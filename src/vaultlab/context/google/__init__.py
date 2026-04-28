@@ -1,40 +1,67 @@
-"""Google ecosystem context — Docs, Sheets, Drive, Gmail, Calendar.
+"""vaultlab.context.google — Google Workspace integration for research-companion mode.
 
-vaultlab integrates with the user's Google Workspace as a context input,
-so research-companion mode has the user's lab work log, project
-spreadsheets, and recent emails in scope without manual paste-in.
+Lifted from bobby_google (in bobby-tools), adapted to use vaultlab config paths
+(`~/.config/vaultlab/google/` instead of `~/.config/google/`).
 
-PLACEHOLDER — full implementation lifts code from `bobby_google` (in
-bobby-tools) into this subpackage during the migration phase. The API
-surface mirrors bobby_google with vaultlab-aware wrappers (auth caching
-in ~/.config/vaultlab/, scope-aware RAG context assembly, KB ingest hooks).
+For setup walkthrough see docs/setup-google.md.
 
-Planned public surface (mirrors bobby_google):
+Public surface (mirrors bobby_google):
 
     from vaultlab.context.google import (
-        get_credentials, build_service,                    # auth
-        append_to_today, read_recent_entries, get_full_text,  # docs
-        read_range, write_range, append_rows,              # sheets
-        scan_directory, get_google_id,                     # drive
-        search_emails, read_recent,                        # gmail
-        get_today_schedule, get_events,                    # calendar
+        # Auth
+        get_credentials, build_service,
+        # Docs (lab work log)
+        append_to_today, get_full_text, read_recent_entries, read_today_entries,
+        # Sheets (sample manifests, panel info)
+        read_range, write_range, append_rows, get_sheet_names,
+        batch_read, batch_write, find_replace, set_formatting,
+        clear_range, create_sheet, delete_sheet,
+        # Drive (file scanning + ID resolution)
+        DriveFile, scan_directory, get_google_id, open_file,
     )
 
-    # vaultlab-specific extensions:
-    from vaultlab.context.google import (
-        ingest_doc_to_kb,        # auto-ingest a Google Doc into <kb>/Sources/
-        scope_for_project,       # narrow Google scope to current project's data
-        as_context_passages,     # convert Google content → RAG passages
-    )
-
-Setup: `vaultlab setup --google` runs the OAuth flow and stores credentials
-at `~/.config/vaultlab/google/`. See `docs/setup-google.md`.
-
-License compatibility: vaultlab is MIT; Google API client libs are
-Apache 2.0; OAuth scopes are user-controlled.
+Convention (per AGENTS.md): every prompt that includes Google content shows
+the source citations in the trace log (`<kb>/.vaultlab/runs/<id>/trace.jsonl`).
 """
 
 from __future__ import annotations
 
-# Placeholder. Real implementation lands in migration commit.
-__all__: list[str] = []
+from vaultlab.context.google.auth import build_service, get_credentials
+from vaultlab.context.google.docs import (
+    append_to_today,
+    get_full_text,
+    read_recent_entries,
+    read_today_entries,
+)
+from vaultlab.context.google.drive import (
+    DriveFile,
+    get_google_id,
+    open_file,
+    scan_directory,
+)
+from vaultlab.context.google.sheets import (
+    append_rows,
+    batch_read,
+    batch_write,
+    clear_range,
+    create_sheet,
+    delete_sheet,
+    find_replace,
+    get_sheet_names,
+    read_range,
+    set_formatting,
+    write_range,
+)
+
+__all__ = [
+    # auth
+    "get_credentials", "build_service",
+    # docs
+    "append_to_today", "get_full_text", "read_recent_entries", "read_today_entries",
+    # sheets
+    "read_range", "write_range", "append_rows", "get_sheet_names",
+    "batch_read", "batch_write", "find_replace", "set_formatting",
+    "clear_range", "create_sheet", "delete_sheet",
+    # drive
+    "DriveFile", "scan_directory", "get_google_id", "open_file",
+]

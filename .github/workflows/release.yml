@@ -1,0 +1,71 @@
+name: Release to PyPI
+
+# Triggered when a version tag is pushed (e.g., `git tag v0.0.1 && git push --tags`).
+# Uses PyPI Trusted Publishers — NO API tokens stored or used.
+# Trusted Publisher must be pre-configured at:
+#     https://pypi.org/manage/account/publishing/
+# with workflow filename = release.yml and environment name = pypi.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: List built artifacts
+        run: ls -la dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI (Trusted Publisher)
+    needs: build
+    runs-on: ubuntu-latest
+
+    # The 'pypi' environment matches what was registered in the
+    # PyPI Trusted Publisher config. PyPI checks this on upload.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/vaultlab
+
+    # Required permissions for trusted publishing (OIDC token exchange)
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No `password` or `user` needed — Trusted Publisher uses OIDC.

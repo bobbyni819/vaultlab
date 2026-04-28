@@ -1,0 +1,38 @@
+name: DCO sign-off check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on all PR commits
+        run: |
+          # Verify every commit in the PR has a Signed-off-by line
+          # matching the commit author email (DCO).
+          missing=0
+          while IFS=$'\t' read -r sha author trailers; do
+            if [ -z "$trailers" ]; then
+              echo "::error::Commit $sha is missing Signed-off-by trailer"
+              echo "Add with: git commit --amend -s --no-edit"
+              echo "(or rebase + sign all commits: git rebase --signoff origin/main)"
+              missing=1
+            elif ! echo "$trailers" | grep -q "<$author>"; then
+              echo "::error::Commit $sha Signed-off-by trailer doesn't match author email"
+              echo "Author: $author"
+              echo "Trailers: $trailers"
+              missing=1
+            fi
+          done < <(git log --format='%H%x09%ae%x09%(trailers:key=Signed-off-by,valueonly,unfold)' origin/main..HEAD)
+
+          if [ "$missing" -eq 1 ]; then
+            exit 1
+          fi
+          echo "✓ All commits properly signed off"
