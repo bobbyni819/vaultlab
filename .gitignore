@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# Virtualenvs
+.venv/
+venv/
+env/
+.env
+.envrc
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# vaultlab-specific
+~/.config/vaultlab/
+.vaultlab/
+*.provenance.json.bak
+embeddings/
+.cache/
+
+# Data (per .vaultlab-project.json data_sources, real data lives outside repo)
+data/
+*.h5ad
+*.h5
+*.tiff
+*.tif
+*.zarr/
+*.imzML
+*.ibd
+*.fcs
+*.svs
+
+# Generated outputs
+Output/
+runs/
+
+# Anthropic / API artifacts
+*.cassette
+.anthropic_cache/
+
+# Build artifacts
+*.pdf
+!docs/**/*.pdf
+*.pptx
+!examples/**/expected_outputs/*.pptx
+*.docx
+!examples/**/expected_outputs/*.docx

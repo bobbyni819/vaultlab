@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: "vaultlab: An open-source AI laboratory for biological researchers"
+message: "If you use vaultlab, please cite both the software and the preprint."
+type: software
+authors:
+  - family-names: "Ni"
+    given-names: "Bobby Y.X."
+    affiliation: "Hickey Lab, Duke University"
+version: "0.0.1"
+license: MIT
+repository-code: "https://github.com/bobbyni819/vaultlab"
+url: "https://github.com/bobbyni819/vaultlab"
+abstract: >
+  vaultlab is an open-source software framework that integrates literature
+  search, citation verification, wet-lab data analysis, publication-quality
+  figure generation, manuscript drafting, and slide deck creation in a single
+  repository designed for use with the Claude Code agentic IDE. vaultlab
+  wraps established Python libraries (scanpy, squidpy, scikit-image, Cellpose)
+  for canonical bioinformatics analyses and adds a Claude-driven orchestration
+  layer that surfaces literature, verifies citations against source passages
+  with semantic matching, and produces NotebookLM-style evidence-on-demand
+  for manuscript drafts.
+keywords:
+  - "AI lab"
+  - "scientific computing"
+  - "spatial omics"
+  - "single-cell RNA-seq"
+  - "manuscript drafting"
+  - "citation verification"
+  - "Claude Code"
+  - "Obsidian"
+  - "knowledge base"
