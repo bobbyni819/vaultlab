@@ -101,6 +101,12 @@ data-flow = [
     "FlowCytometryTools>=0.5",
     "fcsparser>=0.2",
 ]
+meetings = [
+    # meeting_recorder is not yet on PyPI; install from
+    # https://github.com/bobbyni819/meeting_recorder until then.
+    # When PyPI-published this becomes:
+    # "meeting-recorder>=0.1; sys_platform == 'win32'",
+]
 stats = [
     "scipy>=1.13",
     "statsmodels>=0.14",
@@ -120,7 +126,7 @@ outlook-windows = [
     "pywin32>=306; sys_platform == 'win32'",
 ]
 all = [
-    "vaultlab[research,citations,kb,figures,slides,stats,manuscript]",
+    "vaultlab[research,citations,kb,figures,slides,stats,manuscript,meetings]",
     "vaultlab[data-scrnaseq,data-spatial,data-imaging,data-maldi,data-flow]",
     "vaultlab[google,outlook-windows]",
 ]

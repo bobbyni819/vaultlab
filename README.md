@@ -55,6 +55,8 @@ Plus context pipes that make it a *companion*:
 - **Knowledge base** (Obsidian-native) — every analysis writes; every analysis reads
 - **Google Workspace** — your lab work log, project sheets, recent emails, calendar
 - **Outlook** (Windows) — your inbox + calendar + tasks
+- **Meeting transcripts** (Windows, opt-in) — record meetings, auto-transcribe, ingest into KB so the companion knows what was said in last Tuesday's lab meeting
+- **Project onboarding** — point vaultlab at a new project folder; it reads the structure, builds an understanding, asks clarifying questions, and maintains a `START_HERE.md` so future sessions know exactly where to resume
 
 ---
 
