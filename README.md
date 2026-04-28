@@ -1,192 +1,179 @@
-# vaultlab
+<h1 align="center">vaultlab</h1>
 
-> **An AI research companion for biological scientists.**
->
-> Goes as deep as you want — literature search, data analysis, figure generation, manuscript drafting, slide decks. Driven by you, on your terms.
+<p align="center">
+  <b>An AI research companion for biological scientists.</b><br>
+  Goes as deep as you want — literature, data, figures, manuscripts, slides. <i>Driven by you, on your terms.</i>
+</p>
 
-[![PyPI](https://img.shields.io/pypi/v/vaultlab.svg)](https://pypi.org/project/vaultlab/)
-[![Python](https://img.shields.io/pypi/pyversions/vaultlab.svg)](https://pypi.org/project/vaultlab/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://github.com/bobbyni819/vaultlab/actions/workflows/test.yml/badge.svg)](https://github.com/bobbyni819/vaultlab/actions)
+<p align="center">
+  <a href="https://pypi.org/project/vaultlab/"><img src="https://img.shields.io/pypi/v/vaultlab.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/vaultlab/"><img src="https://img.shields.io/pypi/pyversions/vaultlab.svg" alt="Python"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/bobbyni819/vaultlab/actions"><img src="https://github.com/bobbyni819/vaultlab/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="docs/KNOWN_LIMITATIONS.md"><img src="https://img.shields.io/badge/status-alpha-orange.svg" alt="Status: Alpha"></a>
+</p>
+
+<!-- HERO GRAPHIC GOES HERE
+     1200x400 banner with vaultlab name, tagline, 4-icon row.
+     File: assets/hero.png. See docs/graphics-guide.md.
+-->
 
 > **🚧 Alpha software** — see [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md). v0.1.0 target: late May 2026.
 
-<!-- HERO GRAPHIC GOES HERE
-     Suggested: 1200x400 banner with vaultlab name, tagline, and a 4-icon row
-     showing the four pillars (Literature / Data / Figures / Slides). Or a short
-     animated GIF demonstrating one slash command end-to-end.
-     File: assets/hero.png or assets/hero.gif (~2 MB max for fast README render)
-     Tools: Figma, Excalidraw, Canva, or AI image gen.
--->
+---
+
+## ⭐ Why vaultlab
+
+> [!IMPORTANT]
+> **vaultlab is a research companion you customize, build upon, and direct.**
+>
+> Take the agent **as far as you want** — quick assist for one question, or autonomous deep-dive across your entire lab. *Other tools force a single mode; vaultlab adapts to the depth your work needs.*
+>
+> **No other open-source tool** integrates wet-lab analysis + literature verification + figure recipes + manuscript drafting + slide decks + life-context (calendar, inbox, work log, meeting transcripts) into one Claude Code-readable companion.
 
 ---
 
-## What it is
-
-vaultlab is a [Claude Code](https://claude.com/claude-code) capability layer that follows you through whatever you're doing today. Searching literature. Analyzing data. Drafting a paragraph. Making a figure. Building tomorrow's deck.
-
-Not autonomous. Not generic. **Biology-aware, depth-on-demand, local-first.**
-
-## Get started in 3 steps (~15 minutes)
-
-### 1. Install
+## Get started
 
 ```bash
 git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
 pip install -e ".[all]"
 ```
 
-(Or `pip install vaultlab` from PyPI for the library only, without slash commands.)
-
-### 2. Open Claude Code in this folder, paste this prompt
-
-After clone + install, open [Claude Code](https://claude.com/claude-code) in the `vaultlab` folder and paste:
+Then open [Claude Code](https://claude.com/claude-code) in the folder and paste:
 
 ```
-I've just cloned vaultlab. Please read README.md, CLAUDE.md, AGENTS.md,
-and docs/getting-started.md, then walk me through:
-  1. What vaultlab does and what it doesn't
-  2. What I need to install (Obsidian, API keys, etc.)
-  3. Setting up my first project — ask me what research I'm working on,
-     where my files live, and where I want my knowledge base to be
-  4. Running my first slash command
-
-Be patient with me — this is my first time using vaultlab. Hedged voice
-when discussing capabilities (some are still v0.0.1 placeholders).
+I've just cloned vaultlab. Read README.md, CLAUDE.md, AGENTS.md, and
+docs/getting-started.md, then walk me through what it does, what I
+need to install, set up my first project, and run my first slash command.
+Hedged voice on placeholder capabilities.
 ```
 
-Claude Code reads the docs, then **interviews you about your work**, sets up your first project + knowledge base, and walks you through your first useful command.
+That's it. Claude Code interviews you about your work, sets up your KB + first project, walks you through the first command. ~10–15 minutes.
 
-### 3. Reference docs (if you want to read yourself first)
+<details>
+<summary><b>Prefer to read setup docs yourself first?</b></summary>
 
 - ⭐ [`docs/getting-started.md`](docs/getting-started.md) — full first-10-minutes walkthrough + 10 best practices
-- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian download + plugin setup
+- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + recommended plugins
 - [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature API keys
 - [`docs/setup-google.md`](docs/setup-google.md) — Google Cloud Console + OAuth (~10 min)
 - [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook (Windows only)
 
----
-
-## The big idea — a centralized memory for your research
-
-The most underrated thing vaultlab does: it ties **every fragmented source of context about your work into one place** the LLM can read. The result is a research companion that actually knows what's going on, not a generic chatbot you have to re-explain things to every session.
-
-| Source | What's captured | How |
-|---|---|---|
-| **Knowledge base** (Obsidian-native, plain markdown) | Papers, notes, summaries, findings, concepts, manuscripts, figures | Every analysis writes; every analysis reads |
-| **Google Workspace** | Your lab work log (Docs), sample manifests (Sheets), shared files (Drive), pressing emails (Gmail), today's schedule (Calendar) | OAuth, opt-in per scope |
-| **Outlook** (Windows) | Inbox + calendar + tasks + drafts with your signature | COM automation, no proxy |
-| **Meeting transcripts** (Windows, opt-in) | Full audio + transcript of every recorded meeting | meeting_recorder + Whisper local/cloud |
-| **Local filesystem** | Anything Claude Code can read | You just point at the folder |
-| **Project state** | Current focus, recent activity, files-to-read-first | Auto-maintained `START_HERE.md` per project |
-
-**Three implications worth calling out:**
-
-1. **Onboarding scales by sharing.** Add a lab member to your Google Drive shared folder + your KB folder, and they instantly have the entire project context. No more "let me catch you up" — the catchup is a `Read(START_HERE.md)`.
-2. **Nothing is lost.** Recorded meetings + ingested papers + auto-written analysis notes + verified citations all land in the KB with rich frontmatter. The information you need is always *somewhere queryable*, not in the bottom of a Slack thread or the back of someone's notebook.
-3. **The system gets smarter as you use it.** Cross-project insights emerge: *"You saw a similar exhausted-T-cell phenotype in the 2026-03 tonsil run."* The KB grows; retrieval over the growing markdown corpus is the differentiator.
+</details>
 
 ---
 
-## Four pillars on top of that memory (v0.1.0 target — May 2026)
+## The big idea: a centralized memory for your research
 
-> **Heads-up:** v0.0.1 (current) is a scaffold with structure in place. The capabilities below land progressively in v0.1.0. See [Roadmap](#roadmap) for what works now vs what's coming.
+vaultlab knits every fragmented source of context about your work into one place the LLM can read:
 
-<!-- CAPABILITY DIAGRAM GOES HERE
-     Suggested: 4-quadrant graphic with icons. Or a Mermaid flowchart showing
-     how the pillars connect through the knowledge base.
-     File: assets/capability-grid.png
--->
+- **Knowledge base** (Obsidian-native markdown) — papers, notes, findings, manuscripts
+- **Google Workspace** — work log, sample sheets, drive files, emails, calendar
+- **Outlook** (Windows) — inbox + calendar + tasks + drafts
+- **Meeting transcripts** (opt-in) — full record of every recorded meeting
+- **Local files** — anything Claude Code can read on your machine
+- **Project state** — auto-maintained `START_HERE.md` per project; resume in 30 seconds
+
+**Three implications:** *(1) Onboarding scales by sharing* — add a lab member to your shared Drive folder, they have the full project context. *(2) Nothing is lost* — meetings, papers, notes, citations all queryable. *(3) The system gets smarter as you use it* — cross-project insights emerge as the KB grows.
+
+---
+
+## Four pillars on top of that memory (v0.1.0 target)
 
 | Pillar | What it does |
 |---|---|
-| 📄 **Literature & citations** | Search across the literature sources you have API access to (PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP — configure what's available in your `secrets.toml`). Verify every `[N]` semantically against the source passage; flag hallucinations. |
-| 🧬 **Data analysis** | Wraps mature Python tools (scanpy, squidpy, scikit-image, Cellpose for spatial / single-cell / imaging; scipy.stats, statsmodels, pingouin for general inference). Ships a curated **tools index** so the LLM knows when to use which package — no raw web searches at runtime. Hedges on interpretation, never invents results. |
-| 📊 **Figures** | Corpus-backed recipes (every recipe cites ≥3 published examples). Publication-tight by default, presentation-loose on demand. |
-| ✍️ **Manuscripts & slides** | Drafts methods/results sections with verified citations. Builds slide decks from research outputs (the flagship). |
-
-The pillars all read from + write to the centralized memory above. *That's* what makes vaultlab a companion: the pillars know what you've already done.
-
----
-
-## Project onboarding (how a new researcher gets up to speed)
-
-Point vaultlab at a new project folder; it reads the structure, builds an understanding, asks clarifying questions, and initializes a `START_HERE.md` that future sessions read first to resume in 30 seconds:
-
-```
-> /onboard-project ~/Downloads/my_research_project
-```
-
-See [`docs/getting-started.md`](docs/getting-started.md) for the full workflow.
+| 📄 **Literature & citations** | Search the lit sources you have API access to (PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP). Verify every `[N]` semantically against the source passage; flag hallucinations. |
+| 🧬 **Data analysis** | Wraps mature tools (scanpy, squidpy, scikit-image, Cellpose; scipy.stats, statsmodels, pingouin). Curated **tools index** so the LLM picks real functions, not raw web searches. |
+| 📊 **Figures** | Corpus-backed recipes — every recipe cites ≥3 published examples. Publication-tight default; presentation-loose on demand. |
+| 🎤 **Manuscripts & slides** | Methods drafts with verified citations. Slide decks from research outputs (the flagship). |
 
 ---
 
 ## How it works
 
 ```mermaid
-flowchart LR
-    User["You + Claude Code"] -- "natural language" --> CC[Claude Code session]
-    CC -- "slash command<br/>or import" --> VL[vaultlab]
-    VL --> Lit[Literature]
-    VL --> Data[Data analysis]
-    VL --> Fig[Figures]
-    VL --> Doc[Manuscript / slides]
-    VL <--> KB[(Knowledge base<br/>Obsidian markdown)]
-    VL -.-> GW[Google Workspace]
-    VL -.-> OL[Outlook<br/>Windows]
-    KB --> CC
+flowchart TB
+    subgraph Team["Your lab"]
+        You[You]
+        Mate[Lab member]
+        Collab[Collaborator]
+    end
+
+    Team --> CC[Claude Code]
+    CC --> VL[vaultlab capabilities]
+
+    subgraph Memory["Centralized memory<br/>(unified, shareable, scalable)"]
+        KB[(Obsidian KB)]
+        GD[Google Workspace]
+        OL[Outlook]
+        MT[Meeting transcripts]
+        FS[Local files]
+        SH[START_HERE.md per project]
+    end
+
+    VL <--> Memory
+    CC -.reads.-> Memory
+
+    style Memory fill:#fef3c7,stroke:#854d0e,stroke-width:2px
+    style Team fill:#e0f2fe,stroke:#0369a1
 ```
 
-You talk to Claude Code. Claude Code reads vaultlab's slash commands and skills. vaultlab orchestrates real work — wraps mature scientific tools, calls Claude for interpretation, writes everything to your KB. The KB is the long-term memory; vaultlab gets smarter project-by-project as it grows.
+**The pattern:** you (or anyone you've shared the KB with) talks to Claude Code. Claude Code reads vaultlab + memory. vaultlab orchestrates work, writes results back into the memory. Memory is **plain markdown** on Google Drive — share it like any folder, scale across your lab without infrastructure.
 
 ---
 
-## Specialized modules
+<details>
+<summary><b>Specialized modules per modality</b> (CODEX, MALDI, spatial transcriptomics, scRNA-seq, imaging, flow)</summary>
 
-Beyond the general pillars, vaultlab includes modules tuned to specific modalities — built around the Hickey Lab (Duke BME) and our collaborators. Each module benefits from real expertise the lab can tap:
+vaultlab has modules tuned to specific modalities, each anchored by a Hickey Lab (Duke BME) expert:
 
-| Modality | What's in vaultlab | Lab expertise |
-|---|---|---|
-| **CODEX multiplex IF** | Segmentation (Mesmer/Cellpose/StarDist), marker normalization, cellular neighborhoods (Schürch 2020 + Hickey lab CN methodology) | Nick + Young (lab) |
-| **MALDI imaging** | pyimzML + Cardinal-via-rpy2 wrappers, ion-image visualization, multi-modal coregistration with H&E | Angela (collaborator) |
-| **Spatial transcriptomics** | Visium / Xenium / SpatialData via squidpy | Reina (lab) |
-| **Single-cell RNA-seq** | scanpy + anndata canonical pipelines | Bobby (lab) — also tap others |
-| **Generic imaging / flow cytometry** | Wrappers for standard tools (scikit-image, FlowCytometryTools) | TBD lab contact |
+| Modality | Lab expertise |
+|---|---|
+| **CODEX multiplex IF** | Nick + Young |
+| **MALDI imaging** | Angela (collaborator) |
+| **Spatial transcriptomics** | Reina |
+| **Single-cell RNA-seq** | Bobby + others |
+| **Generic imaging / flow cytometry** | TBD |
 
-**Why lab-anchored matters.** The Hickey lab is a *spatial-omics-specialty lab*. Most generic AI-for-research tools wrap whatever PyPI gives them. vaultlab is built with the lab — modality-specific modules carry the methods we actually use, not the generic defaults. This makes vaultlab **noticeably better than scanpy/squidpy alone** for the spatial workflows the lab runs.
+**Why lab-anchored matters.** Generic AI tools wrap whatever PyPI gives them. vaultlab is built *with* a spatial-omics specialty lab — modality modules carry the methods we actually use, not the generic defaults.
 
-**Lab algorithm library.** Lab member Nick has compiled an internal GitHub repository of data-analysis algorithms specific to spatial-omics workflows. vaultlab will reference it — *"if your data looks like this, here's the algorithm we've validated for it"* — so users tap the lab's hard-won knowledge without having to reverse-engineer it. (Repo URL: TBD; will be linked in `vaultlab.kb.tools_index/lab_algorithms.md` once Nick approves sharing.)
+**Lab algorithm library** — Lab member Nick has compiled a GitHub repo of validated spatial-omics analysis algorithms. vaultlab references it: *"if your data looks like this, here's the algorithm we validated."* Repo URL pending Nick's approval to link publicly.
 
-These aren't required to use vaultlab. They're there if your work touches them.
+</details>
 
----
+<details>
+<summary><b>Architecture philosophy</b> (4 commitments)</summary>
 
-## Architecture philosophy
+1. **Markdown is the user-facing interface; Python is the engine.** Slash commands, role prompts, recipes are markdown — Claude Code reads them directly.
+2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence. No surface-skim.
+3. **Result-oriented agentic loop.** You describe a goal; vaultlab plans + verifies + refines internally; you see the finished result.
+4. **KB is the smartness.** No vector DBs, no hidden state. Markdown grows with your work; cross-project reasoning emerges via retrieval.
 
-vaultlab is a **capability layer FOR Claude Code**, not a competing harness. Markdown is the user-facing interface; Python is the engine. Slash commands, role prompts, recipes, layouts, and skill definitions are all markdown files Claude Code reads at first repo open.
+Full spec: [`docs/architecture.md`](docs/architecture.md). Invariants for contributors: [`AGENTS.md`](AGENTS.md).
 
-### Four core commitments
+</details>
 
-1. **Markdown is the interface; Python is the engine.**
-2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence.
-3. **Result-oriented.** You describe a goal; vaultlab plans + verifies + refines internally; you see the finished result.
-4. **KB is the smartness.** No vector DBs, no hidden state. Just markdown that grows with your work.
+<details>
+<summary><b>What's unique vs PaperQA / scanpy / FutureHouse / scverse / Aider</b></summary>
 
-See [`docs/architecture.md`](docs/architecture.md), [`AGENTS.md`](AGENTS.md), and [`CLAUDE.md`](CLAUDE.md).
+| Capability | vaultlab | PaperQA2 | scanpy | FutureHouse | scverse | Aider |
+|---|---|---|---|---|---|---|
+| Wet-lab data analysis | ✓ | ✗ | ✓ | ✗ | ✓ | ✗ |
+| Literature + citation verification | ✓ | ✓ | ✗ | ✓ | ✗ | ✗ |
+| **NotebookLM-style evidence retrieval** | ✓ | partial | ✗ | ✗ | ✗ | ✗ |
+| Manuscript drafting | ✓ | ✗ | ✗ | partial | ✗ | ✗ |
+| **Slide deck output** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Calendar / inbox / meeting context** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Knowledge base (Obsidian)** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Local-first | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| **Companion mode (you control depth)** | ✓ | partial | n/a | ✗ | n/a | ✓ |
+| **Lab-anchored modality expertise** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Claude-Code-native skill bundle | ✓ | ✗ | ✗ | ✗ | ✗ | partial |
 
----
+The combination is the value. If you only need one piece, those tools are great. If you want a research companion that knows your whole lab, vaultlab is the only option.
 
-## What makes vaultlab different
-
-<!-- COMPARISON / POSITIONING GRAPHIC GOES HERE
-     Suggested: Venn diagram or capability matrix showing vaultlab vs PaperQA /
-     scanpy / FutureHouse / scverse / Aider. Highlight the unique combination.
-     File: assets/comparison.png
--->
-
-No tool combines literature verification + wet-lab data + manuscript drafting + slide output + life-context (calendar, inbox, work log) wired through Claude Code. If you want one piece, those tools are great; vaultlab is for the combination.
-
-See [`docs/comparison.md`](docs/comparison.md).
+</details>
 
 ---
 
@@ -194,70 +181,48 @@ See [`docs/comparison.md`](docs/comparison.md).
 
 | Version | When | What works |
 |---|---|---|
-| **v0.0.1** (current) | shipped 2026-04-28 | Repo scaffold + full documentation. `vaultlab.figures.publication` (publication-styling helpers), `vaultlab.context.google` + `vaultlab.context.outlook` (lifted from bobby-tools), 4 GitHub workflows (test, DCO, release-to-PyPI). 27 unit tests passing. Most subpackages are placeholders. |
-| **v0.1.0** | target 2026-05-27 | Real `vaultlab.research` (multi-source lit search), `vaultlab.citations` (3-tier semantic verification), `vaultlab.figures.recipes` (≥5 corpus-backed recipes), `vaultlab.slides` (deck generation), `vaultlab.kb` (Obsidian setup + ingest + semantic search), `vaultlab.runner` (bounded loop + verifiers). All ~30 slash commands wired up. End-to-end `vaultlab demo pbmc3k` works. arXiv preprint draft. |
-| **v0.2.0** | autumn 2026 | MCP server. `vaultlab.context.meetings` (full meeting_recorder integration). Cross-model judge. Cross-project insight transfer. `examples/codex_hubmap_tonsil/` flagship demo. macOS/Linux meeting backend. |
-| **v1.0.0** | TBD | Stable API. First-class lab adoption. Documented benchmarks. |
+| **v0.0.1** | shipped 2026-04-28 | Scaffold + docs. `figures.publication`, `context.google`, `context.outlook` real. Most other modules are placeholders. 27 unit tests passing. |
+| **v0.1.0** | target 2026-05-27 | Real `research`, `citations`, `figures.recipes`, `slides`, `kb`, `runner`. ~30 slash commands. End-to-end demo works. arXiv preprint draft. |
+| **v0.2.0** | autumn 2026 | MCP server. Full meeting-recorder integration. Cross-model judge. macOS/Linux meeting backend. |
+| **v1.0.0** | TBD | Stable API, lab adoption, documented benchmarks. |
 
-See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what's currently a placeholder.
-
----
-
-## Documentation
-
-**Setup:**
-- ⭐ [`docs/getting-started.md`](docs/getting-started.md) — **start here** — first-10-minutes walkthrough + best practices for using vaultlab day-to-day
-- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + plugins
-- [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature APIs
-- [`docs/setup-google.md`](docs/setup-google.md) — Google Workspace OAuth
-- [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook (Windows)
-
-**Reference:**
-- [`docs/architecture.md`](docs/architecture.md) — full architectural spec
-- [`.claude/commands/COMMANDS.md`](.claude/commands/COMMANDS.md) — slash command inventory (what you can invoke from Claude Code)
-- [`docs/graphics-guide.md`](docs/graphics-guide.md) — figure design principles for contributors
-- [`docs/comparison.md`](docs/comparison.md) — vs other tools (TODO populate)
-- [`AGENTS.md`](AGENTS.md) — invariants for code contributors
-- [`CLAUDE.md`](CLAUDE.md) — entrypoint for Claude Code sessions
-
-**Lineage & contributions:**
-- [`INSPIRATIONS.md`](INSPIRATIONS.md) — what we drew from where (auditable)
-- [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md) — what's original vs synthesis vs borrowed
-
-**Privacy & limits:**
-- [`docs/data-privacy.md`](docs/data-privacy.md) — what data leaves your machine
-- [`docs/compliance.md`](docs/compliance.md) — explicit non-HIPAA disclosure
-- [`docs/long-term-reproducibility.md`](docs/long-term-reproducibility.md)
-- [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) — honest failures
-
-**For contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for current placeholders.
 
 ---
 
-## Citation
+<details>
+<summary><b>Documentation</b></summary>
+
+**Reference:** [`docs/architecture.md`](docs/architecture.md) · [`.claude/commands/COMMANDS.md`](.claude/commands/COMMANDS.md) · [`docs/comparison.md`](docs/comparison.md) · [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md)
+
+**Privacy:** [`docs/data-privacy.md`](docs/data-privacy.md) · [`docs/compliance.md`](docs/compliance.md) · [`docs/long-term-reproducibility.md`](docs/long-term-reproducibility.md)
+
+**Lineage:** [`INSPIRATIONS.md`](INSPIRATIONS.md) · [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md)
+
+**Contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`docs/graphics-guide.md`](docs/graphics-guide.md)
+
+</details>
+
+---
+
+## Acknowledgments
+
+vaultlab is built on the shoulders of many open-source projects. Foundational influences include [virtual-lab](https://github.com/zou-group/virtual-lab) (multi-agent meeting structure), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (autonomous research patterns), [paperclip](https://github.com/GXL-ai/paperclip) (literature MCP), [gstack](https://github.com/garrytan/gstack) (Claude Code skill bundle philosophy + AGENTS.md framing), [scanpy/squidpy](https://github.com/scverse) (canonical bioinformatics analysis), [Cellpose](https://github.com/MouseLand/cellpose), [Schürch et al. 2020](https://doi.org/10.1016/j.cell.2020.07.005) (cellular neighborhoods), and [Karpathy's nanoGPT](https://github.com/karpathy/nanoGPT) (fork-and-clone primary distribution philosophy). Full attribution + lineage in [`INSPIRATIONS.md`](INSPIRATIONS.md). What's uniquely vaultlab vs synthesis vs borrowed: [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md).
+
+vaultlab's domain modules tap [Hickey Lab (Duke BME)](https://www.hickeylab.org) expertise: Nick + Young (CODEX), Angela (MALDI), Reina (spatial transcriptomics), Bobby (single-cell). PI: John Hickey.
+
+---
+
+## Citation, privacy, license
 
 ```bibtex
 @software{ni_vaultlab_2026,
-  author  = {Ni, Bobby Y.X.},
-  title   = {vaultlab: A research companion for biological scientists},
-  year    = 2026,
-  url     = {https://github.com/bobbyni819/vaultlab},
-  version = {0.0.1}
+  author = {Ni, Bobby Y.X.},
+  title = {vaultlab: A research companion for biological scientists},
+  year = 2026, url = {https://github.com/bobbyni819/vaultlab}
 }
 ```
 
-See [`CITATION.cff`](CITATION.cff).
+**Privacy:** prompt content is sent to Anthropic's Claude API. **Not HIPAA-compliant.** Do not use with PHI/PII/IRB-restricted data. See [`docs/data-privacy.md`](docs/data-privacy.md) for the quick-compliance check.
 
----
-
-## Privacy & compliance
-
-vaultlab uses Anthropic's Claude API. Prompt content is sent to Anthropic. **Not HIPAA-compliant.** Do not use with PHI/PII/IRB-restricted data. See [`docs/data-privacy.md`](docs/data-privacy.md) and [`docs/compliance.md`](docs/compliance.md). You take full responsibility for compliance with your institutional, IRB, IACUC, and regulatory obligations.
-
----
-
-## Author & license
-
-Bobby Y.X. Ni — Hickey Lab, Duke University Biomedical Engineering.
-
-[MIT](LICENSE) — anyone can use, modify, distribute, including commercial.
+**License:** [MIT](LICENSE). Author: Bobby Y.X. Ni — Hickey Lab, Duke University Biomedical Engineering.
