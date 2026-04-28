@@ -202,6 +202,17 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 
 ## Code-generation pipeline + deterministic validation
 
+### bobby_google + bobby_outlook (Bobby's own — predecessor in `bobby-tools`)
+
+- **Source:** `~/Downloads/bobby-tools/src/bobby_google/` and `~/Downloads/bobby-tools/src/bobby_outlook/`
+- **License:** Bobby's own (MIT-equivalent)
+- **What we took:** The full API surface — Google Workspace integration (Docs/Sheets/Drive/Gmail/Calendar with OAuth) and Outlook COM automation (email/calendar/contacts/tasks).
+- **How:** `CODE` — code will be lifted (not just adapted) into `vaultlab.context.google/` and `vaultlab.context.outlook/` in upcoming migration commits. Predecessor implementations remain in `bobby-tools` for personal-toolkit use; vaultlab gets the public-surface fork.
+- **Why this lift:** vaultlab's "research companion" framing requires the LLM to have life-context — what's on calendar, what's in inbox, what's in the lab work log. Without these, vaultlab is a generic LLM chat. With them, vaultlab becomes a colleague who reads everything you've written.
+- **Where in vaultlab:** `src/vaultlab/context/google/` (cross-platform), `src/vaultlab/context/outlook/` (Windows-only). Currently scaffold + `.md` docs; full code migrates next.
+- **Setup docs:** `docs/setup-google.md`, `docs/setup-outlook-windows.md`.
+- **Attribution:** This file + module docstrings + setup docs cite `bobby-tools` as predecessor.
+
 ### MultiAgent (Bobby's own work — local at `~/Downloads/MultiAgent/`)
 
 - **Status:** Bobby's own multi-agent code-generation pipeline (collaborator: Faye does stages 1-3 bio decomposition + lit QA + BSS synthesis; Bobby does stages 4-5 reference analysis + code gen via 11 sub-phases).

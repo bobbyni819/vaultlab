@@ -4,7 +4,9 @@ This file is the first thing Claude Code reads when opening the vaultlab repo. T
 
 ## What vaultlab is
 
-`vaultlab` is the AI lab for biological researchers — an open-source capability layer for Claude Code that integrates literature search, citation verification, wet-lab data analysis, figure generation, manuscript drafting, and slide deck creation.
+`vaultlab` is a **research companion** for biological scientists — an open-source capability layer for Claude Code that integrates literature search, citation verification, wet-lab data analysis, figure generation, manuscript drafting, slide deck creation, AND life-context (Google Docs/Sheets/Drive/Gmail/Calendar, Outlook on Windows).
+
+**Companion mode, not autonomous mode.** vaultlab does NOT generate research questions in a vacuum, run robots, or submit papers. It accompanies the user through whatever they're actually doing today — analysis, drafting, lit review, deck-building — with full context of their work pulled from KB + Google + Outlook.
 
 **Architecture philosophy:** capability layer FOR Claude Code, NOT a competing harness. Users invoke vaultlab via slash commands, CLI, or direct Python imports — Claude Code handles orchestration.
 
@@ -62,6 +64,9 @@ src/vaultlab/                       # The package
   stats/                            # Statistical wrappers (scanpy/scipy/statsmodels with hedged voice)
   plan/                             # Pre-registration drafting
   evaluate/                         # Benchmarks: hallucinations, cluster_naming, figure_captions
+  context/                          # Research-companion CONTEXT pipes (NEW for companion mode):
+    google/                         #   Google Workspace — Docs, Sheets, Drive, Gmail, Calendar (cross-platform)
+    outlook/                        #   Outlook Classic — email, calendar, contacts, tasks (Windows-only)
   patterns.py                       # EvidenceBundle, CascadeWatchdog
   provenance/                       # Per-output provenance receipts
   parsers/                          # LLM output parsing

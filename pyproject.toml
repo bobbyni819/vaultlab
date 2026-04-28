@@ -109,9 +109,20 @@ stats = [
 manuscript = [
     "pypandoc>=1.13",
 ]
+# Research-companion context (NEW for companion mode):
+google = [
+    "google-api-python-client>=2.140",
+    "google-auth>=2.34",
+    "google-auth-oauthlib>=1.2",
+    "google-auth-httplib2>=0.2",
+]
+outlook-windows = [
+    "pywin32>=306; sys_platform == 'win32'",
+]
 all = [
     "vaultlab[research,citations,kb,figures,slides,stats,manuscript]",
     "vaultlab[data-scrnaseq,data-spatial,data-imaging,data-maldi,data-flow]",
+    "vaultlab[google,outlook-windows]",
 ]
 dev = [
     "pytest>=8.0",
