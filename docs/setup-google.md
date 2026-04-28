@@ -157,6 +157,20 @@ vaultlab setup --google --reset
 
 Removes the existing token + prompts for a new account.
 
+## What to do next
+
+After Google integration is verified:
+
+1. **Set up Obsidian** — see [`docs/setup-obsidian.md`](setup-obsidian.md). vaultlab's KB lives as markdown in an Obsidian vault. You can use vaultlab without Obsidian (just plain markdown), but the GUI is recommended.
+2. **Set up Anthropic API key** — see [`docs/setup-api-keys.md`](setup-api-keys.md). Required for the LLM-driven steps (cluster annotation, citation verification, manuscript drafting). Anthropic has a free tier; vaultlab usage runs ~$1-5 per pipeline run.
+3. **(Windows only)** Set up Outlook integration if your institutional email is Outlook — see [`docs/setup-outlook-windows.md`](setup-outlook-windows.md).
+4. **Onboard your first project:**
+   ```
+   /onboard-project ~/path/to/your/project
+   ```
+   in Claude Code. vaultlab walks the folder, builds an understanding, asks clarifying questions, and initializes a `START_HERE.md` so future sessions know exactly where to resume.
+5. **Try a slash command:** see [`.claude/commands/COMMANDS.md`](../.claude/commands/COMMANDS.md) for the inventory. `/lit-search "your topic"` is a good first try (lands in v0.1.0).
+
 ## Going further
 
 - [`vaultlab.context.google` API reference](../src/vaultlab/context/google.md)

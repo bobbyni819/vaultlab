@@ -1,5 +1,21 @@
 # Data privacy
 
+## Quick compliance check (start here)
+
+vaultlab is **safe to use** if your work:
+- ✅ Does NOT involve patient data (PHI/PII)
+- ✅ Does NOT involve IRB-restricted protocols that prohibit external transmission
+- ✅ Uses published data, your own non-clinical institutional data, or synthetic / simulation data
+- ✅ Complies with your institution's cloud-transmission policies
+
+**If all four checked: proceed.** Most academic biology research falls in this bucket — basic molecular bio, imaging analysis on cell lines, scRNA-seq on public datasets, lit review, manuscript drafting from your own non-PHI data.
+
+**If any unchecked:** consult your compliance office. See full disclosure below.
+
+---
+
+## Full disclosure
+
 vaultlab uses Anthropic's Claude API. **Prompt content is sent to Anthropic.** vaultlab is **NOT HIPAA-compliant.**
 
 Do **NOT** use vaultlab with:

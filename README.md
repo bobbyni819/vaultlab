@@ -36,7 +36,9 @@ vaultlab setup
 
 ---
 
-## Four pillars
+## Four pillars (v0.1.0 target — May 2026)
+
+> **Heads-up:** v0.0.1 (current) is a scaffold with structure in place. The capabilities below land progressively in v0.1.0. See [Roadmap](#roadmap) for what works now vs what's coming.
 
 <!-- CAPABILITY DIAGRAM GOES HERE
      Suggested: 4-quadrant graphic with icons. Or a Mermaid flowchart showing
@@ -123,6 +125,19 @@ See [`docs/comparison.md`](docs/comparison.md).
 
 ---
 
+## Roadmap
+
+| Version | When | What works |
+|---|---|---|
+| **v0.0.1** (current) | shipped 2026-04-28 | Repo scaffold + full documentation. `vaultlab.figures.publication` (publication-styling helpers), `vaultlab.context.google` + `vaultlab.context.outlook` (lifted from bobby-tools), 4 GitHub workflows (test, DCO, release-to-PyPI). 27 unit tests passing. Most subpackages are placeholders. |
+| **v0.1.0** | target 2026-05-27 | Real `vaultlab.research` (multi-source lit search), `vaultlab.citations` (3-tier semantic verification), `vaultlab.figures.recipes` (≥5 corpus-backed recipes), `vaultlab.slides` (deck generation), `vaultlab.kb` (Obsidian setup + ingest + semantic search), `vaultlab.runner` (bounded loop + verifiers). All ~30 slash commands wired up. End-to-end `vaultlab demo pbmc3k` works. arXiv preprint draft. |
+| **v0.2.0** | autumn 2026 | MCP server. `vaultlab.context.meetings` (full meeting_recorder integration). Cross-model judge. Cross-project insight transfer. `examples/codex_hubmap_tonsil/` flagship demo. macOS/Linux meeting backend. |
+| **v1.0.0** | TBD | Stable API. First-class lab adoption. Documented benchmarks. |
+
+See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what's currently a placeholder.
+
+---
+
 ## Documentation
 
 **Setup:**
@@ -133,7 +148,9 @@ See [`docs/comparison.md`](docs/comparison.md).
 
 **Reference:**
 - [`docs/architecture.md`](docs/architecture.md) — full architectural spec
-- [`docs/comparison.md`](docs/comparison.md) — vs other tools
+- [`.claude/commands/COMMANDS.md`](.claude/commands/COMMANDS.md) — slash command inventory (what you can invoke from Claude Code)
+- [`docs/graphics-guide.md`](docs/graphics-guide.md) — figure design principles for contributors
+- [`docs/comparison.md`](docs/comparison.md) — vs other tools (TODO populate)
 - [`AGENTS.md`](AGENTS.md) — invariants for code contributors
 - [`CLAUDE.md`](CLAUDE.md) — entrypoint for Claude Code sessions
 

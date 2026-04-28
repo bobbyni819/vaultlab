@@ -30,3 +30,26 @@ keywords:
   - "Claude Code"
   - "Obsidian"
   - "knowledge base"
+  - "research companion"
+references:
+  - type: article
+    title: "The Virtual Lab: AI Agents Design New SARS-CoV-2 Nanobodies with Experimental Validation"
+    authors:
+      - family-names: "Swanson"
+        given-names: "K."
+      - name: "et al."
+    journal: "Nature"
+    year: 2025
+    notes: "Inspiration for vaultlab's multi-agent meeting structure (see INSPIRATIONS.md)."
+  - type: article
+    title: "Coordinated Cellular Neighborhoods Orchestrate Antitumoral Immunity at the Colorectal Cancer Invasive Front"
+    authors:
+      - family-names: "Schürch"
+        given-names: "C. M."
+      - name: "et al."
+    journal: "Cell"
+    volume: 182
+    issue: 5
+    year: 2020
+    doi: "10.1016/j.cell.2020.07.005"
+    notes: "Methodological anchor for vaultlab.data.spatial.niches cellular-neighborhood detection."
