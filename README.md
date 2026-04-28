@@ -143,13 +143,19 @@ You talk to Claude Code. Claude Code reads vaultlab's slash commands and skills.
 
 ## Specialized modules
 
-Beyond the general pillars, vaultlab includes lab-specific modules built around our research at the Hickey Lab (Duke BME):
+Beyond the general pillars, vaultlab includes modules tuned to specific modalities — built around the Hickey Lab (Duke BME) and our collaborators. Each module benefits from real expertise the lab can tap:
 
-- **CODEX multiplex IF** — segmentation (Mesmer/Cellpose/StarDist), marker normalization, cellular neighborhood detection (Schürch 2020 + Hickey lab anchored)
-- **MALDI imaging** — pyimzML + Cardinal-via-rpy2 wrappers, ion-image visualization, multi-modal coregistration with H&E
-- **Spatial transcriptomics** — Visium / Xenium / SpatialData via squidpy
-- **Single-cell RNA-seq** — scanpy + anndata canonical pipelines
-- **Generic imaging + flow cytometry** — wrappers for the standard tools
+| Modality | What's in vaultlab | Lab expertise |
+|---|---|---|
+| **CODEX multiplex IF** | Segmentation (Mesmer/Cellpose/StarDist), marker normalization, cellular neighborhoods (Schürch 2020 + Hickey lab CN methodology) | Nick + Young (lab) |
+| **MALDI imaging** | pyimzML + Cardinal-via-rpy2 wrappers, ion-image visualization, multi-modal coregistration with H&E | Angela (collaborator) |
+| **Spatial transcriptomics** | Visium / Xenium / SpatialData via squidpy | Reina (lab) |
+| **Single-cell RNA-seq** | scanpy + anndata canonical pipelines | Bobby (lab) — also tap others |
+| **Generic imaging / flow cytometry** | Wrappers for standard tools (scikit-image, FlowCytometryTools) | TBD lab contact |
+
+**Why lab-anchored matters.** The Hickey lab is a *spatial-omics-specialty lab*. Most generic AI-for-research tools wrap whatever PyPI gives them. vaultlab is built with the lab — modality-specific modules carry the methods we actually use, not the generic defaults. This makes vaultlab **noticeably better than scanpy/squidpy alone** for the spatial workflows the lab runs.
+
+**Lab algorithm library.** Lab member Nick has compiled an internal GitHub repository of data-analysis algorithms specific to spatial-omics workflows. vaultlab will reference it — *"if your data looks like this, here's the algorithm we've validated for it"* — so users tap the lab's hard-won knowledge without having to reverse-engineer it. (Repo URL: TBD; will be linked in `vaultlab.kb.tools_index/lab_algorithms.md` once Nick approves sharing.)
 
 These aren't required to use vaultlab. They're there if your work touches them.
 
