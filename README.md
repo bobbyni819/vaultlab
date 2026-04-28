@@ -27,12 +27,43 @@ vaultlab is a [Claude Code](https://claude.com/claude-code) capability layer tha
 
 Not autonomous. Not generic. **Biology-aware, depth-on-demand, local-first.**
 
+## Get started in 3 steps (~15 minutes)
+
+### 1. Install
+
 ```bash
-pip install vaultlab          # PyPI
-# or
-git clone https://github.com/bobbyni819/vaultlab && cd vaultlab && pip install -e ".[all]"
-vaultlab setup
+git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
+pip install -e ".[all]"
 ```
+
+(Or `pip install vaultlab` from PyPI for the library only, without slash commands.)
+
+### 2. Open Claude Code in this folder, paste this prompt
+
+After clone + install, open [Claude Code](https://claude.com/claude-code) in the `vaultlab` folder and paste:
+
+```
+I've just cloned vaultlab. Please read README.md, CLAUDE.md, AGENTS.md,
+and docs/getting-started.md, then walk me through:
+  1. What vaultlab does and what it doesn't
+  2. What I need to install (Obsidian, API keys, etc.)
+  3. Setting up my first project — ask me what research I'm working on,
+     where my files live, and where I want my knowledge base to be
+  4. Running my first slash command
+
+Be patient with me — this is my first time using vaultlab. Hedged voice
+when discussing capabilities (some are still v0.0.1 placeholders).
+```
+
+Claude Code reads the docs, then **interviews you about your work**, sets up your first project + knowledge base, and walks you through your first useful command.
+
+### 3. Reference docs (if you want to read yourself first)
+
+- ⭐ [`docs/getting-started.md`](docs/getting-started.md) — full first-10-minutes walkthrough + 10 best practices
+- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian download + plugin setup
+- [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature API keys
+- [`docs/setup-google.md`](docs/setup-google.md) — Google Cloud Console + OAuth (~10 min)
+- [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook (Windows only)
 
 ---
 
