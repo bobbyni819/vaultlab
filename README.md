@@ -1,179 +1,178 @@
 # vaultlab
 
-> *"From microscope to manuscript, in one repo."*
+> **An AI research companion for biological scientists.**
+>
+> Goes as deep as you want — literature search, data analysis, figure generation, manuscript drafting, slide decks. Driven by you, on your terms.
 
-**vaultlab is a research companion for biological scientists.** Most AI lab tools take a research question and try to write the paper for you. vaultlab is different — it accompanies you through whatever you're actually doing today: searching literature, analyzing your CODEX run, drafting the methods section, building tomorrow's lab-meeting deck, triaging your inbox for the manuscript-deadline email you've been avoiding. With full context of your work — your knowledge base, your Google Docs, your Outlook calendar — Claude Code becomes a useful colleague instead of a generic chatbot.
+[![PyPI](https://img.shields.io/pypi/v/vaultlab.svg)](https://pypi.org/project/vaultlab/)
+[![Python](https://img.shields.io/pypi/pyversions/vaultlab.svg)](https://pypi.org/project/vaultlab/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://github.com/bobbyni819/vaultlab/actions/workflows/test.yml/badge.svg)](https://github.com/bobbyni819/vaultlab/actions)
 
-Open-source. Local-first. Claude-Code-native. **MIT licensed.**
+> **🚧 Alpha software** — see [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md). v0.1.0 target: late May 2026.
 
-> **🚧 Alpha software.** vaultlab is under active development toward v0.1.0 (target: late May 2026). Expect rough edges. See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+<!-- HERO GRAPHIC GOES HERE
+     Suggested: 1200x400 banner with vaultlab name, tagline, and a 4-icon row
+     showing the four pillars (Literature / Data / Figures / Slides). Or a short
+     animated GIF demonstrating one slash command end-to-end.
+     File: assets/hero.png or assets/hero.gif (~2 MB max for fast README render)
+     Tools: Figma, Excalidraw, Canva, or AI image gen.
+-->
 
-<!-- TODO: hero GIF showing /build-deck demo at the top of README -->
-<!-- assets/hero.gif (~6 sec, ~2 MB) — auto-loops -->
+---
 
-## What it does
+## What it is
+
+vaultlab is a [Claude Code](https://claude.com/claude-code) capability layer that follows you through whatever you're doing today. Searching literature. Analyzing data. Drafting a paragraph. Making a figure. Building tomorrow's deck.
+
+Not autonomous. Not generic. **Biology-aware, depth-on-demand, local-first.**
+
+```bash
+pip install vaultlab          # PyPI
+# or
+git clone https://github.com/bobbyni819/vaultlab && cd vaultlab && pip install -e ".[all]"
+vaultlab setup
+```
+
+---
+
+## Four pillars
+
+<!-- CAPABILITY DIAGRAM GOES HERE
+     Suggested: 4-quadrant graphic with icons. Or a Mermaid flowchart showing
+     how the pillars connect through the knowledge base.
+     File: assets/capability-grid.png
+-->
 
 | | |
 |---|---|
-| 📄 | **Literature search & citation verification** — PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP |
-| 🧬 | **Wet-lab data analysis** — CODEX, MALDI, Visium, scRNA-seq, H&E, flow cytometry |
-| 📊 | **Publication-quality figures** with corpus-backed recipes (every recipe cites ≥3 published examples) |
-| ✍️ | **Manuscript drafting** with NotebookLM-style evidence retrieval — every `[N]` shows the exact passage on hover |
-| 🎤 | **Slide decks** built from research outputs — journal-club, thesis-committee, conference-talk modes |
-| 🧠 | **Knowledge base** (Obsidian-native) that links it all, queryable via semantic search |
-| 📥 | **Email + calendar context** — vaultlab reads your Outlook (Windows) or Gmail to know what's pressing |
-| 📝 | **Google Docs integration** — your lab work log + Sheets data + Drive files become first-class context |
+| 📄 | **Literature & citations** — search across PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP. Verify every `[N]` semantically against the source passage; flag hallucinations. |
+| 🧬 | **Data analysis** — wraps scanpy / squidpy / scikit-image / Cellpose. Runs the analysis you ask for, hedges on interpretation, never invents results. |
+| 📊 | **Figures** — corpus-backed recipes (every recipe cites ≥3 published examples). Publication-tight by default, presentation-loose on demand. |
+| ✍️ | **Manuscripts & slides** — drafts methods/results sections with verified citations. Builds slide decks from research outputs (the flagship). |
 
-## Companion mode, not autonomous mode
+Plus context pipes that make it a *companion*:
+- **Knowledge base** (Obsidian-native) — every analysis writes; every analysis reads
+- **Google Workspace** — your lab work log, project sheets, recent emails, calendar
+- **Outlook** (Windows) — your inbox + calendar + tasks
 
-vaultlab is **not** an autonomous AI scientist. It does not generate experiment ideas in a vacuum, run robots, or submit papers without you. It assumes:
+---
 
-- **You have ideas** — vaultlab amplifies them
-- **You have context** — vaultlab indexes it
-- **You make the calls** — vaultlab does the rote 60% so you can focus on the insightful 40%
-- **You ship the paper** — vaultlab drafts, verifies, formats, but the byline is yours alone
+## How it works
 
-The "research companion" framing is intentional. The published-paper-via-AI bans many journals impose? Not our use case. *"Here are 23 things vaultlab made my week easier"* is.
-
-## Install
-
-```bash
-git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
-pip install -e ".[all]"
-vaultlab setup            # interactive: API keys, KB path, Obsidian, Google, Outlook
+```mermaid
+flowchart LR
+    User["You + Claude Code"] -- "natural language" --> CC[Claude Code session]
+    CC -- "slash command<br/>or import" --> VL[vaultlab]
+    VL --> Lit[Literature]
+    VL --> Data[Data analysis]
+    VL --> Fig[Figures]
+    VL --> Doc[Manuscript / slides]
+    VL <--> KB[(Knowledge base<br/>Obsidian markdown)]
+    VL -.-> GW[Google Workspace]
+    VL -.-> OL[Outlook<br/>Windows]
+    KB --> CC
 ```
 
-Or, if you only want a piece (citations, lit search, figures):
+You talk to Claude Code. Claude Code reads vaultlab's slash commands and skills. vaultlab orchestrates real work — wraps mature scientific tools, calls Claude for interpretation, writes everything to your KB. The KB is the long-term memory; vaultlab gets smarter project-by-project as it grows.
 
-```bash
-pip install vaultlab            # core
-pip install "vaultlab[research,citations]"   # specific subpackages
-```
+---
 
-## 5-minute Hello World
+## Specialized modules
 
-```bash
-vaultlab demo pbmc3k
-```
+Beyond the general pillars, vaultlab includes lab-specific modules built around our research at the Hickey Lab (Duke BME):
 
-In ~2 minutes on a laptop, this:
-1. Downloads the 3k PBMC dataset (50 MB)
-2. Runs QC + normalization + Leiden clustering
-3. Auto-annotates clusters via LLM (with hedged voice and quoted evidence)
-4. Renders 3 publication-quality figures
-5. Builds a 5-slide journal-club deck with speaker notes
-6. Auto-writes a KB summary note linking everything
+- **CODEX multiplex IF** — segmentation (Mesmer/Cellpose/StarDist), marker normalization, cellular neighborhood detection (Schürch 2020 + Hickey lab anchored)
+- **MALDI imaging** — pyimzML + Cardinal-via-rpy2 wrappers, ion-image visualization, multi-modal coregistration with H&E
+- **Spatial transcriptomics** — Visium / Xenium / SpatialData via squidpy
+- **Single-cell RNA-seq** — scanpy + anndata canonical pipelines
+- **Generic imaging + flow cytometry** — wrappers for the standard tools
 
-## Use cases (real ones, not benchmarks)
+These aren't required to use vaultlab. They're there if your work touches them.
 
-These are the workflows vaultlab solves end-to-end:
-
-- **"I have a CODEX run. Get me to a labeled figure."** Ingest TIFF → segment with Cellpose → cluster → LLM-annotate → publication-tight spatial overlay → caption draft → KB note.
-- **"Draft me a Methods paragraph for the lung paper."** Reads project KB → drafts → verifies every citation semantically → flags any HALLUCINATED → produces a draft you edit, not write from scratch.
-- **"Find papers using GPR55 in intestinal epithelium."** Multi-source lit search (PubMed + bioRxiv + paperclip MCP) → smart query expansion → dedupe → re-rank → KB ingest of top 10 → citation-graph view.
-- **"Build me a journal-club deck on Smith et al. 2024."** `/paper-to-slides 10.1038/...` extracts figures from PDF → composes 12-slide deck → auto-drafts speaker notes → exports `.pptx`.
-- **"What's on my calendar this week + which manuscripts are due?"** Outlook reads upcoming meetings, Gmail reads journal deadlines, KB cross-references active manuscripts → integrated daily brief.
-
-See [`docs/use-cases.md`](docs/use-cases.md) for more (post-v0.1).
+---
 
 ## Architecture philosophy
 
-vaultlab is a **capability layer FOR Claude Code**, not a competing harness. Markdown is the user-facing interface; Python is the engine. Slash commands, role prompts, recipes, layouts, and skill definitions are all markdown files Claude Code can read at first repo open.
+vaultlab is a **capability layer FOR Claude Code**, not a competing harness. Markdown is the user-facing interface; Python is the engine. Slash commands, role prompts, recipes, layouts, and skill definitions are all markdown files Claude Code reads at first repo open.
 
-See [`docs/architecture.md`](docs/architecture.md) for the full spec.
+### Four core commitments
 
-### The four core commitments
+1. **Markdown is the interface; Python is the engine.**
+2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence.
+3. **Result-oriented.** You describe a goal; vaultlab plans + verifies + refines internally; you see the finished result.
+4. **KB is the smartness.** No vector DBs, no hidden state. Just markdown that grows with your work.
 
-1. **Markdown is the interface; Python is the engine.** Slash commands, role prompts, workflow descriptions are markdown.
-2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence. No surface-skim.
-3. **Result-oriented agentic loop.** User says *"draft methods"* → vaultlab plans + verifies + refines internally → returns finished result.
-4. **KB is the smartness.** Every analysis writes to KB; every analysis reads from it. The LLM gets smarter project-by-project.
+See [`docs/architecture.md`](docs/architecture.md), [`AGENTS.md`](AGENTS.md), and [`CLAUDE.md`](CLAUDE.md).
 
-## What's unique vs PaperQA / scanpy / FutureHouse / scverse / Aider
+---
 
-| | vaultlab | PaperQA2 | scanpy | FutureHouse | scverse | Aider |
-|---|---|---|---|---|---|---|
-| Wet-lab data analysis | ✓ | ✗ | ✓ | ✗ | ✓ | ✗ |
-| Literature + citation verification | ✓ | ✓ | ✗ | ✓ | ✗ | ✗ |
-| NotebookLM-style evidence retrieval | ✓ | partial | ✗ | ✗ | ✗ | ✗ |
-| Manuscript drafting | ✓ | ✗ | ✗ | partial | ✗ | ✗ |
-| **Slide deck output** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Calendar / inbox context** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Knowledge base (Obsidian)** | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Local-first | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| Companion mode (not autonomous) | ✓ | partial | n/a | ✗ | n/a | ✓ |
-| Claude-Code-native skill bundle | ✓ | ✗ | ✗ | ✗ | ✗ | partial |
+## What makes vaultlab different
 
-No tool does all of these. **vaultlab's value is the combination** — wet-lab analysis (scverse-grade) + literature verification (PaperQA-grade) + manuscript + slides + life-context (calendar/inbox/docs) wired through Claude Code.
+<!-- COMPARISON / POSITIONING GRAPHIC GOES HERE
+     Suggested: Venn diagram or capability matrix showing vaultlab vs PaperQA /
+     scanpy / FutureHouse / scverse / Aider. Highlight the unique combination.
+     File: assets/comparison.png
+-->
 
-If you only need one piece, those tools are great. If you want a research companion, vaultlab is the only OSS option.
+No tool combines literature verification + wet-lab data + manuscript drafting + slide output + life-context (calendar, inbox, work log) wired through Claude Code. If you want one piece, those tools are great; vaultlab is for the combination.
 
-See [`docs/comparison.md`](docs/comparison.md) for the full positioning analysis.
+See [`docs/comparison.md`](docs/comparison.md).
 
-## Demos
-
-| Demo | Dataset | Time |
-|---|---|---|
-| [`examples/pbmc3k`](examples/pbmc3k/) | 3k PBMCs (scRNA-seq) | 2 min — Hello World |
-| [`examples/visium_brain`](examples/visium_brain/) | 10x mouse brain Visium | 30 min — spatial transcriptomics |
-| [`examples/codex_hubmap_tonsil`](examples/codex_hubmap_tonsil/) | HuBMAP tonsil CODEX | 30 min — flagship spatial imaging |
+---
 
 ## Documentation
 
 **Setup:**
-- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + plugin walkthrough
-- [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature API keys
-- [`docs/setup-google.md`](docs/setup-google.md) — Google ecosystem (Docs, Sheets, Drive, Gmail, Calendar)
-- [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook COM (Windows-only)
+- [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + plugins
+- [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature APIs
+- [`docs/setup-google.md`](docs/setup-google.md) — Google Workspace OAuth
+- [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook (Windows)
 
 **Reference:**
 - [`docs/architecture.md`](docs/architecture.md) — full architectural spec
-- [`docs/use-cases.md`](docs/use-cases.md) — concrete examples of what vaultlab solves
 - [`docs/comparison.md`](docs/comparison.md) — vs other tools
+- [`AGENTS.md`](AGENTS.md) — invariants for code contributors
+- [`CLAUDE.md`](CLAUDE.md) — entrypoint for Claude Code sessions
+
+**Lineage & contributions:**
+- [`INSPIRATIONS.md`](INSPIRATIONS.md) — what we drew from where (auditable)
+- [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md) — what's original vs synthesis vs borrowed
 
 **Privacy & limits:**
 - [`docs/data-privacy.md`](docs/data-privacy.md) — what data leaves your machine
 - [`docs/compliance.md`](docs/compliance.md) — explicit non-HIPAA disclosure
-- [`docs/long-term-reproducibility.md`](docs/long-term-reproducibility.md) — model-version philosophy
+- [`docs/long-term-reproducibility.md`](docs/long-term-reproducibility.md)
 - [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) — honest failures
 
-**For contributors:**
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute
-- [`AGENTS.md`](AGENTS.md) — invariants and conventions
-- [`CLAUDE.md`](CLAUDE.md) — entrypoint for Claude Code sessions
-- [`INSPIRATIONS.md`](INSPIRATIONS.md) — what we drew from where (auditable lineage)
+**For contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+
+---
 
 ## Citation
 
-See [`CITATION.cff`](CITATION.cff). Once v0.1.0 ships, the preferred citation is:
-
 ```bibtex
 @software{ni_vaultlab_2026,
-  author = {Ni, Bobby Y.X.},
-  title  = {vaultlab: A research companion for biological scientists},
-  year   = 2026,
-  url    = {https://github.com/bobbyni819/vaultlab},
-  version= {0.1.0}
+  author  = {Ni, Bobby Y.X.},
+  title   = {vaultlab: A research companion for biological scientists},
+  year    = 2026,
+  url     = {https://github.com/bobbyni819/vaultlab},
+  version = {0.0.1}
 }
 ```
 
+See [`CITATION.cff`](CITATION.cff).
+
+---
+
 ## Privacy & compliance
 
-vaultlab uses Anthropic's Claude API. **Prompt content is sent to Anthropic.** vaultlab is **NOT HIPAA-compliant.** Do **NOT** use with PHI/PII/IRB-restricted data. See [`docs/data-privacy.md`](docs/data-privacy.md).
+vaultlab uses Anthropic's Claude API. Prompt content is sent to Anthropic. **Not HIPAA-compliant.** Do not use with PHI/PII/IRB-restricted data. See [`docs/data-privacy.md`](docs/data-privacy.md) and [`docs/compliance.md`](docs/compliance.md). You take full responsibility for compliance with your institutional, IRB, IACUC, and regulatory obligations.
 
-When you opt into Google or Outlook integration, vaultlab also reads:
-- Google Docs / Sheets / Drive content you authorize
-- Gmail messages matching your search criteria
-- Outlook calendar events + email subjects/bodies
+---
 
-This data may end up in prompts sent to Anthropic. **Do not enable Google/Outlook integration if your account contains PHI or institution-restricted data.** Each integration has its own scopes you can audit; see [`docs/data-privacy.md`](docs/data-privacy.md).
-
-By using vaultlab, you take full responsibility for compliance with your institutional, IRB, IACUC, and regulatory obligations.
-
-## Author
+## Author & license
 
 Bobby Y.X. Ni — Hickey Lab, Duke University Biomedical Engineering.
-
-## License
 
 [MIT](LICENSE) — anyone can use, modify, distribute, including commercial.
