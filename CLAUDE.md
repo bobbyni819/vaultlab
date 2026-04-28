@@ -115,6 +115,28 @@ tests/                              # pytest
 2. Fill in: ingest, qc, processing modules + sibling `.md` docs
 3. Add tests in `tests/test_vaultlab_data/`
 
+## Best-practice rules for Claude Code sessions on this repo
+
+These are non-obvious rules that prevent confusing failure modes. Follow them.
+
+### One KB per chat session
+
+Don't talk about multiple knowledge bases / projects in the same Claude Code chat. vaultlab's context retrieval scopes to the default KB; mixing causes the LLM to conflate findings from different projects.
+
+If a user wants to switch projects mid-chat, suggest opening a new chat. If they insist, use `vaultlab kb switch <name>` and announce the switch explicitly.
+
+### One project per `.vaultlab-project.json`
+
+Every research project gets its own config + KB folder. If a project has multiple manuscripts (main paper + methods companion), use the `manuscripts:` field in the config; do NOT create one config covering multiple projects.
+
+### Auto-update START_HERE on meaningful work
+
+After completing a meaningful task (rendering a figure, drafting a section, running an analysis pipeline), call `vaultlab.kb.start_here.update_start_here(slug, activity, files_to_read_next=...)` so the project's START_HERE.md stays current. Bobby never manually edits it.
+
+### Hedged voice is a feature, not a bug
+
+If you (Claude) catch yourself writing *"X is Y"* in scientific output, stop and rewrite as *"X is consistent with Y"* or *"data are compatible with Y"* (see AGENTS.md). Don't ship overclaimed conclusions.
+
 ## What to NOT do
 
 - Do **not** embed prompts as triple-quoted strings in Python (META PRINCIPLE #1)

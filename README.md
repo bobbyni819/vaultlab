@@ -141,6 +141,7 @@ See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what's currentl
 ## Documentation
 
 **Setup:**
+- ⭐ [`docs/getting-started.md`](docs/getting-started.md) — **start here** — first-10-minutes walkthrough + best practices for using vaultlab day-to-day
 - [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + plugins
 - [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — Anthropic + literature APIs
 - [`docs/setup-google.md`](docs/setup-google.md) — Google Workspace OAuth
