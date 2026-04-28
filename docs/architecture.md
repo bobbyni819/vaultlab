@@ -1,7 +1,7 @@
 # vaultlab architecture
 
 > **Status:** stub. The canonical architectural reference is the master plan at
-> `G:/My Drive/Knowledge/ailab/Sources/Notes/architecture-grill-2026-04-26/99-MASTER-PLAN-vaultlab-shared-design.md`.
+> `G:/My Drive/Knowledge/vaultlab/Sources/Notes/architecture-grill-2026-04-26/99-MASTER-PLAN-vaultlab-shared-design.md` (KB folder renamed from `ailab` on 2026-04-28).
 > This file will be populated in a migration commit with the public-facing version.
 
 For now, see:

@@ -136,7 +136,7 @@ pytest -m "not llm"                         # skip tests that hit a real LLM API
 
 ## Architecture grill (design history)
 
-The full design rationale lives at `G:/My Drive/Knowledge/ailab/Sources/Notes/architecture-grill-2026-04-26/`. The master plan is `99-MASTER-PLAN-vaultlab-shared-design.md`. Read these only when wanting to understand WHY a decision was made; for normal coding, this CLAUDE.md + AGENTS.md is enough.
+The full design rationale lives at `G:/My Drive/Knowledge/vaultlab/Sources/Notes/architecture-grill-2026-04-26/` (KB renamed from `ailab` on 2026-04-28). The master plan is `99-MASTER-PLAN-vaultlab-shared-design.md`. Read these only when wanting to understand WHY a decision was made; for normal coding, this CLAUDE.md + AGENTS.md is enough.
 
 ## When in doubt
 
