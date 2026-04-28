@@ -22,14 +22,59 @@
 
 ---
 
-## ⭐ Why vaultlab
+## ⭐ Things vaultlab does that nobody else does
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+### 🎤 **Records your meetings**
+
+Auto-transcribes via Whisper (local GPU or cloud), ingests into your KB. *"What did John say about cluster 7 last Tuesday?"* becomes a question vaultlab can answer.
+
+</td>
+<td width="33%" align="center">
+
+### 📥 **Reads your inbox + calendar**
+
+Outlook (Windows) or Gmail (any OS). vaultlab knows what's pressing this week without you having to tell it. *"Brief me on this morning."*
+
+</td>
+<td width="33%" align="center">
+
+### 🧠 **Centralized memory across your whole lab**
+
+Add a teammate to your shared Drive folder; they have the full project context. No more *"let me catch you up."*
+
+</td>
+</tr>
+<tr>
+<td width="33%" align="center">
+
+### 📄 **NotebookLM-style citations**
+
+Hover over any `[3]` in a draft → see the exact passage from the source paper. Hallucinated citations get flagged automatically; vaultlab refuses to ship if any unresolved.
+
+</td>
+<td width="33%" align="center">
+
+### 📊 **Figures with provenance**
+
+Every figure recipe cites ≥3 published examples. *"Why did you pick this visualization?"* — vaultlab can answer with DOIs.
+
+</td>
+<td width="33%" align="center">
+
+### 🎤 **From paper to journal-club deck in 90 seconds**
+
+`/paper-to-slides 10.1038/...` extracts figures, composes 12 slides with auto-generated speaker notes, exports `.pptx`. The flagship demo.
+
+</td>
+</tr>
+</table>
 
 > [!IMPORTANT]
-> **vaultlab is a research companion you customize, build upon, and direct.**
->
-> Take the agent **as far as you want** — quick assist for one question, or autonomous deep-dive across your entire lab. *Other tools force a single mode; vaultlab adapts to the depth your work needs.*
->
-> **No other open-source tool** integrates wet-lab analysis + literature verification + figure recipes + manuscript drafting + slide decks + life-context (calendar, inbox, work log, meeting transcripts) into one Claude Code-readable companion.
+> **vaultlab is a companion you customize, build upon, and direct.** Take the agent as far as you want — quick assist or full lab-wide deep-dive. *Other tools force a single mode; vaultlab adapts to the depth your work needs.*
 
 ---
 

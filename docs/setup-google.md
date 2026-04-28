@@ -121,8 +121,8 @@ print(read_today_entries()[-3:])     # last 3 entries from your lab work log
 
 You can use any of:
 
-- **Personal Gmail account** (e.g., `bobbyni819@gmail.com`) — for non-research personal work logs, hobby projects
-- **Institutional account** (e.g., `bobby.ni@duke.edu`) — for research that should live in your work account
+- **Personal Gmail account** — for non-research personal work logs, hobby projects
+- **Institutional account** (e.g., `you@your-university.edu`) — for research that should live in your work account
 
 **Important:** if you choose your institutional account, your IT department / IRB may have policies about what scopes you can grant to a third-party app. Check before proceeding for any account that contains PHI or IRB-restricted data.
 

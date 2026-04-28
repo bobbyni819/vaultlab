@@ -63,10 +63,10 @@ If everything works, you'll see:
 
 ```
 ✓ Outlook Classic detected (version 16.x)
-✓ Signed in as bobby.ni@duke.edu
+✓ Signed in as you@your-institution.edu
 ✓ Read access: 12 unread / 4321 total in inbox
 ✓ Calendar access: 3 events today
-✓ Saved config to C:\Users\bobby\.config\vaultlab\outlook\config.json
+✓ Saved config to ~/.config/vaultlab/outlook/config.json
 ```
 
 ## Step 5: Verify it works

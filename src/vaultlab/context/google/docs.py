@@ -13,7 +13,9 @@ Text supports simple markdown:
 Usage:
     from vaultlab.context.google.docs import append_to_today, read_today_entries
 
-    DOC_ID = "1X6i1TJ7Ed1NrVBTp3o9aSR37hUuwfMszwr1GAv5qenY"
+    # Set DOC_ID to your own work-log Google Doc.
+    # Find it in the URL: docs.google.com/document/d/<DOC_ID>/edit
+    DOC_ID = "<your-google-doc-id>"
     append_to_today(DOC_ID, "Fixed **segmentation bug** in *pipeline*",
                     tab_name="daily updates")
 
