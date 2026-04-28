@@ -6,13 +6,15 @@ This walks you from `git clone` to *"vaultlab knows about my project and I can a
 
 You need:
 - **Python 3.12+** (`python --version`)
-- **An Anthropic API key** ([get one](https://console.anthropic.com)) — vaultlab uses Claude for the LLM-driven steps
+- **[Claude Code](https://claude.com/claude-code)** — vaultlab is Claude-Code-native. Your Claude Code subscription provides the LLM access; vaultlab does **not** need a separate Anthropic API key.
 - **(Optional, recommended) Obsidian** ([download](https://obsidian.md)) — vaultlab's KB renders beautifully here
 - **(Optional) A Google account or Microsoft 365 account** — for life-context integrations
+- **(Optional) Literature API keys** ([setup-api-keys.md](setup-api-keys.md)) — most importantly NCBI (free, 5 min); others are progressively nice-to-have
 
 You do **not** need:
+- An Anthropic API key (Claude Code provides LLM access)
 - A GPU (unless you opt into local meeting transcription)
-- A subscription to anything
+- A subscription to anything beyond Claude Code itself
 - Prior experience with Claude Code (vaultlab is a great way to learn it)
 
 ## Step 1: Clone + install (2 minutes)

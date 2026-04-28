@@ -162,7 +162,7 @@ Removes the existing token + prompts for a new account.
 After Google integration is verified:
 
 1. **Set up Obsidian** — see [`docs/setup-obsidian.md`](setup-obsidian.md). vaultlab's KB lives as markdown in an Obsidian vault. You can use vaultlab without Obsidian (just plain markdown), but the GUI is recommended.
-2. **Set up Anthropic API key** — see [`docs/setup-api-keys.md`](setup-api-keys.md). Required for the LLM-driven steps (cluster annotation, citation verification, manuscript drafting). Anthropic has a free tier; vaultlab usage runs ~$1-5 per pipeline run.
+2. **Set up literature API keys** — see [`docs/setup-api-keys.md`](setup-api-keys.md). NCBI is free + 5 minutes; others (Semantic Scholar, Springer, Elsevier) are progressively nice-to-have. **You do NOT need an Anthropic API key** — vaultlab uses Claude Code for LLM access, which has its own auth.
 3. **(Windows only)** Set up Outlook integration if your institutional email is Outlook — see [`docs/setup-outlook-windows.md`](setup-outlook-windows.md).
 4. **Onboard your first project:**
    ```
