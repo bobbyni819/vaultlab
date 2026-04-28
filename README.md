@@ -67,7 +67,28 @@ Claude Code reads the docs, then **interviews you about your work**, sets up you
 
 ---
 
-## Four pillars (v0.1.0 target — May 2026)
+## The big idea — a centralized memory for your research
+
+The most underrated thing vaultlab does: it ties **every fragmented source of context about your work into one place** the LLM can read. The result is a research companion that actually knows what's going on, not a generic chatbot you have to re-explain things to every session.
+
+| Source | What's captured | How |
+|---|---|---|
+| **Knowledge base** (Obsidian-native, plain markdown) | Papers, notes, summaries, findings, concepts, manuscripts, figures | Every analysis writes; every analysis reads |
+| **Google Workspace** | Your lab work log (Docs), sample manifests (Sheets), shared files (Drive), pressing emails (Gmail), today's schedule (Calendar) | OAuth, opt-in per scope |
+| **Outlook** (Windows) | Inbox + calendar + tasks + drafts with your signature | COM automation, no proxy |
+| **Meeting transcripts** (Windows, opt-in) | Full audio + transcript of every recorded meeting | meeting_recorder + Whisper local/cloud |
+| **Local filesystem** | Anything Claude Code can read | You just point at the folder |
+| **Project state** | Current focus, recent activity, files-to-read-first | Auto-maintained `START_HERE.md` per project |
+
+**Three implications worth calling out:**
+
+1. **Onboarding scales by sharing.** Add a lab member to your Google Drive shared folder + your KB folder, and they instantly have the entire project context. No more "let me catch you up" — the catchup is a `Read(START_HERE.md)`.
+2. **Nothing is lost.** Recorded meetings + ingested papers + auto-written analysis notes + verified citations all land in the KB with rich frontmatter. The information you need is always *somewhere queryable*, not in the bottom of a Slack thread or the back of someone's notebook.
+3. **The system gets smarter as you use it.** Cross-project insights emerge: *"You saw a similar exhausted-T-cell phenotype in the 2026-03 tonsil run."* The KB grows; retrieval over the growing markdown corpus is the differentiator.
+
+---
+
+## Four pillars on top of that memory (v0.1.0 target — May 2026)
 
 > **Heads-up:** v0.0.1 (current) is a scaffold with structure in place. The capabilities below land progressively in v0.1.0. See [Roadmap](#roadmap) for what works now vs what's coming.
 
@@ -77,19 +98,26 @@ Claude Code reads the docs, then **interviews you about your work**, sets up you
      File: assets/capability-grid.png
 -->
 
-| | |
+| Pillar | What it does |
 |---|---|
-| 📄 | **Literature & citations** — search across PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP. Verify every `[N]` semantically against the source passage; flag hallucinations. |
-| 🧬 | **Data analysis** — wraps scanpy / squidpy / scikit-image / Cellpose. Runs the analysis you ask for, hedges on interpretation, never invents results. |
-| 📊 | **Figures** — corpus-backed recipes (every recipe cites ≥3 published examples). Publication-tight by default, presentation-loose on demand. |
-| ✍️ | **Manuscripts & slides** — drafts methods/results sections with verified citations. Builds slide decks from research outputs (the flagship). |
+| 📄 **Literature & citations** | Search across the literature sources you have API access to (PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, paperclip MCP — configure what's available in your `secrets.toml`). Verify every `[N]` semantically against the source passage; flag hallucinations. |
+| 🧬 **Data analysis** | Wraps mature Python tools (scanpy, squidpy, scikit-image, Cellpose for spatial / single-cell / imaging; scipy.stats, statsmodels, pingouin for general inference). Ships a curated **tools index** so the LLM knows when to use which package — no raw web searches at runtime. Hedges on interpretation, never invents results. |
+| 📊 **Figures** | Corpus-backed recipes (every recipe cites ≥3 published examples). Publication-tight by default, presentation-loose on demand. |
+| ✍️ **Manuscripts & slides** | Drafts methods/results sections with verified citations. Builds slide decks from research outputs (the flagship). |
 
-Plus context pipes that make it a *companion*:
-- **Knowledge base** (Obsidian-native) — every analysis writes; every analysis reads
-- **Google Workspace** — your lab work log, project sheets, recent emails, calendar
-- **Outlook** (Windows) — your inbox + calendar + tasks
-- **Meeting transcripts** (Windows, opt-in) — record meetings, auto-transcribe, ingest into KB so the companion knows what was said in last Tuesday's lab meeting
-- **Project onboarding** — point vaultlab at a new project folder; it reads the structure, builds an understanding, asks clarifying questions, and maintains a `START_HERE.md` so future sessions know exactly where to resume
+The pillars all read from + write to the centralized memory above. *That's* what makes vaultlab a companion: the pillars know what you've already done.
+
+---
+
+## Project onboarding (how a new researcher gets up to speed)
+
+Point vaultlab at a new project folder; it reads the structure, builds an understanding, asks clarifying questions, and initializes a `START_HERE.md` that future sessions read first to resume in 30 seconds:
+
+```
+> /onboard-project ~/Downloads/my_research_project
+```
+
+See [`docs/getting-started.md`](docs/getting-started.md) for the full workflow.
 
 ---
 
