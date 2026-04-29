@@ -211,11 +211,24 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 
 ---
 
-## Acknowledgments
+## Methodological lineage
 
-VaultLab is built on the shoulders of many open-source projects. Foundational influences include [virtual-lab](https://github.com/zou-group/virtual-lab) (multi-agent meeting structure), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (autonomous research patterns), [paperclip](https://github.com/GXL-ai/paperclip) (literature MCP), [gstack](https://github.com/garrytan/gstack) (Claude Code skill bundle philosophy + AGENTS.md framing), [scanpy/squidpy](https://github.com/scverse) (canonical bioinformatics analysis), [Cellpose](https://github.com/MouseLand/cellpose), [Schürch et al. 2020](https://doi.org/10.1016/j.cell.2020.07.005) (cellular neighborhoods), and [Karpathy's nanoGPT](https://github.com/karpathy/nanoGPT) (fork-and-clone primary distribution philosophy).
+VaultLab is alpha software — no published paper has been written using it yet. **The credibility comes from what it draws on.** Patterns are deliberately lifted from established, peer-reviewed, or widely-used open-source projects, then adapted into a Claude-Code-native harness:
 
-Full attribution + lineage: [`INSPIRATIONS.md`](INSPIRATIONS.md). What's uniquely VaultLab vs synthesis vs borrowed: [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md).
+| What VaultLab does | Pattern source |
+|---|---|
+| Multi-agent meeting structure (adversarial vs round-table) | [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) |
+| Bounded plan→execute→verify→refine loop | [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) |
+| Literature MCP + cross-source dedup | [paperclip](https://github.com/GXL-ai/paperclip) |
+| Claude Code skill bundle organization + AGENTS.md framing | [gstack](https://github.com/garrytan/gstack) |
+| Canonical scRNA-seq / spatial pipelines | [scanpy + squidpy](https://github.com/scverse) (scverse community, peer-reviewed in *Nat. Methods*) |
+| Cell segmentation primitives | [Cellpose](https://github.com/MouseLand/cellpose) (Stringer & Pachitariu, *Nat. Methods* 2021) |
+| Cellular neighborhood detection | [Schürch et al. 2020, *Cell*](https://doi.org/10.1016/j.cell.2020.07.005) |
+| Fork-and-clone primary distribution | [nanoGPT](https://github.com/karpathy/nanoGPT) (Karpathy) |
+
+Each row represents a method or interface design choice that I read, understood, and adapted — not invented from scratch. The implementations are mine, but the patterns have track records elsewhere.
+
+Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). What's specifically novel to VaultLab vs. synthesis vs. directly borrowed: [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md).
 
 VaultLab is developed by a member of the Hickey Lab at Duke University Biomedical Engineering.
 
