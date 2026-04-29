@@ -24,30 +24,33 @@ Obsidian creates a `.obsidian/` config folder inside the vault. That's normal an
 
 You should now see a sidebar with `Sources/`, `Wiki/`, `Output/`, and your `_Index.md` + `_Catalog.md` files.
 
-## Step 3: Install the recommended plugins
+## Step 3: Initialize the vault config
 
-vaultlab works best with three Obsidian plugins. Install them via Settings → Community plugins.
+```python
+from vaultlab.kb.obsidian import init_vault, configure_plugins, write_templates
+
+init_vault("/path/to/your/kb")              # writes .obsidian/ defaults
+configure_plugins("/path/to/your/kb")        # pre-lists recommended plugins so they auto-enable on install
+write_templates("/path/to/your/kb")          # installs note templates into .templates/
+```
+
+This is idempotent — safe to re-run. It writes config + lists plugins as enabled, but **does not** download community-plugin code (Obsidian doesn't allow programmatic plugin install).
+
+## Step 4: Install the recommended community plugins
+
+vaultlab works best with three Obsidian plugins. After running `configure_plugins()` they are pre-listed in `.obsidian/community-plugins.json` and will auto-enable on install.
 
 | Plugin | What it does | Required? |
 |---|---|---|
-| **Advanced URI** | Lets `vaultlab kb open <path>` open files in new Obsidian tabs (rather than replacing the current tab). | Recommended |
-| **Dataview** | Lets you write queries against your KB frontmatter — e.g., *"show me all Findings with status=verified."* | Recommended |
-| **Templater** | Lets vaultlab-generated note templates auto-fill frontmatter. | Optional |
+| **Advanced URI** (`obsidian-advanced-uri`) | Lets `vaultlab kb open <path>` open files in new Obsidian tabs. Without it, `bobby-kb open` falls back to current-pane behavior. | Recommended |
+| **Dataview** (`dataview`) | Queryable wikilink graph — `_Index.md` and `_Catalog.md` use Dataview blocks. | Recommended |
+| **Templater** (`templater-obsidian`) | Powers the date stamps + slug helpers in vaultlab's note templates. | Recommended |
 
 To install each:
 
 1. Settings → Community plugins → Turn on community plugins (Obsidian asks once; click "Turn on")
 2. Click "Browse"
 3. Search for the plugin name → Install → Enable
-
-(Once `vaultlab kb init` lands in v0.1.0, this happens automatically.)
-
-## Step 4: (Optional) Set up new-tab behavior
-
-By default, Obsidian opens links in the current tab. For research workflows, opening in new tabs is much friendlier. After installing the Advanced URI plugin:
-
-1. Settings → Community plugins → Advanced URI → toggle on
-2. Now `vaultlab kb open <path>` opens files in new tabs
 
 ## Step 5: Verify with vaultlab
 
@@ -106,5 +109,5 @@ vaultlab's `vaultlab kb switch <name>` updates which vault is the default for sl
 ## See also
 
 - [`getting-started.md`](getting-started.md) — first 10 minutes with vaultlab
-- [`vaultlab.kb.obsidian` API reference](../src/vaultlab/kb/obsidian.md) — the Python integration
+- [`vaultlab.kb.obsidian` API reference](../src/vaultlab/kb/obsidian/README.md) — the Python integration
 - [Obsidian docs](https://help.obsidian.md/Home) — official documentation
