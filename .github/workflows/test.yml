@@ -39,5 +39,5 @@ jobs:
         run: mypy src/vaultlab
         continue-on-error: true  # remove once strict mypy is clean
 
-      - name: Run tests (skip LLM-hitting tests in CI)
-        run: pytest -m "not llm" --tb=short
+      - name: Run tests (skip LLM-hitting + matplotlib-requiring tests in CI)
+        run: pytest -m "not llm and not slow" --tb=short
