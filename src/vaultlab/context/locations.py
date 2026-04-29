@@ -44,14 +44,9 @@ Schema (informal — TOML sections)
 from __future__ import annotations
 
 import os
-import sys
+import tomllib
 from pathlib import Path
 from typing import Any
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:  # pragma: no cover - fallback for Python <3.11; vaultlab requires 3.12+
-    import tomli as tomllib  # type: ignore[no-redef]
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +280,7 @@ def _toml_value(value: Any) -> str:
         return f'"{escaped}"'
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return str(value)
     raise TypeError(f"Unsupported TOML value type: {type(value).__name__}")
 
