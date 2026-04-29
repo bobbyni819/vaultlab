@@ -405,27 +405,40 @@ def _add_annotations(
             img_h_in,
         )
 
-        # 1. Bounding-box rectangle (transparent fill, colored outline)
-        box = s.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE,
-            Inches(x_in),
-            Inches(y_in),
-            Inches(w_in),
-            Inches(h_in),
-        )
-        box.name = f"ann{orig_idx + 1}_box"
-        box.fill.background()  # transparent
-        box.line.color.rgb = RGBColor(*color)
-        box.line.width = Pt(2.5)
-        # No text in the bbox shape itself
-        box.text_frame.text = ""
+        # 1. Bounding-box rectangle (skip if ann.use_box=False per Bobby
+        # 2026-04-29 flexibility ask: small / narrow elements can use just
+        # a marker pointing at them).
+        if ann.use_box:
+            box = s.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(x_in),
+                Inches(y_in),
+                Inches(w_in),
+                Inches(h_in),
+            )
+            box.name = f"ann{orig_idx + 1}_box"
+            box.fill.background()
+            box.line.color.rgb = RGBColor(*color)
+            box.line.width = Pt(2.5)
+            box.text_frame.text = ""
 
-        # 2. Numbered marker - top-left corner of the box
+        # 2. Numbered marker - default top-left, but ann.marker_offset_px
+        # can shift it to nearby whitespace to avoid collisions with other
+        # markers or to clear important figure content underneath.
         marker_size = layout.marker_size_in
+        if ann.marker_offset_px is not None:
+            dx_px, dy_px = ann.marker_offset_px
+            sx = img_w_in / src_w
+            sy = img_h_in / src_h
+            marker_x_in = x_in + dx_px * sx
+            marker_y_in = y_in + dy_px * sy
+        else:
+            marker_x_in = x_in
+            marker_y_in = max(0.05, y_in - marker_size - 0.02)
         marker = s.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(x_in),
-            Inches(max(0.05, y_in - marker_size - 0.02)),
+            Inches(marker_x_in),
+            Inches(marker_y_in),
             Inches(marker_size),
             Inches(marker_size),
         )

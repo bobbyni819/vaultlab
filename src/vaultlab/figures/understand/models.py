@@ -28,6 +28,18 @@ class ElementAnnotation:
         Coarse 0.0-1.0 confidence; larger regions on rare motifs score higher.
         Currently a placeholder; future: combine area-fraction + motif-rarity
         + LLM verification verdict.
+    use_box
+        Whether to draw a bounding-box outline around the element. Default True.
+        Set False when the element is small/narrow enough that just a numbered
+        marker pointing at it is cleaner (e.g., a thin band that a box would
+        awkwardly wrap around). Bobby 2026-04-29 flexibility ask.
+    marker_offset_px
+        Optional (dx, dy) pixel offset for the marker position relative to the
+        box's top-left corner. Default None = standard top-left placement.
+        Used to avoid marker collisions when multiple annotations are clustered;
+        place markers in nearby whitespace instead of all stacking on top.
+        Coordinates are SOURCE PIXELS (not inches) to keep the API consistent
+        with bbox_px.
     """
 
     label: str
@@ -35,6 +47,8 @@ class ElementAnnotation:
     explanation: str = ""
     motif_name: str = ""
     confidence: float = 0.0
+    use_box: bool = True
+    marker_offset_px: tuple[int, int] | None = None
 
 
 __all__ = ["ElementAnnotation"]

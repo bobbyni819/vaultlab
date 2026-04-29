@@ -27,67 +27,87 @@ from pptx.util import Inches, Pt
 from vaultlab.figures.understand import ElementAnnotation
 from vaultlab.slides.annotated_figure_slide import add_annotated_figure_slide
 
-
 # ---------------------------------------------------------------------------
 # Image1 annotations - 9 elements (lifted from v3 script with corrections)
 # ---------------------------------------------------------------------------
 
 IMAGE1 = Path(r"C:\tmp\cart_figs_v13\image1.png")
 
+# Per-annotation marker offsets chosen to avoid overlaps + place markers in
+# whitespace, NOT on top of motifs. Bobby's 2026-04-29 feedback: be flexible.
+# Some annotations also drop the box (use_box=False) when a tight marker
+# pointer is cleaner than wrapping the element in a rectangle.
+
 IMAGE1_ANNOTATIONS = [
+    # #1 - Endogenous TCR panel a (left edge of panel; whitespace to the left)
     ElementAnnotation(
         label="Endogenous TCR (panel a, competing)",
         bbox_px=(295, 1827, 419, 2094),
         motif_name="endo-tcr",
-        explanation="",
+        marker_offset_px=(-180, -50),  # to the left in whitespace
     ),
+    # #2 - Introduced TCR panel a (move marker right of the box, into the
+    # 'Introduced TCR' label whitespace area, so it doesn't overlap MHC #3 above)
     ElementAnnotation(
         label="Introduced TCR (panel a)",
         bbox_px=(998, 1853, 1192, 2188),
         motif_name="intro-tcr",
-        explanation="",
+        marker_offset_px=(220, 200),  # right of box, mid-height
     ),
+    # #3 - MHC Class I (top of receptor stack; place marker UP and LEFT to clear
+    # the introduced-TCR region below)
     ElementAnnotation(
         label="MHC Class I (panel a)",
         bbox_px=(1072, 1666, 1185, 1848),
         motif_name="mhc",
-        explanation="",
+        marker_offset_px=(-220, -150),
     ),
+    # #4 - CD3 chains (right of introduced TCR; place marker BELOW the box, in
+    # the membrane area)
     ElementAnnotation(
         label="CD3 chains (panel a)",
         bbox_px=(1206, 2100, 1261, 2392),
         motif_name="cd3",
-        explanation="",
+        marker_offset_px=(150, 320),  # below + slightly right
     ),
+    # #5 - TAA panel b (narrow horizontal band; box is awkward, skip box and
+    # use a marker pointing at it from the LEFT in panel-b whitespace)
     ElementAnnotation(
-        label="TAA (aberrantly expressed protein, panel b)",
+        label="TAA / aberrantly expressed (panel b)",
         bbox_px=(2627, 1820, 2770, 1900),
         motif_name="taa",
-        explanation="",
+        use_box=False,
+        marker_offset_px=(-280, -200),  # well left and above
     ),
+    # #6 - Endogenous TCR panel b (move marker LEFT into whitespace, below
+    # where #5's marker is)
     ElementAnnotation(
-        label="Endogenous TCR (panel b, primary receptor)",
+        label="Endogenous TCR (panel b, primary)",
         bbox_px=(2728, 1857, 3309, 2124),
         motif_name="endo-tcr",
-        explanation="",
+        marker_offset_px=(-300, 200),  # left of box, mid-height
     ),
+    # #7 - scFv panel c (tall narrow column; default top-left works since
+    # the area above scFv is whitespace between tumor cell and the construct)
     ElementAnnotation(
         label="scFv / antigen recognition (panel c)",
         bbox_px=(4558, 1837, 4715, 2430),
         motif_name="endo-tcr",
-        explanation="",
+        marker_offset_px=(-280, 150),  # left of box
     ),
+    # #8 - Co-stim panel c (move marker LEFT to clear the construct stack)
     ElementAnnotation(
-        label="Co-stim domain (panel c)",
+        label="Co-stim domain (panel c, intracellular)",
         bbox_px=(4558, 2436, 4614, 2589),
         motif_name="intro-tcr",
-        explanation="",
+        marker_offset_px=(-280, 0),
     ),
+    # #9 - CD3-zeta panel c (move marker LEFT, separated vertically from #8)
     ElementAnnotation(
         label="CD3-zeta activation (panel c)",
         bbox_px=(4558, 2624, 4620, 2746),
         motif_name="cd3",
-        explanation="",
+        marker_offset_px=(-280, 50),
     ),
 ]
 
@@ -285,7 +305,7 @@ def main() -> None:
         current_section_idx=2,  # "TME challenges"
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v2.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v3.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 
