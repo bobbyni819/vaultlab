@@ -1,10 +1,10 @@
 name: Tests
 
+# Manual-only trigger to conserve GitHub Actions minutes during the alpha
+# build sprint. Bobby 2026-04-29: 90% of 2000 free minutes consumed.
+# To re-enable auto-runs once the rapid iteration slows down, restore the
+# `push:` and `pull_request:` blocks.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -13,8 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.12", "3.13"]
+        # Reduced matrix - was 3 OS x 2 Python = 6 runners per push.
+        # Manual runs use ubuntu only; full matrix available on workflow_dispatch
+        # with input override (enable below if needed).
+        os: [ubuntu-latest]
+        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v4

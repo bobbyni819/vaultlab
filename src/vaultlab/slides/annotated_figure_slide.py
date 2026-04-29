@@ -52,28 +52,68 @@ from vaultlab.figures.understand.models import ElementAnnotation
 class SlideLayout:
     """Geometry + sizing for one annotated-figure slide.
 
-    Tuned per Bobby 2026-04-29 v3 review: bigger figure area, smaller markers
-    + side labels, gutter pushed further right, footer-banner allowance at bottom.
+    Tuned per Bobby 2026-04-29 v3 / v4 review feedback.
     """
 
     slide_w_in: float = 13.333
     slide_h_in: float = 7.5
     title_h_in: float = 0.85
     caption_h_in: float = 0.55
-    footer_h_in: float = 0.40  # page number + section banner
+    footer_h_in: float = 0.40
     figure_area_x_in: float = 0.20
-    figure_area_w_in: float = 10.20  # bumped from 9.0 - more room for the figure
-    gutter_x_in: float = 10.55  # pushed right of the wider figure
-    gutter_w_in: float = 2.65  # narrower side panel
-    marker_size_in: float = 0.24  # smaller markers (Bobby: too big in v1)
+    figure_area_w_in: float = 10.20
+    gutter_x_in: float = 10.55
+    gutter_w_in: float = 2.65
+    marker_size_in: float = 0.24
     marker_font_pt: int = 11
-    label_font_pt: int = 11  # smaller side-label text
-    title_font_pt: int = 26  # bumped from 22 (Bobby Q4 - my call)
+    label_font_pt: int = 11
+    title_font_pt: int = 26
     caption_font_pt: int = 12
     footer_font_pt: int = 9
+    # Theme variant: "light" (white bg, dark text) or "dark" (dark bg, light text)
+    theme_variant: str = "light"
+    # Per Bobby's Hickey-template-logo-zones memory: when using Hickey Lab masters,
+    # the section banner must shrink to avoid the bottom-flanking lab + Duke logos.
+    banner_left_margin_in: float = 0.4
+    banner_right_margin_in: float = 1.1   # leaves room for page number
 
 
 DEFAULT = SlideLayout()
+
+
+HICKEY_LAB_LAYOUT = SlideLayout(
+    theme_variant="dark",
+    banner_left_margin_in=1.2,            # avoid Hickey lab logo
+    banner_right_margin_in=1.4,            # avoid Duke logo
+)
+
+
+# Theme-aware text-color helpers
+def text_color_for_bg(bg_rgb: tuple[int, int, int]) -> tuple[int, int, int]:
+    """Return readable text color (white or near-black) for a given background.
+
+    Per Bobby 2026-04-29 v4 review + theme-aware-font-color memory.
+    """
+    r, g, b = bg_rgb
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return (240, 240, 240) if luminance < 130 else (30, 30, 30)
+
+
+def text_color_for_theme(variant: str) -> tuple[int, int, int]:
+    """Quick text color lookup by theme variant ('dark' or 'light')."""
+    if variant == "dark":
+        return (240, 240, 240)
+    return (30, 30, 30)
+
+
+def muted_text_color_for_theme(variant: str) -> tuple[int, int, int]:
+    """Muted secondary text color (footer, inactive section pills)."""
+    return (180, 185, 195) if variant == "dark" else (110, 115, 125)
+
+
+def card_fill_for_theme(variant: str) -> tuple[int, int, int]:
+    """Background fill for inactive section pills."""
+    return (50, 55, 65) if variant == "dark" else (245, 246, 248)
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +316,7 @@ def _add_title(s, title: str, layout: SlideLayout) -> None:
     run.font.name = "Arial"
     run.font.size = Pt(layout.title_font_pt)
     run.font.bold = True
-    run.font.color.rgb = RGBColor(20, 20, 20)
+    run.font.color.rgb = RGBColor(*text_color_for_theme(layout.theme_variant))
 
 
 def _add_caption(s, caption: str, layout: SlideLayout) -> None:
@@ -297,7 +337,7 @@ def _add_caption(s, caption: str, layout: SlideLayout) -> None:
     run.font.name = "Arial"
     run.font.size = Pt(layout.caption_font_pt)
     run.font.italic = True
-    run.font.color.rgb = RGBColor(70, 70, 70)
+    run.font.color.rgb = RGBColor(*muted_text_color_for_theme(layout.theme_variant))
 
 
 def _add_page_number(s, page_number: int, layout: SlideLayout) -> None:
@@ -319,7 +359,7 @@ def _add_page_number(s, page_number: int, layout: SlideLayout) -> None:
     run.text = str(page_number)
     run.font.name = "Arial"
     run.font.size = Pt(layout.footer_font_pt)
-    run.font.color.rgb = RGBColor(120, 120, 120)
+    run.font.color.rgb = RGBColor(*muted_text_color_for_theme(layout.theme_variant))
 
 
 def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLayout) -> None:
@@ -338,17 +378,17 @@ def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLa
     if n == 0:
         return
 
-    margin = 0.4
-    page_number_reserve = 0.7
+    left_margin = layout.banner_left_margin_in
+    right_margin = layout.banner_right_margin_in
     gap_in = 0.10
-    avail = layout.slide_w_in - 2 * margin - page_number_reserve
+    avail = layout.slide_w_in - left_margin - right_margin
     total_gap = gap_in * (n - 1)
     rect_w = (avail - total_gap) / max(n, 1)
     rect_h = 0.32
     rect_y = layout.slide_h_in - layout.footer_h_in + 0.04
 
     for i, name in enumerate(sections):
-        x = margin + i * (rect_w + gap_in)
+        x = left_margin + i * (rect_w + gap_in)
         rect = s.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(x),
@@ -368,8 +408,8 @@ def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLa
             rect.fill.fore_color.rgb = RGBColor(0, 102, 204)  # cobalt active
             text_color = RGBColor(255, 255, 255)
         else:
-            rect.fill.fore_color.rgb = RGBColor(245, 246, 248)  # off-white card
-            text_color = RGBColor(110, 115, 125)  # muted slate
+            rect.fill.fore_color.rgb = RGBColor(*card_fill_for_theme(layout.theme_variant))
+            text_color = RGBColor(*muted_text_color_for_theme(layout.theme_variant))
         rect.line.fill.background()  # no border
 
         tf = rect.text_frame

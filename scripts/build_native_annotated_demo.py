@@ -25,12 +25,49 @@ from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
 from vaultlab.figures.understand import ElementAnnotation
-from vaultlab.slides.annotated_figure_slide import add_annotated_figure_slide
+from vaultlab.figures.understand.whitespace import find_marker_offset
+from vaultlab.slides.annotated_figure_slide import (
+    HICKEY_LAB_LAYOUT,
+    add_annotated_figure_slide,
+)
 from vaultlab.slides.notes import dual_format
 from vaultlab.slides.themes.hickey_lab import (
     hickey_lab_template_path,
     load_hickey_lab_presentation,
 )
+
+
+def auto_offset_annotations(
+    image_path: Path,
+    annotations: list[ElementAnnotation],
+) -> list[ElementAnnotation]:
+    """Run the whitespace finder over annotations and update marker_offset_px.
+
+    Per Bobby 2026-04-29 figure-annotation decision tree: don't guess marker
+    placement; programmatically pick a nearby whitespace zone.
+    """
+    placed_marker_bboxes: list[tuple[int, int, int, int]] = []
+    out: list[ElementAnnotation] = []
+    for ann in annotations:
+        offset = find_marker_offset(
+            image_path,
+            ann.bbox_px,
+            avoid_other_bboxes=tuple(placed_marker_bboxes),
+        )
+        new_ann = ElementAnnotation(
+            label=ann.label,
+            bbox_px=ann.bbox_px,
+            explanation=ann.explanation,
+            motif_name=ann.motif_name,
+            confidence=ann.confidence,
+            use_box=ann.use_box,
+            marker_offset_px=offset,
+        )
+        out.append(new_ann)
+        if offset is not None:
+            x0, y0 = ann.bbox_px[0] + offset[0], ann.bbox_px[1] + offset[1]
+            placed_marker_bboxes.append((x0, y0, x0 + 120, y0 + 120))
+    return out
 
 # ---------------------------------------------------------------------------
 # Image1 annotations - 9 elements (lifted from v3 script with corrections)
@@ -323,23 +360,30 @@ SECTIONS = [
 
 
 def main() -> None:
-    # Use the Hickey Lab template if bundled, else fall back to plain Presentation.
     if hickey_lab_template_path() is not None:
-        pres = load_hickey_lab_presentation(theme="light")
+        pres = load_hickey_lab_presentation(theme="dark")
         print(f"Using Hickey Lab template: {hickey_lab_template_path()}")
+        layout = HICKEY_LAB_LAYOUT
     else:
         pres = Presentation()
         print("Hickey Lab template not bundled; using plain Presentation.")
+        layout = None  # use default
 
     pres.slide_width = Inches(13.333)
     pres.slide_height = Inches(7.5)
 
     add_title_slide(pres)
 
+    # Auto-pick marker offsets via whitespace finder (no more guessing!)
+    image1_anns = auto_offset_annotations(IMAGE1, IMAGE1_ANNOTATIONS)
+    image10_anns = auto_offset_annotations(IMAGE10, IMAGE10_ANNOTATIONS)
+
+    kwargs = {} if layout is None else {"layout": layout}
+
     add_annotated_figure_slide(
         pres,
         IMAGE1,
-        IMAGE1_ANNOTATIONS,
+        image1_anns,
         title="Engineered T cells recognize antigens via 3 mechanisms: TCR, TAA, CAR",
         caption="Three-panel comparison from VanNoy 2025 (BioRender). "
         "Each numbered annotation is a native PowerPoint shape.",
@@ -347,13 +391,14 @@ def main() -> None:
         notes=IMAGE1_NOTES,
         page_number=2,
         sections=SECTIONS,
-        current_section_idx=1,  # "Antigen recognition"
+        current_section_idx=1,
+        **kwargs,
     )
 
     add_annotated_figure_slide(
         pres,
         IMAGE10,
-        IMAGE10_ANNOTATIONS,
+        image10_anns,
         title="The TME suppresses CAR-T via 7 converging mechanisms around the tumor",
         caption="8 labeled callouts surrounding the central tumor. "
         "Try View > Selection Pane to see all shapes.",
@@ -361,10 +406,11 @@ def main() -> None:
         notes=IMAGE10_NOTES,
         page_number=3,
         sections=SECTIONS,
-        current_section_idx=2,  # "TME challenges"
+        current_section_idx=2,
+        **kwargs,
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v4.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v5.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 
