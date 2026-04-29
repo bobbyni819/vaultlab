@@ -43,9 +43,9 @@ def auto_offset_annotations(
 ) -> list[ElementAnnotation]:
     """Run the whitespace finder over annotations and update marker_offset_px.
 
-    Respects explicit marker_offset_px on the input - if Bobby (or whoever
-    authored the annotation) already specified an offset, keep it rather
-    than auto-overwriting.
+    Respects explicit marker_offset_px on the input - if the annotation
+    already specifies an offset, keep it. Honors marker_force_global to skip
+    the local ring search.
     """
     placed_marker_bboxes: list[tuple[int, int, int, int]] = []
     out: list[ElementAnnotation] = []
@@ -57,6 +57,7 @@ def auto_offset_annotations(
                 image_path,
                 ann.bbox_px,
                 avoid_other_bboxes=tuple(placed_marker_bboxes),
+                force_global=ann.marker_force_global,
             )
         new_ann = ElementAnnotation(
             label=ann.label,
@@ -66,6 +67,9 @@ def auto_offset_annotations(
             confidence=ann.confidence,
             use_box=ann.use_box,
             marker_offset_px=offset,
+            bbox_shape=ann.bbox_shape,
+            bbox_padding_px=ann.bbox_padding_px,
+            marker_force_global=ann.marker_force_global,
         )
         out.append(new_ann)
         if offset is not None:
@@ -178,48 +182,76 @@ IMAGE1_COLORS = {
 IMAGE10 = Path(r"C:\tmp\cart_figs_v13\image10.png")
 
 IMAGE10_ANNOTATIONS = [
+    # #1 - Suppressive cells: this is a CIRCLE zoom-in. Tight bbox + ellipse
+    # outline (bbox_shape='circle'). No padding so the ellipse hugs the
+    # circular zoom region.
     ElementAnnotation(
         label="Suppressive cells (MDSC, Treg, TAM)",
-        bbox_px=(420, 0, 1380, 510),
+        bbox_px=(540, 0, 1280, 480),
         motif_name="suppressive-cells",
         explanation="",
+        bbox_shape="circle",
+        bbox_padding_px=0,
     ),
+    # #2 - PD-1/CTLA-4 detail: another CIRCLE zoom-in (was getting a loose
+    # rectangle that bled into the suppressive-cell region above). Tight
+    # circle + force-global so the label lands in top whitespace, not on
+    # the right where the figure has dense content.
     ElementAnnotation(
         label="PD-1/PDL-1 + CTLA-4/CD86 detail",
-        bbox_px=(20, 360, 720, 800),
+        bbox_px=(60, 440, 670, 870),
         motif_name="checkpoint",
         explanation="",
+        bbox_shape="circle",
+        bbox_padding_px=0,
+        marker_force_global=True,
     ),
+    # #3 - Soluble inhibitors: expand LEFT to capture the upper MDSC + Treg
+    # cells that produce IL-10 / TGF-beta (the labels at the very top of the
+    # figure). Keep vertical extent small so the bbox doesn't overlap with
+    # #1 (the suppressive-cells circle below).
     ElementAnnotation(
         label="Soluble inhibitors: IL-10, TGF-beta",
-        bbox_px=(1300, 60, 2030, 480),
+        bbox_px=(880, 0, 2030, 280),
         motif_name="soluble-inhibitors",
         explanation="",
     ),
+    # #4 - Tumor antigen heterogeneity (no Bobby change requested)
     ElementAnnotation(
         label="Tumor antigen heterogeneity",
         bbox_px=(1330, 660, 2030, 1100),
         motif_name="antigen-heterogeneity",
         explanation="",
     ),
+    # #5 - Metabolic: a bit larger all around per Bobby v8. Marker uses
+    # force_global because the local ring search landed the label far away
+    # in v8 (this region is content-dense).
     ElementAnnotation(
         label="Metabolic suppression (low O2/pH/nutrients)",
-        bbox_px=(820, 670, 1270, 1010),
+        bbox_px=(760, 600, 1320, 1080),
         motif_name="metabolic",
         explanation="",
+        marker_force_global=True,
     ),
+    # #6 - Vasculature: expand right edge per Bobby v8 (820 -> 950).
     ElementAnnotation(
         label="Dysregulated vasculature: VCAM/ICAM down",
-        bbox_px=(0, 1090, 820, 1530),
+        bbox_px=(0, 1090, 950, 1530),
         motif_name="vasculature",
         explanation="",
     ),
+    # #7 - Physical barriers: extend BOTTOM down + shrink RIGHT left per
+    # Bobby v8. Also a CIRCLE zoom-in (the ECM/CAF/IFP region is bounded
+    # by an ellipse in the source figure).
     ElementAnnotation(
         label="Physical barriers: ECM, CAF, IFP",
-        bbox_px=(1260, 1040, 2030, 1620),
+        bbox_px=(1260, 1040, 1900, 1670),
         motif_name="physical-barriers",
         explanation="",
+        bbox_shape="circle",
+        bbox_padding_px=0,
     ),
+    # #8 - Tumor mass (no Bobby change requested)
     ElementAnnotation(
         label="Tumor mass (central pink blob, NOT vessel)",
         bbox_px=(420, 180, 1740, 1430),
@@ -419,7 +451,7 @@ def main() -> None:
         **kwargs,
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v8.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v9.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 

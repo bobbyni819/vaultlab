@@ -303,6 +303,22 @@ def _darken_for_text(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
     return rgb
 
 
+def _resolve_padding(
+    override: int | tuple[int, int, int, int] | None,
+    default_scalar: int,
+) -> tuple[int, int, int, int]:
+    """Return ``(top, right, bottom, left)`` padding in source pixels.
+
+    Resolution order: per-annotation override (scalar broadcast OR explicit
+    4-tuple) > layout default scalar (broadcast).
+    """
+    if override is None:
+        return (default_scalar, default_scalar, default_scalar, default_scalar)
+    if isinstance(override, int):
+        return (override, override, override, override)
+    return override
+
+
 def _add_title(s, title: str, layout: SlideLayout) -> None:
     from pptx.enum.text import PP_ALIGN
 
@@ -434,6 +450,51 @@ def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLa
         run.font.color.rgb = text_color
 
 
+def _add_leader_line(
+    s,
+    *,
+    marker_cx_in: float,
+    marker_cy_in: float,
+    bbox_x_in: float,
+    bbox_y_in: float,
+    bbox_w_in: float,
+    bbox_h_in: float,
+    color: tuple[int, int, int],
+    name: str,
+) -> None:
+    """Thin connector from the bbox edge nearest the marker to the marker center.
+
+    Used when the marker is offset far from its element (e.g., placed in a
+    distant whitespace region). Picks the bbox edge midpoint closest to the
+    marker so the line stays short and doesn't cross figure content.
+    """
+    bbox_left = bbox_x_in
+    bbox_right = bbox_x_in + bbox_w_in
+    bbox_top = bbox_y_in
+    bbox_bottom = bbox_y_in + bbox_h_in
+    bbox_cx = bbox_x_in + bbox_w_in / 2
+    bbox_cy = bbox_y_in + bbox_h_in / 2
+
+    # Pick which edge of the bbox to connect from (whichever side the marker is on)
+    if abs(marker_cx_in - bbox_cx) > abs(marker_cy_in - bbox_cy):
+        anchor_y = bbox_cy
+        anchor_x = bbox_right if marker_cx_in > bbox_cx else bbox_left
+    else:
+        anchor_x = bbox_cx
+        anchor_y = bbox_bottom if marker_cy_in > bbox_cy else bbox_top
+
+    line = s.shapes.add_connector(
+        1,  # MSO_CONNECTOR.STRAIGHT
+        Inches(anchor_x),
+        Inches(anchor_y),
+        Inches(marker_cx_in),
+        Inches(marker_cy_in),
+    )
+    line.name = name
+    line.line.color.rgb = RGBColor(*color)
+    line.line.width = Pt(1.0)
+
+
 def _group_shapes(slide, shapes_to_group, group_name: str) -> None:
     """Wrap a list of shapes into a single PowerPoint group.
 
@@ -522,22 +583,25 @@ def _add_annotations(
             img_h_in,
         )
 
-        # 1. Bounding-box rectangle (skip if ann.use_box=False per Bobby
-        # 2026-04-29 flexibility ask: small / narrow elements can use just
-        # a marker pointing at them).
-        # Pad by layout.bbox_padding_px so the box sits slightly outside the
-        # motif, not flush with its edges (Bobby 2026-04-29 v7 ask).
+        # 1. Bounding-box outline (skip if ann.use_box=False).
+        # Padding: per-annotation override > layout default. Tuple = asymmetric
+        # (top, right, bottom, left) per Bobby 2026-04-29 v8 ask. Shape may be
+        # rectangle or circle/ellipse depending on `bbox_shape`.
         if ann.use_box:
             sx = img_w_in / src_w
             sy = img_h_in / src_h
-            pad_x = layout.bbox_padding_px * sx
-            pad_y = layout.bbox_padding_px * sy
+            pad_top, pad_right, pad_bottom, pad_left = _resolve_padding(
+                ann.bbox_padding_px, layout.bbox_padding_px
+            )
+            box_shape_kind = (
+                MSO_SHAPE.OVAL if ann.bbox_shape == "circle" else MSO_SHAPE.RECTANGLE
+            )
             box = s.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE,
-                Inches(x_in - pad_x),
-                Inches(y_in - pad_y),
-                Inches(w_in + 2 * pad_x),
-                Inches(h_in + 2 * pad_y),
+                box_shape_kind,
+                Inches(x_in - pad_left * sx),
+                Inches(y_in - pad_top * sy),
+                Inches(w_in + (pad_left + pad_right) * sx),
+                Inches(h_in + (pad_top + pad_bottom) * sy),
             )
             box.name = f"ann{orig_idx + 1}_box"
             box.fill.background()
@@ -549,15 +613,46 @@ def _add_annotations(
         # can shift it to nearby whitespace to avoid collisions with other
         # markers or to clear important figure content underneath.
         marker_size = layout.marker_size_in
+        sx = img_w_in / src_w
+        sy = img_h_in / src_h
         if ann.marker_offset_px is not None:
             dx_px, dy_px = ann.marker_offset_px
-            sx = img_w_in / src_w
-            sy = img_h_in / src_h
             marker_x_in = x_in + dx_px * sx
             marker_y_in = y_in + dy_px * sy
         else:
             marker_x_in = x_in
             marker_y_in = max(0.05, y_in - marker_size - 0.02)
+
+        # Leader line: when the marker is FAR from the bbox (>15% of figure
+        # width on either axis), draw a thin connector so the eye can still
+        # trace the marker back to its element. Bobby 2026-04-29 v8: labels
+        # may roam, but the viewer needs a visual link.
+        far_threshold_in = 0.15 * img_w_in
+        marker_cx = marker_x_in + marker_size / 2
+        marker_cy = marker_y_in + marker_size / 2
+        bbox_cx = x_in + w_in / 2
+        bbox_cy = y_in + h_in / 2
+        is_far = (
+            abs(marker_cx - bbox_cx) > far_threshold_in
+            or abs(marker_cy - bbox_cy) > far_threshold_in
+        )
+        # Draw a leader line whenever the marker is far from the bbox center,
+        # regardless of whether use_box is True. When use_box=True the box
+        # itself is a visual anchor; when far + boxed, the leader still
+        # connects the eye to the marker.
+        if is_far:
+            _add_leader_line(
+                s,
+                marker_cx_in=marker_cx,
+                marker_cy_in=marker_cy,
+                bbox_x_in=x_in,
+                bbox_y_in=y_in,
+                bbox_w_in=w_in,
+                bbox_h_in=h_in,
+                color=color,
+                name=f"ann{orig_idx + 1}_leader",
+            )
+
         marker = s.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
             Inches(marker_x_in),

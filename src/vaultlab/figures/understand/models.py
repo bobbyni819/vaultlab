@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass
@@ -40,6 +41,24 @@ class ElementAnnotation:
         place markers in nearby whitespace instead of all stacking on top.
         Coordinates are SOURCE PIXELS (not inches) to keep the API consistent
         with bbox_px.
+    bbox_shape
+        Geometry of the box outline. ``"rect"`` (default) = rectangle.
+        ``"circle"`` = ellipse fit to the bbox (use when the underlying figure
+        element is a circular zoom-in / detail callout). Bobby 2026-04-29 v8:
+        rectangular boxes around circular zoom-ins look loose and wrong.
+    bbox_padding_px
+        Override the global ``layout.bbox_padding_px`` for this annotation.
+        Either a scalar (uniform) or a 4-tuple ``(top, right, bottom, left)``
+        for asymmetric padding. ``None`` = use the layout default. Bobby
+        2026-04-29 v8: some boxes need more padding on one side and less on
+        another; uniform is too coarse.
+    marker_force_global
+        If True, skip the local 8-direction ring search and go straight to the
+        global whitespace search (find the nearest large free patch on the
+        whole figure). Useful when the element is in a content-dense region
+        where local offsets all collide. Bobby 2026-04-29 v8: "you can just
+        slot the label somewhere on the figure as long as it's not blocking
+        underlying text."
     """
 
     label: str
@@ -49,6 +68,9 @@ class ElementAnnotation:
     confidence: float = 0.0
     use_box: bool = True
     marker_offset_px: tuple[int, int] | None = None
+    bbox_shape: Literal["rect", "circle"] = "rect"
+    bbox_padding_px: int | tuple[int, int, int, int] | None = None
+    marker_force_global: bool = False
 
 
 __all__ = ["ElementAnnotation"]

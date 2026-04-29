@@ -75,8 +75,18 @@ def find_marker_offset(
     ),
     avoid_other_bboxes: tuple[tuple[int, int, int, int], ...] = (),
     min_whitespace_frac: float = 0.90,
+    force_global: bool = False,
 ) -> tuple[int, int] | None:
     """Find a whitespace offset near the bbox where a marker would fit.
+
+    Two-stage search:
+
+    1. **Local ring** (default): try 8 directions × 3 radii relative to the
+       bbox. This works for figures with predictable margins around elements.
+    2. **Global fallback** (if local fails or ``force_global=True``): scan
+       the whole figure for the largest free patch, ranked by closeness to
+       the bbox center. Per Bobby 2026-04-29 v8: "you can just slot the label
+       somewhere on the figure as long as it's not blocking underlying text."
 
     Parameters
     ----------
@@ -88,60 +98,105 @@ def find_marker_offset(
         Square edge length of the marker in source pixels (rough - used to
         reserve a square of whitespace).
     preferred_directions
-        Order in which to test directions. ``top`` and ``bottom`` are tried
-        first since BioRender figures usually have horizontal whitespace
-        between rows of content.
+        Order in which to test directions during the local stage.
     avoid_other_bboxes
         Other annotation bboxes (or their existing markers) - we won't place
         the marker on top of these.
     min_whitespace_frac
         Minimum fraction of the candidate patch that must be true whitespace
         (post-edge-dilation). 0.90 default - text labels won't pass.
+    force_global
+        If True, skip the local ring stage and go straight to the global
+        fallback. Useful for elements in dense content regions.
 
     Returns
     -------
     tuple[int, int] | None
         ``(dx, dy)`` offset from bbox top-left where the marker should be
-        placed. ``None`` if no whitespace candidate found.
+        placed. ``None`` only if NO whitespace patch exists anywhere on the
+        figure (very rare; signals the figure has no margins at all).
     """
     mask = whitespace_mask(image_path)
     H, W = mask.shape
     x0, y0, x1, y1 = bbox
 
-    inset = 30
-    candidates: dict[Direction, tuple[int, int]] = {
-        "left": (-marker_size_px - inset, (y1 - y0) // 2 - marker_size_px // 2),
-        "right": ((x1 - x0) + inset, (y1 - y0) // 2 - marker_size_px // 2),
-        "top": ((x1 - x0) // 2 - marker_size_px // 2, -marker_size_px - inset),
-        "bottom": ((x1 - x0) // 2 - marker_size_px // 2, (y1 - y0) + inset),
-        "top-left": (-marker_size_px - inset, -marker_size_px - inset),
-        "top-right": ((x1 - x0) + inset, -marker_size_px - inset),
-        "bottom-left": (-marker_size_px - inset, (y1 - y0) + inset),
-        "bottom-right": ((x1 - x0) + inset, (y1 - y0) + inset),
-    }
+    if not force_global:
+        inset = 30
+        candidates: dict[Direction, tuple[int, int]] = {
+            "left": (-marker_size_px - inset, (y1 - y0) // 2 - marker_size_px // 2),
+            "right": ((x1 - x0) + inset, (y1 - y0) // 2 - marker_size_px // 2),
+            "top": ((x1 - x0) // 2 - marker_size_px // 2, -marker_size_px - inset),
+            "bottom": ((x1 - x0) // 2 - marker_size_px // 2, (y1 - y0) + inset),
+            "top-left": (-marker_size_px - inset, -marker_size_px - inset),
+            "top-right": ((x1 - x0) + inset, -marker_size_px - inset),
+            "bottom-left": (-marker_size_px - inset, (y1 - y0) + inset),
+            "bottom-right": ((x1 - x0) + inset, (y1 - y0) + inset),
+        }
 
-    # First pass: try each direction at offset == its candidate.
-    # If none qualify, second pass: search outward radially for that direction.
-    for radius_mult in (1, 2, 3):
-        for direction in preferred_directions:
-            dx, dy = candidates[direction]
-            dx *= radius_mult
-            dy *= radius_mult
-            mx = x0 + dx
-            my = y0 + dy
-            if mx < 0 or my < 0 or mx + marker_size_px > W or my + marker_size_px > H:
-                continue
+        for radius_mult in (1, 2, 3):
+            for direction in preferred_directions:
+                dx, dy = candidates[direction]
+                dx *= radius_mult
+                dy *= radius_mult
+                mx = x0 + dx
+                my = y0 + dy
+                if mx < 0 or my < 0 or mx + marker_size_px > W or my + marker_size_px > H:
+                    continue
+                if _collides(
+                    (mx, my, mx + marker_size_px, my + marker_size_px),
+                    avoid_other_bboxes,
+                ):
+                    continue
+                patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
+                if patch.size == 0:
+                    continue
+                ws_frac = float(patch.mean())
+                if ws_frac >= min_whitespace_frac:
+                    return (dx, dy)
+
+    # Global fallback: scan the figure on a coarse grid, score each candidate
+    # by (whitespace_frac, -distance_to_bbox_center, no_collision). Bobby's
+    # rule applies: anywhere on the figure is acceptable as long as it's not
+    # blocking underlying text.
+    cx = (x0 + x1) // 2
+    cy = (y0 + y1) // 2
+    step = max(marker_size_px // 3, 30)
+    best: tuple[float, int, int] | None = None  # (score, mx, my) higher = better
+    for my in range(0, H - marker_size_px, step):
+        for mx in range(0, W - marker_size_px, step):
             if _collides(
                 (mx, my, mx + marker_size_px, my + marker_size_px),
                 avoid_other_bboxes,
+            ):
+                continue
+            # Skip patches that overlap the bbox itself
+            if not (
+                mx + marker_size_px <= x0
+                or x1 <= mx
+                or my + marker_size_px <= y0
+                or y1 <= my
             ):
                 continue
             patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
             if patch.size == 0:
                 continue
             ws_frac = float(patch.mean())
-            if ws_frac >= min_whitespace_frac:
-                return (dx, dy)
+            if ws_frac < min_whitespace_frac:
+                continue
+            # Score: prefer high whitespace fraction, prefer near bbox center.
+            # Distance is normalized by figure diagonal so the two terms are
+            # comparable.
+            patch_cx = mx + marker_size_px // 2
+            patch_cy = my + marker_size_px // 2
+            dist = ((patch_cx - cx) ** 2 + (patch_cy - cy) ** 2) ** 0.5
+            diag = (W * W + H * H) ** 0.5
+            score = ws_frac - 0.5 * (dist / diag)
+            if best is None or score > best[0]:
+                best = (score, mx, my)
+
+    if best is not None:
+        _, mx, my = best
+        return (mx - x0, my - y0)
 
     return None
 
