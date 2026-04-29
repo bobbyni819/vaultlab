@@ -233,4 +233,147 @@ def _wrap(text: str, max_chars: int) -> list[str]:
     return out
 
 
-__all__ = ["render_annotated_figure", "render_debug_overlay"]
+def render_annotated_figure_v3(
+    image_path: str | Path,
+    annotations: Sequence[ElementAnnotation],
+    output_path: str | Path,
+    *,
+    motif_colors: dict[str, tuple[int, int, int]] | None = None,
+    gutter_width_px: int = 750,
+    show_leader_lines: bool = False,
+    label_max_chars: int = 22,
+) -> Path:
+    """v3 renderer per Bobby's 2026-04-29 review feedback.
+
+    Differences vs v2 (:func:`render_annotated_figure`):
+
+    - **No leader lines** (cleaner; less visual noise).
+    - **Motif-color matched markers + labels**: marker color = the figure-element
+      color via ``motif_colors`` mapping. Falls back to palette cycling when
+      not supplied.
+    - **White halos** behind colored markers + box outlines so any motif color
+      is visible on any background.
+    - **Bigger side-label fonts** (~3x v2). Two-line wrap when needed.
+    - **Wider right gutter**, labels pushed further off the figure.
+    - **Luminance-aware text darkening**: light motif colors are darkened for
+      readability against the white gutter.
+    """
+    fig = Image.open(Path(image_path)).convert("RGB")
+    W, H = fig.size
+
+    canvas = Image.new("RGB", (W + gutter_width_px, H), (255, 255, 255))
+    canvas.paste(fig, (0, 0))
+    draw = ImageDraw.Draw(canvas)
+
+    label_font = _font(max(20, H // 38))
+    body_font = _font(max(28, H // 50))
+    body_pt = max(28, H // 50)
+
+    n = len(annotations)
+    if n == 0:
+        canvas.save(Path(output_path))
+        return Path(output_path)
+
+    indexed = list(enumerate(annotations))
+    indexed.sort(key=lambda pair: pair[1].bbox_px[1])
+
+    gutter_text_x = W + 100
+    callout_top = 30
+    callout_bottom = H - 30
+    spacing = (callout_bottom - callout_top) / max(n, 1)
+
+    marker_size = max(48, H // 28)
+    halo_offset = 6
+
+    for slot, (orig_idx, ann) in enumerate(indexed):
+        color = _resolve_color(ann, orig_idx, motif_colors)
+        text_color = _darken_for_text(color)
+
+        x0, y0, x1, y1 = ann.bbox_px
+
+        # White halo behind the colored box outline -> visible regardless of bg
+        draw.rectangle(
+            [(x0 - halo_offset, y0 - halo_offset),
+             (x1 + halo_offset, y1 + halo_offset)],
+            outline=(255, 255, 255), width=halo_offset * 2 + 2,
+        )
+        draw.rectangle([(x0, y0), (x1, y1)], outline=color, width=6)
+
+        num = str(orig_idx + 1)
+        try:
+            tw, th = draw.textbbox((0, 0), num, font=label_font)[2:]
+        except AttributeError:
+            tw, th = label_font.getsize(num)  # type: ignore[attr-defined]
+
+        marker_top = max(0, y0 - marker_size - 4)
+        marker_xy = (x0, marker_top)
+        # Halo behind marker
+        draw.rectangle(
+            [(marker_xy[0] - halo_offset, marker_xy[1] - halo_offset),
+             (marker_xy[0] + marker_size + halo_offset, marker_xy[1] + marker_size + halo_offset)],
+            fill=(255, 255, 255),
+        )
+        draw.rectangle(
+            [marker_xy, (marker_xy[0] + marker_size, marker_xy[1] + marker_size)],
+            fill=color,
+        )
+        draw.text(
+            (marker_xy[0] + (marker_size - tw) / 2,
+             marker_xy[1] + (marker_size - th) / 2 - 2),
+            num, fill=(255, 255, 255), font=label_font,
+        )
+
+        # Right-gutter callout - marker (matches on-figure) + big label text
+        callout_y = int(callout_top + spacing * slot)
+        side_marker_xy = (W + 16, callout_y)
+        draw.rectangle(
+            [side_marker_xy,
+             (side_marker_xy[0] + marker_size, side_marker_xy[1] + marker_size)],
+            fill=color,
+        )
+        draw.text(
+            (side_marker_xy[0] + (marker_size - tw) / 2,
+             side_marker_xy[1] + (marker_size - th) / 2 - 2),
+            num, fill=(255, 255, 255), font=label_font,
+        )
+
+        if show_leader_lines:
+            anchor_box = (x1, (y0 + y1) // 2)
+            anchor_callout = (W + 16, callout_y + marker_size // 2)
+            draw.line([anchor_box, anchor_callout], fill=color, width=2)
+
+        for j, line in enumerate(_wrap(ann.label, max_chars=label_max_chars)):
+            draw.text(
+                (gutter_text_x, callout_y + j * (body_pt + 4)),
+                line, fill=text_color, font=body_font,
+            )
+
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(out)
+    return out
+
+
+def _resolve_color(
+    ann: ElementAnnotation,
+    fallback_idx: int,
+    motif_colors: dict[str, tuple[int, int, int]] | None,
+) -> tuple[int, int, int]:
+    if motif_colors and ann.motif_name in motif_colors:
+        return motif_colors[ann.motif_name]
+    return _PALETTE[fallback_idx % len(_PALETTE)]
+
+
+def _darken_for_text(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
+    r, g, b = rgb
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    if luminance > 180:
+        return (max(0, r - 80), max(0, g - 80), max(0, b - 80))
+    return rgb
+
+
+__all__ = [
+    "render_annotated_figure",
+    "render_annotated_figure_v3",
+    "render_debug_overlay",
+]
