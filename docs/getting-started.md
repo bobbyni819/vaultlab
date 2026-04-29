@@ -54,7 +54,7 @@ When `vaultlab setup` asks about your projects, you describe them one at a time:
 ```
 > What project are you working on?
   Name: codex_lung
-  Description: CODEX/MALDI lung tissue analysis with John Hickey
+  Description: CODEX/MALDI lung tissue analysis with your PI
   Where do project files live? Z:/lab_data/CODEX/run_2024_03/
   Where do papers + notes go? G:/My Drive/Knowledge/codex_lung
   Domain: spatial metabolomics, lipid biology

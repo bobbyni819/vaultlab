@@ -53,7 +53,7 @@ with frontmatter:
 type: meeting-transcript
 date: 2026-04-28
 duration_minutes: 47
-attendees: [Bobby Ni, John Hickey]
+attendees: [Researcher A, PI]
 project: codex_lung
 recording_path: ~/.config/meeting_recorder/recordings/2026-04-28-1430.wav
 transcription_model: whisper-large-v3

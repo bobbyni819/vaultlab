@@ -145,29 +145,15 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 - **Where in vaultlab:** `src/vaultlab/data/spatial/niches.py`.
 - **Attribution:** Per-module docstring + sibling `.md` cites Schürch et al. + Hickey lab internal docs.
 
-### Hickey lab — modality expertise (lab + collaborators)
+### Hickey lab — modality expertise
 
-vaultlab is positioned as research companion built **with** a spatial-omics specialty lab, not generic-tool-wrapper. Each modality module benefits from a lab-internal expert vaultlab can tap for refinement:
-
-- **CODEX multiplex IF** — Nick + Young (lab members). Anchor for segmentation method choices, marker normalization conventions, panel-design awareness rules.
-- **MALDI imaging** — Angela (Hickey lab collaborator). Ground-truth on lipid-class assignments + ion-image conventions.
-- **Spatial transcriptomics** — Reina (lab member). Visium / Xenium / SpatialData workflow expertise.
-- **Single-cell RNA-seq** — Bobby (primary) + others as tapped. scanpy + anndata canonical pipelines.
-- **Generic imaging / flow cytometry** — TBD lab contact.
+VaultLab is positioned as a research companion built **with** a spatial-omics specialty lab, not as a generic-tool-wrapper. Modality modules benefit from in-lab expertise (CODEX multiplex IF, MALDI imaging, spatial transcriptomics, single-cell RNA-seq, generic imaging / flow cytometry) without naming individual contributors here. Per-person credits will be added once explicit consent is collected before public launch.
 
 **How:** `PATTERN` (when implementing a new modality, draft a method choice → loop in the relevant lab member → adjust based on their experience). No code copied from any individual; the contribution is judgment + experience.
 
-**Where in vaultlab:** Listed in README §"Specialized modules" + per-modality `.md` docs.
+**Where in VaultLab:** Per-modality `.md` docs anchor on the published methods (e.g., Schürch 2020 for cellular neighborhoods); lab-internal patterns are referenced in private design docs.
 
-### Lab algorithm library (Nick's GitHub — TBD link)
-
-- **Source:** Nick (Hickey lab member) has compiled an internal GitHub repository of data-analysis algorithms tuned for spatial-omics workflows. Repo URL pending Nick's approval to link publicly.
-- **What we'll take:** When a vaultlab module needs an algorithm for a spatial-omics task that scanpy/squidpy don't cover well, vaultlab references Nick's repo — *"if your data looks like this, here's the validated algorithm."*
-- **How:** `TOOL` (call) + `PATTERN` (the framing of "lab-validated algorithm beats generic default") — depends on what's in Nick's repo.
-- **Where in vaultlab:** Will land as `src/vaultlab/kb/tools_index/lab_algorithms.md` once Nick approves sharing. Each algorithm referenced cites Nick's repo + the underlying papers.
-- **Attribution:** Per-algorithm citation in the tools index + this entry.
-
-**Action item:** Bobby to (a) get Nick's approval to link/reference the repo; (b) get the URL; (c) trigger a follow-up commit to populate `lab_algorithms.md`.
+(Action item for Bobby: collect named consent from each lab modality expert before flipping the repo public; add proper attribution at that point. Local design notes are tracked in the private ideation grill, not in this public file.)
 
 ### CODEX_MALDIIMS — figure helpers
 
