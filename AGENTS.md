@@ -72,11 +72,25 @@ Open questions and design decisions go to **markdown documents in the KB**, not 
 1. `START_HERE.md` per project — auto-maintained current state.
 2. `grill-<topic>-<date>.md` — numbered open-question docs when N+ decisions are pending.
 3. `decisions-log.md` per project — append-only design/scope record.
-4. Chat — reserved for *immediately blocking* events only: destructive actions, IRB/PHI/compliance gates, cost-tier escalation above the configured threshold.
+4. Chat — reserved for *immediately blocking* events only.
 
 Every command, role, or workflow that completes meaningful work MUST update at least one of channels 1–3. End-of-turn summary must surface unread KB docs as `bobby-kb open <path>` so the user can read on their schedule.
 
-Complex workflows fan out into parallel sub-workflows automatically (subagents, concurrent tool calls). The user does not orchestrate parallelism by hand.
+**Locked boundary (decisions made 2026-04-29):**
+
+| Action | Blocking? |
+|---|---|
+| Sending email | ✅ Block — leaves the user's machine |
+| Sending Teams / Slack / external chat message | ✅ Block — affects the user's reputation; "make you seem weird" |
+| Appending to the work-log Google Doc | ❌ NOT blocking — that's the whole point of `/update`; documenting is fine |
+| Writing to a NEW or existing KB markdown file | ❌ NOT blocking — log to `decisions-log.md` |
+| Writing to a local file the user named | ❌ NOT blocking |
+| Writing processed datasets to user's default cloud storage (Box / Drive) | ❌ NOT blocking when the destination is the user's existing data home |
+| `restore_snapshot` / file deletion / force push / git reset --hard | ✅ Block (see Invariant 5 + `vaultlab.kb.snapshot`) |
+| IRB / PHI / compliance-gate work | ✅ Block (regardless of cost) |
+| **Cost gating** | ❌ NEVER block on cost — vaultlab assumes users have Claude Code subscriptions; runtime cost should not gate work |
+
+**Parallel decomposition is unbounded.** Complex workflows fan out into as many parallel sub-workflows as the model + tools support. The user does not orchestrate parallelism by hand. The only constraint is that each parallel branch MUST do real semantic reading of its inputs, not surface-skim — Invariant 2 still applies.
 
 ### Invariant 11 — Pluggable adversary / judge model
 

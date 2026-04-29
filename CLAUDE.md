@@ -192,6 +192,30 @@ pytest -m "not llm"                         # skip tests that hit a real LLM API
 
 The full design rationale lives at `G:/My Drive/Knowledge/vaultlab/Sources/Notes/architecture-grill-2026-04-26/` (KB renamed from `ailab` on 2026-04-28). The master plan is `99-MASTER-PLAN-vaultlab-shared-design.md`. Read these only when wanting to understand WHY a decision was made; for normal coding, this CLAUDE.md + AGENTS.md is enough.
 
+## Per-user auto-memory
+
+VaultLab has a per-user memory layer at `~/.config/vaultlab/user_memory/`. When the user gives important feedback or VaultLab learns a non-obvious calibration that should persist across sessions, write it via `vaultlab.context.user_memory.remember(category, name, description, content)`. Future sessions read it back so the system inherits prior tuning instead of relearning each chat.
+
+**At the start of any non-trivial session, check the index:**
+
+```python
+from vaultlab.context.user_memory import recall_all
+index_text, _ = recall_all()  # the always-loaded summary
+```
+
+The `MEMORY.md` index is one line per memory; dive into specific entries when relevant.
+
+**Categories:**
+
+- `feedback` — corrections + confirmations the user made. Lead with the rule, then `**Why:**` and `**How to apply:**`.
+- `preference` — workflow / style choices.
+- `pattern` — design decisions that worked, reusable in similar contexts.
+- `project` — project-specific calibration.
+
+**When to write:** any time the user corrects or confirms in a way that's non-obvious from the code. Save what is applicable to future conversations.
+
+**When NOT to write:** ephemeral task state (use `START_HERE.md`); code patterns derivable from the repo (read it instead); anything the user explicitly asks to forget.
+
 ## When in doubt
 
-When in doubt, read `AGENTS.md` for invariants. When AGENTS.md doesn't cover it, consult the architecture grill master plan. When that doesn't cover it either, ask Bobby — and update one of these docs with the answer so future you (or future Claude) doesn't ask twice.
+When in doubt, read `AGENTS.md` for invariants. When AGENTS.md doesn't cover it, consult the architecture grill master plan. When that doesn't cover it either, write a grill doc via `vaultlab.kb.feedback.open_question` (Invariant 10) and proceed with sensible defaults — don't block the chat.
