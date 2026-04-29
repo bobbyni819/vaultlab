@@ -4,41 +4,64 @@ Per Bobby 2026-04-29 figure-annotation decision tree: marker placement should
 not be guess-by-eye. After identifying each element's bbox, programmatically
 find nearby whitespace and offset the marker to land there.
 
-Approach
---------
-1. Convert image to HSV.
-2. Whitespace mask = pixels with very high value (V > 0.9) AND very low
-   saturation (S < 0.1). That captures both pure white AND off-white card
-   backgrounds (which BioRender uses).
-3. For each query bbox, search radially outward (in 4 directions: top, right,
-   bottom, left) for the nearest patch large enough to fit a marker.
-4. Return the best ``marker_offset_px`` to use, or ``None`` if no close
-   whitespace exists (caller falls back to default top-left).
+v2 approach (2026-04-29 with edge avoidance)
+--------------------------------------------
+The v1 version was fooled by text labels: a "Aberrantly Expressed Protein"
+text label has ~85% white pixels and ~15% dark glyphs, so a 60%-whitespace
+patch test passed and markers landed on top of text. The fix:
+
+1. Color whitespace mask: HSV pixels with V > 0.92 AND S < 0.08.
+2. Edge map via Canny. Dilate edges by ~15 px so the "near a glyph" zone
+   is also excluded.
+3. True-whitespace mask = color-white AND NOT near-edge.
+4. Bumped patch threshold to 90% (was 60%) - real whitespace, no text.
+5. Caching: per-image mask is cached, keyed by ``(image_path, mtime)``.
 """
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
 from PIL import Image
 from skimage import color as skcolor
+from skimage.feature import canny
+from skimage.morphology import binary_dilation, disk
 
-Direction = Literal["top", "right", "bottom", "left", "top-left", "top-right", "bottom-left", "bottom-right"]
+Direction = Literal[
+    "top", "right", "bottom", "left",
+    "top-left", "top-right", "bottom-left", "bottom-right",
+]
 
 
 def whitespace_mask(image_path: str | Path) -> np.ndarray:
-    """Return a boolean mask of whitespace pixels in the image.
+    """Return a strict whitespace mask: white background AND no text/glyphs nearby.
 
-    Whitespace = high value (V > 0.9) AND low saturation (S < 0.1). Captures
-    pure white plus near-white BioRender card backgrounds.
+    Strict = patches over text labels are EXCLUDED via edge dilation.
     """
-    rgb = np.asarray(Image.open(Path(image_path)).convert("RGB"))
+    return _compute_mask(str(Path(image_path).resolve()), Path(image_path).stat().st_mtime)
+
+
+@lru_cache(maxsize=8)
+def _compute_mask(path_str: str, mtime: float) -> np.ndarray:  # noqa: ARG001
+    """Cache key: (resolved path, mtime). Recomputes when the file changes."""
+    rgb = np.asarray(Image.open(path_str).convert("RGB"))
+    gray = skcolor.rgb2gray(rgb)
     hsv = skcolor.rgb2hsv(rgb)
-    s = hsv[..., 1]
-    v = hsv[..., 2]
-    return (v > 0.90) & (s < 0.10)
+
+    # White-ish color
+    color_white = (hsv[..., 2] > 0.92) & (hsv[..., 1] < 0.08)
+
+    # Edge map - Canny finds glyph strokes + line art
+    edges = canny(gray, sigma=2.0)
+    # Dilate edges aggressively so the "near a glyph or line" zone is excluded.
+    # 30 px radius covers full text glyphs + their immediate margin so a 120px
+    # marker patch over text gets caught.
+    edges_dilated = binary_dilation(edges, disk(30))
+
+    return color_white & ~edges_dilated
 
 
 def find_marker_offset(
@@ -46,11 +69,12 @@ def find_marker_offset(
     bbox: tuple[int, int, int, int],
     *,
     marker_size_px: int = 120,
-    search_radius_px: int = 400,
     preferred_directions: tuple[Direction, ...] = (
-        "left", "top", "right", "bottom", "top-left", "top-right",
+        "top", "bottom", "left", "right",
+        "top-left", "top-right", "bottom-left", "bottom-right",
     ),
     avoid_other_bboxes: tuple[tuple[int, int, int, int], ...] = (),
+    min_whitespace_frac: float = 0.90,
 ) -> tuple[int, int] | None:
     """Find a whitespace offset near the bbox where a marker would fit.
 
@@ -61,31 +85,29 @@ def find_marker_offset(
     bbox
         ``(x0, y0, x1, y1)`` of the element being annotated, in source pixels.
     marker_size_px
-        Square edge length of the marker in source pixels (rough — used to
+        Square edge length of the marker in source pixels (rough - used to
         reserve a square of whitespace).
-    search_radius_px
-        How far from the bbox to search for whitespace (each direction).
     preferred_directions
-        Order in which to test directions. First match wins.
+        Order in which to test directions. ``top`` and ``bottom`` are tried
+        first since BioRender figures usually have horizontal whitespace
+        between rows of content.
     avoid_other_bboxes
         Other annotation bboxes (or their existing markers) - we won't place
         the marker on top of these.
+    min_whitespace_frac
+        Minimum fraction of the candidate patch that must be true whitespace
+        (post-edge-dilation). 0.90 default - text labels won't pass.
 
     Returns
     -------
     tuple[int, int] | None
         ``(dx, dy)`` offset from bbox top-left where the marker should be
-        placed. ``None`` if no whitespace candidate found - caller should
-        fall back to default placement.
+        placed. ``None`` if no whitespace candidate found.
     """
     mask = whitespace_mask(image_path)
     H, W = mask.shape
     x0, y0, x1, y1 = bbox
 
-    # Candidate marker positions per direction, expressed as the marker's
-    # top-left (mx, my) relative to the BOX top-left (x0, y0).
-    # Each candidate has a small inset so the marker isn't flush with the
-    # box edge.
     inset = 30
     candidates: dict[Direction, tuple[int, int]] = {
         "left": (-marker_size_px - inset, (y1 - y0) // 2 - marker_size_px // 2),
@@ -98,27 +120,28 @@ def find_marker_offset(
         "bottom-right": ((x1 - x0) + inset, (y1 - y0) + inset),
     }
 
-    for direction in preferred_directions:
-        dx, dy = candidates[direction]
-        # Absolute marker position
-        mx = x0 + dx
-        my = y0 + dy
-        # Outside image?
-        if mx < 0 or my < 0 or mx + marker_size_px > W or my + marker_size_px > H:
-            continue
-        # Collides with another bbox?
-        if _collides(
-            (mx, my, mx + marker_size_px, my + marker_size_px),
-            avoid_other_bboxes,
-        ):
-            continue
-        # Whitespace fraction in the patch
-        patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
-        if patch.size == 0:
-            continue
-        ws_frac = float(patch.mean())
-        if ws_frac >= 0.6:  # at least 60% whitespace
-            return (dx, dy)
+    # First pass: try each direction at offset == its candidate.
+    # If none qualify, second pass: search outward radially for that direction.
+    for radius_mult in (1, 2, 3):
+        for direction in preferred_directions:
+            dx, dy = candidates[direction]
+            dx *= radius_mult
+            dy *= radius_mult
+            mx = x0 + dx
+            my = y0 + dy
+            if mx < 0 or my < 0 or mx + marker_size_px > W or my + marker_size_px > H:
+                continue
+            if _collides(
+                (mx, my, mx + marker_size_px, my + marker_size_px),
+                avoid_other_bboxes,
+            ):
+                continue
+            patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
+            if patch.size == 0:
+                continue
+            ws_frac = float(patch.mean())
+            if ws_frac >= min_whitespace_frac:
+                return (dx, dy)
 
     return None
 

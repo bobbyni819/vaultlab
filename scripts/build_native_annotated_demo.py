@@ -88,13 +88,13 @@ IMAGE1_ANNOTATIONS = [
         motif_name="endo-tcr",
         marker_offset_px=(-180, -50),  # to the left in whitespace
     ),
-    # #2 - Introduced TCR panel a (move marker right of the box, into the
-    # 'Introduced TCR' label whitespace area, so it doesn't overlap MHC #3 above)
+    # #2 - Introduced TCR panel a. Bobby 2026-04-29 v5: skip the box; the green
+    # color is distinctive enough that just a marker is cleaner.
     ElementAnnotation(
         label="Introduced TCR (panel a)",
         bbox_px=(998, 1853, 1192, 2188),
         motif_name="intro-tcr",
-        marker_offset_px=(220, 200),  # right of box, mid-height
+        use_box=False,
     ),
     # #3 - MHC Class I (top of receptor stack; place marker UP and LEFT to clear
     # the introduced-TCR region below)
@@ -384,7 +384,7 @@ def main() -> None:
         pres,
         IMAGE1,
         image1_anns,
-        title="Engineered T cells recognize antigens via 3 mechanisms: TCR, TAA, CAR",
+        title="Three architectures of antigen recognition",
         caption="Three-panel comparison from VanNoy 2025 (BioRender). "
         "Each numbered annotation is a native PowerPoint shape.",
         motif_colors=IMAGE1_COLORS,
@@ -399,7 +399,7 @@ def main() -> None:
         pres,
         IMAGE10,
         image10_anns,
-        title="The TME suppresses CAR-T via 7 converging mechanisms around the tumor",
+        title="Seven mechanisms of TME suppression against CAR-T",
         caption="8 labeled callouts surrounding the central tumor. "
         "Try View > Selection Pane to see all shapes.",
         motif_colors=IMAGE10_COLORS,
@@ -410,7 +410,7 @@ def main() -> None:
         **kwargs,
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v5.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v6.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 
