@@ -1,11 +1,17 @@
-"""Tests for vaultlab.figures.understand — color motifs, region merging, render."""
+"""Tests for vaultlab.figures.understand - color motifs, region merging, render."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-from PIL import Image
+import pytest
+
+# Skip the whole module when figure deps aren't installed (CI installs only [dev]).
+np = pytest.importorskip("numpy")
+pytest.importorskip("PIL")
+pytest.importorskip("skimage")
+
+from PIL import Image  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Synthetic image helpers — predictable color regions for deterministic tests

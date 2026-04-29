@@ -103,7 +103,7 @@ class TestRegisterPath:
         from vaultlab.context.locations import register_path
 
         # Schema requires section.key, not bare key
-        with pytest.raises(ValueError, match="section.key"):
+        with pytest.raises(ValueError, match=r"section\.key"):
             register_path("flat", "value")
 
     def test_handles_paths_with_backslashes(self, loc_file: Path) -> None:
