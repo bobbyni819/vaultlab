@@ -1,6 +1,6 @@
 # Use cases — what vaultlab actually does for a researcher's week
 
-These are the workflows vaultlab solves end-to-end. Drawn from real PhD work in the Hickey lab (Duke BME) — CODEX/MALDI lung tissue analysis, agent-based influenza modeling, multi-agent code generation. Use these as templates for your own workflows.
+These are the workflows VaultLab solves end-to-end. Examples below use spatial-imaging modalities to make the steps concrete, but the same patterns apply to any wet-lab + computational research workflow — single-cell, bulk RNA-seq, ChIP, proteomics, anything you can ingest as data and want to interpret with literature, figures, and a manuscript draft. Adapt to your own work.
 
 > **Status:** v0.0.x scaffold. The workflows below describe what vaultlab v0.1 will do end-to-end. Each is wired to slash commands that land in upcoming commits.
 
@@ -139,7 +139,7 @@ vaultlab (reads Outlook + Google Doc + KB + calendar):
   Tuesday, April 28, 2026
 
   CALENDAR (4 events):
-    10:00 AM — Lab meeting (Mr. Hickey + 6 others)
+    10:00 AM — Lab meeting (PI + 6 others)
     1:30 PM — Manuscript review with John (LPI paper revision)
     3:00 PM — JHU collaborator call (CODEX panel)
     5:00 PM — Optional: workshop on spatial omics (skip if busy)

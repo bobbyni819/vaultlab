@@ -9,7 +9,7 @@ Demonstrates spatial transcriptomics analysis on a public 10x Genomics Visium da
 - Visium data ingest (10x SpaceRanger output)
 - Spatial QC + tissue mask extraction
 - Joint clustering with spatial context (`squidpy`)
-- Cellular neighborhoods detection (Hickey-lab-anchored CN methodology)
+- Cellular neighborhoods detection (Schürch et al. 2020 CN methodology)
 - Spatial overlay figures with `vaultlab.figures.recipes.spatial_overlay`
 - LLM-aided spatial-pattern interpretation
 

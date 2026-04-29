@@ -136,24 +136,13 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 - **Where in vaultlab:** `src/vaultlab/data/codex/segment.py`.
 - **Attribution:** Per-module docstring + tool index entry.
 
-### Hickey lab — neighborhood/community/tissue analysis
+### Schürch et al. 2020 — cellular neighborhoods method
 
-- **Source:** Hickey lab internal patterns; see KB at `<kb>/Wiki/Methods/cellular_neighborhoods_hickey_lab.md`
 - **Reference paper:** Schürch et al. 2020, *Cell* 182(5), https://doi.org/10.1016/j.cell.2020.07.005
-- **What we took:** Cellular-neighborhood (CN) detection methodology with k-NN composition + clustering. Default parameters (k=10, n_clusters=10) match Hickey lab convention.
+- **What we took:** Cellular-neighborhood (CN) detection methodology with k-NN composition + clustering. Default parameters (k=10, n_clusters=10) follow standard practice in the field.
 - **How:** `PATTERN` — implementing the published method via squidpy primitives.
-- **Where in vaultlab:** `src/vaultlab/data/spatial/niches.py`.
-- **Attribution:** Per-module docstring + sibling `.md` cites Schürch et al. + Hickey lab internal docs.
-
-### Hickey lab — modality expertise
-
-VaultLab is positioned as a research companion built **with** a spatial-omics specialty lab, not as a generic-tool-wrapper. Modality modules benefit from in-lab expertise (CODEX multiplex IF, MALDI imaging, spatial transcriptomics, single-cell RNA-seq, generic imaging / flow cytometry) without naming individual contributors here. Per-person credits will be added once explicit consent is collected before public launch.
-
-**How:** `PATTERN` (when implementing a new modality, draft a method choice → loop in the relevant lab member → adjust based on their experience). No code copied from any individual; the contribution is judgment + experience.
-
-**Where in VaultLab:** Per-modality `.md` docs anchor on the published methods (e.g., Schürch 2020 for cellular neighborhoods); lab-internal patterns are referenced in private design docs.
-
-(Action item for Bobby: collect named consent from each lab modality expert before flipping the repo public; add proper attribution at that point. Local design notes are tracked in the private ideation grill, not in this public file.)
+- **Where in VaultLab:** `src/vaultlab/data/spatial/niches.py`.
+- **Attribution:** Per-module docstring + sibling `.md` cites Schürch et al.
 
 ### CODEX_MALDIIMS — figure helpers
 

@@ -11,7 +11,7 @@ The full vaultlab differentiator:
 2. **Cell segmentation** — Mesmer (default for multiplex IF)
 3. **Marker normalization + clustering** — per-channel z-score + Leiden
 4. **Hybrid LLM cell typing** — canonical lineage rules + KB-grounded LLM interpretation
-5. **Spatial neighborhoods** — CN methodology (Schürch et al. 2020 + Hickey lab anchor)
+5. **Spatial neighborhoods** — CN methodology (Schürch et al. 2020)
 6. **Publication-quality spatial overlay figures** — `vaultlab.figures.recipes.spatial_overlay` with publication-tight layout
 7. **Citation-verified Methods section draft** — auto-drafted, semantic citation audit, NotebookLM-style evidence
 8. **12-slide journal-club deck** — `vaultlab.slides` flagship demo

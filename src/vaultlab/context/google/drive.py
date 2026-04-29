@@ -14,7 +14,7 @@ Usage:
     from vaultlab.context.google.drive import scan_directory, get_google_id
 
     # Scan a local Drive folder
-    files = scan_directory("G:/My Drive/HickeyLabProjects/")
+    files = scan_directory("G:/My Drive/Projects/")
     for f in files:
         print(f"{f.name:30s} {f.file_type:15s} {f.google_id or f.local_path}")
 

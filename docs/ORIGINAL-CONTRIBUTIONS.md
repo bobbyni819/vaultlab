@@ -151,7 +151,7 @@ These are external patterns or code that vaultlab uses without significant modif
 | Karpathy nanoGPT | Code-as-documentation philosophy, fork-and-clone primary | CONCEPT |
 | NotebookLM | Citation evidence UX (hover-to-quote) | CONCEPT |
 | scanpy/squidpy/Cellpose/Mesmer | Wrapped, not modified | TOOL |
-| Hickey lab + Schürch 2020 | Cellular neighborhood methodology | PATTERN |
+| Schürch et al. 2020 | Cellular neighborhood methodology | PATTERN |
 | process-bigraph | Typed shared state, dependency-driven step networks | PATTERN |
 | MultiAgent (Bobby's own) | Three-layer error defense, BSS YAML, deterministic eval | PATTERN |
 | CODEX_MALDIIMS (Bobby's own) | Figure helpers ported (P0.1) | CODE |

@@ -236,7 +236,7 @@ VaultLab is built on the shoulders of many open-source projects. Foundational in
 
 Full attribution + lineage: [`INSPIRATIONS.md`](INSPIRATIONS.md). What's uniquely VaultLab vs synthesis vs borrowed: [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md).
 
-VaultLab is developed at the [Hickey Lab](https://www.hickeylab.org), Duke University Biomedical Engineering.
+VaultLab is developed by a member of the Hickey Lab at Duke University Biomedical Engineering.
 
 ---
 

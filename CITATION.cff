@@ -5,7 +5,7 @@ type: software
 authors:
   - family-names: "Ni"
     given-names: "Bobby Y.X."
-    affiliation: "Hickey Lab, Duke University"
+    affiliation: "Hickey Lab, Duke University Biomedical Engineering"
 version: "0.0.1"
 license: MIT
 repository-code: "https://github.com/bobbyni819/vaultlab"
