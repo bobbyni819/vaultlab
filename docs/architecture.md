@@ -210,6 +210,6 @@ These commitments make it safe to use vaultlab on real projects today without fe
 - [`AGENTS.md`](../AGENTS.md) — invariants enforced in code reviews
 - [`CLAUDE.md`](../CLAUDE.md) — Claude Code session entry point
 - [`INSPIRATIONS.md`](../INSPIRATIONS.md) — what we drew from where
-- [`docs/ORIGINAL-CONTRIBUTIONS.md`](ORIGINAL-CONTRIBUTIONS.md) — what's uniquely vaultlab vs synthesis vs borrowed
+- [`docs/design-rationale.md`](design-rationale.md) — design choices novel to vaultlab vs synthesis vs borrowed
 - [`docs/long-term-reproducibility.md`](long-term-reproducibility.md) — model-versioning philosophy
 - [`docs/comparison.md`](comparison.md) — vs PaperQA / scanpy / FutureHouse / scverse / Aider (TODO populate)

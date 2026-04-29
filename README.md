@@ -203,7 +203,7 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 
 **Privacy:** [`docs/data-privacy.md`](docs/data-privacy.md) · [`docs/compliance.md`](docs/compliance.md) · [`docs/long-term-reproducibility.md`](docs/long-term-reproducibility.md)
 
-**Lineage:** [`INSPIRATIONS.md`](INSPIRATIONS.md) · [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md)
+**Lineage:** [`INSPIRATIONS.md`](INSPIRATIONS.md) · [`docs/design-rationale.md`](docs/design-rationale.md)
 
 **Contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`docs/graphics-guide.md`](docs/graphics-guide.md)
 
@@ -228,7 +228,7 @@ VaultLab is alpha software — no published paper has been written using it yet.
 
 Each row represents a method or interface design choice that I read, understood, and adapted — not invented from scratch. The implementations are mine, but the patterns have track records elsewhere.
 
-Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). What's specifically novel to VaultLab vs. synthesis vs. directly borrowed: [`docs/ORIGINAL-CONTRIBUTIONS.md`](docs/ORIGINAL-CONTRIBUTIONS.md).
+Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). For a project-level breakdown of design choices novel to VaultLab vs. synthesis vs. borrowed: [`docs/design-rationale.md`](docs/design-rationale.md).
 
 VaultLab is developed by a member of the Hickey Lab at Duke University Biomedical Engineering.
 

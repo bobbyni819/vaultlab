@@ -203,7 +203,7 @@ Tell Claude Code that. It catches up in 30 seconds. Then ask whatever you'd ask 
 - **Try the demo:** `vaultlab demo pbmc3k` (lands fully in v0.1.0; placeholder in v0.0.1)
 - **Read the architecture:** [`architecture.md`](architecture.md)
 - **See what slash commands exist:** [`.claude/commands/COMMANDS.md`](../.claude/commands/COMMANDS.md)
-- **Understand what vaultlab is uniquely yours vs borrowed:** [`ORIGINAL-CONTRIBUTIONS.md`](ORIGINAL-CONTRIBUTIONS.md)
+- **Read the design rationale:** [`design-rationale.md`](design-rationale.md)
 - **For contributors:** [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`../AGENTS.md`](../AGENTS.md)
 
 ## Stuck?

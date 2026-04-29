@@ -79,7 +79,7 @@ Most LLM research tools either:
 
 vaultlab's curated index + anti-laziness rules + source attribution = research tool that calls REAL functions from REAL packages, not invented ones.
 
-This is part of vaultlab's research-robustness story (see [`docs/ORIGINAL-CONTRIBUTIONS.md`](../../../../docs/ORIGINAL-CONTRIBUTIONS.md)).
+This is part of vaultlab's research-robustness story (see [`docs/design-rationale.md`](../../../../docs/design-rationale.md)).
 
 ## See also
 
