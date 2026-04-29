@@ -43,17 +43,21 @@ def auto_offset_annotations(
 ) -> list[ElementAnnotation]:
     """Run the whitespace finder over annotations and update marker_offset_px.
 
-    Per Bobby 2026-04-29 figure-annotation decision tree: don't guess marker
-    placement; programmatically pick a nearby whitespace zone.
+    Respects explicit marker_offset_px on the input - if Bobby (or whoever
+    authored the annotation) already specified an offset, keep it rather
+    than auto-overwriting.
     """
     placed_marker_bboxes: list[tuple[int, int, int, int]] = []
     out: list[ElementAnnotation] = []
     for ann in annotations:
-        offset = find_marker_offset(
-            image_path,
-            ann.bbox_px,
-            avoid_other_bboxes=tuple(placed_marker_bboxes),
-        )
+        if ann.marker_offset_px is not None:
+            offset: tuple[int, int] | None = ann.marker_offset_px
+        else:
+            offset = find_marker_offset(
+                image_path,
+                ann.bbox_px,
+                avoid_other_bboxes=tuple(placed_marker_bboxes),
+            )
         new_ann = ElementAnnotation(
             label=ann.label,
             bbox_px=ann.bbox_px,
@@ -104,13 +108,13 @@ IMAGE1_ANNOTATIONS = [
         motif_name="mhc",
         marker_offset_px=(-220, -150),
     ),
-    # #4 - CD3 chains (right of introduced TCR; place marker BELOW the box, in
-    # the membrane area)
+    # #4 - CD3 chains. Bobby 2026-04-29 v6: place marker bottom-right in the
+    # extracellular-membrane band where there is whitespace.
     ElementAnnotation(
         label="CD3 chains (panel a)",
         bbox_px=(1206, 2100, 1261, 2392),
         motif_name="cd3",
-        marker_offset_px=(150, 320),  # below + slightly right
+        marker_offset_px=(180, 420),  # bottom-right into membrane band
     ),
     # #5 - TAA panel b (narrow horizontal band; box is awkward, skip box and
     # use a marker pointing at it from the LEFT in panel-b whitespace)
@@ -129,13 +133,12 @@ IMAGE1_ANNOTATIONS = [
         motif_name="endo-tcr",
         marker_offset_px=(-300, 200),  # left of box, mid-height
     ),
-    # #7 - scFv panel c (tall narrow column; default top-left works since
-    # the area above scFv is whitespace between tumor cell and the construct)
+    # #7 - scFv panel c. Bobby 2026-04-29 v6: extend right edge to capture
+    # the entire 'Antigen Recognition Domain' segment + scFv label text.
     ElementAnnotation(
         label="scFv / antigen recognition (panel c)",
-        bbox_px=(4558, 1837, 4715, 2430),
+        bbox_px=(4558, 1837, 5050, 2430),
         motif_name="endo-tcr",
-        marker_offset_px=(-280, 150),  # left of box
     ),
     # #8 - Co-stim panel c (move marker LEFT to clear the construct stack)
     ElementAnnotation(
@@ -410,7 +413,7 @@ def main() -> None:
         **kwargs,
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v6.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v7.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 

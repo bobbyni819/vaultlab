@@ -128,9 +128,8 @@ def render_annotated_figure(
         canvas.save(Path(output_path))
         return Path(output_path)
 
-    # Sort callouts top-to-bottom by box-y to minimize leader-line crossings
+    # Numerical order in the gutter (1, 2, 3...) per Bobby 2026-04-29 v6.
     indexed = list(enumerate(annotations))
-    indexed.sort(key=lambda pair: pair[1].bbox_px[1])
 
     gutter_x = W + 12
     callout_top = 30
@@ -275,7 +274,6 @@ def render_annotated_figure_v3(
         return Path(output_path)
 
     indexed = list(enumerate(annotations))
-    indexed.sort(key=lambda pair: pair[1].bbox_px[1])
 
     gutter_text_x = W + 100
     callout_top = 30

@@ -36,9 +36,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
 from vaultlab.figures.understand.models import ElementAnnotation
@@ -428,6 +430,56 @@ def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLa
         run.font.color.rgb = text_color
 
 
+def _group_shapes(slide, shapes_to_group, group_name: str) -> None:
+    """Wrap a list of shapes into a single PowerPoint group.
+
+    Per Bobby 2026-04-29 v6 review: side-marker + label should be one click,
+    not two. python-pptx has no high-level group API; we build the XML and
+    move the shape elements into it.
+    """
+    if len(shapes_to_group) < 2:
+        return
+
+    sp_tree = slide.shapes._spTree
+
+    min_x = min(s.left for s in shapes_to_group)
+    min_y = min(s.top for s in shapes_to_group)
+    max_x = max(s.left + s.width for s in shapes_to_group)
+    max_y = max(s.top + s.height for s in shapes_to_group)
+
+    # Pick a unique-ish id (current count + 100 to avoid collisions)
+    next_id = len(sp_tree.findall(qn("p:sp"))) + len(sp_tree.findall(qn("p:grpSp"))) + 100
+
+    a_ns = "http://schemas.openxmlformats.org/drawingml/2006/main"
+    p_ns = "http://schemas.openxmlformats.org/presentationml/2006/main"
+
+    grp_xml = (
+        f'<p:grpSp xmlns:p="{p_ns}" xmlns:a="{a_ns}">'
+        f'<p:nvGrpSpPr>'
+        f'<p:cNvPr id="{next_id}" name="{group_name}"/>'
+        f'<p:cNvGrpSpPr/>'
+        f'<p:nvPr/>'
+        f'</p:nvGrpSpPr>'
+        f'<p:grpSpPr>'
+        f'<a:xfrm>'
+        f'<a:off x="{min_x}" y="{min_y}"/>'
+        f'<a:ext cx="{max_x - min_x}" cy="{max_y - min_y}"/>'
+        f'<a:chOff x="{min_x}" y="{min_y}"/>'
+        f'<a:chExt cx="{max_x - min_x}" cy="{max_y - min_y}"/>'
+        f'</a:xfrm>'
+        f'</p:grpSpPr>'
+        f'</p:grpSp>'
+    )
+    grp_sp = etree.fromstring(grp_xml)
+
+    for shape in shapes_to_group:
+        sp_element = shape._element
+        sp_tree.remove(sp_element)
+        grp_sp.append(sp_element)
+
+    sp_tree.append(grp_sp)
+
+
 def _add_annotations(
     s,
     *,
@@ -442,8 +494,10 @@ def _add_annotations(
     layout: SlideLayout,
 ) -> None:
     n = len(annotations)
-    # Sort by box-y to match visual reading order in the gutter
-    sorted_anns = sorted(enumerate(annotations), key=lambda pair: pair[1].bbox_px[1])
+    # Numerical order in the gutter per Bobby 2026-04-29 v6 review:
+    # users expect 1, 2, 3... reading down; box-y ordering caused odd sequences
+    # like 3, 5, 1, 7, ... when annotations were spatially scattered.
+    sorted_anns = list(enumerate(annotations))
 
     gutter_top = layout.title_h_in + 0.15
     gutter_bottom = layout.slide_h_in - layout.caption_h_in - 0.05
@@ -567,6 +621,10 @@ def _add_annotations(
         lr.font.size = Pt(layout.label_font_pt)
         lr.font.bold = True
         lr.font.color.rgb = RGBColor(*text_color)
+
+        # Group the side-marker + label so the user can move/animate them
+        # together with one click (Bobby 2026-04-29 v6 ask).
+        _group_shapes(s, [side_marker, label_box], f"ann{orig_idx + 1}_side_group")
 
 
 __all__ = ["DEFAULT", "SlideLayout", "add_annotated_figure_slide"]
