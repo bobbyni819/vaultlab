@@ -323,48 +323,67 @@ def _add_page_number(s, page_number: int, layout: SlideLayout) -> None:
 
 
 def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLayout) -> None:
-    """Bottom-of-slide banner: N equal-width rectangles, current highlighted."""
+    """Section-banner pills - modern style.
+
+    Per Bobby 2026-04-29 v3 review ('look more modern'):
+    - Rounded-rectangle pills (not sharp)
+    - No outline (clean)
+    - Soft fills: very light card for inactive, cobalt for active
+    - Inactive: muted slate text; active: white bold text
+    - Comfortable gap between pills
+    """
+    from pptx.enum.text import PP_ALIGN
+
     n = len(sections)
     if n == 0:
         return
+
     margin = 0.4
-    avail = layout.slide_w_in - 2 * margin - 1.0  # leave space for page number
-    rect_w = avail / n
-    rect_h = 0.25
-    rect_y = layout.slide_h_in - layout.footer_h_in + 0.08
+    page_number_reserve = 0.7
+    gap_in = 0.10
+    avail = layout.slide_w_in - 2 * margin - page_number_reserve
+    total_gap = gap_in * (n - 1)
+    rect_w = (avail - total_gap) / max(n, 1)
+    rect_h = 0.32
+    rect_y = layout.slide_h_in - layout.footer_h_in + 0.04
 
     for i, name in enumerate(sections):
-        x = margin + i * rect_w
+        x = margin + i * (rect_w + gap_in)
         rect = s.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE,
+            MSO_SHAPE.ROUNDED_RECTANGLE,
             Inches(x),
             Inches(rect_y),
-            Inches(rect_w - 0.04),
+            Inches(rect_w),
             Inches(rect_h),
         )
         rect.name = f"section_banner_{i}"
+        # Crank the corner radius so it looks like a pill
+        try:
+            rect.adjustments[0] = 0.5
+        except (IndexError, AttributeError):
+            pass
+
         rect.fill.solid()
         if i == current_idx:
-            # Current section: filled with cobalt accent
-            rect.fill.fore_color.rgb = RGBColor(0, 102, 204)
+            rect.fill.fore_color.rgb = RGBColor(0, 102, 204)  # cobalt active
             text_color = RGBColor(255, 255, 255)
         else:
-            rect.fill.fore_color.rgb = RGBColor(235, 235, 235)
-            text_color = RGBColor(80, 80, 80)
-        rect.line.color.rgb = RGBColor(200, 200, 200)
-        rect.line.width = Pt(0.5)
+            rect.fill.fore_color.rgb = RGBColor(245, 246, 248)  # off-white card
+            text_color = RGBColor(110, 115, 125)  # muted slate
+        rect.line.fill.background()  # no border
 
         tf = rect.text_frame
         tf.margin_top = Emu(0)
         tf.margin_bottom = Emu(0)
-        from pptx.enum.text import PP_ALIGN
+        tf.margin_left = Emu(0)
+        tf.margin_right = Emu(0)
 
         p = tf.paragraphs[0]
         p.alignment = PP_ALIGN.CENTER
         run = p.add_run()
         run.text = name
         run.font.name = "Arial"
-        run.font.size = Pt(layout.footer_font_pt)
+        run.font.size = Pt(layout.footer_font_pt + 1)
         run.font.bold = i == current_idx
         run.font.color.rgb = text_color
 

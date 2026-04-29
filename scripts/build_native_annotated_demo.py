@@ -26,6 +26,11 @@ from pptx.util import Inches, Pt
 
 from vaultlab.figures.understand import ElementAnnotation
 from vaultlab.slides.annotated_figure_slide import add_annotated_figure_slide
+from vaultlab.slides.notes import dual_format
+from vaultlab.slides.themes.hickey_lab import (
+    hickey_lab_template_path,
+    load_hickey_lab_presentation,
+)
 
 # ---------------------------------------------------------------------------
 # Image1 annotations - 9 elements (lifted from v3 script with corrections)
@@ -194,31 +199,78 @@ IMAGE10_COLORS = {
 # once Bobby has answered Q10-Q13 in the slide-construction grill)
 # ---------------------------------------------------------------------------
 
-IMAGE1_NOTES = (
-    "Three-panel comparison of how engineered T cells recognize tumor antigens. "
-    "Each annotation is a separate PowerPoint shape - try right-clicking any "
-    "numbered marker and 'Add Animation > Appear' to sequence them.\n\n"
-    "Panel a (TCR therapy): introduced TCR (#2) competes with endogenous TCR "
-    "(#1) for MHC-presented peptide (#3); CD3 chains (#4) handle signaling.\n\n"
-    "Panel b (TAA therapy): aberrantly expressed protein (#5) presented via MHC; "
-    "endogenous TCR (#6) is the active receptor.\n\n"
-    "Panel c (CAR T): scFv (#7) binds antigen MHC-independently; "
-    "co-stim (#8) + CD3-zeta (#9) inside the cell."
+IMAGE1_NOTES = dual_format(
+    mental_map={
+        "hook": "T cells engineered to find tumors come in three architectural flavors.",
+        "key_claim": "TCR, TAA, and CAR therapies differ fundamentally in their MHC-dependence.",
+        "evidence": "Three-panel BioRender comparison (VanNoy 2025) on this slide.",
+        "key_terms": ["scFv", "MHC class I", "ITAM", "CD3-zeta"],
+        "click": "9 annotation pairs reveal in order: panel-a items first (#1-4), then panel b (#5-6), then panel c (#7-9).",
+        "transition": "Next slide: how the CAR construct is engineered across 5 generations.",
+    },
+    detailed_script=(
+        "Engineered T cells recognize tumor antigens through three distinct architectural "
+        "strategies, shown in this three-panel BioRender comparison from VanNoy 2025.\n\n"
+        "In panel a, TCR therapy preserves the endogenous T-cell signaling architecture. "
+        "An exogenous T-cell receptor is introduced into the cell (the green dimer marked #2), "
+        "competing with the endogenous TCR (#1, blue) for the same MHC class I peptide complex "
+        "(#3, purple). Both receptors couple through the CD3 chains (#4, orange) for signal "
+        "transduction. The therapeutic gain comes from supplying a high-affinity TCR specific "
+        "for a known tumor peptide.\n\n"
+        "Panel b shows TAA therapy. Here the antigen is an aberrantly expressed self-protein "
+        "(#5, the small red bar at the top of the receptor stack), presented via MHC class I to "
+        "the endogenous TCR (#6, blue). No exogenous receptor is introduced - the existing T "
+        "cell is the effector. The challenge is finding tumor antigens that are both "
+        "tumor-restricted and MHC-presentable.\n\n"
+        "Panel c shows CAR therapy. The chimeric antigen receptor uses an scFv (#7) to bind "
+        "tumor surface antigen directly, MHC-independently. Inside the cell, the construct "
+        "carries a co-stimulatory domain (#8, green) and a CD3-zeta-style activation domain "
+        "(#9, orange). This MHC-independence is consistent with broader antigen reach but also "
+        "with off-target on-tumor toxicity when the antigen is shared with healthy tissue."
+    ),
 )
 
-IMAGE10_NOTES = (
-    "Tumor microenvironment suppressive mechanisms - 8 distinct callout regions. "
-    "Each is a separate shape; you can hide individual ones by toggling visibility "
-    "in the Selection pane.\n\n"
-    "Numbered annotations correspond to the labeled circles in the figure: "
-    "Suppressive cells (#1), checkpoint detail (#2), soluble inhibitors (#3), "
-    "antigen heterogeneity (#4), metabolic suppression (#5), dysregulated "
-    "vasculature (#6), physical barriers (#7), and the central tumor mass (#8) "
-    "- which is the cellular blob, NOT the red blood vessel running through it.\n\n"
-    "Animation suggestion: stagger entrances by 0.5s so each callout enters in "
-    "panel-reading order (suppressive cells -> checkpoint -> soluble inhibitors -> "
-    "antigen heterogeneity -> metabolic -> vasculature -> physical barriers -> "
-    "tumor mass)."
+IMAGE10_NOTES = dual_format(
+    mental_map={
+        "hook": "The tumor microenvironment fights back against CAR-T in seven distinct ways.",
+        "key_claim": "Solid-tumor CAR-T efficacy is limited by converging suppressive mechanisms, not just antigen escape.",
+        "evidence": "8 labeled callout regions surrounding the central tumor mass on this slide.",
+        "key_terms": [
+            "MDSC",
+            "Treg",
+            "TAM",
+            "PD-1/PDL-1",
+            "CTLA-4/CD86",
+            "VCAM-1/ICAM-1",
+            "ECM",
+            "CAF",
+            "IFP",
+        ],
+        "click": "8 annotations enter in clockwise order from suppressive cells (#1) to tumor mass (#8).",
+        "transition": "Next slide: how engineering strategies address each of these mechanisms.",
+    },
+    detailed_script=(
+        "Solid-tumor CAR-T efficacy is bounded not by the engineering of the cells but by the "
+        "tumor microenvironment they enter. This figure summarizes seven converging suppressive "
+        "forces around a central tumor mass.\n\n"
+        "The top-center callout (#1) shows suppressive cells - MDSCs, Tregs, and TAMs that engage "
+        "the CAR T cell directly through inhibitory ligands. The left circle (#2) zooms into the "
+        "checkpoint interaction: PD-1/PDL-1 and CTLA-4/CD86 axes between cancer cells and "
+        "dendritic cells, both targets of approved checkpoint inhibitors.\n\n"
+        "The top-right callout (#3) shows soluble inhibitors. IL-10 and TGF-beta diffuse from "
+        "the suppressive cell cluster, broadly damping immune activation. To the right (#4), "
+        "tumor antigen heterogeneity is consistent with antigen-negative escape variants under "
+        "single-target CAR pressure.\n\n"
+        "The central blue ellipses (#5) capture metabolic suppression: hypoxia, low pH, nutrient "
+        "depletion, and accumulated lactate or adenosine. These metabolic conditions limit T-cell "
+        "function independently of any inhibitory ligand.\n\n"
+        "Bottom-left (#6), dysregulated tumor vasculature with reduced VCAM-1/ICAM-1 limits T-cell "
+        "extravasation into the parenchyma. Bottom-right (#7), physical barriers - dense ECM, "
+        "cancer-associated fibroblasts, and high interstitial fluid pressure - mechanically "
+        "exclude T cells from reaching the tumor cells they target.\n\n"
+        "Note on annotation #8: this captures the actual tumor mass, the pink cellular blob, NOT "
+        "the red blood vessel running through it - a common visual misread of this kind of figure."
+    ),
 )
 
 
@@ -271,7 +323,14 @@ SECTIONS = [
 
 
 def main() -> None:
-    pres = Presentation()
+    # Use the Hickey Lab template if bundled, else fall back to plain Presentation.
+    if hickey_lab_template_path() is not None:
+        pres = load_hickey_lab_presentation(theme="light")
+        print(f"Using Hickey Lab template: {hickey_lab_template_path()}")
+    else:
+        pres = Presentation()
+        print("Hickey Lab template not bundled; using plain Presentation.")
+
     pres.slide_width = Inches(13.333)
     pres.slide_height = Inches(7.5)
 
@@ -305,7 +364,7 @@ def main() -> None:
         current_section_idx=2,  # "TME challenges"
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v3.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v4.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 
