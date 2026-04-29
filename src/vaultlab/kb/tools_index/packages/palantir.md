@@ -8,6 +8,11 @@ docs_url: https://github.com/dpeerlab/Palantir
 
 # Palantir
 
+
+## Summary
+
+Branching-trajectory inference (Setty 2019, *Nat. Biotech.*). For differentiation hierarchies with multiple terminal states (hematopoiesis, neurogenesis). Outputs pseudotime + per-cell branch probabilities + branching entropy (high entropy = bipotent state). Requires manual `early_cell` argument. For non-branching trajectories, `scanpy.tl.dpt` is cheaper.
+
 Setty 2019 (Nat. Biotech). Trajectory inference for branching differentiation hierarchies. Better than diffusion-pseudotime alone when there are multiple terminal states.
 
 ## When to use

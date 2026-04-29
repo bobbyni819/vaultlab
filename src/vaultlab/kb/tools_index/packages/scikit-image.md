@@ -8,6 +8,11 @@ docs_url: https://scikit-image.org
 
 # scikit-image
 
+
+## Summary
+
+General-purpose image processing for microscopy + spatial imaging. Threshold-based segmentation (Otsu, adaptive), morphology (open/close/dilate), filters (Gaussian, median, CLAHE), connected-component labeling, region-property feature extraction, watershed segmentation. The non-deep-learning workhorse.
+
 General-purpose image processing. The default tool for non-deep-learning microscopy work.
 
 ## When to use

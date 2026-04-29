@@ -8,6 +8,11 @@ docs_url: https://anndata.readthedocs.io
 
 # anndata
 
+
+## Summary
+
+The annotated data-matrix container that scanpy / squidpy / scvi-tools all share. Holds `.X` (cells × genes), `.obs` (cell-level annotations), `.var` (gene-level), `.obsm` (embeddings), `.layers` (alternative matrices). Read/write `.h5ad`. Slicing returns views — `.copy()` to materialize.
+
 Matrix-with-annotations container. The substrate for scanpy, squidpy, scvi-tools, and most scverse-aligned analyses.
 
 ## When to use

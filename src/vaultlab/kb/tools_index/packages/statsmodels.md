@@ -8,6 +8,11 @@ docs_url: https://www.statsmodels.org
 
 # statsmodels
 
+
+## Summary
+
+Where `scipy.stats` stops being enough: regression with R-style formulas (`'y ~ x + C(group)'`), GLMs (logistic / Poisson / negative binomial), mixed-effects models for nested designs, multiple-testing correction (Benjamini-Hochberg), time-series models. The right tool when batch effects or repeated-measures structure matters.
+
 Where scipy.stats stops being enough. Regression formulas, GLMs, mixed-effects models, multiple-testing correction.
 
 ## When to use

@@ -8,6 +8,11 @@ docs_url: https://github.com/alexandrovteam/pyimzML
 
 # pyimzML
 
+
+## Summary
+
+Reader for MALDI mass-spectrometry imzML files. Iterates spectra by spatial coordinate; builds 2D ion images for given m/z ± tolerance. Two flavors: continuous (shared m/z axis) vs processed (per-pixel axis); `p.continuous` flag tells which. Bridge to scanpy / squidpy by binning spectra to a fixed m/z grid and stacking into AnnData.
+
 Reader for the imzML community standard. Most MALDI vendor software exports imzML — this is how Python sees the data.
 
 ## When to use

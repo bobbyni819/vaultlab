@@ -8,6 +8,11 @@ docs_url: https://github.com/slowkow/harmonypy
 
 # Harmony
 
+
+## Summary
+
+Korsunsky 2019 batch correction in PCA space. Fast, deterministic, no GPU. The lightweight first-pass before reaching for scVI — covers ~95% of typical batch problems. Output `Z_corr` is `(n_pcs, n_cells)` — TRANSPOSE before assigning to `.obsm`. Multi-covariate via `['batch', 'donor']`.
+
 Korsunsky 2019 (Nat. Methods). Batch-correct in PCA space iteratively. Fast, deterministic, no GPU. For most batch problems, Harmony is "good enough" before reaching for scVI.
 
 ## When to use

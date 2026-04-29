@@ -8,6 +8,11 @@ docs_url: https://squidpy.readthedocs.io
 
 # squidpy
 
+
+## Summary
+
+Spatial extension of scanpy for Visium / Xenium / MERFISH / CODEX. Builds spatial-neighbor graphs, computes neighborhood enrichment, co-occurrence at distance scales, Ripley's K, and Moran's I. Operates on AnnData with spatial coords in `.obsm['spatial']`.
+
 Spatial extension of the scanpy / AnnData ecosystem. Built for Visium, Xenium, MERFISH, and related modalities.
 
 ## When to use

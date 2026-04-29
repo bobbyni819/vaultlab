@@ -8,6 +8,11 @@ docs_url: https://pingouin-stats.org
 
 # pingouin
 
+
+## Summary
+
+Statistical tests that return p-values, effect sizes, and 95% CIs in one call — paper-ready output without manual bootstrap. T-tests, Mann-Whitney, correlations, ANOVA + repeated-measures ANOVA, linear regression. Returns one-row DataFrames easy to concatenate. Use when you need Cohen's d / eta-squared alongside the p-value.
+
 Returns p-values, effect sizes, AND confidence intervals from one call — rather than scipy's bare-bones p-value-only output. Good for paper-ready statistical tables.
 
 ## When to use

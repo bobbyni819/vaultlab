@@ -8,6 +8,11 @@ docs_url: https://scanpy.readthedocs.io
 
 # scanpy
 
+
+## Summary
+
+Single-cell RNA-seq analysis on AnnData objects: preprocessing (filter, normalize, HVG, scale), embeddings (PCA, UMAP, t-SNE), graph-based clustering (Leiden), differential expression, and standard QC plots. The default Python toolkit for scRNA-seq pipelines.
+
 Canonical Python toolkit for single-cell RNA-seq analysis. Operates on AnnData objects.
 
 ## When to use

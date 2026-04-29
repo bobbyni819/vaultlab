@@ -8,6 +8,11 @@ docs_url: https://docs.scipy.org/doc/scipy/reference/stats.html
 
 # scipy.stats
 
+
+## Summary
+
+The Python statistics workhorse. Hypothesis tests (t-test, Mann-Whitney, Wilcoxon, KS, Fisher exact), correlations (Pearson, Spearman, Kendall), probability distributions, bootstrap CIs. Bare-bones — for effect sizes + CIs in the same call, prefer `pingouin`. For multi-test correction, use `statsmodels`.
+
 The Python statistics workhorse. Hypothesis tests, distributions, descriptive statistics.
 
 ## When to use

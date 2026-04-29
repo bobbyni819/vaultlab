@@ -8,6 +8,11 @@ docs_url: https://cellpose.readthedocs.io
 
 # Cellpose
 
+
+## Summary
+
+Generalist deep-learning cell + nucleus segmentation (Stringer & Pachitariu, *Nat. Methods* 2021). Pretrained models (`cyto3`, `nuclei`, `tissuenet_cp3`, `livecell_cp3`) work zero-shot on most fluorescence / brightfield / H&E microscopy. GPU recommended; output is per-cell integer mask.
+
 Stringer & Pachitariu (Nat. Methods 2021). Pretrained generalist segmentation that works out-of-the-box on most microscopy modalities.
 
 ## When to use

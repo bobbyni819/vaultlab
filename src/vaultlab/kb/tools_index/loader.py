@@ -14,14 +14,23 @@ class ToolsIndexError(Exception):
 
 @dataclass
 class ToolEntry:
-    """One curated package entry."""
+    """One curated package entry.
+
+    Tiered for searchability per Bobby 2026-04-29: ``description`` + ``summary``
+    are the always-loaded short form (~1 paragraph); ``body`` is the deep doc
+    that the LLM only reads after deciding this package is relevant.
+
+    Use :func:`summary_for` / :func:`deep_doc_for` for tiered access; ``body``
+    is preserved for backwards compatibility.
+    """
 
     name: str
     description: str
+    summary: str  # one-paragraph TL;DR (always loaded)
     domains: list[str]
     install: str
     docs_url: str
-    body: str  # full markdown for LLM consumption
+    body: str  # full markdown for LLM consumption (loaded on demand)
     path: Path  # source file
     key_functions: list[str] = field(default_factory=list)
 
@@ -126,6 +135,30 @@ _FRONT_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 _LIST_RE = re.compile(r"^\s*-\s+`([^`\n]+)`", re.MULTILINE)
 
 
+def summary_for(name: str, *, index: dict[str, ToolEntry] | None = None) -> str | None:
+    """Return the one-paragraph summary for a package, or ``None`` if unknown.
+
+    The tiered-search entry point: read summaries across all 12 packages,
+    decide which 1-3 to dive into, then call :func:`deep_doc_for` for those.
+    """
+    if index is None:
+        index = load_index()
+    entry = index.get(name)
+    return entry.summary if entry is not None else None
+
+
+def deep_doc_for(name: str, *, index: dict[str, ToolEntry] | None = None) -> str | None:
+    """Return the full body for a package after summary triage.
+
+    Per Bobby 2026-04-29: don't read 50 pages every time — read summaries first,
+    only dive into deep docs when the summary indicates relevance.
+    """
+    if index is None:
+        index = load_index()
+    entry = index.get(name)
+    return entry.body if entry is not None else None
+
+
 def _parse_tool_md(path: Path) -> ToolEntry:
     text = path.read_text(encoding="utf-8")
     m = _FRONT_RE.match(text)
@@ -158,6 +191,10 @@ def _parse_tool_md(path: Path) -> ToolEntry:
             if list_match:
                 key_functions.append(list_match.group(1).strip())
 
+    # Extract the "## Summary" section (one-paragraph TL;DR for tiered search).
+    # Falls back to the description if no Summary section is present.
+    summary = _extract_summary(body) or str(fm.get("description", ""))
+
     name_val = fm.get("name") or path.stem
     desc_val = fm.get("description", "")
     domains_val = fm.get("domains", [])
@@ -167,6 +204,7 @@ def _parse_tool_md(path: Path) -> ToolEntry:
     return ToolEntry(
         name=str(name_val),
         description=str(desc_val),
+        summary=summary,
         domains=list(domains_val) if isinstance(domains_val, list) else [str(domains_val)],
         install=str(install_val),
         docs_url=str(docs_val),
@@ -174,3 +212,26 @@ def _parse_tool_md(path: Path) -> ToolEntry:
         path=path,
         key_functions=key_functions,
     )
+
+
+def _extract_summary(body: str) -> str:
+    """Extract the first paragraph following a ``## Summary`` heading.
+
+    Returns the empty string if no Summary section is present.
+    """
+    in_summary = False
+    paragraph_lines: list[str] = []
+    for line in body.splitlines():
+        if line.startswith("## "):
+            if in_summary:
+                break  # next section ends Summary
+            in_summary = "Summary" in line
+            continue
+        if in_summary:
+            stripped = line.strip()
+            if not stripped:
+                if paragraph_lines:  # blank after content = end of first paragraph
+                    break
+                continue
+            paragraph_lines.append(stripped)
+    return " ".join(paragraph_lines).strip()

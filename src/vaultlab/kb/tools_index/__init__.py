@@ -28,19 +28,23 @@ from __future__ import annotations
 from vaultlab.kb.tools_index.loader import (
     ToolEntry,
     ToolsIndexError,
+    deep_doc_for,
     external_repos_path,
     load_external_repos,
     load_index,
     packages_dir,
     suggest_for_topic,
+    summary_for,
 )
 
 __all__ = [
     "ToolEntry",
     "ToolsIndexError",
+    "deep_doc_for",
     "external_repos_path",
     "load_external_repos",
     "load_index",
     "packages_dir",
     "suggest_for_topic",
+    "summary_for",
 ]

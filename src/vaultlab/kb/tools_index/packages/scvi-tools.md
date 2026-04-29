@@ -8,6 +8,11 @@ docs_url: https://scvi-tools.org
 
 # scvi-tools
 
+
+## Summary
+
+Probabilistic models for single-cell omics (scVI, scANVI, totalVI, multiVI). Trains on raw counts (do NOT log-transform); returns latent representations + batch-corrected expression + Bayesian DE. Use when Harmony's PCA-space correction isn't enough — particularly for cross-protocol or cross-species integration. GPU strongly recommended.
+
 Generative models for single-cell data. Trains on counts, gives back latent representations, batch-corrected expression, and per-gene posterior distributions.
 
 ## When to use

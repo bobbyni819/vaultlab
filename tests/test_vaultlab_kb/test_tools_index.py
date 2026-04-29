@@ -32,6 +32,7 @@ class TestLoadIndex:
         for entry in load_index().values():
             assert entry.name
             assert entry.description, f"{entry.name} missing description"
+            assert entry.summary, f"{entry.name} missing summary (## Summary section)"
             assert entry.domains, f"{entry.name} missing domains"
             assert entry.docs_url, f"{entry.name} missing docs_url"
             assert entry.body, f"{entry.name} body should be non-empty"
@@ -100,6 +101,36 @@ class TestExternalRepos:
         assert spatial["url"] == ""
         assert spatial["status"] == "pending-access"
         assert "spatial-omics" in spatial["domains"]
+
+
+class TestTieredSearch:
+    def test_summary_for_returns_one_paragraph(self) -> None:
+        from vaultlab.kb.tools_index import summary_for
+
+        s = summary_for("scanpy")
+        assert s is not None
+        assert len(s) < 1000  # one paragraph, not the full body
+        assert "scRNA-seq" in s or "single-cell" in s.lower()
+
+    def test_summary_for_unknown_returns_none(self) -> None:
+        from vaultlab.kb.tools_index import summary_for
+
+        assert summary_for("not-a-real-pkg") is None
+
+    def test_deep_doc_for_returns_full_body(self) -> None:
+        from vaultlab.kb.tools_index import deep_doc_for, summary_for
+
+        s = summary_for("scanpy")
+        deep = deep_doc_for("scanpy")
+        assert deep is not None
+        assert len(deep) > len(s or "")  # deep doc longer than summary
+        # The deep doc contains sections beyond just Summary
+        assert "## Key functions" in deep
+
+    def test_deep_doc_for_unknown_returns_none(self) -> None:
+        from vaultlab.kb.tools_index import deep_doc_for
+
+        assert deep_doc_for("not-a-real-pkg") is None
 
 
 class TestParseFailures:
