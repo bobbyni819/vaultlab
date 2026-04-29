@@ -1,0 +1,24 @@
+# External-repo registry for VaultLab.
+#
+# Lab-collaborator repositories that VaultLab can suggest when a user asks a
+# question that matches the repo's domain. Per Q17 in the 2026-04-29 grill
+# (Bobby's lab-collaborator-network ask).
+#
+# Schema:
+#   [[repo]]
+#   slug          — kebab-case identifier
+#   url           — empty until access granted
+#   description   — one sentence
+#   domains       — keyword tags VaultLab matches against
+#   status        — pending-access / public / private
+#   contact       — how a VaultLab user reaches the maintainer
+#   when_to_suggest — natural-language trigger condition
+
+[[repo]]
+slug = "spatial-omics-algorithms"
+url = ""
+description = "Compiled spatial-omics algorithms (cellular-neighborhood detection, niche identification, spatial pattern analysis) maintained by a Hickey-lab member."
+domains = ["spatial-omics", "codex", "cellular-neighborhood", "niche-detection", "tissue-architecture"]
+status = "pending-access"
+contact = "Reach out via Bobby until access details are public."
+when_to_suggest = "User asks about cellular-neighborhood detection, niche identification, COX/spatial pattern algorithms, or other spatial-omics methods beyond what scanpy/squidpy provide."
