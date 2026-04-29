@@ -241,6 +241,15 @@ def add_title_slide(pres: Presentation) -> None:
         run.font.color.rgb = RGBColor(60, 60, 60)
 
 
+SECTIONS = [
+    "Background",
+    "Antigen recognition",
+    "TME challenges",
+    "Engineering strategies",
+    "Outlook",
+]
+
+
 def main() -> None:
     pres = Presentation()
     pres.slide_width = Inches(13.333)
@@ -252,25 +261,31 @@ def main() -> None:
         pres,
         IMAGE1,
         IMAGE1_ANNOTATIONS,
-        title="Mechanisms of Antigen Recognition (TCR / TAA / CAR T)",
+        title="Engineered T cells recognize antigens via 3 mechanisms: TCR, TAA, CAR",
         caption="Three-panel comparison from VanNoy 2025 (BioRender). "
         "Each numbered annotation is a native PowerPoint shape.",
         motif_colors=IMAGE1_COLORS,
         notes=IMAGE1_NOTES,
+        page_number=2,
+        sections=SECTIONS,
+        current_section_idx=1,  # "Antigen recognition"
     )
 
     add_annotated_figure_slide(
         pres,
         IMAGE10,
         IMAGE10_ANNOTATIONS,
-        title="TME Suppressive Mechanisms vs CAR-T",
+        title="The TME suppresses CAR-T via 7 converging mechanisms around the tumor",
         caption="8 labeled callouts surrounding the central tumor. "
         "Try View > Selection Pane to see all shapes.",
         motif_colors=IMAGE10_COLORS,
         notes=IMAGE10_NOTES,
+        page_number=3,
+        sections=SECTIONS,
+        current_section_idx=2,  # "TME challenges"
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v2.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 

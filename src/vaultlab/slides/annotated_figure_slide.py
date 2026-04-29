@@ -50,15 +50,27 @@ from vaultlab.figures.understand.models import ElementAnnotation
 
 @dataclass(frozen=True)
 class SlideLayout:
+    """Geometry + sizing for one annotated-figure slide.
+
+    Tuned per Bobby 2026-04-29 v3 review: bigger figure area, smaller markers
+    + side labels, gutter pushed further right, footer-banner allowance at bottom.
+    """
+
     slide_w_in: float = 13.333
     slide_h_in: float = 7.5
     title_h_in: float = 0.85
-    caption_h_in: float = 0.6
-    figure_area_x_in: float = 0.3
-    figure_area_w_in: float = 9.0  # figure column
-    gutter_x_in: float = 9.5  # side-label column
-    gutter_w_in: float = 3.7
-    marker_size_in: float = 0.35
+    caption_h_in: float = 0.55
+    footer_h_in: float = 0.40  # page number + section banner
+    figure_area_x_in: float = 0.20
+    figure_area_w_in: float = 10.20  # bumped from 9.0 - more room for the figure
+    gutter_x_in: float = 10.55  # pushed right of the wider figure
+    gutter_w_in: float = 2.65  # narrower side panel
+    marker_size_in: float = 0.24  # smaller markers (Bobby: too big in v1)
+    marker_font_pt: int = 11
+    label_font_pt: int = 11  # smaller side-label text
+    title_font_pt: int = 26  # bumped from 22 (Bobby Q4 - my call)
+    caption_font_pt: int = 12
+    footer_font_pt: int = 9
 
 
 DEFAULT = SlideLayout()
@@ -79,8 +91,11 @@ def add_annotated_figure_slide(
     motif_colors: dict[str, tuple[int, int, int]] | None = None,
     layout: SlideLayout = DEFAULT,
     notes: str = "",
+    page_number: int | None = None,
+    sections: Sequence[str] | None = None,
+    current_section_idx: int | None = None,
 ) -> None:
-    """Add one slide with figure + native-shape annotations.
+    """Add one slide with figure + native-shape annotations + footer.
 
     Parameters
     ----------
@@ -91,7 +106,7 @@ def add_annotated_figure_slide(
     annotations
         Concept-to-region pairings.
     title
-        Slide title (rendered in title text box at top).
+        Slide title (rendered in title text box at top, centered).
     caption
         Optional italic caption below the figure.
     motif_colors
@@ -101,16 +116,21 @@ def add_annotated_figure_slide(
         Geometric layout constants.
     notes
         Speaker notes text.
+    page_number
+        If set, draws "<n>" in the right side of the footer (Bobby Q2 2026-04-29).
+    sections
+        If set, draws a section banner across the full bottom: one rectangle
+        per section, current section highlighted via ``current_section_idx``.
+    current_section_idx
+        Index into ``sections`` of the current section (highlighted).
     """
     from PIL import Image
 
     blank = pres.slide_layouts[6]
     s = pres.slides.add_slide(blank)
 
-    # Title
     _add_title(s, title, layout)
 
-    # Figure
     src_w, src_h = Image.open(Path(image_path)).size
     img_x_in, img_y_in, img_w_in, img_h_in = _placed_figure_geometry(src_w, src_h, layout)
     s.shapes.add_picture(
@@ -121,11 +141,9 @@ def add_annotated_figure_slide(
         height=Inches(img_h_in),
     )
 
-    # Caption
     if caption:
         _add_caption(s, caption, layout)
 
-    # Annotation shapes - boxes + markers on figure, labels in gutter
     if annotations:
         _add_annotations(
             s,
@@ -140,7 +158,17 @@ def add_annotated_figure_slide(
             layout=layout,
         )
 
-    # Speaker notes
+    # Footer (page number + optional section banner)
+    if page_number is not None:
+        _add_page_number(s, page_number, layout)
+    if sections:
+        _add_section_banner(
+            s,
+            sections=sections,
+            current_idx=current_section_idx,
+            layout=layout,
+        )
+
     if notes:
         s.notes_slide.notes_text_frame.text = notes
 
@@ -160,19 +188,18 @@ def _placed_figure_geometry(
     """
     avail_w = layout.figure_area_w_in
     avail_h = (
-        layout.slide_h_in - layout.title_h_in - layout.caption_h_in - 0.3
-    )  # 0.3 = bottom margin
+        layout.slide_h_in - layout.title_h_in - layout.caption_h_in - layout.footer_h_in - 0.15
+    )
     aspect_src = src_w / src_h
     aspect_avail = avail_w / avail_h
     if aspect_src > aspect_avail:
-        # Width-limited
         w = avail_w
         h = avail_w / aspect_src
     else:
         h = avail_h
         w = avail_h * aspect_src
     x = layout.figure_area_x_in + (avail_w - w) / 2
-    y = layout.title_h_in + 0.15
+    y = layout.title_h_in + 0.10
     return x, y, w, h
 
 
@@ -247,15 +274,17 @@ def _add_title(s, title: str, layout: SlideLayout) -> None:
     run = p.add_run()
     run.text = title
     run.font.name = "Arial"
-    run.font.size = Pt(22)
+    run.font.size = Pt(layout.title_font_pt)
     run.font.bold = True
     run.font.color.rgb = RGBColor(20, 20, 20)
 
 
 def _add_caption(s, caption: str, layout: SlideLayout) -> None:
+    # Caption sits above the footer
+    caption_top = layout.slide_h_in - layout.footer_h_in - layout.caption_h_in - 0.02
     box = s.shapes.add_textbox(
         Inches(0.4),
-        Inches(layout.slide_h_in - layout.caption_h_in - 0.05),
+        Inches(caption_top),
         Inches(layout.slide_w_in - 0.8),
         Inches(layout.caption_h_in),
     )
@@ -266,9 +295,78 @@ def _add_caption(s, caption: str, layout: SlideLayout) -> None:
     run = p.add_run()
     run.text = caption
     run.font.name = "Arial"
-    run.font.size = Pt(13)
+    run.font.size = Pt(layout.caption_font_pt)
     run.font.italic = True
     run.font.color.rgb = RGBColor(70, 70, 70)
+
+
+def _add_page_number(s, page_number: int, layout: SlideLayout) -> None:
+    """Right-aligned page number in the footer."""
+    from pptx.enum.text import PP_ALIGN
+
+    box = s.shapes.add_textbox(
+        Inches(layout.slide_w_in - 1.0),
+        Inches(layout.slide_h_in - layout.footer_h_in + 0.05),
+        Inches(0.8),
+        Inches(layout.footer_h_in - 0.10),
+    )
+    box.name = "slide_page_number"
+    tf = box.text_frame
+    tf.word_wrap = False
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.RIGHT
+    run = p.add_run()
+    run.text = str(page_number)
+    run.font.name = "Arial"
+    run.font.size = Pt(layout.footer_font_pt)
+    run.font.color.rgb = RGBColor(120, 120, 120)
+
+
+def _add_section_banner(s, *, sections, current_idx: int | None, layout: SlideLayout) -> None:
+    """Bottom-of-slide banner: N equal-width rectangles, current highlighted."""
+    n = len(sections)
+    if n == 0:
+        return
+    margin = 0.4
+    avail = layout.slide_w_in - 2 * margin - 1.0  # leave space for page number
+    rect_w = avail / n
+    rect_h = 0.25
+    rect_y = layout.slide_h_in - layout.footer_h_in + 0.08
+
+    for i, name in enumerate(sections):
+        x = margin + i * rect_w
+        rect = s.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(x),
+            Inches(rect_y),
+            Inches(rect_w - 0.04),
+            Inches(rect_h),
+        )
+        rect.name = f"section_banner_{i}"
+        rect.fill.solid()
+        if i == current_idx:
+            # Current section: filled with cobalt accent
+            rect.fill.fore_color.rgb = RGBColor(0, 102, 204)
+            text_color = RGBColor(255, 255, 255)
+        else:
+            rect.fill.fore_color.rgb = RGBColor(235, 235, 235)
+            text_color = RGBColor(80, 80, 80)
+        rect.line.color.rgb = RGBColor(200, 200, 200)
+        rect.line.width = Pt(0.5)
+
+        tf = rect.text_frame
+        tf.margin_top = Emu(0)
+        tf.margin_bottom = Emu(0)
+        from pptx.enum.text import PP_ALIGN
+
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        run = p.add_run()
+        run.text = name
+        run.font.name = "Arial"
+        run.font.size = Pt(layout.footer_font_pt)
+        run.font.bold = i == current_idx
+        run.font.color.rgb = text_color
 
 
 def _add_annotations(
@@ -349,7 +447,7 @@ def _add_annotations(
         mr.text = num
         mr.font.name = "Arial"
         mr.font.bold = True
-        mr.font.size = Pt(16)
+        mr.font.size = Pt(layout.marker_font_pt)
         mr.font.color.rgb = RGBColor(255, 255, 255)
 
         # 3. Side label in gutter - marker square + label text
@@ -377,7 +475,7 @@ def _add_annotations(
         smr.text = num
         smr.font.name = "Arial"
         smr.font.bold = True
-        smr.font.size = Pt(16)
+        smr.font.size = Pt(layout.marker_font_pt)
         smr.font.color.rgb = RGBColor(255, 255, 255)
 
         # Label text box
@@ -394,7 +492,7 @@ def _add_annotations(
         lr = lp.add_run()
         lr.text = ann.label
         lr.font.name = "Arial"
-        lr.font.size = Pt(14)
+        lr.font.size = Pt(layout.label_font_pt)
         lr.font.bold = True
         lr.font.color.rgb = RGBColor(*text_color)
 
