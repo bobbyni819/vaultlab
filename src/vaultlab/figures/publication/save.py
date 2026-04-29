@@ -13,16 +13,17 @@ after, so each figure has both a PNG/PDF + a provenance receipt.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 
 def save_fig(
-    fig: "Figure",
-    out_path: "Path | str",
+    fig: Figure,
+    out_path: Path | str,
     *,
     formats: Sequence[str] = ("png", "pdf"),
     dpi: int = 300,

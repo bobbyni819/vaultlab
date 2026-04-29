@@ -42,6 +42,7 @@ def send_email(to, subject, body, attachments=None):
                 part = MIMEBase(maintype, subtype)
                 part.set_payload(f.read())
             from email import encoders
+
             encoders.encode_base64(part)
             part.add_header("Content-Disposition", "attachment", filename=path.name)
             msg.attach(part)
@@ -53,6 +54,4 @@ def send_email(to, subject, body, attachments=None):
     msg["subject"] = subject
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    service.users().messages().send(
-        userId="me", body={"raw": raw}
-    ).execute()
+    service.users().messages().send(userId="me", body={"raw": raw}).execute()

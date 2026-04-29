@@ -24,23 +24,16 @@
 
 ## 🌟 The flagship — centralized memory for your whole research life
 
-<p align="center"><b>Other tools forget you between sessions. VaultLab remembers everything, forever.</b></p>
-
-VaultLab knits **every fragmented source of context about your work** into one place the LLM reads. The KB grows project-by-project; cross-project insights emerge automatically.
+VaultLab pulls every source of context about your work into one place the LLM reads:
 
 | | |
 |---|---|
-| 📓 **Knowledge base** | Plain-markdown KB (Obsidian-native). Papers, notes, findings, manuscripts, figures — everything you write goes here, everything VaultLab reads comes from here. |
-| 🎤 **Meeting transcripts** | Record meetings, auto-transcribe (local Whisper or cloud). *"What did we decide about cluster 7 last Tuesday?"* becomes a question VaultLab answers from the transcript it ingested. |
-| 📥 **Inbox + calendar + work log** | Reads your Outlook (Windows) or Gmail + Google Docs lab work log + Calendar. *"Brief me on this morning"* — VaultLab knows what's pressing without you telling it. |
-| 💾 **Local files** | Anything Claude Code can read on your machine. No upload, no proxy. |
-| 🚀 **Auto-resumed projects** | Every project has a `START_HERE.md` that VaultLab maintains. Coming back after 3 days? Read one file, you're caught up in 30 seconds. |
+| 📓 **Knowledge base** | Plain-markdown KB (Obsidian-native). Papers, notes, findings, manuscripts, figures — all here. |
+| 🎤 **Meeting transcripts** | Record + auto-transcribe (local Whisper or cloud). *"What did we decide about cluster 7 last Tuesday?"* — answered from the transcript. |
+| 📥 **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
+| 🚀 **Auto-resumed projects** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. |
 
-**Three things this enables that no other research tool offers:**
-
-- **Onboarding scales by sharing.** Add a lab member to your shared Drive folder + KB folder — they have the full project context. *No more "let me catch you up."*
-- **Nothing is lost.** Recorded meetings + ingested papers + auto-written analysis notes + verified citations all queryable. *The information you need is always somewhere.*
-- **The system gets smarter the more you use it.** Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."*
+Onboard a lab member by sharing the Drive folder. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."*
 
 ---
 
@@ -132,7 +125,8 @@ flowchart TB
     Team --> CC[Claude Code]
     CC --> VL[VaultLab capabilities]
 
-    subgraph Memory["Centralized memory<br/>(unified, shareable, scalable)"]
+    subgraph Memory["Centralized memory"]
+        direction LR
         KB[(Obsidian KB)]
         GD[Google Workspace]
         OL[Outlook]
@@ -199,19 +193,6 @@ Full spec: [`docs/architecture.md`](docs/architecture.md). Invariants for contri
 The combination is the value. Several rows nobody else even attempts. If you only need one piece, those tools are great. If you want a research companion that knows your whole lab, VaultLab is the only option.
 
 </details>
-
----
-
-## Roadmap
-
-| Version | When | What works |
-|---|---|---|
-| **v0.0.1** | shipped 2026-04-28 | Scaffold + docs. `figures.publication`, `context.google`, `context.outlook` real. Most other modules are placeholders. 27 unit tests passing. |
-| **v0.1.0** | target 2026-05-27 | Real `research`, `citations`, `figures.recipes`, `slides`, `kb`, `runner`. ~30 slash commands. End-to-end demo works. arXiv preprint draft. |
-| **v0.2.0** | autumn 2026 | MCP server. Full meeting-recorder integration. Cross-model judge. macOS/Linux meeting backend. |
-| **v1.0.0** | TBD | Stable API, lab adoption, documented benchmarks. |
-
-See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for current placeholders.
 
 ---
 

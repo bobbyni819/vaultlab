@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
-from vaultlab.context.outlook._connection import get_namespace, get_outlook_app, _with_retry
+from vaultlab.context.outlook._connection import _with_retry, get_namespace, get_outlook_app
 from vaultlab.context.outlook._constants import OL_APPOINTMENT_ITEM, OL_FOLDER_CALENDAR, OL_MEETING
 from vaultlab.context.outlook._converters import _com_date_to_datetime, _datetime_to_outlook_str
 from vaultlab.context.outlook.models import CalendarEvent
@@ -156,9 +155,7 @@ def get_next_event() -> CalendarEvent | None:
         The next CalendarEvent, or None if no events remain today/tomorrow.
     """
     now = datetime.now()
-    tomorrow_end = (now + timedelta(days=1)).replace(
-        hour=23, minute=59, second=59, microsecond=0
-    )
+    tomorrow_end = (now + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=0)
     events = get_events(now, tomorrow_end)
     for event in events:
         if event.start and event.start >= now:
@@ -172,8 +169,8 @@ def create_meeting(
     start: datetime,
     end: datetime,
     attendees: list[str],
-    location: Optional[str] = None,
-    body: Optional[str] = None,
+    location: str | None = None,
+    body: str | None = None,
     send_invites: bool = True,
 ) -> CalendarEvent:
     """Create a meeting with attendees and optionally send invites.
@@ -229,8 +226,8 @@ def create_appointment(
     subject: str,
     start: datetime,
     end: datetime,
-    location: Optional[str] = None,
-    body: Optional[str] = None,
+    location: str | None = None,
+    body: str | None = None,
 ) -> CalendarEvent:
     """Create a personal appointment (no attendees).
 
@@ -329,8 +326,8 @@ def find_free_slots(
 @_with_retry
 def get_shared_calendar(
     owner_name_or_email: str,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ) -> list[CalendarEvent]:
     """Access another user's shared calendar (best-effort).
 
@@ -368,9 +365,7 @@ def get_shared_calendar(
     items.Sort("[Start]")
 
     if start_date is None:
-        start_date = datetime.now().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     if end_date is None:
         end_date = start_date + timedelta(days=1)
 
@@ -406,11 +401,11 @@ def delete_event(entry_id: str) -> None:
 @_with_retry
 def update_event(
     entry_id: str,
-    subject: Optional[str] = None,
-    start: Optional[datetime] = None,
-    end: Optional[datetime] = None,
-    location: Optional[str] = None,
-    body: Optional[str] = None,
+    subject: str | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    location: str | None = None,
+    body: str | None = None,
 ) -> CalendarEvent:
     """Update an existing calendar event's fields.
 

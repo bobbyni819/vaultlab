@@ -12,7 +12,8 @@ rainbow colors. That looks generated. This module fights that default.
 
 from __future__ import annotations
 
-from typing import Final, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Final
 
 # ---------------------------------------------------------------------------
 # Colorblind-safe palettes
@@ -21,16 +22,36 @@ from typing import Final, Mapping, Sequence
 #: Paul Tol's qualitative colorblind-safe palette (9 colors).
 #: Reference: https://personal.sron.nl/~pault/
 CB_PALETTE: Final[tuple[str, ...]] = (
-    "#332288", "#88CCEE", "#44AA99", "#117733",
-    "#999933", "#DDCC77", "#CC6677", "#882255", "#AA4499",
+    "#332288",
+    "#88CCEE",
+    "#44AA99",
+    "#117733",
+    "#999933",
+    "#DDCC77",
+    "#CC6677",
+    "#882255",
+    "#AA4499",
 )
 
 #: Extended palette for >9 categories (24 colors). Earlier 9 match CB_PALETTE
 #: for stable mapping.
-EXT_PALETTE: Final[tuple[str, ...]] = CB_PALETTE + (
-    "#661100", "#6699CC", "#AA4466", "#4477AA", "#228833",
-    "#CCBB44", "#EE6677", "#AA3377", "#BBBBBB", "#000000",
-    "#66CCEE", "#1B9E77", "#D95F02", "#7570B3", "#E7298A",
+EXT_PALETTE: Final[tuple[str, ...]] = (
+    *CB_PALETTE,
+    "#661100",
+    "#6699CC",
+    "#AA4466",
+    "#4477AA",
+    "#228833",
+    "#CCBB44",
+    "#EE6677",
+    "#AA3377",
+    "#BBBBBB",
+    "#000000",
+    "#66CCEE",
+    "#1B9E77",
+    "#D95F02",
+    "#7570B3",
+    "#E7298A",
 )
 
 # ---------------------------------------------------------------------------
@@ -48,9 +69,9 @@ NEUTRAL_GREY_EDGE: Final = "#444444"
 # Significance encoding (Rule 14: opt-in for sign)
 # ---------------------------------------------------------------------------
 
-SIG_COLOR_UP: Final = "#E64B35"     #: Red for up / enriched / positive
-SIG_COLOR_DOWN: Final = "#4DBBD5"   #: Blue for down / depleted / negative
-SIG_COLOR_NS: Final = "#CCCCCC"     #: Grey for non-significant
+SIG_COLOR_UP: Final = "#E64B35"  #: Red for up / enriched / positive
+SIG_COLOR_DOWN: Final = "#4DBBD5"  #: Blue for down / depleted / negative
+SIG_COLOR_NS: Final = "#CCCCCC"  #: Grey for non-significant
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +139,7 @@ def palette_for(n: int) -> tuple[str, ...]:
         return EXT_PALETTE[:n]
     # n > 24: cycle and warn
     import warnings
+
     warnings.warn(
         f"palette_for(n={n}) exceeds 24 distinct colors. Consider grouping "
         f"or a different visualization. Cycling EXT_PALETTE.",
@@ -178,9 +200,7 @@ def bar_fill(
     """
     if sign is not None:
         if len(sign) != len(labels):
-            raise ValueError(
-                f"len(sign) ({len(sign)}) != len(labels) ({len(labels)})"
-            )
+            raise ValueError(f"len(sign) ({len(sign)}) != len(labels) ({len(labels)})")
         # Threshold near-zero values to NS at +/- 1e-3 (caller can pre-threshold)
         return [
             SIG_COLOR_UP if s > 1e-3 else SIG_COLOR_DOWN if s < -1e-3 else SIG_COLOR_NS

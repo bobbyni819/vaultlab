@@ -11,9 +11,8 @@ import os
 import re
 import time
 from datetime import datetime
-from typing import Optional
 
-from vaultlab.context.outlook._connection import get_namespace, get_outlook_app, _with_retry
+from vaultlab.context.outlook._connection import _with_retry, get_namespace, get_outlook_app
 from vaultlab.context.outlook._constants import (
     FOLDER_NAME_MAP,
     OL_FLAG_COMPLETE,
@@ -59,7 +58,7 @@ def _get_folder(folder_name: str = "Inbox"):
 
 
 @_with_retry
-def list_folders(account: Optional[str] = None) -> list[dict]:
+def list_folders(account: str | None = None) -> list[dict]:
     """List all mail folders with item counts.
 
     Args:
@@ -84,12 +83,14 @@ def list_folders(account: Optional[str] = None) -> list[dict]:
                 name = sub.Name
                 if name.lower() in _SYSTEM_FOLDERS:
                     continue
-                folders.append({
-                    "name": name,
-                    "account": store_name,
-                    "item_count": sub.Items.Count,
-                    "unread_count": sub.UnReadItemCount,
-                })
+                folders.append(
+                    {
+                        "name": name,
+                        "account": store_name,
+                        "item_count": sub.Items.Count,
+                        "unread_count": sub.UnReadItemCount,
+                    }
+                )
             except Exception:
                 continue
     return folders
@@ -143,7 +144,7 @@ def _item_to_email(item) -> Email:
 def read_inbox(
     limit: int = 50,
     unread_only: bool = False,
-    since: Optional[datetime] = None,
+    since: datetime | None = None,
 ) -> list[Email]:
     """Read emails from the Inbox.
 
@@ -186,7 +187,7 @@ def read_folder(
     folder_name: str,
     limit: int = 50,
     unread_only: bool = False,
-    since: Optional[datetime] = None,
+    since: datetime | None = None,
 ) -> list[Email]:
     """Read emails from a named folder (Sent, Drafts, custom folders, etc.).
 
@@ -223,24 +224,44 @@ def read_folder(
     return emails
 
 
-_SYSTEM_FOLDERS = frozenset((
-    "inbox", "sent items", "outbox", "drafts",
-    "deleted items", "junk email", "junk e-mail",
-    "sync issues", "contacts", "calendar", "tasks",
-    "notes", "journal", "rss feeds", "conversation history",
-    "conversation action settings", "quick step settings",
-    "social activity notifications", "yammer root",
-    "externalcontacts", "files", "events", "dcp",
-    "public folders", "favorites", "all public folders",
-))
+_SYSTEM_FOLDERS = frozenset(
+    (
+        "inbox",
+        "sent items",
+        "outbox",
+        "drafts",
+        "deleted items",
+        "junk email",
+        "junk e-mail",
+        "sync issues",
+        "contacts",
+        "calendar",
+        "tasks",
+        "notes",
+        "journal",
+        "rss feeds",
+        "conversation history",
+        "conversation action settings",
+        "quick step settings",
+        "social activity notifications",
+        "yammer root",
+        "externalcontacts",
+        "files",
+        "events",
+        "dcp",
+        "public folders",
+        "favorites",
+        "all public folders",
+    )
+)
 
 
 def _search_single_folder(
     query: str,
     folder: str,
     limit: int,
-    sender: Optional[str] = None,
-    since: Optional[datetime] = None,
+    sender: str | None = None,
+    since: datetime | None = None,
 ) -> list[Email]:
     """Search a single folder by subject or body content."""
     fld = _get_folder(folder)
@@ -272,8 +293,7 @@ def _search_single_folder(
                 if sender_lower:
                     item_sender = (item.SenderName or "").lower()
                     item_email = _get_sender_email(item).lower()
-                    if (sender_lower not in item_sender
-                            and sender_lower not in item_email):
+                    if sender_lower not in item_sender and sender_lower not in item_email:
                         continue
                 emails.append(_item_to_email(item))
             except Exception:
@@ -295,8 +315,7 @@ def _search_single_folder(
             if sender_lower:
                 item_sender = (item.SenderName or "").lower()
                 item_email = _get_sender_email(item).lower()
-                if (sender_lower not in item_sender
-                        and sender_lower not in item_email):
+                if sender_lower not in item_sender and sender_lower not in item_email:
                     continue
             subject = (item.Subject or "").lower()
             body = (item.Body or "").lower()
@@ -313,8 +332,8 @@ def search_emails(
     folder: str = "Inbox",
     limit: int = 50,
     all_folders: bool = False,
-    sender: Optional[str] = None,
-    since: Optional[datetime] = None,
+    sender: str | None = None,
+    since: datetime | None = None,
 ) -> list[Email]:
     """Search emails by subject or body content.
 
@@ -336,8 +355,7 @@ def search_emails(
         List of matching Email objects, newest first.
     """
     if not all_folders:
-        return _search_single_folder(query, folder, limit,
-                                     sender=sender, since=since)
+        return _search_single_folder(query, folder, limit, sender=sender, since=since)
 
     # Search across all mail folders
     ns = get_namespace()
@@ -346,8 +364,7 @@ def search_emails(
 
     # Standard folders first
     for std_folder in ("Inbox", "Sent"):
-        for email in _search_single_folder(query, std_folder, limit,
-                                           sender=sender, since=since):
+        for email in _search_single_folder(query, std_folder, limit, sender=sender, since=since):
             if email.id not in seen_ids:
                 seen_ids.add(email.id)
                 all_emails.append(email)
@@ -361,9 +378,7 @@ def search_emails(
                 name = sub.Name
                 if name.lower() in _SYSTEM_FOLDERS:
                     continue
-                for email in _search_single_folder(
-                    query, name, limit, sender=sender, since=since
-                ):
+                for email in _search_single_folder(query, name, limit, sender=sender, since=since):
                     if email.id not in seen_ids:
                         seen_ids.add(email.id)
                         all_emails.append(email)
@@ -371,9 +386,7 @@ def search_emails(
                 continue
 
     # Sort newest first and apply limit
-    all_emails.sort(
-        key=lambda e: e.received_time or datetime.min, reverse=True
-    )
+    all_emails.sort(key=lambda e: e.received_time or datetime.min, reverse=True)
     return all_emails[:limit]
 
 
@@ -392,7 +405,7 @@ def get_email(entry_id: str) -> Email:
     return _item_to_email(item)
 
 
-_BODY_FONT = 'font-family:Aptos,Calibri,sans-serif;font-size:12pt'
+_BODY_FONT = "font-family:Aptos,Calibri,sans-serif;font-size:12pt"
 
 # ---------------------------------------------------------------------------
 # Signature helpers
@@ -413,7 +426,7 @@ def _load_signature_html() -> str:
         if fname.endswith(".htm"):
             path = os.path.join(_SIG_DIR, fname)
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     return f.read()
             except OSError:
                 continue
@@ -422,16 +435,14 @@ def _load_signature_html() -> str:
 
 def _text_to_html(text: str) -> str:
     """Convert plain text body to styled HTML paragraphs."""
-    lines = text.split('\n')
+    lines = text.split("\n")
     parts = []
     for line in lines:
-        if line.strip() == '':
-            parts.append('<br>')
+        if line.strip() == "":
+            parts.append("<br>")
         else:
-            parts.append(
-                f'<p style="margin:0;{_BODY_FONT}">{line}</p>'
-            )
-    return ''.join(parts)
+            parts.append(f'<p style="margin:0;{_BODY_FONT}">{line}</p>')
+    return "".join(parts)
 
 
 def _insert_body_html(body: str, existing_html: str, include_signature: bool = False) -> str:
@@ -449,10 +460,10 @@ def _insert_body_html(body: str, existing_html: str, include_signature: bool = F
     if include_signature:
         sig = _load_signature_html()
         if sig:
-            body_html += '<br>' + sig
+            body_html += "<br>" + sig
     return re.sub(
-        r'(<body[^>]*>)',
-        r'\1' + body_html + '<br>',
+        r"(<body[^>]*>)",
+        r"\1" + body_html + "<br>",
         existing_html,
         count=1,
         flags=re.IGNORECASE,
@@ -464,7 +475,7 @@ def reply(
     entry_id: str,
     body: str,
     reply_all: bool = False,
-    cc: Optional[str | list[str]] = None,
+    cc: str | list[str] | None = None,
     send: bool = True,
 ) -> str:
     """Reply to an email.
@@ -486,9 +497,7 @@ def reply(
     if cc:
         existing_cc = reply_item.CC or ""
         new_cc = "; ".join(cc) if isinstance(cc, list) else cc
-        reply_item.CC = (
-            f"{existing_cc}; {new_cc}" if existing_cc else new_cc
-        )
+        reply_item.CC = f"{existing_cc}; {new_cc}" if existing_cc else new_cc
 
     # Insert styled HTML body + signature before the quoted thread
     reply_item.HTMLBody = _insert_body_html(body, reply_item.HTMLBody, include_signature=True)
@@ -507,8 +516,8 @@ def reply(
 def forward(
     entry_id: str,
     to: str | list[str],
-    body: Optional[str] = None,
-    cc: Optional[str | list[str]] = None,
+    body: str | None = None,
+    cc: str | list[str] | None = None,
     send: bool = True,
 ) -> str:
     """Forward an email.
@@ -548,9 +557,9 @@ def send_email(
     to: str | list[str],
     subject: str,
     body: str,
-    cc: Optional[str | list[str]] = None,
-    bcc: Optional[str | list[str]] = None,
-    attachments: Optional[list[str]] = None,
+    cc: str | list[str] | None = None,
+    bcc: str | list[str] | None = None,
+    attachments: list[str] | None = None,
     html: bool = False,
 ) -> None:
     """Compose and send an email.
@@ -660,7 +669,7 @@ def get_flagged_emails(limit: int = 50) -> list[Email]:
 def count_by_sender(
     folder: str = "Inbox",
     limit: int = 200,
-    since: Optional[datetime] = None,
+    since: datetime | None = None,
 ) -> list[tuple[str, str, int]]:
     """Count emails grouped by sender.
 
@@ -700,17 +709,14 @@ def count_by_sender(
         except Exception:
             continue
 
-    return [
-        (name, email, count)
-        for (name, email), count in sender_counts.most_common()
-    ]
+    return [(name, email, count) for (name, email), count in sender_counts.most_common()]
 
 
 def send_personalized_emails(
     recipients: list[dict],
     subject: str,
     body_template: str,
-    cc: Optional[str] = None,
+    cc: str | None = None,
     delay: float = 1.5,
     dry_run: bool = False,
 ) -> tuple[int, list[dict]]:
@@ -741,12 +747,17 @@ def send_personalized_emails(
         if dry_run:
             logger.info(
                 "[DRY RUN %d/%d] Would send to %s (%s)",
-                sent + 1, total, r.get("first_name", "?"), r["email"],
+                sent + 1,
+                total,
+                r.get("first_name", "?"),
+                r["email"],
             )
             if sent == 0:
                 logger.info(
                     "Preview — To: %s | Subject: %s | Body: %s...",
-                    r["email"], subject, body[:300],
+                    r["email"],
+                    subject,
+                    body[:300],
                 )
             sent += 1
             continue
@@ -762,7 +773,10 @@ def send_personalized_emails(
             sent += 1
             logger.info(
                 "[%d/%d] Sent to %s (%s)",
-                sent, total, r.get("first_name", "?"), r["email"],
+                sent,
+                total,
+                r.get("first_name", "?"),
+                r["email"],
             )
             if sent < total:
                 time.sleep(delay)
@@ -770,7 +784,9 @@ def send_personalized_emails(
             failed.append(r)
             logger.error(
                 "FAILED: %s (%s) - %s",
-                r.get("first_name", "?"), r["email"], e,
+                r.get("first_name", "?"),
+                r["email"],
+                e,
             )
 
     logger.info("Done! Sent %d/%d emails.", sent, total)
@@ -848,7 +864,7 @@ def reply_to_thread(
     body: str,
     reply_all: bool = True,
     folder: str = "Inbox",
-    cc: Optional[str | list[str]] = None,
+    cc: str | list[str] | None = None,
     send: bool = True,
     all_folders: bool = False,
 ) -> None:
@@ -863,9 +879,7 @@ def reply_to_thread(
         send: If True, send immediately. If False, save as draft.
         all_folders: If True, search across all folders to find the thread.
     """
-    results = search_emails(
-        subject, folder=folder, limit=1, all_folders=all_folders
-    )
+    results = search_emails(subject, folder=folder, limit=1, all_folders=all_folders)
     if not results:
         raise ValueError(f"No email found with subject matching: {subject}")
 
@@ -885,9 +899,9 @@ def send_with_signature(
     to: str | list[str],
     subject: str,
     body: str,
-    cc: Optional[str | list[str]] = None,
-    bcc: Optional[str | list[str]] = None,
-    attachments: Optional[list[str]] = None,
+    cc: str | list[str] | None = None,
+    bcc: str | list[str] | None = None,
+    attachments: list[str] | None = None,
     html: bool = False,
 ) -> None:
     """Compose and send an email with Outlook's default signature.
@@ -924,10 +938,8 @@ def send_with_signature(
     sig = _load_signature_html()
     body_html = _text_to_html(body)
     if sig:
-        body_html += '<br>' + sig
-    mail.HTMLBody = (
-        f'<html><body>{body_html}</body></html>'
-    )
+        body_html += "<br>" + sig
+    mail.HTMLBody = f"<html><body>{body_html}</body></html>"
 
     mail.Send()
     logger.info("Email with signature sent to %s: %s", to, subject)
@@ -938,9 +950,9 @@ def create_draft(
     to: str | list[str],
     subject: str,
     body: str,
-    cc: Optional[str | list[str]] = None,
-    bcc: Optional[str | list[str]] = None,
-    attachments: Optional[list[str]] = None,
+    cc: str | list[str] | None = None,
+    bcc: str | list[str] | None = None,
+    attachments: list[str] | None = None,
 ) -> str:
     """Create a draft email with Outlook's default signature.
 
@@ -978,10 +990,8 @@ def create_draft(
     sig = _load_signature_html()
     body_html = _text_to_html(body)
     if sig:
-        body_html += '<br>' + sig
-    mail.HTMLBody = (
-        f'<html><body>{body_html}</body></html>'
-    )
+        body_html += "<br>" + sig
+    mail.HTMLBody = f"<html><body>{body_html}</body></html>"
 
     mail.Save()
     draft_id = mail.EntryID
@@ -1131,11 +1141,13 @@ def get_attachments_info(entry_id: str) -> list[dict[str, str]]:
     attachments = []
     for i in range(1, item.Attachments.Count + 1):
         att = item.Attachments.Item(i)
-        attachments.append({
-            "filename": att.FileName,
-            "size": att.Size,
-            "index": i,
-        })
+        attachments.append(
+            {
+                "filename": att.FileName,
+                "size": att.Size,
+                "index": i,
+            }
+        )
     return attachments
 
 

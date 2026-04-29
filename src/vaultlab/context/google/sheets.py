@@ -20,7 +20,6 @@ import re
 
 from vaultlab.context.google.auth import build_service
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -75,10 +74,7 @@ def _rows_to_dicts(rows: list[list]) -> list[dict]:
         raise ValueError("Cannot convert empty rows to dicts — no header row")
     headers = rows[0]
     width = len(headers)
-    return [
-        dict(zip(headers, row + [""] * (width - len(row))))
-        for row in rows[1:]
-    ]
+    return [dict(zip(headers, row + [""] * (width - len(row)), strict=False)) for row in rows[1:]]
 
 
 def _get_sheet_id(spreadsheet_id: str, title: str) -> int:
@@ -95,9 +91,11 @@ def _get_sheet_id(spreadsheet_id: str, title: str) -> int:
         ValueError: If the sheet name is not found (lists available names).
     """
     service = _get_service()
-    meta = service.spreadsheets().get(
-        spreadsheetId=spreadsheet_id, fields="sheets.properties"
-    ).execute()
+    meta = (
+        service.spreadsheets()
+        .get(spreadsheetId=spreadsheet_id, fields="sheets.properties")
+        .execute()
+    )
 
     for sheet in meta.get("sheets", []):
         props = sheet["properties"]
@@ -189,11 +187,16 @@ def read_range(
     """
     service = _get_service()
     qualified = _qualify_range(range_, sheet_name)
-    result = service.spreadsheets().values().get(
-        spreadsheetId=spreadsheet_id,
-        range=qualified,
-        valueRenderOption=value_render,
-    ).execute()
+    result = (
+        service.spreadsheets()
+        .values()
+        .get(
+            spreadsheetId=spreadsheet_id,
+            range=qualified,
+            valueRenderOption=value_render,
+        )
+        .execute()
+    )
 
     rows = result.get("values", [])
     if as_dicts:
@@ -224,12 +227,17 @@ def write_range(
     """
     service = _get_service()
     qualified = _qualify_range(range_, sheet_name)
-    return service.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id,
-        range=qualified,
-        valueInputOption=value_input,
-        body={"values": values},
-    ).execute()
+    return (
+        service.spreadsheets()
+        .values()
+        .update(
+            spreadsheetId=spreadsheet_id,
+            range=qualified,
+            valueInputOption=value_input,
+            body={"values": values},
+        )
+        .execute()
+    )
 
 
 def append_rows(
@@ -254,13 +262,18 @@ def append_rows(
     """
     service = _get_service()
     qualified = _qualify_range(range_, sheet_name)
-    return service.spreadsheets().values().append(
-        spreadsheetId=spreadsheet_id,
-        range=qualified,
-        valueInputOption=value_input,
-        insertDataOption="INSERT_ROWS",
-        body={"values": values},
-    ).execute()
+    return (
+        service.spreadsheets()
+        .values()
+        .append(
+            spreadsheetId=spreadsheet_id,
+            range=qualified,
+            valueInputOption=value_input,
+            insertDataOption="INSERT_ROWS",
+            body={"values": values},
+        )
+        .execute()
+    )
 
 
 def clear_range(
@@ -281,11 +294,16 @@ def clear_range(
     """
     service = _get_service()
     qualified = _qualify_range(range_, sheet_name)
-    return service.spreadsheets().values().clear(
-        spreadsheetId=spreadsheet_id,
-        range=qualified,
-        body={},
-    ).execute()
+    return (
+        service.spreadsheets()
+        .values()
+        .clear(
+            spreadsheetId=spreadsheet_id,
+            range=qualified,
+            body={},
+        )
+        .execute()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -303,9 +321,11 @@ def get_sheet_names(spreadsheet_id: str) -> list[str]:
         List of sheet tab names in order.
     """
     service = _get_service()
-    meta = service.spreadsheets().get(
-        spreadsheetId=spreadsheet_id, fields="sheets.properties"
-    ).execute()
+    meta = (
+        service.spreadsheets()
+        .get(spreadsheetId=spreadsheet_id, fields="sheets.properties")
+        .execute()
+    )
     return [s["properties"]["title"] for s in meta.get("sheets", [])]
 
 
@@ -337,10 +357,14 @@ def create_sheet(
     if grid_props:
         props["gridProperties"] = grid_props
 
-    resp = service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body={"requests": [{"addSheet": {"properties": props}}]},
-    ).execute()
+    resp = (
+        service.spreadsheets()
+        .batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": [{"addSheet": {"properties": props}}]},
+        )
+        .execute()
+    )
 
     return resp["replies"][0]["addSheet"]["properties"]["sheetId"]
 
@@ -387,11 +411,16 @@ def batch_read(
         Dict mapping each range string to its rows (list[list] or list[dict]).
     """
     service = _get_service()
-    result = service.spreadsheets().values().batchGet(
-        spreadsheetId=spreadsheet_id,
-        ranges=ranges,
-        valueRenderOption=value_render,
-    ).execute()
+    result = (
+        service.spreadsheets()
+        .values()
+        .batchGet(
+            spreadsheetId=spreadsheet_id,
+            ranges=ranges,
+            valueRenderOption=value_render,
+        )
+        .execute()
+    )
 
     out: dict[str, list] = {}
     for vr in result.get("valueRanges", []):
@@ -420,15 +449,17 @@ def batch_write(
     service = _get_service()
     body = {
         "valueInputOption": value_input,
-        "data": [
-            {"range": r, "values": v}
-            for r, v in data.items()
-        ],
+        "data": [{"range": r, "values": v} for r, v in data.items()],
     }
-    return service.spreadsheets().values().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body=body,
-    ).execute()
+    return (
+        service.spreadsheets()
+        .values()
+        .batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body=body,
+        )
+        .execute()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -469,10 +500,14 @@ def find_replace(
     if sheet_name is not None:
         req["sheetId"] = _get_sheet_id(spreadsheet_id, sheet_name)
 
-    resp = service.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body={"requests": [{"findReplace": req}]},
-    ).execute()
+    resp = (
+        service.spreadsheets()
+        .batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": [{"findReplace": req}]},
+        )
+        .execute()
+    )
 
     return resp["replies"][0]["findReplace"].get("occurrencesChanged", 0)
 
@@ -528,9 +563,11 @@ def set_formatting(
     else:
         # Default to first sheet
         service = _get_service()
-        meta = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id, fields="sheets.properties"
-        ).execute()
+        meta = (
+            service.spreadsheets()
+            .get(spreadsheetId=spreadsheet_id, fields="sheets.properties")
+            .execute()
+        )
         sheet_id = meta["sheets"][0]["properties"]["sheetId"]
 
     grid_range = _a1_to_grid_range(range_, sheet_id)

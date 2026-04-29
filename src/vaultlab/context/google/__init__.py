@@ -54,14 +54,29 @@ from vaultlab.context.google.sheets import (
 )
 
 __all__ = [
-    # auth
-    "get_credentials", "build_service",
-    # docs
-    "append_to_today", "get_full_text", "read_recent_entries", "read_today_entries",
-    # sheets
-    "read_range", "write_range", "append_rows", "get_sheet_names",
-    "batch_read", "batch_write", "find_replace", "set_formatting",
-    "clear_range", "create_sheet", "delete_sheet",
     # drive
-    "DriveFile", "scan_directory", "get_google_id", "open_file",
+    "DriveFile",
+    "append_rows",
+    # docs
+    "append_to_today",
+    "batch_read",
+    "batch_write",
+    "build_service",
+    "clear_range",
+    "create_sheet",
+    "delete_sheet",
+    "find_replace",
+    # auth
+    "get_credentials",
+    "get_full_text",
+    "get_google_id",
+    "get_sheet_names",
+    "open_file",
+    # sheets
+    "read_range",
+    "read_recent_entries",
+    "read_today_entries",
+    "scan_directory",
+    "set_formatting",
+    "write_range",
 ]

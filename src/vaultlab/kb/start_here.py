@@ -19,7 +19,6 @@ from typing import Any
 
 import frontmatter  # python-frontmatter, dependency from pyproject.toml
 
-
 _TEMPLATE = """\
 # START_HERE — {slug}
 
@@ -182,11 +181,11 @@ def _insert_under_section(body: str, heading: str, line: str, max_entries: int) 
 
     # Existing list items in this section
     section_lines = lines[i + 1 : j]
-    existing_bullets = [l for l in section_lines if l.startswith("- ")]
-    new_bullets = [line] + existing_bullets[: max_entries - 1]
+    existing_bullets = [ln for ln in section_lines if ln.startswith("- ")]
+    new_bullets = [line, *existing_bullets[: max_entries - 1]]
 
     # Reassemble
-    new_section = [heading, ""] + new_bullets + [""]
+    new_section = [heading, "", *new_bullets, ""]
     return "\n".join(lines[:i] + new_section + lines[j:])
 
 

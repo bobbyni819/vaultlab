@@ -32,7 +32,6 @@ from datetime import date
 
 from vaultlab.context.google.auth import build_service
 
-
 # ---------------------------------------------------------------------------
 # Markdown parsing
 # ---------------------------------------------------------------------------
@@ -68,9 +67,7 @@ def _parse_inline(text: str) -> tuple[str, list[dict]]:
                 pos = sum(len(p) for p in plain)
                 content = text[i + 2 : end]
                 plain.append(content)
-                spans.append(
-                    {"start": pos, "end": pos + len(content), "underline": True}
-                )
+                spans.append({"start": pos, "end": pos + len(content), "underline": True})
                 i = end + 2
                 continue
 
@@ -85,9 +82,7 @@ def _parse_inline(text: str) -> tuple[str, list[dict]]:
                 pos = sum(len(p) for p in plain)
                 content = text[i + 1 : end]
                 plain.append(content)
-                spans.append(
-                    {"start": pos, "end": pos + len(content), "italic": True}
-                )
+                spans.append({"start": pos, "end": pos + len(content), "italic": True})
                 i = end + 1
                 continue
 
@@ -354,9 +349,7 @@ def _build_format_requests(
 def get_full_text(doc_id: str, *, tab_name: str | None = None) -> str:
     """Get the full plain text content of a Google Doc (or a specific tab)."""
     service = build_service("docs", "v1")
-    doc = service.documents().get(
-        documentId=doc_id, includeTabsContent=True
-    ).execute()
+    doc = service.documents().get(documentId=doc_id, includeTabsContent=True).execute()
     body, _ = _get_tab(doc, tab_name)
 
     parts = []
@@ -384,9 +377,7 @@ def read_today_entries(
     heading = today.strftime("%Y%m%d")
 
     service = build_service("docs", "v1")
-    doc = service.documents().get(
-        documentId=doc_id, includeTabsContent=True
-    ).execute()
+    doc = service.documents().get(documentId=doc_id, includeTabsContent=True).execute()
     body, _ = _get_tab(doc, tab_name)
 
     result = _find_heading_range(body, heading)
@@ -411,9 +402,7 @@ def read_today_entries(
     return "".join(parts).strip()
 
 
-def read_recent_entries(
-    doc_id: str, *, n: int = 7, tab_name: str | None = None
-) -> str:
+def read_recent_entries(doc_id: str, *, n: int = 7, tab_name: str | None = None) -> str:
     """Read entries from the most recent *n* date headings.
 
     Useful for giving Claude context about recent work across multiple days.
@@ -429,9 +418,7 @@ def read_recent_entries(
         Text of recent entries with date headings preserved, or empty string.
     """
     service = build_service("docs", "v1")
-    doc = service.documents().get(
-        documentId=doc_id, includeTabsContent=True
-    ).execute()
+    doc = service.documents().get(documentId=doc_id, includeTabsContent=True).execute()
     body, _ = _get_tab(doc, tab_name)
     content = body.get("content", [])
 
@@ -498,9 +485,7 @@ def append_to_today(
     heading = today.strftime("%Y%m%d")
 
     service = build_service("docs", "v1")
-    doc = service.documents().get(
-        documentId=doc_id, includeTabsContent=True
-    ).execute()
+    doc = service.documents().get(documentId=doc_id, includeTabsContent=True).execute()
     body, tab_id = _get_tab(doc, tab_name)
 
     result = _find_heading_range(body, heading)
@@ -519,8 +504,7 @@ def append_to_today(
 
         # Adjust span offsets to be relative to full_text
         adjusted = [
-            {**s, "start": s["start"] + line_start, "end": s["end"] + line_start}
-            for s in spans
+            {**s, "start": s["start"] + line_start, "end": s["end"] + line_start} for s in spans
         ]
         line_info.append(
             {"start": line_start, "end": line_end, "level": line["level"], "spans": adjusted}

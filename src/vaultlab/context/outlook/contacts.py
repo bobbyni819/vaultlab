@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from vaultlab.context.outlook._connection import get_namespace, get_outlook_app, _with_retry
+from vaultlab.context.outlook._connection import _with_retry, get_namespace, get_outlook_app
 from vaultlab.context.outlook._constants import OL_CONTACT_ITEM, OL_FOLDER_CONTACTS
 from vaultlab.context.outlook.models import Contact
 

@@ -45,6 +45,7 @@ def is_available() -> bool:
         return False
     try:
         import meeting_recorder  # noqa: F401
+
         return True
     except ImportError:
         return False

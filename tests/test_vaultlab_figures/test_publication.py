@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # -----------------------------------------------------------------------------
 # color.py — palettes and Rule 14 discipline
 # -----------------------------------------------------------------------------
@@ -131,9 +130,7 @@ class TestBarFillRule14:
         # only opt-in for emphasis)
         from vaultlab.figures.publication import SIG_COLOR_UP, bar_fill
 
-        result = bar_fill(
-            ["A"], sign=[1.0], palette={"A": "#000000"}
-        )
+        result = bar_fill(["A"], sign=[1.0], palette={"A": "#000000"})
         assert result == [SIG_COLOR_UP]
 
     def test_mismatched_lengths_raises(self) -> None:

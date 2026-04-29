@@ -17,17 +17,17 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Figure size presets (inches; Nature column widths)
 # ---------------------------------------------------------------------------
-FIG_1COL: Final = (3.5, 3.0)        # single column
-FIG_1p5COL: Final = (5.5, 4.0)       # 1.5 column
-FIG_2COL: Final = (7.0, 5.0)         # double column
-FIG_WIDE: Final = (7.0, 3.5)         # wide panel
-FIG_TALL: Final = (3.5, 6.0)         # tall panel (e.g., horizontal bars)
-FIG_HEATMAP: Final = (7.0, 6.0)      # heatmaps
+FIG_1COL: Final = (3.5, 3.0)  # single column
+FIG_1p5COL: Final = (5.5, 4.0)  # 1.5 column
+FIG_2COL: Final = (7.0, 5.0)  # double column
+FIG_WIDE: Final = (7.0, 3.5)  # wide panel
+FIG_TALL: Final = (3.5, 6.0)  # tall panel (e.g., horizontal bars)
+FIG_HEATMAP: Final = (7.0, 6.0)  # heatmaps
 FIG_HEATMAP_WIDE: Final = (10.0, 8.0)  # wide heatmaps
-FIG_VOLCANO: Final = (5.5, 5.0)      # volcano plots
-FIG_UMAP: Final = (5.0, 4.5)         # UMAP / scatter
-FIG_BARH: Final = (5.5, 8.0)         # horizontal bar charts
-FIG_TRIPLE: Final = (10.5, 4.0)      # 3-panel side-by-side
+FIG_VOLCANO: Final = (5.5, 5.0)  # volcano plots
+FIG_UMAP: Final = (5.0, 4.5)  # UMAP / scatter
+FIG_BARH: Final = (5.5, 8.0)  # horizontal bar charts
+FIG_TRIPLE: Final = (10.5, 4.0)  # 3-panel side-by-side
 
 # ---------------------------------------------------------------------------
 # Font sizes (publication-tight; large enough to be readable in print)
@@ -75,7 +75,7 @@ def setup_rcparams() -> None:
 
 
 def style_ax(
-    ax: "Axes",
+    ax: Axes,
     title: str = "",
     xlabel: str = "",
     ylabel: str = "",

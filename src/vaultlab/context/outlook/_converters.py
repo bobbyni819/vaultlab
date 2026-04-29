@@ -6,7 +6,12 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from vaultlab.context.outlook._constants import IMPORTANCE_MAP, OL_IMPORTANCE_NORMAL, OL_TO, OL_CC, OL_BCC
+from vaultlab.context.outlook._constants import (
+    IMPORTANCE_MAP,
+    OL_BCC,
+    OL_CC,
+    OL_TO,
+)
 
 logger = logging.getLogger(__name__)
 

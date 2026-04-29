@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
@@ -20,7 +19,7 @@ class Email:
     sender_email: str = ""
     to: list[str] = field(default_factory=list)
     cc: list[str] = field(default_factory=list)
-    received_time: Optional[datetime] = None
+    received_time: datetime | None = None
     body: str = ""
     body_preview: str = ""
     is_read: bool = False
@@ -39,8 +38,8 @@ class CalendarEvent:
 
     id: str = ""
     subject: str = ""
-    start: Optional[datetime] = None
-    end: Optional[datetime] = None
+    start: datetime | None = None
+    end: datetime | None = None
     organizer: str = ""
     attendees: list[dict[str, str]] = field(default_factory=list)
     location: str = ""
@@ -76,8 +75,8 @@ class Task:
     id: str = ""
     subject: str = ""
     body: str = ""
-    due_date: Optional[datetime] = None
-    start_date: Optional[datetime] = None
+    due_date: datetime | None = None
+    start_date: datetime | None = None
     status: str = "not_started"
     percent_complete: int = 0
     priority: str = "normal"

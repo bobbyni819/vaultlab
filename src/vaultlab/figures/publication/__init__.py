@@ -43,7 +43,6 @@ from vaultlab.figures.publication.save import save_fig
 from vaultlab.figures.publication.style import (
     ANNOT_SIZE,
     FIG_1COL,
-    FIG_1p5COL,
     FIG_2COL,
     FIG_BARH,
     FIG_HEATMAP,
@@ -60,25 +59,47 @@ from vaultlab.figures.publication.style import (
     SPINE_WIDTH,
     TICK_SIZE,
     TITLE_SIZE,
+    FIG_1p5COL,
     setup_rcparams,
     style_ax,
 )
 
 __all__ = [
-    # style
-    "FIG_1COL", "FIG_1p5COL", "FIG_2COL", "FIG_WIDE", "FIG_TALL",
-    "FIG_HEATMAP", "FIG_HEATMAP_WIDE", "FIG_VOLCANO", "FIG_UMAP",
-    "FIG_BARH", "FIG_TRIPLE",
-    "TITLE_SIZE", "LABEL_SIZE", "TICK_SIZE", "LEGEND_SIZE",
-    "ANNOT_SIZE", "SMALL_SIZE",
-    "SPINE_WIDTH", "LINE_WIDTH",
-    "setup_rcparams", "style_ax",
+    "ANNOT_SIZE",
     # color
-    "CB_PALETTE", "EXT_PALETTE", "NEUTRAL_GREY",
-    "SIG_COLOR_UP", "SIG_COLOR_DOWN", "SIG_COLOR_NS",
-    "PaletteRegistry", "palette_for", "bar_fill",
-    # legend
-    "save_legend", "legend_position_for_density",
+    "CB_PALETTE",
+    "EXT_PALETTE",
+    # style
+    "FIG_1COL",
+    "FIG_2COL",
+    "FIG_BARH",
+    "FIG_HEATMAP",
+    "FIG_HEATMAP_WIDE",
+    "FIG_TALL",
+    "FIG_TRIPLE",
+    "FIG_UMAP",
+    "FIG_VOLCANO",
+    "FIG_WIDE",
+    "LABEL_SIZE",
+    "LEGEND_SIZE",
+    "LINE_WIDTH",
+    "NEUTRAL_GREY",
+    "SIG_COLOR_DOWN",
+    "SIG_COLOR_NS",
+    "SIG_COLOR_UP",
+    "SMALL_SIZE",
+    "SPINE_WIDTH",
+    "TICK_SIZE",
+    "TITLE_SIZE",
+    "FIG_1p5COL",
+    "PaletteRegistry",
+    "bar_fill",
+    "legend_position_for_density",
+    "palette_for",
     # save
     "save_fig",
+    # legend
+    "save_legend",
+    "setup_rcparams",
+    "style_ax",
 ]

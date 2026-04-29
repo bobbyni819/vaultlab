@@ -9,7 +9,8 @@ Two concerns this module addresses:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from vaultlab.figures.publication.style import LEGEND_SIZE
 
@@ -17,13 +18,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from matplotlib.artist import Artist
-    from matplotlib.figure import Figure
 
 # Position strings supported by matplotlib (subset; cleaner than passing
 # arbitrary strings around).
 LegendPos = str  # "best", "upper right", "upper left", "lower left", "lower right",
-                 # "right", "center left", "center right", "lower center",
-                 # "upper center", "center"
+# "right", "center left", "center right", "lower center",
+# "upper center", "center"
 
 
 def legend_position_for_density(
@@ -93,9 +93,9 @@ def legend_position_for_density(
 
 
 def save_legend(
-    handles: Sequence["Artist"],
+    handles: Sequence[Artist],
     labels: Sequence[str],
-    out_path: "Path | str",
+    out_path: Path | str,
     *,
     ncol: int = 1,
     title: str | None = None,
@@ -142,8 +142,9 @@ def save_legend(
     >>> handles, labels = ax.get_legend_handles_labels()
     >>> save_legend(handles, labels, "/tmp/legend_v1")  # writes legend_v1.png + legend_v1.pdf  # doctest: +SKIP
     """
-    import matplotlib.pyplot as plt
     from pathlib import Path
+
+    import matplotlib.pyplot as plt
 
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)

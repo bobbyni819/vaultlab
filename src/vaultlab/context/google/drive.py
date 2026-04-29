@@ -30,10 +30,10 @@ from dataclasses import dataclass
 
 from vaultlab.context.google.auth import build_service
 
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DriveFile:
@@ -51,6 +51,7 @@ class DriveFile:
         mime_type: MIME type of the file.
         extension: Original file extension (lowercase, with dot).
     """
+
     name: str
     file_type: str
     local_path: str | None
@@ -65,12 +66,12 @@ class DriveFile:
 
 # Extension → (file_type, Google MIME type)
 _GOOGLE_NATIVE_TYPES: dict[str, tuple[str, str]] = {
-    ".gdoc":    ("google_doc",     "application/vnd.google-apps.document"),
-    ".gsheet":  ("google_sheet",   "application/vnd.google-apps.spreadsheet"),
-    ".gslides": ("google_slides",  "application/vnd.google-apps.presentation"),
-    ".gform":   ("google_form",    "application/vnd.google-apps.form"),
-    ".gdraw":   ("google_drawing", "application/vnd.google-apps.drawing"),
-    ".gmap":    ("google_map",     "application/vnd.google-apps.map"),
+    ".gdoc": ("google_doc", "application/vnd.google-apps.document"),
+    ".gsheet": ("google_sheet", "application/vnd.google-apps.spreadsheet"),
+    ".gslides": ("google_slides", "application/vnd.google-apps.presentation"),
+    ".gform": ("google_form", "application/vnd.google-apps.form"),
+    ".gdraw": ("google_drawing", "application/vnd.google-apps.drawing"),
+    ".gmap": ("google_map", "application/vnd.google-apps.map"),
 }
 
 
@@ -137,7 +138,7 @@ def _resolve_folder_id(local_path: str) -> str:
             "Expected a path containing 'My Drive'."
         )
     # Everything after "My Drive" is the relative path
-    relative = normalized[my_drive_idx + len("My Drive"):]
+    relative = normalized[my_drive_idx + len("My Drive") :]
     parts = [p for p in relative.split("/") if p]
 
     if not parts:
@@ -154,11 +155,15 @@ def _resolve_folder_id(local_path: str) -> str:
             f"and mimeType = 'application/vnd.google-apps.folder' "
             f"and trashed = false"
         )
-        resp = service.files().list(
-            q=query,
-            fields="files(id, name)",
-            pageSize=1,
-        ).execute()
+        resp = (
+            service.files()
+            .list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=1,
+            )
+            .execute()
+        )
 
         files = resp.get("files", [])
         if not files:
@@ -186,12 +191,16 @@ def _list_folder_files(folder_id: str) -> dict[str, str]:
     page_token = None
 
     while True:
-        resp = service.files().list(
-            q=f"'{folder_id}' in parents and trashed = false",
-            fields="nextPageToken, files(id, name, mimeType)",
-            pageSize=1000,
-            pageToken=page_token,
-        ).execute()
+        resp = (
+            service.files()
+            .list(
+                q=f"'{folder_id}' in parents and trashed = false",
+                fields="nextPageToken, files(id, name, mimeType)",
+                pageSize=1000,
+                pageToken=page_token,
+            )
+            .execute()
+        )
 
         for f in resp.get("files", []):
             name_to_id[f["name"]] = f["id"]
@@ -247,8 +256,7 @@ def scan_directory(
         # Check for Google-native files to decide if we need API lookup
         entries = list(os.scandir(dir_path))
         has_native = any(
-            e.is_file() and _is_google_native(os.path.splitext(e.name)[1].lower())
-            for e in entries
+            e.is_file() and _is_google_native(os.path.splitext(e.name)[1].lower()) for e in entries
         )
 
         # Only call Drive API if there are Google-native files in this folder
@@ -269,24 +277,28 @@ def scan_directory(
                 # Google-native file — resolve ID by matching stem name
                 stem = os.path.splitext(entry.name)[0]
                 google_id = cloud_files.get(stem)
-                results.append(DriveFile(
-                    name=stem,
-                    file_type=file_type,
-                    local_path=None,
-                    google_id=google_id,
-                    mime_type=mime_type,
-                    extension=ext,
-                ))
+                results.append(
+                    DriveFile(
+                        name=stem,
+                        file_type=file_type,
+                        local_path=None,
+                        google_id=google_id,
+                        mime_type=mime_type,
+                        extension=ext,
+                    )
+                )
             else:
                 # Regular file
-                results.append(DriveFile(
-                    name=entry.name,
-                    file_type=file_type,
-                    local_path=entry.path,
-                    google_id=None,
-                    mime_type=mime_type,
-                    extension=ext,
-                ))
+                results.append(
+                    DriveFile(
+                        name=entry.name,
+                        file_type=file_type,
+                        local_path=entry.path,
+                        google_id=None,
+                        mime_type=mime_type,
+                        extension=ext,
+                    )
+                )
 
     _scan(local_path)
     return results
@@ -357,6 +369,4 @@ def open_file(drive_file: DriveFile) -> str:
         return drive_file.google_id
     if drive_file.local_path is not None:
         return drive_file.local_path
-    raise ValueError(
-        f"DriveFile '{drive_file.name}' has neither google_id nor local_path"
-    )
+    raise ValueError(f"DriveFile '{drive_file.name}' has neither google_id nor local_path")

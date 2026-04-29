@@ -7,9 +7,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Optional
 
-from vaultlab.context.outlook._connection import get_namespace, get_outlook_app, _with_retry
+from vaultlab.context.outlook._connection import _with_retry, get_namespace, get_outlook_app
 from vaultlab.context.outlook._constants import (
     OL_FOLDER_TASKS,
     OL_IMPORTANCE_HIGH,
@@ -96,9 +95,9 @@ def read_tasks(include_completed: bool = False, limit: int = 100) -> list[Task]:
 @_with_retry
 def create_task(
     subject: str,
-    due_date: Optional[datetime] = None,
-    body: Optional[str] = None,
-    priority: Optional[str] = None,
+    due_date: datetime | None = None,
+    body: str | None = None,
+    priority: str | None = None,
 ) -> Task:
     """Create a new task in the default Tasks folder.
 
@@ -137,10 +136,10 @@ def create_task(
 @_with_retry
 def update_task(
     entry_id: str,
-    subject: Optional[str] = None,
-    due_date: Optional[datetime] = None,
-    body: Optional[str] = None,
-    priority: Optional[str] = None,
+    subject: str | None = None,
+    due_date: datetime | None = None,
+    body: str | None = None,
+    priority: str | None = None,
 ) -> Task:
     """Update an existing task's fields.
 
@@ -207,7 +206,7 @@ def search_tasks(
     query: str,
     include_completed: bool = False,
     limit: int = 50,
-    due_before: Optional[datetime] = None,
+    due_before: datetime | None = None,
 ) -> list[Task]:
     """Search tasks by subject or body substring.
 
