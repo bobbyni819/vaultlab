@@ -73,6 +73,7 @@ def auto_offset_annotations(
             placed_marker_bboxes.append((x0, y0, x0 + 120, y0 + 120))
     return out
 
+
 # ---------------------------------------------------------------------------
 # Image1 annotations - 9 elements (lifted from v3 script with corrections)
 # ---------------------------------------------------------------------------
@@ -85,36 +86,38 @@ IMAGE1 = Path(r"C:\tmp\cart_figs_v13\image1.png")
 # pointer is cleaner than wrapping the element in a rectangle.
 
 IMAGE1_ANNOTATIONS = [
-    # #1 - Endogenous TCR panel a (left edge of panel; whitespace to the left)
+    # #1 - Endogenous TCR (panel a). v7: drop box; marker in left margin.
     ElementAnnotation(
         label="Endogenous TCR (panel a, competing)",
         bbox_px=(295, 1827, 419, 2094),
         motif_name="endo-tcr",
-        marker_offset_px=(-180, -50),  # to the left in whitespace
+        use_box=False,
+        marker_offset_px=(-180, -50),
     ),
-    # #2 - Introduced TCR panel a. Bobby 2026-04-29 v5: skip the box; the green
-    # color is distinctive enough that just a marker is cleaner.
+    # #2 - Introduced TCR (panel a). use_box=False since v6.
     ElementAnnotation(
         label="Introduced TCR (panel a)",
         bbox_px=(998, 1853, 1192, 2188),
         motif_name="intro-tcr",
         use_box=False,
     ),
-    # #3 - MHC Class I (top of receptor stack; place marker UP and LEFT to clear
-    # the introduced-TCR region below)
+    # #3 - MHC Class I (panel a). v7: drop box (sits clearly alone above
+    # the receptors).
     ElementAnnotation(
         label="MHC Class I (panel a)",
         bbox_px=(1072, 1666, 1185, 1848),
         motif_name="mhc",
+        use_box=False,
         marker_offset_px=(-220, -150),
     ),
-    # #4 - CD3 chains. Bobby 2026-04-29 v6: place marker bottom-right in the
-    # extracellular-membrane band where there is whitespace.
+    # #4 - CD3 chains (panel a). v7: place marker UP into the extracellular
+    # band (above membrane line). Biology check: yes, the orange chains right
+    # of the introduced TCR are CD3; each TCR has its own CD3 cluster.
     ElementAnnotation(
         label="CD3 chains (panel a)",
         bbox_px=(1206, 2100, 1261, 2392),
         motif_name="cd3",
-        marker_offset_px=(180, 420),  # bottom-right into membrane band
+        marker_offset_px=(50, -180),  # UP into extracellular band
     ),
     # #5 - TAA panel b (narrow horizontal band; box is awkward, skip box and
     # use a marker pointing at it from the LEFT in panel-b whitespace)
@@ -125,20 +128,22 @@ IMAGE1_ANNOTATIONS = [
         use_box=False,
         marker_offset_px=(-280, -200),  # well left and above
     ),
-    # #6 - Endogenous TCR panel b (move marker LEFT into whitespace, below
-    # where #5's marker is)
+    # #6 - Endogenous TCR (panel b). v7: drop box (was too wide); marker
+    # to the RIGHT of the receptor in panel-b whitespace.
     ElementAnnotation(
         label="Endogenous TCR (panel b, primary)",
         bbox_px=(2728, 1857, 3309, 2124),
         motif_name="endo-tcr",
-        marker_offset_px=(-300, 200),  # left of box, mid-height
+        use_box=False,
+        marker_offset_px=(620, 50),  # RIGHT of box
     ),
-    # #7 - scFv panel c. Bobby 2026-04-29 v6: extend right edge to capture
-    # the entire 'Antigen Recognition Domain' segment + scFv label text.
+    # #7 - scFv (panel c). v7: tighter box (just the scFv graphic at top of
+    # CAR construct); color matches the beige scFv icon (was wrong electric
+    # blue from endo-tcr motif).
     ElementAnnotation(
-        label="scFv / antigen recognition (panel c)",
-        bbox_px=(4558, 1837, 5050, 2430),
-        motif_name="endo-tcr",
+        label="scFv (panel c, antigen recognition)",
+        bbox_px=(4570, 1840, 4730, 2080),
+        motif_name="scfv-beige",
     ),
     # #8 - Co-stim panel c (move marker LEFT to clear the construct stack)
     ElementAnnotation(
@@ -162,6 +167,7 @@ IMAGE1_COLORS = {
     "mhc": (130, 70, 180),  # purple
     "cd3": (220, 110, 30),  # orange
     "taa": (210, 50, 70),  # red-magenta
+    "scfv-beige": (180, 145, 95),  # warm tan / beige (matches scFv icon)
 }
 
 
@@ -413,7 +419,7 @@ def main() -> None:
         **kwargs,
     )
 
-    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v7.pptx")
+    out = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_native_v8.pptx")
     pres.save(out)
     print(f"Wrote -> {out}")
 

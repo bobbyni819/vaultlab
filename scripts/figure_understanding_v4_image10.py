@@ -132,22 +132,24 @@ ANNOTATIONS: list[ElementAnnotation] = [
 
 # Color mapping - each motif gets a visually distinct color
 MOTIF_COLORS = {
-    "suppressive-cells": (180, 60, 200),       # magenta
-    "checkpoint": (220, 80, 60),                # red
-    "soluble-inhibitors": (40, 160, 200),       # cyan
-    "antigen-heterogeneity": (220, 100, 30),    # orange
-    "metabolic": (50, 150, 150),                # teal
-    "vasculature": (200, 30, 30),               # crimson
-    "physical-barriers": (130, 90, 50),         # brown
-    "tumor-mass": (220, 130, 150),              # tumor pink
+    "suppressive-cells": (180, 60, 200),  # magenta
+    "checkpoint": (220, 80, 60),  # red
+    "soluble-inhibitors": (40, 160, 200),  # cyan
+    "antigen-heterogeneity": (220, 100, 30),  # orange
+    "metabolic": (50, 150, 150),  # teal
+    "vasculature": (200, 30, 30),  # crimson
+    "physical-barriers": (130, 90, 50),  # brown
+    "tumor-mass": (220, 130, 150),  # tumor pink
 }
 
 
 def main() -> None:
     out = render_annotated_figure_v3(
-        INPUT, ANNOTATIONS, OUT,
+        INPUT,
+        ANNOTATIONS,
+        OUT,
         motif_colors=MOTIF_COLORS,
-        gutter_width_px=1100,         # wider for big labels
+        gutter_width_px=1100,  # wider for big labels
         label_max_chars=30,
     )
     print(f"Wrote -> {out}")

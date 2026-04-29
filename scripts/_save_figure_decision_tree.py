@@ -94,8 +94,10 @@ def main() -> None:
         ),
     )
 
-    print("3 memories saved: figure-annotation-decision-tree, theme-aware-font-color, "
-          "hickey-template-logo-zones")
+    print(
+        "3 memories saved: figure-annotation-decision-tree, theme-aware-font-color, "
+        "hickey-template-logo-zones"
+    )
 
 
 if __name__ == "__main__":

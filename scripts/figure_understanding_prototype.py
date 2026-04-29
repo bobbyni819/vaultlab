@@ -16,12 +16,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
-from pptx.util import Emu, Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.util import Emu, Inches, Pt
 
 INPUT_DIR = Path(r"C:\tmp\cart_figs_v13")
 OUTPUT_DIR = Path(r"C:\tmp\cart_figs_v13_annotated")
@@ -39,9 +38,9 @@ PPTX_OUT = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_demo
 
 @dataclass
 class Annotation:
-    label: str              # short text drawn on the figure
-    bbox: Tuple[float, float, float, float]  # (x, y, w, h) in [0,1]
-    explanation: str        # for speaker notes
+    label: str  # short text drawn on the figure
+    bbox: tuple[float, float, float, float]  # (x, y, w, h) in [0,1]
+    explanation: str  # for speaker notes
 
 
 @dataclass
@@ -49,7 +48,7 @@ class FigurePlan:
     image_filename: str
     title: str
     overall_caption: str
-    long_explanation: str   # paragraph for speaker notes
+    long_explanation: str  # paragraph for speaker notes
     annotations: list[Annotation]
 
 
@@ -79,21 +78,42 @@ PLANS: list[FigurePlan] = [
             "the construct to MHC-independent off-target hits."
         ),
         annotations=[
-            Annotation("Endogenous TCR", (0.05, 0.45, 0.10, 0.30),
-                       "Native TCR (blue dimer) binds same MHC-peptide as introduced TCR — competes for ligand."),
-            Annotation("Introduced TCR", (0.18, 0.40, 0.10, 0.30),
-                       "Engineered TCR (green) is the therapeutic receptor in TCR therapy."),
-            Annotation("MHC-I + peptide", (0.20, 0.30, 0.08, 0.10),
-                       "MHC class I (gray) presenting tumor peptide (red dot)."),
-            Annotation("CD3 / ζ chains", (0.10, 0.65, 0.20, 0.20),
-                       "Signal-transduction subunits — orange = CD3 ε/γ/δ; tail = ζ chains with ITAMs."),
-            Annotation("TAA presented", (0.42, 0.30, 0.08, 0.20),
-                       "Aberrantly expressed self-protein presented via MHC-I as neoantigen."),
-            Annotation("scFv (Antigen Recognition)", (0.72, 0.42, 0.10, 0.18),
-                       "Single-chain variable fragment binds surface antigen directly. "
-                       "Marked 'MHC Independent' on the figure."),
-            Annotation("CAR signaling domains", (0.78, 0.65, 0.10, 0.20),
-                       "Co-stimulatory (green) + activation (orange) domains. CD28/4-1BB + CD3-ζ-style ITAMs."),
+            Annotation(
+                "Endogenous TCR",
+                (0.05, 0.45, 0.10, 0.30),
+                "Native TCR (blue dimer) binds same MHC-peptide as introduced TCR — competes for ligand.",
+            ),
+            Annotation(
+                "Introduced TCR",
+                (0.18, 0.40, 0.10, 0.30),
+                "Engineered TCR (green) is the therapeutic receptor in TCR therapy.",
+            ),
+            Annotation(
+                "MHC-I + peptide",
+                (0.20, 0.30, 0.08, 0.10),
+                "MHC class I (gray) presenting tumor peptide (red dot).",
+            ),
+            Annotation(
+                "CD3 / ζ chains",
+                (0.10, 0.65, 0.20, 0.20),
+                "Signal-transduction subunits — orange = CD3 ε/γ/δ; tail = ζ chains with ITAMs.",
+            ),
+            Annotation(
+                "TAA presented",
+                (0.42, 0.30, 0.08, 0.20),
+                "Aberrantly expressed self-protein presented via MHC-I as neoantigen.",
+            ),
+            Annotation(
+                "scFv (Antigen Recognition)",
+                (0.72, 0.42, 0.10, 0.18),
+                "Single-chain variable fragment binds surface antigen directly. "
+                "Marked 'MHC Independent' on the figure.",
+            ),
+            Annotation(
+                "CAR signaling domains",
+                (0.78, 0.65, 0.10, 0.20),
+                "Co-stimulatory (green) + activation (orange) domains. CD28/4-1BB + CD3-ζ-style ITAMs.",
+            ),
         ],
     ),
     FigurePlan(
@@ -120,22 +140,46 @@ PLANS: list[FigurePlan] = [
             "the blue/orange element labeled JAK + STAT3/5."
         ),
         annotations=[
-            Annotation("TCR (reference)", (0.04, 0.10, 0.13, 0.50),
-                       "Native TCR architecture: αβ chains + CD3γε/δε + ζ chains + ZAP70."),
-            Annotation("1st gen CAR (CD3ζ only)", (0.20, 0.10, 0.13, 0.80),
-                       "First-generation: scFv -> CD3ζ. Poor persistence; superseded clinically."),
-            Annotation("2nd gen (+1 co-stim)", (0.36, 0.10, 0.13, 0.80),
-                       "Adds CD28 OR 4-1BB. The clinically dominant generation (axi-cel, tisa-cel, etc.)."),
-            Annotation("3rd gen (+2 co-stim)", (0.52, 0.10, 0.13, 0.80),
-                       "Two co-stimulatory domains in tandem (CD28 + 4-1BB)."),
-            Annotation("4th gen (TRUCK)", (0.66, 0.10, 0.13, 0.80),
-                       "Cytokine-inducer module — releases cytokines on antigen engagement."),
-            Annotation("5th gen (JAK-STAT)", (0.80, 0.10, 0.16, 0.80),
-                       "JAK-binding domain + STAT3/5 activation. Drives cytokine signaling directly."),
-            Annotation("Ectodomain band", (0.18, 0.04, 0.78, 0.20),
-                       "Above the membrane — antigen-binding domains."),
-            Annotation("Endodomain band", (0.18, 0.55, 0.78, 0.40),
-                       "Below the membrane — signaling cascade."),
+            Annotation(
+                "TCR (reference)",
+                (0.04, 0.10, 0.13, 0.50),
+                "Native TCR architecture: αβ chains + CD3γε/δε + ζ chains + ZAP70.",
+            ),
+            Annotation(
+                "1st gen CAR (CD3ζ only)",
+                (0.20, 0.10, 0.13, 0.80),
+                "First-generation: scFv -> CD3ζ. Poor persistence; superseded clinically.",
+            ),
+            Annotation(
+                "2nd gen (+1 co-stim)",
+                (0.36, 0.10, 0.13, 0.80),
+                "Adds CD28 OR 4-1BB. The clinically dominant generation (axi-cel, tisa-cel, etc.).",
+            ),
+            Annotation(
+                "3rd gen (+2 co-stim)",
+                (0.52, 0.10, 0.13, 0.80),
+                "Two co-stimulatory domains in tandem (CD28 + 4-1BB).",
+            ),
+            Annotation(
+                "4th gen (TRUCK)",
+                (0.66, 0.10, 0.13, 0.80),
+                "Cytokine-inducer module — releases cytokines on antigen engagement.",
+            ),
+            Annotation(
+                "5th gen (JAK-STAT)",
+                (0.80, 0.10, 0.16, 0.80),
+                "JAK-binding domain + STAT3/5 activation. Drives cytokine signaling directly.",
+            ),
+            Annotation(
+                "Ectodomain band",
+                (0.18, 0.04, 0.78, 0.20),
+                "Above the membrane — antigen-binding domains.",
+            ),
+            Annotation(
+                "Endodomain band",
+                (0.18, 0.55, 0.78, 0.40),
+                "Below the membrane — signaling cascade.",
+            ),
         ],
     ),
     FigurePlan(
@@ -159,18 +203,36 @@ PLANS: list[FigurePlan] = [
             "expand and persist."
         ),
         annotations=[
-            Annotation("Signal 1: TAA + CAR", (0.10, 0.05, 0.25, 0.30),
-                       "TAA (red) -> CAR scFv binding -> primary activation."),
-            Annotation("CAR architecture", (0.08, 0.18, 0.18, 0.50),
-                       "CD3ζ tail -> NFAT activation -> DNA. Blue = recognition; orange = activation domain."),
-            Annotation("Signal 2: co-stim", (0.36, 0.05, 0.25, 0.30),
-                       "Second receptor engages ligand. Drives PI3K/AKT, NF-κB, MAPK."),
-            Annotation("PI3K/AKT, NF-κB, MAPK", (0.42, 0.30, 0.15, 0.15),
-                       "Co-stim downstream pathways shown in green text — converge on the nucleus."),
-            Annotation("Signal 3: cytokines", (0.65, 0.05, 0.30, 0.40),
-                       "Cytokine release (blue dots) — IL-2 family for proliferation + persistence."),
-            Annotation("Effector Function (DNA)", (0.30, 0.65, 0.45, 0.18),
-                       "Joint output — transcription of effector cytokines + cytotoxic granules."),
+            Annotation(
+                "Signal 1: TAA + CAR",
+                (0.10, 0.05, 0.25, 0.30),
+                "TAA (red) -> CAR scFv binding -> primary activation.",
+            ),
+            Annotation(
+                "CAR architecture",
+                (0.08, 0.18, 0.18, 0.50),
+                "CD3ζ tail -> NFAT activation -> DNA. Blue = recognition; orange = activation domain.",
+            ),
+            Annotation(
+                "Signal 2: co-stim",
+                (0.36, 0.05, 0.25, 0.30),
+                "Second receptor engages ligand. Drives PI3K/AKT, NF-κB, MAPK.",
+            ),
+            Annotation(
+                "PI3K/AKT, NF-κB, MAPK",
+                (0.42, 0.30, 0.15, 0.15),
+                "Co-stim downstream pathways shown in green text — converge on the nucleus.",
+            ),
+            Annotation(
+                "Signal 3: cytokines",
+                (0.65, 0.05, 0.30, 0.40),
+                "Cytokine release (blue dots) — IL-2 family for proliferation + persistence.",
+            ),
+            Annotation(
+                "Effector Function (DNA)",
+                (0.30, 0.65, 0.45, 0.18),
+                "Joint output — transcription of effector cytokines + cytotoxic granules.",
+            ),
         ],
     ),
     FigurePlan(
@@ -200,20 +262,41 @@ PLANS: list[FigurePlan] = [
             "exhausted CD8+ T cell, activation of exhausted CD8+ T cell, dendritic cell, tumor cell."
         ),
         annotations=[
-            Annotation("A: Antigen-dependent cytotoxicity", (0.02, 0.02, 0.55, 0.30),
-                       "M0 -> M1 polarization driven by IFN-γ + IPS; releases inflammatory cytokines."),
-            Annotation("B: TME remodeling + recruitment", (0.58, 0.02, 0.40, 0.25),
-                       "M1 macrophages recruit NK cells, neutrophils, T cells via chemokines."),
-            Annotation("C: Tumor phagocytosis (3 steps)", (0.02, 0.34, 0.55, 0.22),
-                       "Recognition -> activation/engulfment -> digestion/elimination. Core CAR-M effector pathway."),
-            Annotation("D: Transcription-factor activation", (0.02, 0.58, 0.55, 0.35),
-                       "NF-κB, STAT1/5, IRF3/5, HIF-1α drive cytokine + chemokine transcription."),
-            Annotation("E: Infiltration in solid tumor", (0.58, 0.30, 0.40, 0.25),
-                       "CAR-Ms penetrating tumor mass — macrophages cross stromal barriers better than T cells."),
-            Annotation("F: Legend (cell types)", (0.58, 0.58, 0.40, 0.40),
-                       "Cell-type icon glossary used throughout the panel set."),
-            Annotation("Cytokine cocktail (panel A)", (0.30, 0.10, 0.27, 0.22),
-                       "IFN-γ, IL-1β, GM-CSF, IL-6, IL-8, IL-12, TNF-α/β — broad inflammatory milieu."),
+            Annotation(
+                "A: Antigen-dependent cytotoxicity",
+                (0.02, 0.02, 0.55, 0.30),
+                "M0 -> M1 polarization driven by IFN-γ + IPS; releases inflammatory cytokines.",
+            ),
+            Annotation(
+                "B: TME remodeling + recruitment",
+                (0.58, 0.02, 0.40, 0.25),
+                "M1 macrophages recruit NK cells, neutrophils, T cells via chemokines.",
+            ),
+            Annotation(
+                "C: Tumor phagocytosis (3 steps)",
+                (0.02, 0.34, 0.55, 0.22),
+                "Recognition -> activation/engulfment -> digestion/elimination. Core CAR-M effector pathway.",
+            ),
+            Annotation(
+                "D: Transcription-factor activation",
+                (0.02, 0.58, 0.55, 0.35),
+                "NF-κB, STAT1/5, IRF3/5, HIF-1α drive cytokine + chemokine transcription.",
+            ),
+            Annotation(
+                "E: Infiltration in solid tumor",
+                (0.58, 0.30, 0.40, 0.25),
+                "CAR-Ms penetrating tumor mass — macrophages cross stromal barriers better than T cells.",
+            ),
+            Annotation(
+                "F: Legend (cell types)",
+                (0.58, 0.58, 0.40, 0.40),
+                "Cell-type icon glossary used throughout the panel set.",
+            ),
+            Annotation(
+                "Cytokine cocktail (panel A)",
+                (0.30, 0.10, 0.27, 0.22),
+                "IFN-γ, IL-1β, GM-CSF, IL-6, IL-8, IL-12, TNF-α/β — broad inflammatory milieu.",
+            ),
         ],
     ),
     FigurePlan(
@@ -241,20 +324,41 @@ PLANS: list[FigurePlan] = [
             "TIM-3/phospholipids, TGF-β, B7-H4. Each inhibitor is a therapeutic checkpoint target."
         ),
         annotations=[
-            Annotation("1. Release of antigens", (0.05, 0.65, 0.25, 0.25),
-                       "Immunogenic vs tolerogenic cell death — defines downstream cycle entry."),
-            Annotation("2. Tumor antigen presentation", (0.02, 0.30, 0.20, 0.35),
-                       "DCs take up antigens, mature in cytokine context, present on MHC."),
-            Annotation("3. Priming + activation", (0.22, 0.05, 0.30, 0.20),
-                       "DC + T-cell synapse with co-stimulation + checkpoint signals."),
-            Annotation("4. T-cell migration", (0.62, 0.02, 0.30, 0.22),
-                       "Chemokine-driven trafficking to tumor: CX3CL1, CXCL9/10, CCL5."),
-            Annotation("5. Infiltration", (0.70, 0.25, 0.28, 0.18),
-                       "Vascular adhesion: LFA-1/ICAM-1, selectins, VEGF, endothelial B receptor."),
-            Annotation("6. Tumor recognition", (0.65, 0.45, 0.30, 0.20),
-                       "TCR engages pMHC on tumor cell — but tumors downregulate MHC for escape."),
-            Annotation("7. Tumor cell death", (0.30, 0.65, 0.45, 0.25),
-                       "Cytotoxic killing modulated by checkpoints: PD-1/L1, LAG-3, TIM-3, TGF-β."),
+            Annotation(
+                "1. Release of antigens",
+                (0.05, 0.65, 0.25, 0.25),
+                "Immunogenic vs tolerogenic cell death — defines downstream cycle entry.",
+            ),
+            Annotation(
+                "2. Tumor antigen presentation",
+                (0.02, 0.30, 0.20, 0.35),
+                "DCs take up antigens, mature in cytokine context, present on MHC.",
+            ),
+            Annotation(
+                "3. Priming + activation",
+                (0.22, 0.05, 0.30, 0.20),
+                "DC + T-cell synapse with co-stimulation + checkpoint signals.",
+            ),
+            Annotation(
+                "4. T-cell migration",
+                (0.62, 0.02, 0.30, 0.22),
+                "Chemokine-driven trafficking to tumor: CX3CL1, CXCL9/10, CCL5.",
+            ),
+            Annotation(
+                "5. Infiltration",
+                (0.70, 0.25, 0.28, 0.18),
+                "Vascular adhesion: LFA-1/ICAM-1, selectins, VEGF, endothelial B receptor.",
+            ),
+            Annotation(
+                "6. Tumor recognition",
+                (0.65, 0.45, 0.30, 0.20),
+                "TCR engages pMHC on tumor cell — but tumors downregulate MHC for escape.",
+            ),
+            Annotation(
+                "7. Tumor cell death",
+                (0.30, 0.65, 0.45, 0.25),
+                "Cytotoxic killing modulated by checkpoints: PD-1/L1, LAG-3, TIM-3, TGF-β.",
+            ),
         ],
     ),
     FigurePlan(
@@ -283,20 +387,41 @@ PLANS: list[FigurePlan] = [
             "metabolic 'shield' around the tumor that further suppresses T-cell function."
         ),
         annotations=[
-            Annotation("Suppressive cells: MDSC, Treg, TAM", (0.10, 0.05, 0.30, 0.25),
-                       "MDSCs / Tregs / TAMs engage CAR-T via inhibitory ligands; suppress directly."),
-            Annotation("Checkpoint detail (PD-1, CTLA-4)", (0.05, 0.30, 0.20, 0.25),
-                       "DC-cancer-cell interaction. PD-1/PD-L1 + CTLA-4/CD86 — therapeutic checkpoint targets."),
-            Annotation("Soluble inhibitors: IL-10, TGF-β", (0.70, 0.10, 0.25, 0.20),
-                       "Cytokines + chemokines diffusing from MDSCs/Tregs — inhibitory milieu."),
-            Annotation("Tumor antigen heterogeneity", (0.65, 0.30, 0.30, 0.30),
-                       "Different antigen profiles per tumor subclone -> single-CAR escape."),
-            Annotation("Metabolic suppression", (0.36, 0.40, 0.25, 0.18),
-                       "O₂/pH/nutrients DOWN, toxic metabolites (lactate, adenosine) UP."),
-            Annotation("Dysregulated vasculature", (0.05, 0.62, 0.35, 0.18),
-                       "VCAM-1/ICAM-1 down — reduced T-cell extravasation."),
-            Annotation("Physical barriers: ECM, CAF, IFP", (0.55, 0.65, 0.40, 0.30),
-                       "Stromal exclusion of T cells: dense ECM + CAFs + high interstitial pressure."),
+            Annotation(
+                "Suppressive cells: MDSC, Treg, TAM",
+                (0.10, 0.05, 0.30, 0.25),
+                "MDSCs / Tregs / TAMs engage CAR-T via inhibitory ligands; suppress directly.",
+            ),
+            Annotation(
+                "Checkpoint detail (PD-1, CTLA-4)",
+                (0.05, 0.30, 0.20, 0.25),
+                "DC-cancer-cell interaction. PD-1/PD-L1 + CTLA-4/CD86 — therapeutic checkpoint targets.",
+            ),
+            Annotation(
+                "Soluble inhibitors: IL-10, TGF-β",
+                (0.70, 0.10, 0.25, 0.20),
+                "Cytokines + chemokines diffusing from MDSCs/Tregs — inhibitory milieu.",
+            ),
+            Annotation(
+                "Tumor antigen heterogeneity",
+                (0.65, 0.30, 0.30, 0.30),
+                "Different antigen profiles per tumor subclone -> single-CAR escape.",
+            ),
+            Annotation(
+                "Metabolic suppression",
+                (0.36, 0.40, 0.25, 0.18),
+                "O₂/pH/nutrients DOWN, toxic metabolites (lactate, adenosine) UP.",
+            ),
+            Annotation(
+                "Dysregulated vasculature",
+                (0.05, 0.62, 0.35, 0.18),
+                "VCAM-1/ICAM-1 down — reduced T-cell extravasation.",
+            ),
+            Annotation(
+                "Physical barriers: ECM, CAF, IFP",
+                (0.55, 0.65, 0.40, 0.30),
+                "Stromal exclusion of T cells: dense ECM + CAFs + high interstitial pressure.",
+            ),
         ],
     ),
     FigurePlan(
@@ -326,18 +451,36 @@ PLANS: list[FigurePlan] = [
             "phagocytosis (vs direct lysis)."
         ),
         annotations=[
-            Annotation("Cell-type legend (11 icons)", (0.02, 0.02, 0.96, 0.10),
-                       "Glossary: B, Cancer, CAR-T/NK/M, DC, Fibroblast, Macrophage, MDSC, Neutrophil, NK, T, Treg."),
-            Annotation("A: Tumor microenvironment", (0.02, 0.15, 0.45, 0.55),
-                       "Heterogeneous TME with all listed cell types. Cytokine balance bottom-labeled."),
-            Annotation("Stimulatory vs inhibitory cytokines", (0.10, 0.78, 0.30, 0.20),
-                       "Blue = TNF, IL-1/6/12/18 (stimulatory); Red = TGF-β, IL-4/10 (inhibitory)."),
-            Annotation("CAR-T -> granzymes + perforin", (0.50, 0.15, 0.45, 0.20),
-                       "Classical cytotoxic-granule killing — primary CAR-T mechanism."),
-            Annotation("CAR-NK -> perforin", (0.50, 0.40, 0.45, 0.20),
-                       "Perforin-mediated lysis. Off-the-shelf potential (less GVHD risk)."),
-            Annotation("CAR-M -> cytokines", (0.50, 0.65, 0.45, 0.30),
-                       "Pro+anti-inflammatory cytokines + phagocytosis. Distinct from direct lysis."),
+            Annotation(
+                "Cell-type legend (11 icons)",
+                (0.02, 0.02, 0.96, 0.10),
+                "Glossary: B, Cancer, CAR-T/NK/M, DC, Fibroblast, Macrophage, MDSC, Neutrophil, NK, T, Treg.",
+            ),
+            Annotation(
+                "A: Tumor microenvironment",
+                (0.02, 0.15, 0.45, 0.55),
+                "Heterogeneous TME with all listed cell types. Cytokine balance bottom-labeled.",
+            ),
+            Annotation(
+                "Stimulatory vs inhibitory cytokines",
+                (0.10, 0.78, 0.30, 0.20),
+                "Blue = TNF, IL-1/6/12/18 (stimulatory); Red = TGF-β, IL-4/10 (inhibitory).",
+            ),
+            Annotation(
+                "CAR-T -> granzymes + perforin",
+                (0.50, 0.15, 0.45, 0.20),
+                "Classical cytotoxic-granule killing — primary CAR-T mechanism.",
+            ),
+            Annotation(
+                "CAR-NK -> perforin",
+                (0.50, 0.40, 0.45, 0.20),
+                "Perforin-mediated lysis. Off-the-shelf potential (less GVHD risk).",
+            ),
+            Annotation(
+                "CAR-M -> cytokines",
+                (0.50, 0.65, 0.45, 0.30),
+                "Pro+anti-inflammatory cytokines + phagocytosis. Distinct from direct lysis.",
+            ),
         ],
     ),
     FigurePlan(
@@ -369,25 +512,50 @@ PLANS: list[FigurePlan] = [
             "off-tumor toxicity."
         ),
         annotations=[
-            Annotation("EGF Repeats (NECD)", (0.10, 0.04, 0.20, 0.18),
-                       "Multiple Epidermal Growth Factor-like repeats — ligand-binding extracellular region."),
-            Annotation("NRR: LNR + HD", (0.30, 0.18, 0.20, 0.10),
-                       "Negative Regulatory Region — Lin-Notch Repeats + Heterodimerization Domain. "
-                       "Holds receptor inactive until ligand binding."),
-            Annotation("Transmembrane (TM)", (0.45, 0.27, 0.10, 0.05),
-                       "Single-pass transmembrane domain."),
-            Annotation("NICD: RAM, ANK, NLS, PEST", (0.30, 0.30, 0.30, 0.15),
-                       "Intracellular signaling cassette — RAM-CSL binding, Ankyrin repeats, NLS, PEST degron."),
-            Annotation("(1) First antigen binding", (0.05, 0.55, 0.20, 0.10),
-                       "syn-Notch recognition domain engages antigen #1."),
-            Annotation("(2) ADAM + γ-secretase cleavage", (0.05, 0.70, 0.30, 0.10),
-                       "Proteolytic release of synthetic TF into cytoplasm."),
-            Annotation("(3) TF -> nucleus -> CAR transcription", (0.30, 0.85, 0.30, 0.10),
-                       "TF drives CAR expression from engineered locus — INDUCED, not constitutive."),
-            Annotation("(4) Second-antigen recognition", (0.55, 0.55, 0.20, 0.15),
-                       "AND-gate: CAR (only present after step 3) binds antigen #2."),
-            Annotation("(5) Cytotoxic granule release", (0.78, 0.55, 0.18, 0.30),
-                       "Granzyme + perforin exocytosis -> target killing."),
+            Annotation(
+                "EGF Repeats (NECD)",
+                (0.10, 0.04, 0.20, 0.18),
+                "Multiple Epidermal Growth Factor-like repeats — ligand-binding extracellular region.",
+            ),
+            Annotation(
+                "NRR: LNR + HD",
+                (0.30, 0.18, 0.20, 0.10),
+                "Negative Regulatory Region — Lin-Notch Repeats + Heterodimerization Domain. "
+                "Holds receptor inactive until ligand binding.",
+            ),
+            Annotation(
+                "Transmembrane (TM)", (0.45, 0.27, 0.10, 0.05), "Single-pass transmembrane domain."
+            ),
+            Annotation(
+                "NICD: RAM, ANK, NLS, PEST",
+                (0.30, 0.30, 0.30, 0.15),
+                "Intracellular signaling cassette — RAM-CSL binding, Ankyrin repeats, NLS, PEST degron.",
+            ),
+            Annotation(
+                "(1) First antigen binding",
+                (0.05, 0.55, 0.20, 0.10),
+                "syn-Notch recognition domain engages antigen #1.",
+            ),
+            Annotation(
+                "(2) ADAM + γ-secretase cleavage",
+                (0.05, 0.70, 0.30, 0.10),
+                "Proteolytic release of synthetic TF into cytoplasm.",
+            ),
+            Annotation(
+                "(3) TF -> nucleus -> CAR transcription",
+                (0.30, 0.85, 0.30, 0.10),
+                "TF drives CAR expression from engineered locus — INDUCED, not constitutive.",
+            ),
+            Annotation(
+                "(4) Second-antigen recognition",
+                (0.55, 0.55, 0.20, 0.15),
+                "AND-gate: CAR (only present after step 3) binds antigen #2.",
+            ),
+            Annotation(
+                "(5) Cytotoxic granule release",
+                (0.78, 0.55, 0.18, 0.30),
+                "Granzyme + perforin exocytosis -> target killing.",
+            ),
         ],
     ),
 ]
@@ -399,15 +567,15 @@ PLANS: list[FigurePlan] = [
 
 
 COLORS = [
-    (0, 102, 204),    # cobalt
-    (220, 50, 47),    # solarized red
-    (38, 139, 210),   # blue
-    (181, 137, 0),    # solarized yellow
-    (133, 153, 0),    # green
+    (0, 102, 204),  # cobalt
+    (220, 50, 47),  # solarized red
+    (38, 139, 210),  # blue
+    (181, 137, 0),  # solarized yellow
+    (133, 153, 0),  # green
     (108, 113, 196),  # violet
-    (203, 75, 22),    # orange
-    (211, 54, 130),   # magenta
-    (42, 161, 152),   # cyan
+    (203, 75, 22),  # orange
+    (211, 54, 130),  # magenta
+    (42, 161, 152),  # cyan
 ]
 
 
@@ -471,7 +639,9 @@ def annotate_figure(plan: FigurePlan) -> Path:
             tw, th = label_font.getsize(num)  # type: ignore[attr-defined]
         draw.text(
             (marker_xy[0] + (marker_size - tw) / 2, marker_xy[1] + (marker_size - th) / 2 - 2),
-            num, fill=(255, 255, 255), font=label_font,
+            num,
+            fill=(255, 255, 255),
+            font=label_font,
         )
 
         # Callout in the right gutter, vertically distributed
@@ -483,14 +653,17 @@ def annotate_figure(plan: FigurePlan) -> Path:
 
         # Callout marker
         draw.rectangle(
-            [(gutter_x - marker_size - 4, callout_y),
-             (gutter_x - 4, callout_y + marker_size)],
+            [(gutter_x - marker_size - 4, callout_y), (gutter_x - 4, callout_y + marker_size)],
             fill=color,
         )
         draw.text(
-            (gutter_x - marker_size - 4 + (marker_size - tw) / 2,
-             callout_y + (marker_size - th) / 2 - 2),
-            num, fill=(255, 255, 255), font=label_font,
+            (
+                gutter_x - marker_size - 4 + (marker_size - tw) / 2,
+                callout_y + (marker_size - th) / 2 - 2,
+            ),
+            num,
+            fill=(255, 255, 255),
+            font=label_font,
         )
 
         # Wrap label text into ~30-char lines
@@ -498,7 +671,9 @@ def annotate_figure(plan: FigurePlan) -> Path:
         for j, line in enumerate(wrapped):
             draw.text(
                 (gutter_x + 2, callout_y + j * (max(11, H // 75) + 2)),
-                line, fill=(20, 20, 20), font=body_font,
+                line,
+                fill=(20, 20, 20),
+                font=body_font,
             )
 
     out = OUTPUT_DIR / f"annotated_{plan.image_filename}"
@@ -537,9 +712,7 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
 
     # Title slide
     s = pres.slides.add_slide(blank)
-    title_box = s.shapes.add_textbox(
-        Inches(0.5), Inches(2.0), Inches(12.3), Inches(2.0)
-    )
+    title_box = s.shapes.add_textbox(Inches(0.5), Inches(2.0), Inches(12.3), Inches(2.0))
     tf = title_box.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
@@ -550,9 +723,7 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
     run.font.bold = True
     run.font.color.rgb = RGBColor(20, 20, 20)
 
-    sub = s.shapes.add_textbox(
-        Inches(0.5), Inches(4.2), Inches(12.3), Inches(2.5)
-    )
+    sub = s.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(12.3), Inches(2.5))
     sf = sub.text_frame
     sf.word_wrap = True
     sub_text = (
@@ -560,8 +731,8 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
         "For each: numbered bounding-box overlays show what VaultLab identified + "
         "where on the figure. Right-side callouts are short tags; full explanations "
         "live in the speaker notes.\n\n"
-        f"Generated 2026-04-29 by vaultlab figure-understanding prototype "
-        f"(scripts/figure_understanding_prototype.py)."
+        "Generated 2026-04-29 by vaultlab figure-understanding prototype "
+        "(scripts/figure_understanding_prototype.py)."
     )
     for i, line in enumerate(sub_text.split("\n\n")):
         p = sf.paragraphs[0] if i == 0 else sf.add_paragraph()
@@ -572,13 +743,11 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
         run.font.color.rgb = RGBColor(60, 60, 60)
 
     # Figure slides
-    for plan, ann_path in zip(plans, annotated_paths):
+    for plan, ann_path in zip(plans, annotated_paths, strict=False):
         s = pres.slides.add_slide(blank)
 
         # Title
-        title_box = s.shapes.add_textbox(
-            Inches(0.4), Inches(0.2), Inches(12.5), Inches(0.7)
-        )
+        title_box = s.shapes.add_textbox(Inches(0.4), Inches(0.2), Inches(12.5), Inches(0.7))
         tf = title_box.text_frame
         tf.word_wrap = True
         p = tf.paragraphs[0]
@@ -613,9 +782,7 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
         )
 
         # Caption
-        caption_box = s.shapes.add_textbox(
-            Inches(0.4), Inches(6.7), Inches(12.5), Inches(0.7)
-        )
+        caption_box = s.shapes.add_textbox(Inches(0.4), Inches(6.7), Inches(12.5), Inches(0.7))
         cf = caption_box.text_frame
         cf.word_wrap = True
         p = cf.paragraphs[0]
@@ -629,8 +796,7 @@ def build_pptx(plans: list[FigurePlan], annotated_paths: list[Path]) -> Path:
         # Speaker notes
         notes = s.notes_slide.notes_text_frame
         ann_listing = "\n\nNumbered annotations:\n" + "\n".join(
-            f"{i + 1}. [{a.label}] — {a.explanation}"
-            for i, a in enumerate(plan.annotations)
+            f"{i + 1}. [{a.label}] — {a.explanation}" for i, a in enumerate(plan.annotations)
         )
         notes.text = plan.long_explanation + ann_listing
 

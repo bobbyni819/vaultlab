@@ -14,7 +14,6 @@ Tests:
 
 from __future__ import annotations
 
-import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -48,6 +47,7 @@ def test_feedback() -> None:
 
 def test_locations() -> None:
     import os
+
     from vaultlab.context.locations import (
         get_path,
         load_locations,
@@ -71,6 +71,7 @@ def test_locations() -> None:
 
 def test_user_memory() -> None:
     import os
+
     from vaultlab.context.user_memory import recall, recall_all, remember
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -111,8 +112,7 @@ def test_ingest() -> None:
         # BibTeX
         bib = Path(tmp) / "refs.bib"
         bib.write_text(
-            "@article{a2024, title = {A}, year = {2024}}\n"
-            "@book{b2025, title = {B}}\n",
+            "@article{a2024, title = {A}, year = {2024}}\n@book{b2025, title = {B}}\n",
             encoding="utf-8",
         )
         result = ingest(bib)
@@ -186,6 +186,7 @@ def test_dual_format_notes() -> None:
 def test_slide_grouping() -> None:
     from pptx import Presentation
     from pptx.util import Inches
+
     from vaultlab.figures.understand import ElementAnnotation
     from vaultlab.slides.annotated_figure_slide import add_annotated_figure_slide
 

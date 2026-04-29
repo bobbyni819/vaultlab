@@ -42,10 +42,10 @@ OUT_DIR.mkdir(exist_ok=True)
 @dataclass
 class ColorMotif:
     name: str
-    hue_range: tuple[float, float]   # in [0, 360]
-    sat_min: float                   # in [0, 1]
-    val_min: float                   # in [0, 1]
-    min_area_frac: float             # min connected-component size as fraction of total pixels
+    hue_range: tuple[float, float]  # in [0, 360]
+    sat_min: float  # in [0, 1]
+    val_min: float  # in [0, 1]
+    min_area_frac: float  # min connected-component size as fraction of total pixels
 
 
 MOTIFS: list[ColorMotif] = [
@@ -104,12 +104,12 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
 
 
 PALETTE = [
-    (0, 153, 0),     # green
-    (0, 102, 204),   # blue
-    (220, 80, 0),    # orange
-    (200, 30, 80),   # magenta
+    (0, 153, 0),  # green
+    (0, 102, 204),  # blue
+    (220, 80, 0),  # orange
+    (200, 30, 80),  # magenta
     (130, 60, 180),  # purple
-    (200, 170, 0),   # gold
+    (200, 170, 0),  # gold
 ]
 
 
@@ -139,7 +139,7 @@ def main() -> None:
             draw.rectangle([(x0, y0), (x1, y1)], outline=color_rgb, width=3)
             draw.text(
                 (x0 + 4, max(0, y0 - 22)),
-                f"{motif.name.split(' ')[0]} #{j+1}",
+                f"{motif.name.split(' ')[0]} #{j + 1}",
                 fill=color_rgb,
                 font=label_font,
             )

@@ -21,10 +21,10 @@ from pptx.util import Emu, Inches, Pt
 sys.path.insert(0, str(Path(__file__).parent))
 from figure_understanding_prototype import (  # type: ignore[import-not-found]
     PLANS as V1_PLANS,
-    annotate_figure as v1_annotate,
-    OUTPUT_DIR as V1_OUT_DIR,
 )
-
+from figure_understanding_prototype import (
+    annotate_figure as v1_annotate,
+)
 
 PPTX_OUT = Path(r"C:\Users\bobby\Downloads\car_t_decks\figure_understanding_demo_v2.pptx")
 V2_FIG1 = Path(r"C:\tmp\cart_figs_v13_annotated_v2\figure1_v2.png")
@@ -100,8 +100,11 @@ def _add_figure_slide(
 
     x_in = (13.333 - disp_w / Emu(914400)) / 2
     s.shapes.add_picture(
-        str(image_path), Inches(x_in), Inches(1.0),
-        width=disp_w, height=disp_h,
+        str(image_path),
+        Inches(x_in),
+        Inches(1.0),
+        width=disp_w,
+        height=disp_h,
     )
 
     caption_box = s.shapes.add_textbox(Inches(0.4), Inches(6.7), Inches(12.5), Inches(0.7))
@@ -179,9 +182,10 @@ def main() -> None:
             f"{plan.title} (v1)",
             annotated,
             plan.overall_caption,
-            plan.long_explanation + "\n\nNumbered annotations:\n" + "\n".join(
-                f"{i + 1}. [{a.label}] -- {a.explanation}"
-                for i, a in enumerate(plan.annotations)
+            plan.long_explanation
+            + "\n\nNumbered annotations:\n"
+            + "\n".join(
+                f"{i + 1}. [{a.label}] -- {a.explanation}" for i, a in enumerate(plan.annotations)
             ),
         )
 

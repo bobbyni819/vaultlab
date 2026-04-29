@@ -72,12 +72,16 @@ class SlideLayout:
     title_font_pt: int = 26
     caption_font_pt: int = 12
     footer_font_pt: int = 9
+    # Bobby 2026-04-29 v7 review: 'boxes should be slightly larger than the
+    # motif so they are not right on the boundaries'. Pads the box by N
+    # source pixels on all sides when drawing.
+    bbox_padding_px: int = 30
     # Theme variant: "light" (white bg, dark text) or "dark" (dark bg, light text)
     theme_variant: str = "light"
     # Per Bobby's Hickey-template-logo-zones memory: when using Hickey Lab masters,
     # the section banner must shrink to avoid the bottom-flanking lab + Duke logos.
     banner_left_margin_in: float = 0.4
-    banner_right_margin_in: float = 1.1   # leaves room for page number
+    banner_right_margin_in: float = 1.1  # leaves room for page number
 
 
 DEFAULT = SlideLayout()
@@ -85,8 +89,8 @@ DEFAULT = SlideLayout()
 
 HICKEY_LAB_LAYOUT = SlideLayout(
     theme_variant="dark",
-    banner_left_margin_in=1.2,            # avoid Hickey lab logo
-    banner_right_margin_in=1.4,            # avoid Duke logo
+    banner_left_margin_in=1.2,  # avoid Hickey lab logo
+    banner_right_margin_in=1.4,  # avoid Duke logo
 )
 
 
@@ -455,20 +459,20 @@ def _group_shapes(slide, shapes_to_group, group_name: str) -> None:
 
     grp_xml = (
         f'<p:grpSp xmlns:p="{p_ns}" xmlns:a="{a_ns}">'
-        f'<p:nvGrpSpPr>'
+        f"<p:nvGrpSpPr>"
         f'<p:cNvPr id="{next_id}" name="{group_name}"/>'
-        f'<p:cNvGrpSpPr/>'
-        f'<p:nvPr/>'
-        f'</p:nvGrpSpPr>'
-        f'<p:grpSpPr>'
-        f'<a:xfrm>'
+        f"<p:cNvGrpSpPr/>"
+        f"<p:nvPr/>"
+        f"</p:nvGrpSpPr>"
+        f"<p:grpSpPr>"
+        f"<a:xfrm>"
         f'<a:off x="{min_x}" y="{min_y}"/>'
         f'<a:ext cx="{max_x - min_x}" cy="{max_y - min_y}"/>'
         f'<a:chOff x="{min_x}" y="{min_y}"/>'
         f'<a:chExt cx="{max_x - min_x}" cy="{max_y - min_y}"/>'
-        f'</a:xfrm>'
-        f'</p:grpSpPr>'
-        f'</p:grpSp>'
+        f"</a:xfrm>"
+        f"</p:grpSpPr>"
+        f"</p:grpSp>"
     )
     grp_sp = etree.fromstring(grp_xml)
 
@@ -521,13 +525,19 @@ def _add_annotations(
         # 1. Bounding-box rectangle (skip if ann.use_box=False per Bobby
         # 2026-04-29 flexibility ask: small / narrow elements can use just
         # a marker pointing at them).
+        # Pad by layout.bbox_padding_px so the box sits slightly outside the
+        # motif, not flush with its edges (Bobby 2026-04-29 v7 ask).
         if ann.use_box:
+            sx = img_w_in / src_w
+            sy = img_h_in / src_h
+            pad_x = layout.bbox_padding_px * sx
+            pad_y = layout.bbox_padding_px * sy
             box = s.shapes.add_shape(
                 MSO_SHAPE.RECTANGLE,
-                Inches(x_in),
-                Inches(y_in),
-                Inches(w_in),
-                Inches(h_in),
+                Inches(x_in - pad_x),
+                Inches(y_in - pad_y),
+                Inches(w_in + 2 * pad_x),
+                Inches(h_in + 2 * pad_y),
             )
             box.name = f"ann{orig_idx + 1}_box"
             box.fill.background()
