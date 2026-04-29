@@ -6,7 +6,7 @@ vaultlab is in active alpha development; some invariants may evolve, but each ch
 
 ---
 
-## The nine invariants
+## The eleven invariants
 
 ### Invariant 1 — Data-first Analyst
 
@@ -64,6 +64,25 @@ Slash commands fall into two categories:
 **Orchestrated commands** — multi-agent meetings or plan-execute-verify-refine loops. Use `vaultlab.runner` + `vaultlab.workflows`. Examples: `/research-pipeline`, `/deep-think`, `/build-deck`.
 
 Bypass orchestration when one tool call answers the user's intent. Use orchestration when the intent requires multiple agent perspectives or iterative refinement.
+
+### Invariant 10 — Async-first feedback loop
+
+Open questions and design decisions go to **markdown documents in the KB**, not blocking chat questions. The four channels (in priority order):
+
+1. `START_HERE.md` per project — auto-maintained current state.
+2. `grill-<topic>-<date>.md` — numbered open-question docs when N+ decisions are pending.
+3. `decisions-log.md` per project — append-only design/scope record.
+4. Chat — reserved for *immediately blocking* events only: destructive actions, IRB/PHI/compliance gates, cost-tier escalation above the configured threshold.
+
+Every command, role, or workflow that completes meaningful work MUST update at least one of channels 1–3. End-of-turn summary must surface unread KB docs as `bobby-kb open <path>` so the user can read on their schedule.
+
+Complex workflows fan out into parallel sub-workflows automatically (subagents, concurrent tool calls). The user does not orchestrate parallelism by hand.
+
+### Invariant 11 — Pluggable adversary / judge model
+
+The runner supports user-selected models for the adversary, judge, and verifier roles via `~/.config/vaultlab/models.toml`. Defaults are sensible (Claude family), but users MUST be able to plug in OpenAI, Gemini, local Llama, etc. without editing source.
+
+`vaultlab.runner.judge_for(role)` returns the configured model handle. Role implementations call this — they do not hardcode `claude-sonnet-4-6` or any other identifier. `applicable_modes` and capability requirements (vision, long context, tool use) are declared in the role's `prompt.md` frontmatter so the config layer can warn on incompatible substitutions.
 
 ---
 

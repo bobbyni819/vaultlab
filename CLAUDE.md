@@ -24,7 +24,7 @@ When opening this repo, read in this order:
 
 Legend: 🛠️ = read + edit if applicable. 📖 = read only.
 
-## The four core commitments (META PRINCIPLES)
+## The six core commitments (META PRINCIPLES)
 
 These are non-negotiable. Every architectural decision serves them.
 
@@ -43,6 +43,38 @@ User says *"draft methods"* → vaultlab plans + runs internal meetings/critique
 ### 4. KB is the smartness
 
 Every analysis writes to KB; every analysis reads from KB. Cross-project reasoning emerges via retrieval. The LLM gets smarter project-by-project as the KB grows.
+
+### 5. Async-first feedback loop
+
+VaultLab keeps working rather than blocking the user with mid-flight questions. Open questions, design decisions, and clarifications go into **markdown documents in the KB** — not chat. The user reads them at their leisure (Obsidian opens via `bobby-kb open <path>`) and either edits the file or replies referencing it.
+
+**The four channels:**
+1. **`START_HERE.md` per project** — auto-maintained current state.
+2. **`grill-<topic>-<date>.md`** — numbered open-question docs when N+ decisions are pending.
+3. **`decisions-log.md` per project** — append-only record of design/scope decisions.
+4. **Chat** — reserved for *immediately blocking* events only.
+
+**Where blocking confirmation IS still required:**
+- Destructive actions (delete, force push, send email, post to external services)
+- IRB / PHI / compliance gates
+- Cost-tier escalation (single LLM call > configured threshold)
+
+**Parallel decomposition:** complex workflows fan out into parallel sub-workflows automatically (subagents, concurrent tool calls). The user does not orchestrate parallelism by hand.
+
+**End every turn with one line:** if a grill doc, decisions-log entry, or START_HERE update was written, surface it as `bobby-kb open <path>` so the user can read it on their schedule.
+
+### 6. Centralized memory is the flagship
+
+What separates VaultLab from PaperQA / scanpy / FutureHouse / scverse / Aider is the unified memory layer. Six channels stitched into one place the LLM reads:
+
+1. **Knowledge base** (Obsidian markdown — `Sources/`, `Wiki/`, `Output/`)
+2. **Meeting transcripts** (local-Whisper or cloud → auto-ingested into KB)
+3. **Inbox + calendar + work log** (Outlook / Gmail / Google Calendar / lab Google Doc work log)
+4. **Local files** (anything Claude Code can `Read()`)
+5. **Project state files** (`START_HERE.md`, `decisions-log.md`, grill docs)
+6. **Per-user locations registry** (`~/.config/vaultlab/locations.toml` — the index that lets all six channels find each other)
+
+When extending VaultLab, every new feature must answer: *"How does this read from / write to centralized memory?"* If a feature only operates on its own private state, that's a smell.
 
 ## Top-level structure
 
