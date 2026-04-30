@@ -81,6 +81,10 @@ from vaultlab.provenance import ProvenanceRecord, write_receipts
 from vaultlab.research.acquisition import acquire_pdfs_for_corpus
 from vaultlab.research.corpus import build_corpus_from_seeds
 from vaultlab.research.graph_metrics import compute_metrics
+from vaultlab.research.picker import (
+    PickerCallback,
+    pick_top_n_content_aware,
+)
 from vaultlab.research.summarize import (
     DEFAULT_MODEL,
     PaperSummary,
@@ -877,6 +881,10 @@ def run_lit_arc(
     progress: _ProgressFn | None = None,
     reader: SummaryReader | None = None,
     narrator: ArcNarrator | None = None,
+    picker_callback: PickerCallback | None = None,
+    picker_coarse_n: int = 30,
+    project: str | None = None,
+    run_dir: Path | None = None,
     # Test injection points (default to real implementations):
     _client: Any | None = None,
     _llm_summary: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
@@ -903,6 +911,20 @@ def run_lit_arc(
 
     The two modes can be mixed (e.g. SDK summaries + Claude-Code
     narrator) by passing only one of the callbacks.
+
+    **Content-aware Tier-A picker.** Pass ``picker_callback`` to swap the
+    mechanical citation-graph picker for a content-aware one that reads
+    candidate abstracts before deciding (see
+    :mod:`vaultlab.research.picker`). When ``picker_callback`` is
+    ``None``, the previous citation-graph behaviour is preserved. The
+    coarse-pool size (default 30) is controlled by ``picker_coarse_n``.
+
+    The ``project`` and ``run_dir`` arguments steer the picker's
+    audit-trail output: when ``project`` is given AND
+    ``Wiki/Projects/<project>/decisions-log.md`` already exists, the
+    pick rationales are appended there. Otherwise, when ``run_dir`` is
+    given, the rationales are written to ``<run_dir>/picker-decision.md``
+    instead. Both can be ``None`` (rationales then live only in logs).
 
     Test injection points (``_client``, ``_llm_summary``, ``_llm_arc``,
     etc.) take precedence over both modes; callers in production should
@@ -1002,18 +1024,36 @@ def run_lit_arc(
     # we WANT the reader to summarize) and pass to summarize_corpus.
     # Picker now also biases toward papers WITH cached PDFs.
     tier_a_dois: set[str] | None = None
+    picker_method: str = "citation-graph"
     if max_papers_to_summarize and max_papers_to_summarize < corpus.n_papers:
-        keep = set(
-            _pick_top_n_for_summarization(
-                corpus, n=max_papers_to_summarize, pdf_cache_dir=pdf_cache_dir,
+        if picker_callback is not None:
+            keep_list = pick_top_n_content_aware(
+                topic,
+                corpus,
+                target_n=max_papers_to_summarize,
+                coarse_n=picker_coarse_n,
+                kb_root=kb_root,
+                pdf_cache_dir=pdf_cache_dir,
+                picker_callback=picker_callback,
+                fallback_to_citation_graph=True,
+                project=project,
+                fallback_dir=run_dir,
             )
-        )
+            picker_method = "content-aware"
+        else:
+            keep_list = _pick_top_n_for_summarization(
+                corpus,
+                n=max_papers_to_summarize,
+                pdf_cache_dir=pdf_cache_dir,
+            )
+        keep = set(keep_list)
         tier_a_dois = keep
         _emit(
             progress,
             "summarize_budget",
             kept=len(keep),
             total=corpus.n_papers,
+            method=picker_method,
         )
 
     summarize_fn = _summarize_corpus_fn if _summarize_corpus_fn is not None else summarize_corpus

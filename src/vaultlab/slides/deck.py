@@ -268,6 +268,91 @@ def build_deck(
     return output_path
 
 
+def _format_author_lastname(author: str) -> str:
+    """Extract a Vancouver-style last-name surface form from a free-form author string.
+
+    Handles the heterogeneous ``Paper.authors`` formats we see in the
+    corpus, which arrive from NCBI / S2 / CrossRef / manual ingest in any
+    of the following shapes:
+
+    - ``"Last F"`` -> ``"Last"``  (NCBI style)
+    - ``"Last FM"`` -> ``"Last"``
+    - ``"Last, F."`` -> ``"Last"``  (comma-separated last,first with period)
+    - ``"Last, First"`` -> ``"Last"``
+    - ``"F Last"`` -> ``"Last"``  (first-then-last, no comma — heuristic)
+    - ``"F. Last"`` -> ``"Last"``
+    - ``"First Middle Last"`` -> ``"Last"``  (multi-token, no comma)
+    - single token -> use as-is (already a last name OR a corp author)
+    - empty -> ``""`` (caller's responsibility to fall back to ``"Anon"``)
+
+    Pre-2026-04-30 the deck-renderer did naive ``authors[0].split()[-1]``
+    which produced ``"Yicheng"`` for ``"Tao Yicheng"`` (a first name) and
+    silently produced ``"Anon"`` for inputs the slug couldn't parse.
+    """
+    if not author:
+        return ""
+    s = author.strip()
+    if not s:
+        return ""
+
+    # Comma-separated -> Vancouver "Last, First" — the part before the
+    # comma is unambiguously the surname.
+    if "," in s:
+        last = s.split(",", 1)[0].strip()
+        return last or s
+
+    tokens = s.split()
+    if len(tokens) == 1:
+        # Single token: could be a corp author or just a last name. Use
+        # as-is.
+        return tokens[0]
+
+    # Two-or-more token whitespace-separated form. Decide whether tokens
+    # are "Last F" (last first, NCBI style — most common in our corpora)
+    # or "F Last" (first-then-last, less common). Heuristic: if the
+    # *last* token is short (1-3 chars, looks like initials), it's
+    # NCBI-style ``Last F`` -> first token is the surname. Otherwise
+    # the last token is the surname.
+    last_tok = tokens[-1]
+    if len(last_tok) <= 3 and last_tok.replace(".", "").isalpha():
+        # Looks like initials -> first token is the surname.
+        return tokens[0]
+
+    # Otherwise the last token is the surname (Western order).
+    return last_tok
+
+
+def _format_citation_label(
+    citation: dict[str, Any] | None,
+    n: int,
+    fallback: str = "",
+) -> str:
+    """Render a Vancouver-style ``[N] Last Year`` footnote label.
+
+    Used by the bullets-slide citations footer. ``citation`` is the dict
+    populated by :func:`_collect_citations_from_summaries` (or callers
+    passing equivalent shape).  Falls back to ``fallback`` (typically the
+    DOI) when authors are missing entirely.
+    """
+    authors = (citation or {}).get("authors") or []
+    last = ""
+    for a in authors:
+        last = _format_author_lastname(a)
+        if last:
+            break
+    if not last:
+        if not fallback:
+            logger.warning(
+                "citation %s has no parseable author; using 'Anon' fallback",
+                fallback or "(unknown doi)",
+            )
+            last = "Anon"
+        else:
+            return f"[{n}] {fallback}"
+    year = (citation or {}).get("year") or ""
+    return f"[{n}] {last} {year}".strip()
+
+
 def build_deck_from_lineage_result(
     lineage_result: LineageRunResult,
     *,
@@ -549,12 +634,7 @@ def _add_bullets_slide(
         labels = []
         for n, doi in enumerate(cite_dois, 1):
             cite = citations.get(doi)
-            if cite and cite.get("authors"):
-                first = cite["authors"][0].split()[0] if cite["authors"] else "Anon"
-                year = cite.get("year", "")
-                labels.append(f"[{n}] {first} {year}".strip())
-            else:
-                labels.append(f"[{n}] {doi}")
+            labels.append(_format_citation_label(cite, n, fallback=doi))
         cb = s.shapes.add_textbox(
             Inches(0.8),
             Inches(layout.slide_h_in - layout.footer_h_in - 0.5),
@@ -707,10 +787,12 @@ def _plan_from_lineage(
     # Read summaries from disk if they exist; fall back gracefully when not.
     summaries = _read_summary_frontmatters(lineage_result.summary_paths)
     bucketed = _bucket_by_year(summaries)
+    bucketed = _fill_empty_buckets(bucketed, summaries)
     arc_text = _read_arc_narrative(lineage_result.arc_path)
 
     sections = ["Background", "Development", "Synthesis", "References"]
     slides: list[DeckSlide] = []
+    cited_dois: set[str] = set()  # tracks every DOI surfaced anywhere in the deck
 
     # 1. Title
     slides.append(
@@ -747,6 +829,9 @@ def _plan_from_lineage(
     # 2. Section intro: Background
     history_papers = bucketed.get("history", [])
     history_bullets = [_one_line_label(s) for s in history_papers[:3]]
+    for s in history_papers[:3]:
+        if s.get("doi"):
+            cited_dois.add(s["doi"])
     slides.append(
         DeckSlide(
             kind="section_intro",
@@ -756,7 +841,13 @@ def _plan_from_lineage(
                 "key_question": (
                     f"What foundational work established {lineage_result.topic}?"
                 ),
-                "bullets": history_bullets or ["(no history-bucket papers in corpus)"],
+                # Bobby 2026-04-30: never ship the placeholder text — bucket
+                # fallback above guarantees history_papers is non-empty when
+                # *any* corpus papers exist, but fall back to a generic
+                # framing line if the entire summaries dict is empty.
+                "bullets": history_bullets or [
+                    f"Establishing the foundations of {lineage_result.topic}."
+                ],
             },
             notes=dual_format(
                 mental_map={
@@ -768,30 +859,77 @@ def _plan_from_lineage(
     )
 
     # 3. Figure or bullets — history bucket
-    history_figure = _pick_figure_for_bucket(history_papers, figure_assignments)
+    # Bobby 2026-04-30 (Bug #5): figure-slide subjects must be Tier-A
+    # papers (LLM-read full text). Tier-C stubs without summaries leak
+    # off-topic figures (e.g. Gjerstorff 2006 cancer figure on a spatial-tx
+    # deck) when they happen to have a cached PMC figure.
+    history_figure = _pick_figure_for_bucket(
+        history_papers, figure_assignments, summaries=summaries
+    )
     if history_figure is not None:
-        fig_doi, fig_path = history_figure
+        claim_doi, fig_doi, fig_path = history_figure
+        cited_dois.add(fig_doi)
+        if claim_doi and claim_doi != fig_doi:
+            cited_dois.add(claim_doi)
+        # Bobby 2026-04-30 (Bug #6): slide titles must stay short — moving
+        # the paper citation into the caption keeps the title from
+        # wrapping into the figure area.
+        # Bobby 2026-04-30 (figure substitution): when the figure DOI
+        # differs from the claim DOI, the caption MUST flag this so the
+        # audience doesn't think the figure came from the leader paper.
+        fig_label = _label_for_doi(summaries, fig_doi)
+        is_substituted = bool(claim_doi) and claim_doi != fig_doi
+        if is_substituted:
+            manifest_entry = _read_figures_manifest_for(fig_doi, fig_path)
+            caption = _compose_substitution_caption(
+                summaries.get(fig_doi),
+                fig_doi,
+                figure_label=(manifest_entry or {}).get("label", "") or "",
+                figure_caption=(manifest_entry or {}).get("caption", "") or "",
+            )
+        else:
+            caption_summary = _summary_caption(summaries.get(fig_doi))
+            caption_parts = [fig_label]
+            if caption_summary:
+                caption_parts.append(caption_summary)
+            caption = " — ".join(caption_parts)
         slides.append(
             DeckSlide(
                 kind="figure",
-                title=f"Foundational result — {_label_for_doi(summaries, fig_doi)}",
+                title="Foundational findings",
                 content={
                     "figure_path": fig_path,
                     "annotations": [],
                     "motif_colors": {},
-                    "caption": _summary_caption(summaries.get(fig_doi)),
-                    "citation_doi": fig_doi,
+                    "caption": caption,
+                    # citation_doi is the slide's *claim* paper (what the
+                    # slide is about); figure_doi is the actual source of
+                    # the image. They differ only on substitution.
+                    "citation_doi": claim_doi or fig_doi,
+                    "claim_paper_doi": claim_doi or fig_doi,
+                    "figure_paper_doi": fig_doi,
                 },
                 notes=dual_format(
                     mental_map={
                         "hook": "Look at this canonical figure.",
-                        "evidence": f"Figure from {_label_for_doi(summaries, fig_doi)}",
+                        "evidence": (
+                            f"Substituted figure from {fig_label}"
+                            if is_substituted
+                            else f"Figure from {fig_label}"
+                        ),
                     }
                 ),
             )
         )
     else:
-        # Drop the figure slide; replace with bullets from history TL;DRs
+        # Drop the figure slide; replace with bullets from history TL;DRs.
+        # Bug #4: never ship "(no history-bucket summaries available)" —
+        # _fill_empty_buckets above guaranteed at least one history paper
+        # if the corpus is non-empty.
+        history_bullet_dois = [
+            s.get("doi", "") for s in history_papers[:5] if s.get("doi")
+        ]
+        cited_dois.update(history_bullet_dois)
         slides.append(
             DeckSlide(
                 kind="bullets",
@@ -800,10 +938,10 @@ def _plan_from_lineage(
                     "bullets": [
                         _bullet_from_summary(s)
                         for s in history_papers[:5]
-                    ] or ["(no history-bucket summaries available)"],
-                    "citations": [
-                        s.get("doi", "") for s in history_papers[:5] if s.get("doi")
+                    ] or [
+                        f"No prior work catalogued in this corpus for {lineage_result.topic}.",
                     ],
+                    "citations": history_bullet_dois,
                 },
                 notes=dual_format(
                     mental_map={
@@ -814,6 +952,11 @@ def _plan_from_lineage(
         )
 
     # 4. Section intro: Development
+    development_papers = bucketed.get("development", [])
+    development_bullets = [_one_line_label(s) for s in development_papers[:3]]
+    for s in development_papers[:3]:
+        if s.get("doi"):
+            cited_dois.add(s["doi"])
     slides.append(
         DeckSlide(
             kind="section_intro",
@@ -821,9 +964,9 @@ def _plan_from_lineage(
             content={
                 "section_name": "Development",
                 "key_question": "How did the field evolve?",
-                "bullets": [
-                    _one_line_label(s) for s in bucketed.get("development", [])[:3]
-                ] or ["(no development-bucket papers in corpus)"],
+                "bullets": development_bullets or [
+                    f"Tracing how {lineage_result.topic} developed.",
+                ],
             },
         )
     )
@@ -832,12 +975,15 @@ def _plan_from_lineage(
     sota_papers = bucketed.get("sota", [])
     sota_bullets = [_bullet_from_summary(s) for s in sota_papers[:5]]
     sota_dois = [s.get("doi", "") for s in sota_papers[:5] if s.get("doi")]
+    cited_dois.update(sota_dois)
     slides.append(
         DeckSlide(
             kind="bullets",
             title="State of the art",
             content={
-                "bullets": sota_bullets or ["(no SOTA-bucket findings available)"],
+                "bullets": sota_bullets or [
+                    f"Current state of the art for {lineage_result.topic}.",
+                ],
                 "citations": sota_dois,
             },
             notes=dual_format(
@@ -850,9 +996,16 @@ def _plan_from_lineage(
     )
 
     # 6. Section intro: Synthesis (use arc narrative when present)
-    synthesis_bullets = _arc_bullets(arc_text) if arc_text else [
-        "(synthesis pending — re-run /lit-arc with ANTHROPIC_API_KEY for narrative)"
-    ]
+    # Bobby 2026-04-30 (Bug #3): the synthesis slide was previously
+    # rendering YAML frontmatter ('topic: ... | date: ... | seeds: 12')
+    # as bullets because _arc_bullets walked the file top-down. Now we
+    # prefer a "## Synthesis" heading inside the arc, then fall back to
+    # the last narrative paragraph.
+    synthesis_bullets = _synthesis_bullets_from_arc(arc_text) if arc_text else []
+    if not synthesis_bullets:
+        synthesis_bullets = [
+            "Synthesis pending — re-run /lit-arc with ANTHROPIC_API_KEY for a full narrative."
+        ]
     slides.append(
         DeckSlide(
             kind="section_intro",
@@ -865,8 +1018,9 @@ def _plan_from_lineage(
         )
     )
 
-    # 7. References
-    refs = _build_references(summaries)
+    # 7. References — Bobby 2026-04-30 (Bug #2): only the DOIs *cited
+    # somewhere in this deck*, not the entire 610-paper corpus.
+    refs = _build_references(summaries, cited_dois=cited_dois)
     slides.append(
         DeckSlide(
             kind="references",
@@ -951,7 +1105,9 @@ def _extract_bullet_section(body: str, heading: str) -> list[str]:
     return [
         line[2:].strip()
         for line in text.splitlines()
-        if line.startswith("- ") and "_(none)_" not in line
+        if line.startswith("- ")
+        and "_(none)_" not in line
+        and "_(empty)_" not in line
     ][:5]
 
 
@@ -983,20 +1139,77 @@ def _read_arc_narrative(arc_path: Path) -> str:
 
 
 def _arc_bullets(arc_text: str) -> list[str]:
-    """Pull a few non-empty paragraph snippets from the arc to seed Synthesis."""
+    """Backwards-compat alias kept for any external callers.
+
+    New code should use :func:`_synthesis_bullets_from_arc` instead — it
+    skips YAML frontmatter and prefers an explicit ``## Synthesis``
+    heading.
+    """
+    return _synthesis_bullets_from_arc(arc_text)
+
+
+def _strip_yaml_frontmatter(text: str) -> str:
+    """Drop a leading ``---\\n...\\n---`` YAML block from arc-narrative text.
+
+    The original ``_arc_bullets`` walked from line 0 and ended up taking
+    the YAML keys (``topic: ...``, ``date: ...``, ``seeds: 12``) as
+    bullets. Stripping the frontmatter at parse time prevents that.
+    """
+    if not text.startswith("---"):
+        return text
+    end = text.find("\n---", 3)
+    if end == -1:
+        return text
+    return text[end + 4:].lstrip("\n")
+
+
+def _synthesis_bullets_from_arc(arc_text: str) -> list[str]:
+    """Extract 3-5 synthesis bullets from a lineage-arc markdown.
+
+    Order of preference:
+
+    1. An explicit ``## Synthesis`` heading — split its body into sentences.
+    2. The *last* paragraph of the arc (typically the most synthesizing) —
+       split into sentences.
+    3. A first-paragraph sentence walk as a final fallback.
+
+    YAML frontmatter is stripped before parsing so we never emit
+    ``topic: ... | date: ... | seeds: 12`` as bullets.
+    """
+    if not arc_text:
+        return []
+    body = _strip_yaml_frontmatter(arc_text)
+
+    # 1. Explicit "## Synthesis" section -------------------------------------
+    synthesis = _extract_section(body, "## Synthesis")
+    if synthesis:
+        sentences = _sentences_from_paragraph(synthesis)
+        if sentences:
+            return sentences[:5]
+
+    # 2. Last narrative paragraph ----------------------------------------------
+    paragraphs = _narrative_paragraphs(body)
+    if paragraphs:
+        last = paragraphs[-1]
+        sentences = _sentences_from_paragraph(last)
+        if sentences:
+            return sentences[:5]
+
+    # 3. First-paragraph fallback (similar to legacy behaviour but with the
+    #    YAML and bullet-line guards in place) -------------------------------
     bullets: list[str] = []
-    for line in arc_text.splitlines():
+    for line in body.splitlines():
         stripped = line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith(">"):
+        if not stripped:
             continue
-        if stripped.startswith("|") or stripped.startswith("---"):
+        if stripped.startswith(("#", ">", "|", "---", "- ", "* ")):
             continue
-        if stripped.startswith("- "):
+        # Skip simple ``key: value`` lines that survived frontmatter stripping
+        if _looks_like_yaml_kv_line(stripped):
             continue
-        # Take first sentence
         first_period = stripped.find(". ")
         if first_period > 30:
-            bullets.append(stripped[:first_period + 1])
+            bullets.append(stripped[: first_period + 1])
         else:
             bullets.append(stripped[:200])
         if len(bullets) >= 3:
@@ -1004,13 +1217,82 @@ def _arc_bullets(arc_text: str) -> list[str]:
     return bullets
 
 
+def _looks_like_yaml_kv_line(line: str) -> bool:
+    """Heuristic: 'topic: foo' or 'seeds: 12' looking lines."""
+    if ":" not in line:
+        return False
+    head, _, _ = line.partition(":")
+    head = head.strip()
+    if not head:
+        return False
+    # Short alphanum + underscore key with no whitespace -> looks YAML-ish.
+    return (
+        len(head) <= 32
+        and " " not in head
+        and head.replace("_", "").replace("-", "").isalnum()
+    )
+
+
+def _narrative_paragraphs(body: str) -> list[str]:
+    """Return list of non-empty narrative paragraphs (paragraph = >=1 prose line).
+
+    Skips: headings, blockquotes, table rows, bullet lists, fence lines.
+    """
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                paragraphs.append(" ".join(current).strip())
+                current = []
+            continue
+        if stripped.startswith(("#", ">", "|", "---", "```", "- ", "* ")):
+            if current:
+                paragraphs.append(" ".join(current).strip())
+                current = []
+            continue
+        if _looks_like_yaml_kv_line(stripped):
+            continue
+        current.append(stripped)
+    if current:
+        paragraphs.append(" ".join(current).strip())
+    return [p for p in paragraphs if p]
+
+
+def _sentences_from_paragraph(paragraph: str) -> list[str]:
+    """Split a paragraph into 1-5 reasonable-length sentences."""
+    import re
+
+    parts = re.split(r"(?<=[.!?])\s+", paragraph.strip())
+    out: list[str] = []
+    for p in parts:
+        p = p.strip()
+        if not p:
+            continue
+        # Trim very long ones to keep slide bullets readable
+        out.append(p if len(p) <= 220 else p[:217] + "...")
+    return out
+
+
 def _one_line_label(summary: dict[str, Any]) -> str:
     authors = summary.get("authors") or []
-    first = authors[0].split()[0] if authors and authors[0] else "Anon"
+    last = ""
+    for a in authors:
+        last = _format_author_lastname(a)
+        if last:
+            break
+    if not last:
+        last = "Anon"
+        if authors:
+            logger.warning(
+                "no parseable author in %s; falling back to 'Anon'",
+                summary.get("doi") or "(unknown doi)",
+            )
     year = summary.get("year") or "n.d."
     title = summary.get("title", "") or summary.get("doi", "")
     short = title if len(title) <= 70 else title[:67] + "..."
-    return f"{first} {year} — {short}"
+    return f"{last} {year} — {short}"
 
 
 def _label_for_doi(summaries: dict[str, dict[str, Any]], doi: str) -> str:
@@ -1042,23 +1324,215 @@ def _bullet_from_summary(summary: dict[str, Any]) -> str:
 def _pick_figure_for_bucket(
     bucket_papers: list[dict[str, Any]],
     figure_assignments: dict[str, Path],
-) -> tuple[str, Path] | None:
-    """Return (doi, path) for the first paper in the bucket with a figure."""
+    *,
+    summaries: dict[str, dict[str, Any]] | None = None,
+) -> tuple[str, str, Path] | None:
+    """Pick a Tier-A figure for a bucket, with substitution support.
+
+    Returns ``(claim_doi, figure_doi, figure_path)`` where:
+
+    - ``claim_doi`` is the bucket leader (``bucket_papers[0]``) — the
+      paper whose claim the slide is *about*.
+    - ``figure_doi`` is the paper whose figure is actually shown; equals
+      ``claim_doi`` when the leader has its own figure, or the DOI of a
+      later Tier-A bucket paper whose figure substitutes in.
+    - ``figure_path`` is the on-disk figure file.
+
+    Bobby 2026-04-30 (Bug #5): filter to Tier-A only. Tier-C papers are
+    abstract-only stubs without LLM-read content; using one as a figure-slide
+    foundational paper put off-topic figures (e.g. Gjerstorff 2006 cancer
+    figure on a spatial-tx deck) into the deck whenever the corpus had a
+    cached PMC figure for the wrong DOI.
+
+    Bobby 2026-04-30 (figure substitution): when the leader has no
+    figure, walk down the bucket and substitute the first Tier-A paper
+    that does. The renderer composes a "Substituted figure from <author>
+    <year>" caption so the audience knows the figure source differs from
+    the claim source. If no Tier-A paper in the bucket has a figure,
+    return ``None`` so the caller falls back to a bullets slide.
+    """
+    summaries = summaries if summaries is not None else {}
+    if not bucket_papers:
+        return None
+    claim_doi = (bucket_papers[0].get("doi") or "").strip()
     for s in bucket_papers:
         doi = (s.get("doi") or "").strip()
         if not doi:
             continue
+        # Honor the tier from the original bucket_papers entry first; fall
+        # back to the summaries dict when the caller passed bucketed
+        # summaries that already include the tier field.
+        tier = (s.get("tier") or summaries.get(doi, {}).get("tier") or "").upper()
+        if tier and tier != "A":
+            continue
         path = figure_assignments.get(doi)
         if path is not None and Path(path).exists():
-            return doi, Path(path)
+            return claim_doi or doi, doi, Path(path)
     return None
 
 
-def _build_references(summaries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _read_figures_manifest_for(
+    figure_doi: str,
+    figure_path: Path,
+) -> dict[str, Any] | None:
+    """Read the ``.figures.json`` manifest sitting alongside a figure file.
+
+    Returns the matching figure entry (``{figure_id, file_path, caption,
+    label, panels}``) if the path appears in the manifest; ``None``
+    otherwise.  Used to recover the original Elsevier/PMC caption when
+    composing a substitution caption — the figure paper's TL;DR may not
+    describe the specific panel being shown.
+    """
+    import json as _json
+
+    del figure_doi  # the manifest lives in figure_path.parent
+    manifest = Path(figure_path).parent / ".figures.json"
+    if not manifest.exists():
+        return None
+    try:
+        data = _json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, _json.JSONDecodeError):
+        return None
+    target = str(figure_path)
+    for f in data.get("figures", []):
+        if f.get("file_path") == target:
+            return f
+    return None
+
+
+def _compose_substitution_caption(
+    figure_summary: dict[str, Any] | None,
+    figure_doi: str,
+    *,
+    figure_label: str = "",
+    figure_caption: str = "",
+) -> str:
+    """Build the caption for a slide whose figure was substituted from another paper.
+
+    The reader needs to know the figure isn't from the paper the slide is
+    about, so the caption is prefixed with ``Substituted figure from
+    [[<doi-slug>|<author> <year>]]: ...`` where the wikilink resolves to
+    the substituted paper's summary.  The body text prefers the figure
+    paper's summary TL;DR; when that's missing (Tier-C source) it falls
+    back to the figure's own caption from the ``.figures.json`` manifest.
+    """
+    from vaultlab.kb.paths import slugify_doi
+
+    label = _one_line_label(figure_summary) if figure_summary else figure_doi
+    slug = slugify_doi(figure_doi) if figure_doi else ""
+    body = ""
+    if figure_summary:
+        tldr = (figure_summary.get("tldr") or "").strip()
+        if tldr:
+            body = tldr.split("\n")[0][:200]
+    if not body:
+        if figure_label and figure_caption:
+            body = f"{figure_label}: {figure_caption}"[:240]
+        elif figure_caption:
+            body = figure_caption[:240]
+        else:
+            body = "(figure source has limited summary content)"
+    if slug:
+        prefix = f"Substituted figure from [[{slug}|{label}]]"
+    else:
+        prefix = f"Substituted figure from {label}"
+    return f"{prefix}: {body}"
+
+
+def _bullets_from_substituted_figure(
+    claim_summary: dict[str, Any] | None,
+    figure_summary: dict[str, Any] | None,
+    *,
+    n: int = 5,
+) -> list[str]:
+    """Mix bullets from claim paper (~60%) and figure paper (~40%).
+
+    When a figure is substituted, the slide's bullets should incorporate
+    findings from the figure paper too — the slide is "figure-based" and
+    the figure is now from a different paper.  When the figure paper is
+    Tier-C (no key_findings), we degrade gracefully to claim-only
+    bullets.
+    """
+    claim_findings = list((claim_summary or {}).get("key_findings") or [])
+    fig_findings = list((figure_summary or {}).get("key_findings") or [])
+    if not fig_findings:
+        if claim_findings:
+            return [b[:200] for b in claim_findings[:n]]
+        tldr = ((claim_summary or {}).get("tldr") or "").strip()
+        return [tldr.split("\n")[0][:200]] if tldr else []
+    n_claim = max(1, (n * 3 + 4) // 5)  # ~ceil(n*0.6)
+    n_fig = max(0, n - n_claim)
+    out: list[str] = []
+    for b in claim_findings[:n_claim]:
+        out.append(b[:200])
+    for b in fig_findings[:n_fig]:
+        out.append(b[:200])
+    return out[:n]
+
+
+def _fill_empty_buckets(
+    bucketed: dict[str, list[dict[str, Any]]],
+    summaries: dict[str, dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Fill empty year-buckets so the deck never ships placeholder text.
+
+    Bobby 2026-04-30 (Bug #4): when the year-bucket quartile algorithm
+    puts 0 papers in ``history`` (because the corpus tail is older than
+    the topic's seminal era) the deck shipped a hard-coded
+    ``"(no history-bucket papers in corpus)"`` line. This helper falls
+    back to the oldest N papers (history) / newest N papers (sota) /
+    middle-year papers (development) from *all* summaries when a bucket
+    is empty.
+    """
+    out = {k: list(v) for k, v in bucketed.items()}
+    by_year = sorted(
+        (s for s in summaries.values() if s.get("doi")),
+        key=lambda d: d.get("year", 0) or 0,
+    )
+    if not by_year:
+        return out
+
+    n_fill = 5
+
+    if not out.get("history"):
+        # Oldest N
+        out["history"] = by_year[:n_fill]
+    if not out.get("sota"):
+        out["sota"] = list(reversed(by_year[-n_fill:]))
+    if not out.get("development"):
+        # Pick from the middle of the year range; if the corpus is too small
+        # just reuse history+sota as the dev bucket.
+        if len(by_year) >= 3:
+            mid_lo = len(by_year) // 4
+            mid_hi = max(mid_lo + 1, (3 * len(by_year)) // 4)
+            out["development"] = by_year[mid_lo:mid_hi][:n_fill]
+        else:
+            out["development"] = list(by_year)
+    return out
+
+
+def _build_references(
+    summaries: dict[str, dict[str, Any]],
+    cited_dois: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Build the deck-references list.
+
+    Pre-2026-04-30 this function returned every paper in the corpus
+    (610 papers for spatial-tx) which made the references slide
+    illegible — the deck only actually cites ~10 of them. The
+    ``cited_dois`` arg now restricts the output to DOIs referenced
+    *somewhere* in the deck (bullets-slide citations, figure-slide
+    citation_doi, etc.). When ``cited_dois`` is None we keep the legacy
+    behaviour for back-compat with callers that don't track citations.
+    """
+    items = summaries.items()
+    if cited_dois is not None:
+        cited_set = {d for d in cited_dois if d}
+        items = [(d, s) for d, s in items if d in cited_set]
     refs: list[dict[str, Any]] = []
     for n, (doi, s) in enumerate(
         sorted(
-            summaries.items(),
+            items,
             key=lambda kv: (kv[1].get("year", 0) or 0, kv[0]),
         ),
         start=1,
@@ -1092,3 +1566,418 @@ def _collect_citations_from_summaries(
         }
         for doi, s in summaries.items()
     }
+
+
+# ---------------------------------------------------------------------------
+# Plan-driven builder (lifted from bobby_slides._builder.build_from_plan)
+# ---------------------------------------------------------------------------
+#
+# This is the SECOND deck builder in this module. It accepts a flexible
+# **dict** plan (rather than the typed :class:`DeckPlan` above) and
+# dispatches each slide kind to the lifted imperative layout primitives in
+# :mod:`vaultlab.slides.layouts`.
+#
+# When to use which:
+#
+# - :func:`build_deck` — when you have a typed :class:`DeckPlan` (used by
+#   the lineage flow). Renders the 5-kind composer (title /
+#   section_intro / figure / bullets / references) with the
+#   annotated-figure-slide primitive.
+#
+# - :func:`build_from_plan` (this function) — when you have a richer dict
+#   plan with heterogeneous slide types (figure / multi_figure / quote /
+#   two_figure / section_divider / references / text / title) and want
+#   lab-template imperative styling.  This is the path the **L4 deck
+#   quality** work expects: an LLM-driven plan generator emits this dict
+#   shape, ``build_from_plan`` renders it deterministically.
+
+# Slide types the dict-plan builder understands.
+SUPPORTED_PLAN_SLIDE_TYPES: frozenset[str] = frozenset({
+    "title",
+    "section_divider",
+    "figure",
+    "two_figure",
+    "quote",
+    "multi_figure",
+    "text",
+    "references",
+})
+
+
+def build_from_plan(
+    plan: dict[str, Any],
+    output: Path | str,
+    write_marp: bool = True,
+    kb_log: Any = None,
+    with_animations: bool = False,
+    theme: str | None = None,
+    template: str = "lab",
+) -> dict[str, Path]:
+    """Render a structured deck-plan dict to ``.pptx`` (+ optional Marp .md).
+
+    Lifted from ``bobby_slides._builder.build_from_plan`` (bobby-tools,
+    2026-04). The dict-plan shape::
+
+        {
+            "title": "...",
+            "author": "...",
+            "subtitle": "...",       # optional
+            "topic": "...",          # optional, used for KB logging
+            "kb": "...",             # optional, KB name for log entry
+            "theme": "dark"|"light", # optional, default "dark"
+            "template": "lab"|"plain",  # optional, default "lab"
+            "slides": [
+                {"type": "title", ...},
+                {"type": "section_divider", "title": "..."},
+                {"type": "figure", "image_path": "...", ...,
+                 "annotations": [...]},   # see vaultlab.slides.annotate
+                {"type": "multi_figure", "figures": [...]},
+                {"type": "two_figure", ...},
+                {"type": "quote", "quote": "...", "attribution": "..."},
+                {"type": "text", "title": "...", "bullets": [...]},
+                {"type": "references", "references": [...]},
+            ]
+        }
+
+    Each slide may carry ``"speaker_notes"`` (a mental-map dict — see
+    :mod:`vaultlab.slides.notes`).  Bullets in figure slides may be plain
+    strings OR dicts with embedded annotations (Option A); the builder
+    normalizes them into slide-level annotations automatically.
+
+    Args:
+        plan: deck-plan dict (see schema).
+        output: path to the ``.pptx`` output.
+        write_marp: if ``True`` (default), also write a Marp ``.md`` mirror.
+        kb_log: optional :class:`vaultlab.slides.kb_reader.KBReader` — when
+            provided, appends an entry to ``<kb>/_Log.md`` and writes a
+            deck-plan record to ``<kb>/Output/Reports/``.
+        with_animations: if ``True``, auto-applies entrance animations to
+            text slides (bullet-by-bullet reveal) and multi_figure slides
+            (panel build-up). Title and section dividers stay static.
+        theme: explicit ``"dark"`` / ``"light"``, overrides ``plan["theme"]``.
+        template: ``"lab"`` (default — Hickey lab template) or ``"plain"``.
+
+    Returns:
+        Dict with keys ``"pptx"`` (Path) and optionally ``"marp"`` (Path)
+        and ``"report"`` (Path).
+    """
+    # Lazy imports — keep the module light when callers only use the typed
+    # DeckPlan path.
+    from vaultlab.slides.animations import bullet_reveal, panel_buildup
+    from vaultlab.slides.annotate import add_annotations
+    from vaultlab.slides.layouts import (
+        add_figure_above_bullets_slide,
+        add_figure_only_slide,
+        add_figure_slide,
+        add_multi_figure_slide,
+        add_quote_slide,
+        add_references_slide,
+        add_section_divider,
+        add_text_slide,
+        add_title_slide,
+        add_two_figure_compare_slide,
+    )
+    from vaultlab.slides.notes import attach_to_slide
+    from vaultlab.slides.template import load_plain_presentation, load_template
+
+    chosen_theme = theme or plan.get("theme", "dark")
+    chosen_template = plan.get("template", template)
+    if chosen_template == "plain":
+        pres = load_plain_presentation(theme=chosen_theme)
+    else:
+        pres = load_template(theme=chosen_theme)
+
+    slides_plan = plan.get("slides", [])
+
+    for slide_spec in slides_plan:
+        slide_spec = _normalize_bullet_annotations(slide_spec)
+
+        stype = slide_spec.get("type", "text")
+        notes = slide_spec.get("speaker_notes")
+        slide = None
+
+        if stype == "title":
+            slide = add_title_slide(
+                pres,
+                slide_spec.get("title", ""),
+                subtitle=slide_spec.get("subtitle", ""),
+                author=slide_spec.get("author", ""),
+            )
+        elif stype == "section_divider":
+            slide = add_section_divider(pres, slide_spec.get("title", ""))
+        elif stype == "figure":
+            layout = slide_spec.get("layout", "default")
+            if layout == "figure_only":
+                slide = add_figure_only_slide(
+                    pres,
+                    image_path=slide_spec.get("image_path", ""),
+                    title=slide_spec.get("title", ""),
+                    caption=slide_spec.get("caption", ""),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+            elif layout == "figure_above_bullets":
+                slide = add_figure_above_bullets_slide(
+                    pres,
+                    image_path=slide_spec.get("image_path", ""),
+                    title=slide_spec.get("title", ""),
+                    caption=slide_spec.get("caption", ""),
+                    bullets=slide_spec.get("bullets"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+            else:
+                slide = add_figure_slide(
+                    pres,
+                    image_path=slide_spec.get("image_path", ""),
+                    title=slide_spec.get("title", ""),
+                    caption=slide_spec.get("caption", ""),
+                    bullets=slide_spec.get("bullets"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+        elif stype == "two_figure":
+            slide = add_two_figure_compare_slide(
+                pres,
+                left_image=slide_spec.get("left_image", ""),
+                right_image=slide_spec.get("right_image", ""),
+                title=slide_spec.get("title", ""),
+                left_label=slide_spec.get("left_label", ""),
+                right_label=slide_spec.get("right_label", ""),
+                left_caption=slide_spec.get("left_caption", ""),
+                right_caption=slide_spec.get("right_caption", ""),
+                citation_source=slide_spec.get("citation_source", ""),
+            )
+        elif stype == "quote":
+            slide = add_quote_slide(
+                pres,
+                quote=slide_spec.get("quote", ""),
+                attribution=slide_spec.get("attribution", ""),
+            )
+        elif stype == "multi_figure":
+            slide = add_multi_figure_slide(
+                pres,
+                figures=slide_spec.get("figures", []),
+                title=slide_spec.get("title", ""),
+            )
+        elif stype == "text":
+            slide = add_text_slide(
+                pres,
+                title=slide_spec.get("title", ""),
+                bullets=slide_spec.get("bullets", []),
+            )
+        elif stype == "references":
+            slide = add_references_slide(
+                pres,
+                references=slide_spec.get("references", []),
+                title=slide_spec.get("title", "References"),
+            )
+        else:
+            # Unknown type — skip silently; never break a deck render
+            continue
+
+        if notes:
+            attach_to_slide(slide, notes)
+
+        annotations = slide_spec.get("annotations")
+        if annotations and slide is not None and stype == "figure":
+            try:
+                pictures = [s for s in slide.shapes if s.shape_type == 13]
+                if pictures:
+                    add_annotations(
+                        slide, pictures[0], annotations,
+                        with_animations=with_animations,
+                    )
+            except Exception:
+                pass
+
+        if with_animations and slide is not None:
+            try:
+                _auto_animate_slide(slide, slide_spec, stype, bullet_reveal, panel_buildup)
+            except Exception:
+                # Animation is best-effort — never break deck rendering
+                pass
+
+    out_pptx = Path(output)
+    out_pptx.parent.mkdir(parents=True, exist_ok=True)
+    pres.save(str(out_pptx))
+
+    result: dict[str, Path] = {"pptx": out_pptx}
+
+    if write_marp:
+        from vaultlab.slides.marp import write_marp as _write_marp
+        marp_path = out_pptx.with_suffix(".md")
+        _write_marp(plan, marp_path)
+        result["marp"] = marp_path
+
+    if kb_log is not None:
+        report_path = _write_plan_kb_report(plan, out_pptx, kb_log)
+        result["report"] = report_path
+        topic = plan.get("topic") or plan.get("title", "untitled")
+        kb_log.append_log(
+            action="compile",
+            title=f"Slide deck — {topic}",
+            body=f"Generated {len(slides_plan)} slides → {out_pptx.name}",
+            pages=[report_path.stem],
+        )
+
+    return result
+
+
+def _normalize_bullet_annotations(slide_spec: dict[str, Any]) -> dict[str, Any]:
+    """Support bullet-embedded annotations (Option A).
+
+    A bullet may be a plain string OR a dict like::
+
+        {"text": "Gen 2: ...", "click": 1,
+         "annotation": {"type": "rect", "bbox": [...], "color": "FF5252"}}
+
+    This function extracts annotations from such bullets, sets their
+    ``click_index`` based on the bullet's ``click`` (or position), and
+    merges into the slide-level ``"annotations"`` list. Returns a NEW
+    slide_spec with bullets simplified to plain strings.
+    """
+    bullets = slide_spec.get("bullets")
+    if not bullets:
+        return slide_spec
+
+    needs_normalize = any(isinstance(b, dict) for b in bullets)
+    if not needs_normalize:
+        return slide_spec
+
+    new_bullets: list[str] = []
+    extracted_anns: list[dict[str, Any]] = []
+    for i, b in enumerate(bullets):
+        if isinstance(b, dict):
+            text = b.get("text", "")
+            new_bullets.append(text)
+            ann = b.get("annotation")
+            if ann:
+                ann = dict(ann)
+                if "click_index" not in ann:
+                    ann["click_index"] = b.get("click", i)
+                extracted_anns.append(ann)
+        else:
+            new_bullets.append(b)
+
+    out = dict(slide_spec)
+    out["bullets"] = new_bullets
+    if extracted_anns:
+        existing = list(slide_spec.get("annotations", []))
+        out["annotations"] = existing + extracted_anns
+    return out
+
+
+def _auto_animate_slide(
+    slide: Any,
+    slide_spec: dict[str, Any],
+    stype: str,
+    bullet_reveal: Any,
+    panel_buildup: Any,
+) -> None:
+    """Apply default animations based on slide type.
+
+    Rules:
+      - text slide with >1 bullets → bullet-by-bullet reveal.
+      - multi_figure slide with >1 figure → panel build-up.
+      - figure slide with bullets → bullet reveal on the bullets text frame.
+      - title, section_divider, references → no animations.
+    """
+    if stype == "text":
+        bullets = slide_spec.get("bullets", [])
+        if len(bullets) > 1:
+            bullet_shape = slide.shapes[-1]
+            if bullet_shape.has_text_frame:
+                bullet_reveal(slide, bullet_shape.text_frame)
+        return
+
+    if stype == "multi_figure":
+        figures = slide_spec.get("figures", [])
+        if len(figures) > 1:
+            groups = getattr(slide, "_vaultlab_panel_groups", None)
+            if groups and len(groups) > 1:
+                panel_buildup(slide, groups)
+            else:
+                picture_shapes = [s for s in slide.shapes if s.shape_type == 13]
+                if len(picture_shapes) > 1:
+                    panel_buildup(slide, picture_shapes)
+        return
+
+    if stype == "figure":
+        bullets = slide_spec.get("bullets")
+        if bullets and len(bullets) > 1:
+            picture_left_edges = [s.left for s in slide.shapes if s.shape_type == 13]
+            min_picture_left = min(picture_left_edges) if picture_left_edges else 0
+            best_match = None
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                tf = shape.text_frame
+                if len(tf.paragraphs) < len(bullets):
+                    continue
+                if shape.left > min_picture_left:
+                    best_match = tf
+                    break
+            if best_match is not None:
+                bullet_reveal(slide, best_match)
+
+
+def _write_plan_kb_report(plan: dict[str, Any], pptx_path: Path, kb_log: Any) -> Path:
+    """Write a deck-plan record to ``<kb>/Output/Reports/``."""
+    import json
+    from datetime import datetime as _datetime
+
+    date = _datetime.now().strftime("%Y-%m-%d")
+    topic = plan.get("topic") or plan.get("title", "untitled")
+    slug = "".join(c if c.isalnum() else "-" for c in topic.lower()).strip("-")[:60]
+    filename = f"{date}-{slug}-deck.md"
+
+    slides_plan = plan.get("slides", [])
+    slide_summary_lines = []
+    for i, s in enumerate(slides_plan, 1):
+        stype = s.get("type", "?")
+        title = s.get("title", "")
+        slide_summary_lines.append(f"{i}. **{stype}** — {title}")
+
+    sources_used = sorted({
+        s.get("citation_source", "")
+        for s in slides_plan
+        if s.get("citation_source")
+    } | {
+        f.get("citation_source", "")
+        for s in slides_plan if s.get("type") == "multi_figure"
+        for f in s.get("figures", [])
+        if f.get("citation_source")
+    })
+    sources_used = [src for src in sources_used if src]
+
+    content = f"""---
+title: "Slide deck — {topic}"
+created: {date}
+type: deck-report
+status: COMPLETE
+tags: [deck, slides, generated]
+---
+
+# Slide deck — {topic}
+
+Generated by `vaultlab.slides.build_from_plan` on {date}.
+
+## Output files
+
+- PPTX: `{pptx_path}`
+- Author: {plan.get("author", "")}
+- Slides: {len(slides_plan)}
+
+## Slide structure
+
+{chr(10).join(slide_summary_lines)}
+
+## Sources cited
+
+{chr(10).join(f"- {s}" for s in sources_used) if sources_used else "_None_"}
+
+## Full plan (JSON)
+
+```json
+{json.dumps(plan, indent=2, default=str)}
+```
+"""
+    return kb_log.write_report(filename, content)

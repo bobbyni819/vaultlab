@@ -11,11 +11,30 @@ captions / labels via APIs that publish them as machine-readable assets:
        parse the ``<fig>`` elements in the NXML to recover labels and
        captions, then match each ``<graphic xlink:href="...">`` to a
        file extracted from the tar.
-    2. **Springer Open Access JSON** — the secondary path for non-PMC
-       Springer papers.  The OA API may include a ``figures`` array with
-       caption + image URL fields; coverage is checked empirically.
+    2. **Elsevier ScienceDirect Article Retrieval (XML)** — the secondary
+       path for paywalled Cell Press / Elsevier titles when an institutional
+       ``elsevier_key`` is configured.  The XML response contains
+       ``<ce:figure>`` elements with labels, captions, and ``<ce:link
+       locator="grN"/>`` references.  We resolve each locator to the
+       Elsevier object-retrieval endpoint
+       (``/content/object/eid/1-s2.0-<PII>-<locator>_lrg.jpg``) which
+       returns the high-resolution JPEG bytes.  Confirmed empirically
+       2026-04-30 against ``cell.2018.07.010`` (Goltsev CODEX, 15 figures),
+       ``immuni.2018.12.018`` (7 figures), ``cell.2020.07.005`` (14
+       figures) — the institutional key on file unlocks ~100 paywalled
+       Elsevier DOIs in the existing CODEX corpus.
+    3. **Springer Open Access JSON** — the tertiary path for non-PMC
+       Springer papers.  The OA API does NOT advertise figure URLs
+       (verified empirically 2026-04-30 — top-level keys are
+       ``contentType, identifier, language, url, title, creators,
+       publicationName, doi, publisher, ..., abstract, subjects,
+       disciplines``; no ``figures``/``graphics``/``images`` field).
+       The probe code is retained so future schema changes can be
+       handled by widening the field probe.  The Springer Meta API v2
+       (which DOES expose figures) requires a separate
+       ``springer_meta_api_key`` that is not currently provisioned.
 
-Anything that cannot be resolved by these two paths is returned with
+Anything that cannot be resolved by these paths is returned with
 ``source = "unavailable"``.  We never fall back to extracting images
 from PDFs — the user has explicitly opted out of that path.
 
@@ -64,6 +83,12 @@ PMC_OA_BASE = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
 SPRINGER_OA_BASE = "http://api.springernature.com/openaccess/json"
 """Springer Open Access JSON API; queried by DOI."""
 
+ELSEVIER_ARTICLE_BASE = "https://api.elsevier.com/content/article/doi"
+"""Elsevier ScienceDirect Article Retrieval API; XML by DOI."""
+
+ELSEVIER_OBJECT_BASE = "https://api.elsevier.com/content/object/eid"
+"""Elsevier object retrieval — fetches figure binaries by EID."""
+
 _DEFAULT_TIMEOUT = 60
 _FIGURE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".gif")
 """File extensions in the PMC OA tar package that we treat as figures."""
@@ -71,6 +96,15 @@ _FIGURE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".gif")
 # JATS XML namespaces — the OA NXML files use the standard JATS schema.
 _NS = {
     "xlink": "http://www.w3.org/1999/xlink",
+}
+
+# Elsevier full-text-retrieval-response namespaces.
+_ELS_NS = {
+    "ce": "http://www.elsevier.com/xml/common/dtd",
+    "xlink": "http://www.w3.org/1999/xlink",
+    "xocs": "http://www.elsevier.com/xml/xocs/dtd",
+    "prism": "http://prismstandard.org/namespaces/basic/2.0/",
+    "dc": "http://purl.org/dc/elements/1.1/",
 }
 
 
@@ -480,7 +514,158 @@ def _try_pmc_tar(
 
 
 # ---------------------------------------------------------------------------
-# Tier 2: Springer Open Access JSON
+# Tier 2: Elsevier ScienceDirect Article Retrieval (paywalled Cell Press, etc.)
+# ---------------------------------------------------------------------------
+
+
+def _parse_elsevier_figures(xml_bytes: bytes) -> tuple[str, list[dict[str, str]]]:
+    """Parse an Elsevier full-text-retrieval-response XML.
+
+    Returns ``(pii, figures)`` where ``pii`` is the article PII (used to
+    construct figure object EIDs) and ``figures`` is a list of dicts with
+    keys ``id, label, caption, locator``.  ``locator`` is the figure key
+    inside the article (e.g. ``"gr1"`` for main figures, ``"figs1"`` for
+    supplementary) referenced by ``<ce:link locator="...">`` inside each
+    ``<ce:figure>`` block.
+    """
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as exc:
+        logger.warning("Elsevier XML parse error: %s", exc)
+        return "", []
+
+    # PII: appears as <xocs:pii-unformatted>, <prism:pii>, or
+    # <dc:identifier>PII:...</dc:identifier> depending on the article.
+    pii = ""
+    for tag in (
+        f"{{{_ELS_NS['xocs']}}}pii-unformatted",
+        f"{{{_ELS_NS['prism']}}}pii",
+    ):
+        el = root.find(f".//{tag}")
+        if el is not None and el.text:
+            pii = el.text.strip()
+            break
+    if not pii:
+        # dc:identifier has the form "PII:S0..."
+        for el in root.iter(f"{{{_ELS_NS['dc']}}}identifier"):
+            if el.text and el.text.startswith("PII:"):
+                pii = el.text[len("PII:"):].strip()
+                break
+
+    figures: list[dict[str, str]] = []
+    for fig in root.iter(f"{{{_ELS_NS['ce']}}}figure"):
+        fig_id = fig.get("id", "")
+        label_el = fig.find(f"{{{_ELS_NS['ce']}}}label")
+        label = _all_text(label_el) if label_el is not None else ""
+        # Caption text lives inside <ce:caption><ce:simple-para>...
+        cap_el = fig.find(f".//{{{_ELS_NS['ce']}}}simple-para")
+        caption = _all_text(cap_el) if cap_el is not None else ""
+        link_el = fig.find(f".//{{{_ELS_NS['ce']}}}link")
+        locator = link_el.get("locator", "") if link_el is not None else ""
+        if not locator:
+            # Fallback: pull from xlink:href like "pii:<PII>/gr1"
+            href = link_el.get(f"{{{_ELS_NS['xlink']}}}href", "") if link_el is not None else ""
+            if "/" in href:
+                locator = href.rsplit("/", 1)[-1]
+        if not locator:
+            continue
+        figures.append(
+            {
+                "id": fig_id or locator,
+                "label": label,
+                "caption": caption,
+                "locator": locator,
+            }
+        )
+    return pii, figures
+
+
+def _try_elsevier_api(
+    doi: str,
+    paper_dir: Path,
+    session: _PoliteSession,
+    api_key: str,
+) -> FigureAcquisitionResult | None:
+    """Attempt the Elsevier ScienceDirect Article Retrieval path.
+
+    Returns ``None`` when the key is missing, the article isn't on
+    ScienceDirect (404), or the XML carries no ``<ce:figure>`` blocks.
+    Returns a populated result when at least one figure binary was
+    successfully fetched from the object-retrieval endpoint.
+    """
+    if not api_key:
+        return None
+    url = f"{ELSEVIER_ARTICLE_BASE}/{doi}"
+    resp = session.get(
+        "elsevier",
+        url,
+        headers={"X-ELS-APIKey": api_key, "Accept": "text/xml"},
+    )
+    if resp is None or resp.status_code != 200 or not resp.content:
+        return None
+
+    pii, fig_meta = _parse_elsevier_figures(resp.content)
+    if not pii or not fig_meta:
+        return None
+
+    paper_dir.mkdir(parents=True, exist_ok=True)
+    figures: list[Figure] = []
+    for entry in fig_meta:
+        locator = entry["locator"]
+        # Try high-res first, then fall back to standard, then small.
+        # EID format: 1-s2.0-<PII>-<locator>_lrg.jpg
+        eid_candidates = [
+            f"1-s2.0-{pii}-{locator}_lrg.jpg",
+            f"1-s2.0-{pii}-{locator}.jpg",
+        ]
+        fetched: tuple[bytes, str] | None = None
+        for eid in eid_candidates:
+            obj_url = f"{ELSEVIER_OBJECT_BASE}/{eid}"
+            obj_resp = session.get(
+                "elsevier",
+                obj_url,
+                headers={"X-ELS-APIKey": api_key},
+            )
+            if obj_resp is None or obj_resp.status_code != 200:
+                continue
+            ct = (obj_resp.headers or {}).get("Content-Type", "") if obj_resp.headers else ""
+            if not obj_resp.content or "image" not in ct.lower():
+                continue
+            fetched = (obj_resp.content, ct)
+            break
+        if fetched is None:
+            continue
+
+        content, content_type = fetched
+        ext = _guess_extension(content_type, eid_candidates[0])
+        # Cache file name uses locator (e.g. "gr1.jpg") to mirror the
+        # filenames PMC tars use; figure_id keeps the original ce:figure id.
+        target = paper_dir / f"{locator}{ext}"
+        with open(target, "wb") as fh:
+            fh.write(content)
+
+        caption = entry["caption"]
+        figures.append(
+            Figure(
+                figure_id=entry["id"],
+                file_path=target,
+                caption=caption,
+                label=entry["label"],
+                panels=_extract_panels_from_caption(caption),
+            )
+        )
+
+    if not figures:
+        return None
+    return FigureAcquisitionResult(
+        doi=doi,
+        figures=figures,
+        source="elsevier-api",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 3: Springer Open Access JSON
 # ---------------------------------------------------------------------------
 
 
@@ -613,6 +798,7 @@ def _load_default_apis() -> dict[str, str]:
     return {
         "springer_open_access_api_key": cfg.get("springer_open_access_api_key", ""),
         "ncbi_api_key": cfg.get("ncbi_api_key", ""),
+        "elsevier_key": cfg.get("elsevier_key", ""),
     }
 
 
@@ -679,7 +865,18 @@ def acquire_figures(
         _save_manifest(result, paper_dir)
         return result
 
-    # Tier 2: Springer OA JSON
+    # Tier 2: Elsevier ScienceDirect Article Retrieval (paywalled Cell Press, etc.)
+    elsevier_key = apis.get("elsevier_key", "")
+    try:
+        result = _try_elsevier_api(doi, paper_dir, session, elsevier_key)
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.warning("Elsevier figure API failed for %s: %s", doi, exc)
+        result = None
+    if result is not None and result.figures:
+        _save_manifest(result, paper_dir)
+        return result
+
+    # Tier 3: Springer OA JSON (probe-only — empirically no figures field)
     springer_key = apis.get("springer_open_access_api_key", "")
     try:
         result = _try_springer_api(doi, paper_dir, session, springer_key)
@@ -694,7 +891,7 @@ def acquire_figures(
         doi=doi,
         figures=[],
         source="unavailable",
-        error="no API source provided figures (tried pmc-tar, springer-api)",
+        error="no API source provided figures (tried pmc-tar, elsevier-api, springer-api)",
     )
     # Persist the unavailable verdict so the next run doesn't re-query.
     _save_manifest(final, paper_dir)
@@ -784,6 +981,8 @@ def acquire_figures_for_corpus(
 
 
 __all__ = [
+    "ELSEVIER_ARTICLE_BASE",
+    "ELSEVIER_OBJECT_BASE",
     "Figure",
     "FigureAcquisitionResult",
     "PMC_OA_BASE",
@@ -801,9 +1000,11 @@ __test_exports__ = [
     "_extract_panels_from_caption",
     "_extract_tar_to_dir",
     "_load_manifest",
+    "_parse_elsevier_figures",
     "_parse_nxml_figures",
     "_resolve_pmc_tar_url",
     "_save_manifest",
+    "_try_elsevier_api",
     "_try_pmc_tar",
     "_try_springer_api",
 ]

@@ -1,19 +1,51 @@
-"""vaultlab.slides.layouts — declarative layout templates.
+"""vaultlab.slides.layouts — declarative layout templates + lifted primitives.
 
-Phase-1 layouts:
+Two layers live here:
 
-- ``title`` — title + subtitle, centered
-- ``content_with_bullets`` — H1 + bullet list (the workhorse for talks)
-- ``figure_with_caption`` — figure on top, caption below
+1. **Declarative LayoutSpec registry** (``registry.py``) — the original
+   markdown-as-interface layout primitives (``title``,
+   ``content_with_bullets``, ``figure_with_caption``). Used by the
+   simple :func:`vaultlab.slides.render_pptx` renderer.
 
-Per the markdown-as-interface principle (Invariant 7), each layout has both
-``<name>.py`` (the renderer instructions) and a sibling ``<name>.md`` (visual
-reference + contributor notes). Future phases add ``two_column``, ``quote``,
-``section_divider``, and ~7 more layouts.
+2. **Lab-template imperative primitives** (``title.py``, ``figure.py``,
+   ``multi_figure.py``, ``text.py``, ``section_divider.py``,
+   ``references.py``) — lifted from ``bobby_slides._layout`` (2026-04).
+   Used by :func:`vaultlab.slides.deck.build_from_plan` for richly-styled
+   decks that load the Hickey Lab template.
+
+Both layers coexist: the declarative ``LayoutSpec`` model is great for
+data-driven decks, the imperative primitives are great for content-aware
+plan-driven decks where layout choice depends on slide intent.
 """
 
 from __future__ import annotations
 
+from vaultlab.slides.layouts.figure import (
+    add_figure_above_bullets_slide,
+    add_figure_only_slide,
+    add_figure_slide,
+    add_quote_slide,
+    add_two_figure_compare_slide,
+)
+from vaultlab.slides.layouts.multi_figure import add_multi_figure_slide
+from vaultlab.slides.layouts.references import add_references_slide
 from vaultlab.slides.layouts.registry import LAYOUTS, LayoutSpec, get_layout
+from vaultlab.slides.layouts.section_divider import add_section_divider
+from vaultlab.slides.layouts.text import add_text_slide
+from vaultlab.slides.layouts.title import add_title_slide
 
-__all__ = ["LAYOUTS", "LayoutSpec", "get_layout"]
+__all__ = [
+    "LAYOUTS",
+    "LayoutSpec",
+    "add_figure_above_bullets_slide",
+    "add_figure_only_slide",
+    "add_figure_slide",
+    "add_multi_figure_slide",
+    "add_quote_slide",
+    "add_references_slide",
+    "add_section_divider",
+    "add_text_slide",
+    "add_title_slide",
+    "add_two_figure_compare_slide",
+    "get_layout",
+]

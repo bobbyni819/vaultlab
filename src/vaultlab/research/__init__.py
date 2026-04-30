@@ -43,6 +43,15 @@ from vaultlab.research.lineage import (
     render_arc_from_response,
     run_lit_arc,
 )
+from vaultlab.research.picker import (
+    CandidatePaper,
+    PickerCallback,
+    PickerTask,
+    pick_top_n_content_aware,
+    picker_response_schema,
+    prepare_picker_task,
+    render_picks_from_response,
+)
 
 if TYPE_CHECKING:
     from vaultlab.research.verification import (
@@ -73,6 +82,7 @@ __all__ = [
     "AcquisitionResult",
     "ArcNarrator",
     "ArcTask",
+    "CandidatePaper",
     "CitationGraph",
     # Citation graph corpus / metrics (literature-search v2)
     "Corpus",
@@ -82,6 +92,8 @@ __all__ = [
     "LineageRunResult",
     "Paper",
     "PaperSummary",
+    "PickerCallback",
+    "PickerTask",
     "RateLimitError",
     "Reference",
     "ResearchClient",
@@ -108,9 +120,13 @@ __all__ = [
     "get_influential_count_via_s2",
     "get_paper",
     "get_references_via_crossref",
+    "pick_top_n_content_aware",
+    "picker_response_schema",
     "prepare_arc_task",
+    "prepare_picker_task",
     "prepare_summary_task",
     "render_arc_from_response",
+    "render_picks_from_response",
     "render_summary_from_response",
     "run_lit_arc",
     "search_papers",

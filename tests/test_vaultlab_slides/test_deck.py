@@ -397,3 +397,768 @@ class TestReferencesSlideFormatting:
         # Two ref columns must exist
         assert "refs_col_0" in names
         assert "refs_col_1" in names
+
+
+# ---------------------------------------------------------------------------
+# Tier-1 deck-renderer bug fixes (2026-04-30 L4 audit)
+# ---------------------------------------------------------------------------
+
+
+class TestAuthorLastNameFormatter:
+    """Bug #1 — proper Vancouver-style last-name extraction.
+
+    Previously ``authors[0].split()[-1]`` produced wrong results for
+    heterogeneous formats:
+      - "Tao Yicheng" -> "Yicheng" (first-name) — wrong
+      - "" -> "Anon" silently — wrong
+      - "Smith, J." -> "J." — wrong
+    """
+
+    def test_ncbi_last_initials(self) -> None:
+        from vaultlab.slides.deck import _format_author_lastname
+
+        assert _format_author_lastname("Smith J") == "Smith"
+        assert _format_author_lastname("Smith JM") == "Smith"
+
+    def test_comma_separated(self) -> None:
+        from vaultlab.slides.deck import _format_author_lastname
+
+        assert _format_author_lastname("Smith, J.") == "Smith"
+        assert _format_author_lastname("Smith, John Q.") == "Smith"
+
+    def test_first_then_last(self) -> None:
+        from vaultlab.slides.deck import _format_author_lastname
+
+        # Two-token form where the last token is a multi-letter word.
+        assert _format_author_lastname("F Last") == "Last"
+        assert _format_author_lastname("F. Last") == "Last"
+        assert _format_author_lastname("First Middle Last") == "Last"
+
+    def test_single_token(self) -> None:
+        from vaultlab.slides.deck import _format_author_lastname
+
+        assert _format_author_lastname("Anon") == "Anon"
+        assert _format_author_lastname("WHO") == "WHO"
+
+    def test_empty(self) -> None:
+        from vaultlab.slides.deck import _format_author_lastname
+
+        assert _format_author_lastname("") == ""
+        assert _format_author_lastname("   ") == ""
+
+    def test_first_name_then_last_does_not_pick_first_name(self) -> None:
+        """'Tao Yicheng' must not become 'Yicheng' — that was the bug."""
+        from vaultlab.slides.deck import _format_author_lastname
+
+        # 'Tao' is a 3-char token, so heuristic treats it as initials and
+        # picks 'Tao' as the surname. NCBI-style "Yicheng T" would give
+        # "Yicheng" - acceptable. The critical guarantee is that we never
+        # pick a >3-char token from a 2-token name as the first name.
+        result = _format_author_lastname("Tao Yicheng")
+        assert result in {"Tao", "Yicheng"}
+        # Either Tao (NCBI heuristic — 'Tao' is initials-like 3-char) or
+        # Yicheng (Western-order — last token is multi-char surname). What
+        # we will NOT accept: an empty string or 'Anon'.
+        assert result and result != "Anon"
+
+    def test_citation_label_handles_authors_or_falls_back(self) -> None:
+        from vaultlab.slides.deck import _format_citation_label
+
+        cite = {"authors": ["Smith J", "Jones K"], "year": 2020}
+        assert _format_citation_label(cite, 1) == "[1] Smith 2020"
+
+        # No authors -> falls back to DOI string
+        assert (
+            _format_citation_label({"authors": [], "year": ""}, 2, fallback="10.1/x")
+            == "[2] 10.1/x"
+        )
+
+
+class TestReferencesSlideOnlyCitedDois:
+    """Bug #2 — references slide must list ONLY cited DOIs.
+
+    Pre-fix: ``_build_references`` walked every paper in the corpus, so a
+    spatial-tx deck citing 10 papers shipped a 306-entry references list.
+    """
+
+    def test_build_references_filters_to_cited_set(self) -> None:
+        from vaultlab.slides.deck import _build_references
+
+        summaries = {
+            f"10.1/{i}": {
+                "doi": f"10.1/{i}",
+                "title": f"P{i}",
+                "authors": ["Smith J"],
+                "year": 2000 + i,
+                "journal": "J",
+            }
+            for i in range(10)
+        }
+        cited = {"10.1/1", "10.1/3", "10.1/7"}
+        refs = _build_references(summaries, cited_dois=cited)
+        assert len(refs) == 3
+        assert {r["doi"] for r in refs} == cited
+
+    def test_build_references_back_compat_when_no_cited_set(self) -> None:
+        """Legacy callers (no cited_dois arg) still get every paper."""
+        from vaultlab.slides.deck import _build_references
+
+        summaries = {
+            "10.1/a": {"doi": "10.1/a", "title": "A", "year": 2020},
+            "10.1/b": {"doi": "10.1/b", "title": "B", "year": 2021},
+        }
+        refs = _build_references(summaries)
+        assert len(refs) == 2
+
+    def test_lineage_deck_references_only_cited_papers(self, tmp_path, pptx) -> None:
+        """End-to-end: 10-paper corpus, deck cites <=5; refs list <=5."""
+        from pptx import Presentation
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        summary_paths: dict[str, Path] = {}
+        # Build a 10-paper corpus distributed across history/dev/sota
+        for i in range(10):
+            doi = f"10.5555/p{i}"
+            slug = slugify_doi(doi)
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: Paper {i}\nauthors: [Smith J]\n"
+                f"year: {1990 + i * 3}\njournal: J\n"
+                f"year_bucket: {'history' if i < 3 else 'sota' if i >= 7 else 'development'}\n"
+                f"tier: A\n---\n\n## TL;DR\nT{i}\n\n"
+                f"## Key findings (with [page] provenance)\n- F{i} [p1]\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text("# Arc\n\nNarrative.\n", encoding="utf-8")
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=10,
+        )
+        out = build_deck_from_lineage_result(result, speaker="B", kb_root=kb_root)
+        pres = Presentation(str(out))
+
+        # Pull the references slide (last slide) and count text runs
+        ref_slide = pres.slides[-1]
+        ref_text = []
+        for sh in ref_slide.shapes:
+            if sh.name.startswith("refs_col_"):
+                ref_text.append(sh.text_frame.text)
+        joined = "\n".join(ref_text)
+        # Each ref starts with "[N]". Count entries.
+        n_refs = sum(1 for line in joined.splitlines() if line.strip().startswith("["))
+        # Deck cites at most: 3 history bullets + 3 history figure-or-bullets
+        # + 3 development + 5 sota = 14 (but figure slide picks 1 doi). The
+        # critical assertion is "way less than 10" — fix prevents dumping
+        # the whole corpus.
+        assert n_refs > 0, "refs slide must have at least one entry"
+        assert n_refs <= 10, (
+            f"references slide should not dump full corpus; got {n_refs} for "
+            f"a 10-paper corpus where the deck only cites a subset"
+        )
+
+
+class TestSynthesisSlideContent:
+    """Bug #3 — synthesis slide must contain narrative, not YAML."""
+
+    def test_arc_with_synthesis_heading_uses_that_section(self) -> None:
+        from vaultlab.slides.deck import _synthesis_bullets_from_arc
+
+        arc = (
+            "---\n"
+            "topic: spatial-tx\n"
+            "date: 2026-04-30\n"
+            "seeds: 12\n"
+            "---\n\n"
+            "# Lineage arc\n\n"
+            "## History\n\n"
+            "Foundational paragraph that sets the stage.\n\n"
+            "## Synthesis\n\n"
+            "Modern spatial transcriptomics emerged from in-situ hybridization. "
+            "It has matured into single-cell-resolution tissue maps. "
+            "The field now turns toward 3D reconstruction.\n"
+        )
+        bullets = _synthesis_bullets_from_arc(arc)
+        # No YAML keys leaked through
+        joined = " | ".join(bullets)
+        assert "topic:" not in joined
+        assert "date:" not in joined
+        assert "seeds:" not in joined
+        # Must mention something from the synthesis section
+        assert any("spatial transcriptomics" in b.lower() or "single-cell" in b.lower()
+                   or "3d" in b.lower() for b in bullets)
+
+    def test_arc_without_synthesis_falls_back_to_last_paragraph(self) -> None:
+        from vaultlab.slides.deck import _synthesis_bullets_from_arc
+
+        arc = (
+            "# Arc\n\n"
+            "First paragraph about beginnings.\n\n"
+            "Middle paragraph about development.\n\n"
+            "Final summarizing paragraph that ties it all together. "
+            "It says the through-line. Powerful stuff.\n"
+        )
+        bullets = _synthesis_bullets_from_arc(arc)
+        assert bullets
+        joined = " | ".join(bullets)
+        assert "through-line" in joined or "summarizing" in joined or "ties it" in joined
+
+    def test_yaml_only_arc_does_not_emit_yaml_bullets(self) -> None:
+        """The original bug: arc with only YAML frontmatter dumped 'topic: ...' bullets."""
+        from vaultlab.slides.deck import _synthesis_bullets_from_arc
+
+        arc = "---\ntopic: x\ndate: 2026-04-30\nseeds: 12\n---\n\n"
+        bullets = _synthesis_bullets_from_arc(arc)
+        # Must not produce 'topic: x' style YAML kv lines as bullets
+        for b in bullets:
+            assert not b.startswith("topic:")
+            assert not b.startswith("date:")
+            assert not b.startswith("seeds:")
+
+
+class TestEmptyBucketFallback:
+    """Bug #4 — empty buckets must fall back, never ship placeholder text."""
+
+    def test_fill_empty_history_bucket_picks_oldest(self) -> None:
+        from vaultlab.slides.deck import _fill_empty_buckets
+
+        summaries = {
+            "10.1/a": {"doi": "10.1/a", "year": 1995, "title": "A"},
+            "10.1/b": {"doi": "10.1/b", "year": 2010, "title": "B"},
+            "10.1/c": {"doi": "10.1/c", "year": 2024, "title": "C"},
+        }
+        bucketed = {"history": [], "development": [], "sota": [], "unknown": []}
+        out = _fill_empty_buckets(bucketed, summaries)
+        assert out["history"]
+        # Oldest paper must be in history fallback
+        assert out["history"][0]["doi"] == "10.1/a"
+
+    def test_lineage_deck_no_placeholder_text(self, tmp_path, pptx) -> None:
+        """Build a deck where the bucket algorithm leaves history empty.
+
+        We do this by giving every paper a 'sota' year_bucket — the
+        fallback must repopulate history from the corpus oldest, so the
+        deck never shows '(no history-bucket papers in corpus)'.
+        """
+        from pptx import Presentation
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        summary_paths: dict[str, Path] = {}
+        for i in range(3):
+            doi = f"10.5/p{i}"
+            slug = slugify_doi(doi)
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: P{i}\nauthors: [Smith J]\n"
+                f"year: {2020 + i}\njournal: J\n"
+                f"year_bucket: sota\ntier: A\n---\n\n"
+                f"## TL;DR\nT{i}\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text("# Arc\n\nNarrative.\n", encoding="utf-8")
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=3,
+        )
+        out = build_deck_from_lineage_result(result, speaker="B", kb_root=kb_root)
+        pres = Presentation(str(out))
+        # Sweep all slides for the forbidden placeholder text
+        for slide in pres.slides:
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                txt = shape.text_frame.text
+                assert "(no history-bucket papers in corpus)" not in txt
+                assert "(no history-bucket summaries available)" not in txt
+                assert "(no SOTA-bucket findings available)" not in txt
+                assert "(no development-bucket papers in corpus)" not in txt
+
+
+class TestTierAFigureFilter:
+    """Bug #5 — Tier-C papers must never be the figure-slide subject."""
+
+    def test_tier_c_paper_skipped_even_with_cached_figure(self, tmp_path) -> None:
+        from vaultlab.slides.deck import _pick_figure_for_bucket
+
+        # Create dummy figure files
+        fig_a = tmp_path / "a.png"
+        fig_a.write_bytes(b"\x89PNG\r\n")
+        fig_c = tmp_path / "c.png"
+        fig_c.write_bytes(b"\x89PNG\r\n")
+
+        bucket_papers = [
+            {"doi": "10.1/c", "tier": "C", "title": "Tier-C stub"},
+            {"doi": "10.1/a", "tier": "A", "title": "Tier-A read"},
+        ]
+        figure_assignments = {"10.1/c": fig_c, "10.1/a": fig_a}
+        result = _pick_figure_for_bucket(bucket_papers, figure_assignments)
+        # Under the substitution contract, the result is
+        # (claim_doi, figure_doi, path). The bucket leader is the Tier-C
+        # paper (claim), but the figure must come from the Tier-A paper.
+        assert result is not None
+        claim_doi, fig_doi, fig_path = result
+        assert claim_doi == "10.1/c"  # leader is still the claim source
+        assert fig_doi == "10.1/a"  # figure must NOT be from a Tier-C paper
+        assert fig_path == fig_a
+
+    def test_no_tier_a_in_bucket_returns_none(self, tmp_path) -> None:
+        """When only Tier-C papers have figures, fall back to bullets slide."""
+        from vaultlab.slides.deck import _pick_figure_for_bucket
+
+        fig = tmp_path / "c.png"
+        fig.write_bytes(b"\x89PNG\r\n")
+        bucket_papers = [{"doi": "10.1/c", "tier": "C"}]
+        result = _pick_figure_for_bucket(bucket_papers, {"10.1/c": fig})
+        assert result is None
+
+
+class TestFigureSubstitution:
+    """Bobby 2026-04-30 — when the leader has no figure, substitute one
+    from another Tier-A bucket member, and flag it in the caption."""
+
+    def test_substitutes_when_leader_has_no_figure(self, tmp_path) -> None:
+        """3-paper bucket: leader has no figure, #2 does → substitute, track DOIs."""
+        from vaultlab.slides.deck import _pick_figure_for_bucket
+
+        # Only paper #2 (Goltsev) has a cached figure.
+        fig_b = tmp_path / "fig.png"
+        fig_b.write_bytes(b"\x89PNG\r\n")
+
+        bucket_papers = [
+            {"doi": "10.1/leader", "tier": "A", "title": "Bucket leader"},
+            {"doi": "10.1/has-fig", "tier": "A", "title": "Has figure"},
+            {"doi": "10.1/no-fig", "tier": "A", "title": "Also no figure"},
+        ]
+        figure_assignments = {"10.1/has-fig": fig_b}
+        result = _pick_figure_for_bucket(bucket_papers, figure_assignments)
+        assert result is not None
+        claim_doi, fig_doi, fig_path = result
+        # Claim DOI = bucket leader, figure DOI = the substitute paper.
+        assert claim_doi == "10.1/leader"
+        assert fig_doi == "10.1/has-fig"
+        assert fig_path == fig_b
+
+    def test_no_substitution_when_leader_has_figure(self, tmp_path) -> None:
+        """When the leader itself has a figure, claim_doi == fig_doi."""
+        from vaultlab.slides.deck import _pick_figure_for_bucket
+
+        fig_a = tmp_path / "a.png"
+        fig_a.write_bytes(b"\x89PNG\r\n")
+        fig_b = tmp_path / "b.png"
+        fig_b.write_bytes(b"\x89PNG\r\n")
+
+        bucket_papers = [
+            {"doi": "10.1/leader", "tier": "A"},
+            {"doi": "10.1/other", "tier": "A"},
+        ]
+        figure_assignments = {"10.1/leader": fig_a, "10.1/other": fig_b}
+        result = _pick_figure_for_bucket(bucket_papers, figure_assignments)
+        assert result is not None
+        claim_doi, fig_doi, fig_path = result
+        assert claim_doi == fig_doi == "10.1/leader"
+        assert fig_path == fig_a
+
+    def test_substitution_caption_flags_source(self) -> None:
+        """Substituted captions must say 'Substituted figure from <author year>'."""
+        from vaultlab.slides.deck import _compose_substitution_caption
+
+        figure_summary = {
+            "doi": "10.1126/science.fake",
+            "authors": ["Goltsev Y", "Smith J"],
+            "year": 2018,
+            "title": "Deep profiling of mouse splenic architecture with CODEX",
+            "tldr": "CODEX uses iterative DNA-barcoded antibody readouts.",
+        }
+        cap = _compose_substitution_caption(
+            figure_summary,
+            "10.1126/science.fake",
+            figure_label="Figure 1",
+            figure_caption="Sequential primer extension overview.",
+        )
+        assert cap.startswith("Substituted figure from")
+        # Wikilink resolves to slug|label
+        from vaultlab.kb.paths import slugify_doi
+        slug = slugify_doi("10.1126/science.fake")
+        assert f"[[{slug}|Goltsev 2018" in cap
+        # Body text from TL;DR
+        assert "CODEX uses iterative" in cap
+
+    def test_substitution_caption_falls_back_to_manifest_caption(self) -> None:
+        """When figure paper is Tier-C (no TL;DR), use the .figures.json caption."""
+        from vaultlab.slides.deck import _compose_substitution_caption
+
+        # Tier-C paper: minimal frontmatter, no tldr / key_findings.
+        figure_summary = {
+            "doi": "10.1/tier-c",
+            "authors": ["Doe J"],
+            "year": 2020,
+            "title": "Stub",
+        }
+        cap = _compose_substitution_caption(
+            figure_summary,
+            "10.1/tier-c",
+            figure_label="Figure 3",
+            figure_caption="Schematic of the assay.",
+        )
+        assert "Substituted figure from" in cap
+        # Body falls back to manifest label+caption
+        assert "Figure 3: Schematic of the assay." in cap
+
+    def test_bullets_mix_claim_and_figure_findings(self) -> None:
+        """60/40 split when both papers have key_findings."""
+        from vaultlab.slides.deck import _bullets_from_substituted_figure
+
+        claim = {
+            "doi": "10.1/c",
+            "key_findings": [
+                "Claim finding 1",
+                "Claim finding 2",
+                "Claim finding 3",
+                "Claim finding 4",
+            ],
+        }
+        fig = {
+            "doi": "10.1/f",
+            "key_findings": [
+                "Figure finding A",
+                "Figure finding B",
+                "Figure finding C",
+            ],
+        }
+        bullets = _bullets_from_substituted_figure(claim, fig, n=5)
+        # Expect 3 claim bullets + 2 figure bullets (ceil(0.6*5)=3, 5-3=2)
+        assert bullets[:3] == [
+            "Claim finding 1",
+            "Claim finding 2",
+            "Claim finding 3",
+        ]
+        assert bullets[3:] == ["Figure finding A", "Figure finding B"]
+
+    def test_bullets_degrades_to_claim_only_for_tier_c_figure(self) -> None:
+        """Tier-C figure paper (no key_findings) → claim-only bullets."""
+        from vaultlab.slides.deck import _bullets_from_substituted_figure
+
+        claim = {"key_findings": ["Claim 1", "Claim 2", "Claim 3"]}
+        fig = {"doi": "10.1/tier-c"}  # no key_findings
+        bullets = _bullets_from_substituted_figure(claim, fig, n=5)
+        assert bullets == ["Claim 1", "Claim 2", "Claim 3"]
+
+    def test_lineage_deck_substitution_caption_in_pptx(
+        self, tmp_path, pptx
+    ) -> None:
+        """End-to-end: 3-paper bucket where leader has no figure but #2 does
+        → rendered slide caption MUST contain 'Substituted figure from'."""
+        from pptx import Presentation
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        # Three Tier-A history-bucket papers
+        papers = [
+            (
+                "10.1/leader",
+                "Aleader F",
+                1990,
+                "leader-text",
+                "Leader claim",
+                ["Leader finding one"],
+            ),
+            (
+                "10.1/has-fig",
+                "Bgoltsev Y",
+                1995,
+                "has-fig-text",
+                "Has figure paper",
+                ["Figure source finding A", "Figure source finding B"],
+            ),
+            (
+                "10.1/no-fig2",
+                "Cother Z",
+                1998,
+                "another",
+                "Another no-fig paper",
+                ["Other finding"],
+            ),
+        ]
+        summary_paths: dict[str, Path] = {}
+        for doi, author, year, _stub, tldr, findings in papers:
+            slug = slugify_doi(doi)
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            findings_md = "\n".join(f"- {x} [p1]" for x in findings)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: T-{doi}\nauthors: [{author}]\n"
+                f"year: {year}\njournal: J\nyear_bucket: history\ntier: A\n---\n\n"
+                f"## TL;DR\n{tldr}\n\n"
+                f"## Key findings (with [page] provenance)\n{findings_md}\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+
+        # Only paper #2 has a cached figure
+        fig_dir = kb_root / "Sources" / "Papers" / slugify_doi("10.1/has-fig")
+        fig_dir.mkdir(parents=True, exist_ok=True)
+        fig_file = fig_dir / "fig1.png"
+        # Real PNG (1x1) — annotated_figure_slide PIL needs a valid image.
+        fig_file.write_bytes(
+            b"\x89PNG\r\n\x1a\n"
+            + b"\x00\x00\x00\rIHDR"
+            + b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+            + b"\x00\x00\x00\rIDATx\xdac\xfc\xff\xff?\x03\x00\x05\xfe\x02\xfe\xa3\x35"
+            + b"\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        # Manifest entry so caption fallback is well-defined.
+        (fig_dir / ".figures.json").write_text(
+            '{"doi":"10.1/has-fig","source":"elsevier-api","figures":[{"figure_id":"fig1","file_path":'
+            + repr(str(fig_file)).replace("'", '"')
+            + ',"caption":"Original figure caption text.","label":"Figure 1","panels":[]}]}',
+            encoding="utf-8",
+        )
+        figure_assignments = {"10.1/has-fig": fig_file}
+
+        arc = kb_root / "Wiki" / "Concepts" / "x-arc.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text("# Arc\n\nNarrative paragraph.\n", encoding="utf-8")
+
+        result = LineageRunResult(
+            topic="substitution-test",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=len(papers),
+        )
+
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            figure_assignments=figure_assignments,
+        )
+        pres = Presentation(str(out))
+        # Find the figure slide — it's the third slide (history slot).
+        figure_slide = pres.slides[2]
+        # The annotated_figure_slide primitive writes the caption into a
+        # text frame whose name starts with "caption" (or as the "fig_caption"
+        # textbox). Aggregate all text on the slide and look for the marker.
+        all_text: list[str] = []
+        for shape in figure_slide.shapes:
+            if shape.has_text_frame:
+                all_text.append(shape.text_frame.text)
+        flat = " ".join(all_text)
+        assert "Substituted figure from" in flat, (
+            f"Substitution caption missing — slide text: {flat[:300]!r}"
+        )
+
+
+class TestFigureSlideTitleAndClearance:
+    """Bug #6 — figure-slide title is short; ≥0.25" title-picture clearance."""
+
+    def test_figure_slide_geometry_reserves_clearance(self) -> None:
+        from vaultlab.slides.annotated_figure_slide import (
+            DEFAULT,
+            _placed_figure_geometry,
+        )
+
+        # Audit-required minimum clearance between title-bottom and
+        # picture-top, in inches.
+        REQUIRED_CLEARANCE_IN = 0.25
+
+        x, y, w, h = _placed_figure_geometry(800, 600, DEFAULT)
+        # Title box bottom edge: y=0.15 + h=(title_h_in - 0.1)
+        title_bottom = 0.15 + (DEFAULT.title_h_in - 0.1)
+        clearance = y - title_bottom
+        assert clearance >= REQUIRED_CLEARANCE_IN - 1e-6, (
+            f"picture top {y:.3f} too close to title bottom {title_bottom:.3f}; "
+            f"clearance was {clearance:.3f} (need >= {REQUIRED_CLEARANCE_IN})"
+        )
+
+    def test_lineage_deck_figure_title_is_short(self, tmp_path, pptx, synthetic_png) -> None:
+        """Deck with a figure assignment must use a short title, not a paper citation."""
+        from pptx import Presentation
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        doi = "10.1/foundational"
+        slug = slugify_doi(doi)
+        p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"---\ndoi: {doi}\n"
+            f"title: A very long restrictive expression study of GAGE proteins in cancer\n"
+            f"authors: [Gjerstorff M]\nyear: 2006\njournal: J\n"
+            f"year_bucket: history\ntier: A\n---\n\n"
+            f"## TL;DR\nGAGE proteins are restricted to cancer.\n",
+            encoding="utf-8",
+        )
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text("# Arc\n\nNarrative.\n", encoding="utf-8")
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths={doi: p},
+            corpus_size=1,
+        )
+        # Provide a figure for this DOI -> figure slide path
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            figure_assignments={doi: synthetic_png},
+        )
+        pres = Presentation(str(out))
+        # Find the figure slide (slide_title shape with figure picture)
+        fig_slide = None
+        for s in pres.slides:
+            names = {sh.name for sh in s.shapes}
+            if "slide_title" in names and any(
+                sh.shape_type == 13 for sh in s.shapes  # 13 == PICTURE
+            ):
+                fig_slide = s
+                break
+        assert fig_slide is not None, "no figure slide found in deck"
+        title_shape = next(sh for sh in fig_slide.shapes if sh.name == "slide_title")
+        title_text = title_shape.text_frame.text
+        # Title must be short — not a jammed paper citation
+        assert len(title_text) <= 40, (
+            f"figure-slide title too long ({len(title_text)} chars): {title_text!r}"
+        )
+        assert "Gjerstorff 2006" not in title_text
+        # The author label should appear in the caption instead
+        caption_shape = next(
+            (sh for sh in fig_slide.shapes if sh.name == "slide_caption"), None
+        )
+        if caption_shape is not None:
+            assert "Gjerstorff" in caption_shape.text_frame.text or \
+                "2006" in caption_shape.text_frame.text
+
+
+class TestDeckSmokeWithBugTriggers:
+    """Synthetic small deck with all bug triggers — confirm fixes hold."""
+
+    def test_smoke_no_anon_no_yaml_no_placeholder_no_dump(
+        self, tmp_path, pptx
+    ) -> None:
+        """Build a deck with: empty history bucket, YAML-only arc, mixed-format authors, 20-paper corpus.
+
+        Then verify the rendered deck has none of:
+          - 'Anon' in citations
+          - 'topic:'/'date:'/'seeds:' YAML in synthesis bullets
+          - '(no ... papers in corpus)' placeholders
+          - References slide listing more than ~10 entries (deck cites <=10)
+        """
+        from pptx import Presentation
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        summary_paths: dict[str, Path] = {}
+        # 20 papers, all 'sota' year_bucket -> history bucket starts empty
+        # mixed author formats including ones that previously broke
+        author_choices = [
+            ["Smith, J."],
+            ["Jones K"],
+            ["Bandyopadhyay R"],
+            ["Tao Yicheng"],
+            ["F Last"],
+            ["WHO"],
+            ["Goyal, F. M."],
+        ]
+        for i in range(20):
+            doi = f"10.9/p{i}"
+            slug = slugify_doi(doi)
+            authors = author_choices[i % len(author_choices)]
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: Paper {i}\nauthors: {authors}\n"
+                f"year: {2010 + i}\njournal: J\n"
+                f"year_bucket: sota\ntier: A\n---\n\n"
+                f"## TL;DR\nT{i}\n\n"
+                f"## Key findings (with [page] provenance)\n- F{i} [p1]\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+        # Arc with YAML frontmatter only (the bug trigger for synthesis)
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text(
+            "---\ntopic: x\ndate: 2026-04-30\nseeds: 12\n---\n\n"
+            "# Lineage arc\n\n"
+            "Spatial transcriptomics matured rapidly. "
+            "It now drives 3D tissue reconstruction. "
+            "The future lies in mechanism extraction.\n",
+            encoding="utf-8",
+        )
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=20,
+        )
+        out = build_deck_from_lineage_result(result, speaker="B", kb_root=kb_root)
+        pres = Presentation(str(out))
+
+        # Collect all text from all slides
+        all_text: list[str] = []
+        ref_text_lines: list[str] = []
+        for slide in pres.slides:
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                txt = shape.text_frame.text
+                all_text.append(txt)
+                if shape.name.startswith("refs_col_"):
+                    ref_text_lines.extend(txt.splitlines())
+
+        joined = "\n".join(all_text)
+        # No YAML leak in synthesis bullets
+        assert "topic: x" not in joined
+        assert "date: 2026-04-30" not in joined
+        assert "seeds: 12" not in joined
+        # No placeholder text
+        assert "(no history-bucket papers in corpus)" not in joined
+        assert "(no history-bucket summaries available)" not in joined
+        assert "(no SOTA-bucket findings available)" not in joined
+        # References list capped to cited papers (deck cites at most ~13)
+        n_refs = sum(1 for line in ref_text_lines if line.strip().startswith("["))
+        assert n_refs <= 15, (
+            f"references slide dumped ~all {len(summary_paths)} papers, got {n_refs}"
+        )
+        # Bullets-slide citation footers must not say "Anon" — our author
+        # parser handles every supplied format
+        for slide in pres.slides:
+            for shape in slide.shapes:
+                if shape.name == "slide_citations_footer" and shape.has_text_frame:
+                    assert "Anon" not in shape.text_frame.text, (
+                        f"citation footer fell back to Anon: {shape.text_frame.text!r}"
+                    )

@@ -103,17 +103,67 @@ def _make_corpus(dois: list[str]) -> Corpus:
 
 class TestDoiSlug:
     def test_slashes_and_dots(self):
-        assert doi_slug("10.1126/science.1225829") == "10-1126_science-1225829"
+        # Bobby 2026-04-30 slug-unification: doi_slug now delegates to
+        # vaultlab.kb.paths.slugify_doi (dot format wins) so summary
+        # frontmatter source_pdf paths actually resolve.
+        assert doi_slug("10.1126/science.1225829") == "10.1126_science.1225829"
 
     def test_lowercased(self):
-        assert doi_slug("10.1038/S41586-024-07159-5") == "10-1038_s41586-024-07159-5"
+        assert doi_slug("10.1038/S41586-024-07159-5") == "10.1038_s41586-024-07159-5"
 
     def test_strips_whitespace(self):
-        assert doi_slug("  10.1/a  ") == "10-1_a"
+        assert doi_slug("  10.1/a  ") == "10.1_a"
+
+    def test_matches_kb_paths_slugify(self):
+        """Single source of truth — round-trip with vaultlab.kb.paths."""
+        from vaultlab.kb.paths import slugify_doi
+
+        for d in [
+            "10.1126/science.1225829",
+            "10.1038/s41586-023-05915-x",
+            "10.1101/2024.01.02.123456",
+        ]:
+            assert doi_slug(d) == slugify_doi(d)
 
     def test_cache_path_uses_slug(self, tmp_path: Path):
         p = cache_path_for("10.1/a", tmp_path)
-        assert p == tmp_path / "10-1_a.pdf"
+        assert p == tmp_path / "10.1_a.pdf"
+
+    def test_cache_path_back_compat_resolves_legacy_dash_format(
+        self, tmp_path: Path
+    ):
+        """399 PDFs already on disk under the dash-format slug must still resolve.
+
+        Pre-2026-04-30 ``doi_slug`` produced ``10-1126_science-1225829``;
+        existing PDFs + extracted figures live at that path. The
+        :func:`cache_path_for` resolver now tries the canonical dot-format
+        first, then falls back to the dash-format if the legacy file
+        already exists.
+        """
+        from vaultlab.research.acquisition import _legacy_doi_slug
+
+        doi = "10.1126/science.1225829"
+        legacy = tmp_path / f"{_legacy_doi_slug(doi)}.pdf"
+        legacy.write_bytes(_PDF_BYTES)
+
+        resolved = cache_path_for(doi, tmp_path)
+        assert resolved == legacy
+        assert resolved.exists()
+
+    def test_cache_path_prefers_dot_format_when_both_exist(
+        self, tmp_path: Path
+    ):
+        """If both formats live on disk the canonical dot-format wins."""
+        from vaultlab.research.acquisition import _legacy_doi_slug
+
+        doi = "10.1/a"
+        canonical = tmp_path / "10.1_a.pdf"
+        legacy = tmp_path / f"{_legacy_doi_slug(doi)}.pdf"
+        canonical.write_bytes(_PDF_BYTES)
+        legacy.write_bytes(_PDF_BYTES)
+
+        resolved = cache_path_for(doi, tmp_path)
+        assert resolved == canonical
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +173,7 @@ class TestDoiSlug:
 
 class TestCacheShortCircuit:
     def test_existing_pdf_returns_cache_result(self, tmp_path: Path):
-        target = tmp_path / "10-1_a.pdf"
+        target = tmp_path / "10.1_a.pdf"
         target.write_bytes(_PDF_BYTES)
 
         # An empty session means any HTTP call would 404 — proving we never
@@ -140,7 +190,7 @@ class TestCacheShortCircuit:
         assert session.calls == []
 
     def test_too_small_cache_file_is_ignored(self, tmp_path: Path):
-        target = tmp_path / "10-1_a.pdf"
+        target = tmp_path / "10.1_a.pdf"
         target.write_bytes(b"%PDF-tiny")
         session = _FakeSession(
             [

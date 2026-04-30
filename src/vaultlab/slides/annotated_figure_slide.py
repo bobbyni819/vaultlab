@@ -224,6 +224,20 @@ def add_annotated_figure_slide(
 # ---------------------------------------------------------------------------
 
 
+# Minimum clearance between the title's bottom edge and the picture's
+# top edge. Bobby 2026-04-30 (Bug #6 / title-overlap): the legacy 0.10"
+# offset gave only 0.05" clearance after the title text box's
+# ``title_h_in - 0.1`` height adjustment, which let figure pictures
+# overlap wrapping titles.
+#
+# The picture is placed at ``title_h_in + TITLE_PICTURE_CLEARANCE_IN``;
+# the title box itself ends at ``0.15 + (title_h_in - 0.10) = title_h_in
+# + 0.05``. Real clearance is therefore ``TITLE_PICTURE_CLEARANCE_IN -
+# 0.05``. Setting the constant to 0.30" yields 0.25" of *actual* gap —
+# which is the audit-required minimum.
+TITLE_PICTURE_CLEARANCE_IN: float = 0.30
+
+
 def _placed_figure_geometry(
     src_w: int, src_h: int, layout: SlideLayout
 ) -> tuple[float, float, float, float]:
@@ -231,11 +245,20 @@ def _placed_figure_geometry(
 
     Aspect-preserve fit inside the figure-area rectangle; center horizontally
     within the column.
+
+    Reserves :data:`TITLE_PICTURE_CLEARANCE_IN` of vertical clearance
+    between the title's bottom edge and the picture's top edge so a
+    wrapping multi-line title never overlaps the figure.
     """
-    avail_w = layout.figure_area_w_in
     avail_h = (
-        layout.slide_h_in - layout.title_h_in - layout.caption_h_in - layout.footer_h_in - 0.15
+        layout.slide_h_in
+        - layout.title_h_in
+        - TITLE_PICTURE_CLEARANCE_IN
+        - layout.caption_h_in
+        - layout.footer_h_in
+        - 0.05
     )
+    avail_w = layout.figure_area_w_in
     aspect_src = src_w / src_h
     aspect_avail = avail_w / avail_h
     if aspect_src > aspect_avail:
@@ -245,7 +268,7 @@ def _placed_figure_geometry(
         h = avail_h
         w = avail_h * aspect_src
     x = layout.figure_area_x_in + (avail_w - w) / 2
-    y = layout.title_h_in + 0.10
+    y = layout.title_h_in + TITLE_PICTURE_CLEARANCE_IN
     return x, y, w, h
 
 

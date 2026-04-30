@@ -39,7 +39,7 @@ the Read tool and produce a JSON response matching the task's schema.
 from pathlib import Path
 from vaultlab.context import locations as _loc
 from vaultlab.research import (
-    ArcTask, SummarizationTask, run_lit_arc,
+    ArcTask, PickerTask, SummarizationTask, run_lit_arc,
 )
 
 topic = "<topic from $ARGUMENTS>"
@@ -50,7 +50,43 @@ kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
 If `kb_root` is not set, ask the user which KB they want this written to
 (they may have multiple — `research`, `tools`, `dcp`, etc.).
 
-### Step 2 — Define the per-paper reader (YOU read the PDF)
+### Step 2 — Define the content-aware paper picker (YOU read abstracts)
+
+Before Tier-A reads, the orchestrator builds a `PickerTask` containing
+the top-30 candidates' abstracts and asks YOU to rank by topical
+relevance + likely contribution + diversity. This avoids the
+"citation-graph picks an off-topic paper because it has a cached figure"
+failure mode (L4 spatial-tx Gjerstorff 2006 bug, 2026-04-30).
+
+Your job per call:
+
+1. Inspect `task.candidates` — list of `CandidatePaper` (doi, title,
+   authors, year, journal, abstract, og_score, forward_influence, has_pdf).
+2. Inspect `task.prompt` (already includes the topic + ranking criteria).
+3. Return JSON matching `task.response_schema`:
+
+```
+{
+  "picks": [
+    {"doi": "10.1038/...", "rank": 1, "rationale": "Foundational CODEX paper..."},
+    {"doi": "10.1126/...", "rank": 2, "rationale": "Methodological extension..."},
+    ...
+  ]
+}
+```
+
+Rank papers most-relevant-first. The orchestrator takes
+`task.target_n` picks. **Only return DOIs that appear in
+`task.candidates`** — fabricated DOIs get filtered out.
+
+```python
+def claude_code_picker(task: PickerTask) -> dict:
+    # YOU implement this at runtime by reading abstracts and ranking.
+    # Citation-graph fallback runs if you raise / return non-dict.
+    ...
+```
+
+### Step 3 — Define the per-paper reader (YOU read the PDF)
 
 When `run_lit_arc` reaches phase 6, it builds a `SummarizationTask` for each
 Tier-A paper (one with an acquired PDF) and calls your reader with it.

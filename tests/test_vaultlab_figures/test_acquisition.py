@@ -30,6 +30,7 @@ from vaultlab.figures.acquisition import (
     FigureAcquisitionResult,
     _extract_panels_from_caption,
     _extract_tar_to_dir,
+    _parse_elsevier_figures,
     _parse_nxml_figures,
     acquire_figures,
     figure_cache_dir,
@@ -437,6 +438,163 @@ class TestAcquireFiguresUnavailable:
         assert result.source == "unavailable"
         assert result.error == "empty doi"
         assert session.calls == []
+
+
+# ---------------------------------------------------------------------------
+# Elsevier ScienceDirect path
+# ---------------------------------------------------------------------------
+
+
+_SAMPLE_ELS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+<full-text-retrieval-response
+  xmlns="http://www.elsevier.com/xml/svapi/article/dtd"
+  xmlns:ce="http://www.elsevier.com/xml/common/dtd"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xocs="http://www.elsevier.com/xml/xocs/dtd"
+  xmlns:prism="http://prismstandard.org/namespaces/basic/2.0/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <coredata>
+    <prism:pii>S0092867418309048</prism:pii>
+  </coredata>
+  <originalText>
+    <xocs:doc>
+      <xocs:meta>
+        <xocs:pii-unformatted>S0092867418309048</xocs:pii-unformatted>
+      </xocs:meta>
+      <xocs:serial-item>
+        <ce:figure id="fig1">
+          <ce:label>Figure 1</ce:label>
+          <ce:caption>
+            <ce:simple-para>Overview showing (A) panel A, (B) panel B, and (C) feedback.</ce:simple-para>
+          </ce:caption>
+          <ce:link locator="gr1" xlink:href="pii:S0092867418309048/gr1"/>
+        </ce:figure>
+        <ce:figure id="fig2">
+          <ce:label>Figure 2</ce:label>
+          <ce:caption>
+            <ce:simple-para>Second figure caption text.</ce:simple-para>
+          </ce:caption>
+          <ce:link locator="gr2" xlink:href="pii:S0092867418309048/gr2"/>
+        </ce:figure>
+      </xocs:serial-item>
+    </xocs:doc>
+  </originalText>
+</full-text-retrieval-response>
+"""
+
+
+class TestParseElsevierFigures:
+    def test_extracts_pii_label_caption_locator(self) -> None:
+        pii, figs = _parse_elsevier_figures(_SAMPLE_ELS_XML)
+        assert pii == "S0092867418309048"
+        assert len(figs) == 2
+        assert figs[0]["id"] == "fig1"
+        assert figs[0]["label"] == "Figure 1"
+        assert "panel A" in figs[0]["caption"]
+        assert figs[0]["locator"] == "gr1"
+        assert figs[1]["locator"] == "gr2"
+
+    def test_returns_empty_on_bad_xml(self) -> None:
+        pii, figs = _parse_elsevier_figures(b"<not xml")
+        assert pii == ""
+        assert figs == []
+
+
+_JPEG_BYTES = (
+    b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    + (b"\x00" * 200)
+    + b"\xff\xd9"
+)
+
+
+class TestAcquireFiguresElsevier:
+    def test_elsevier_falls_back_when_pmc_misses(self, tmp_path: Path) -> None:
+        session = _FakeSession(
+            [
+                # PMC idconv: no PMCID (skip PMC tier)
+                (
+                    ("pmc", "idconv"),
+                    _FakeResponse(status_code=200, _json={"records": [{}]}),
+                ),
+                # Elsevier article retrieval returns the XML.
+                (
+                    ("elsevier", "/content/article/doi/"),
+                    _FakeResponse(
+                        status_code=200,
+                        content=_SAMPLE_ELS_XML,
+                        headers={"Content-Type": "text/xml;charset=UTF-8"},
+                    ),
+                ),
+                # First figure: high-res object download succeeds.
+                (
+                    ("elsevier", "1-s2.0-S0092867418309048-gr1_lrg.jpg"),
+                    _FakeResponse(
+                        status_code=200,
+                        content=_JPEG_BYTES,
+                        headers={"Content-Type": "image/jpeg;charset=UTF-8"},
+                    ),
+                ),
+                # Second figure: high-res 404, fall back to standard.
+                (
+                    ("elsevier", "1-s2.0-S0092867418309048-gr2_lrg.jpg"),
+                    _FakeResponse(status_code=404, headers={}),
+                ),
+                (
+                    ("elsevier", "1-s2.0-S0092867418309048-gr2.jpg"),
+                    _FakeResponse(
+                        status_code=200,
+                        content=_JPEG_BYTES,
+                        headers={"Content-Type": "image/jpeg"},
+                    ),
+                ),
+            ]
+        )
+        result = acquire_figures(
+            "10.1016/j.cell.2018.07.010",
+            cache_dir=tmp_path,
+            apis={"elsevier_key": "fake-key"},
+            _session=session,  # type: ignore[arg-type]
+        )
+        assert result.source == "elsevier-api"
+        assert result.error is None
+        assert len(result.figures) == 2
+
+        by_id = {f.figure_id: f for f in result.figures}
+        # Caption + label preserved
+        assert by_id["fig1"].label == "Figure 1"
+        assert "panel A" in by_id["fig1"].caption
+        assert by_id["fig1"].panels == ["A", "B", "C"]
+        # File saved on disk under canonical layout
+        paper_dir = figure_cache_dir("10.1016/j.cell.2018.07.010", tmp_path)
+        for f in result.figures:
+            assert f.file_path.parent == paper_dir
+            assert f.file_path.exists()
+            assert f.file_path.suffix == ".jpg"
+
+        # Manifest persisted with elsevier-api source.
+        manifest = paper_dir / ".figures.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        assert data["source"] == "elsevier-api"
+
+    def test_elsevier_skipped_without_key(self, tmp_path: Path) -> None:
+        # PMC misses, Elsevier never queried because no key, Springer never has key either.
+        session = _FakeSession(
+            [
+                (
+                    ("pmc", "idconv"),
+                    _FakeResponse(status_code=200, _json={"records": [{}]}),
+                ),
+            ]
+        )
+        result = acquire_figures(
+            "10.1016/j.cell.test",
+            cache_dir=tmp_path,
+            apis={},  # no elsevier_key
+            _session=session,  # type: ignore[arg-type]
+        )
+        assert result.source == "unavailable"
+        # We should not have made any elsevier-tier calls
+        assert not any(s == "elsevier" for s, _u, _p in session.calls)
 
 
 # ---------------------------------------------------------------------------

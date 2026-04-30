@@ -152,10 +152,6 @@ def _label_to_key(label: str) -> str | None:
     return None
 
 
-__all__ = ["DIVIDER", "dual_format", "parse_dual_format"]
-
-
-# Helpful convenience re-export so callers don't have to remember the field set
 def required_mental_map_keys() -> Iterable[str]:
     """The full ordered set of mental-map keys.
 
@@ -163,3 +159,100 @@ def required_mental_map_keys() -> Iterable[str]:
     contract the dual_format renderer expects.
     """
     return tuple(_MENTAL_MAP_ORDER)
+
+
+# ---------------------------------------------------------------------------
+# Compat layer: bobby_slides._speaker public surface
+# ---------------------------------------------------------------------------
+#
+# These three functions were lifted from ``bobby_slides._speaker`` (2026-04)
+# so callers that worked with the bobby_slides API (and the lifted
+# ``vaultlab.slides.marp`` renderer + plan builders) keep working without
+# rewriting. The dual-format API above is the recommended new path; the
+# names below are the older mental-map-only surface.
+#
+# Detailed-script support (the divider section): callers can still pass a
+# ``"script"`` key in the notes dict to format_speaker_notes; we route it
+# through the divider for backwards compat with bobby_slides.
+
+
+def format_speaker_notes(notes: dict[str, Any] | None) -> str:
+    """Render a structured notes dict as a mental-map string.
+
+    Lifted from ``bobby_slides._speaker.format_speaker_notes``. If the dict
+    contains a ``"script"`` key, its value is appended after the
+    ``--- DETAILED SCRIPT ---`` divider — same dual-format output as
+    :func:`dual_format`.
+
+    Args:
+        notes: dict with optional keys ``hook``, ``key_claim``, ``evidence``,
+            ``key_terms`` (list or string), ``click``, ``transition``, and
+            optional ``script``. Missing keys are skipped. ``None`` or empty
+            dict yields ``""``.
+
+    Returns:
+        A formatted multi-line string ready to drop into a slide's notes.
+    """
+    if not notes:
+        return ""
+
+    map_text = _render_mental_map(notes)
+    script = notes.get("script")
+    if script:
+        return f"{map_text}{DIVIDER}{str(script).strip()}" if map_text else str(script).strip()
+    return map_text
+
+
+def parse_speaker_notes(text: str) -> dict[str, Any]:
+    """Reverse of :func:`format_speaker_notes` — parse mental-map back to dict.
+
+    Lifted from ``bobby_slides._speaker.parse_speaker_notes``. ``KEY TERMS``
+    values are returned as a list (split on commas). Missing keys are
+    absent from the result.
+    """
+    if not text or not text.strip():
+        return {}
+
+    label_to_key = {v: k for k, v in _LABELS.items()}
+    result: dict[str, Any] = {}
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("-"):
+            continue
+        line = line.lstrip("- ").strip()
+        for label, key in label_to_key.items():
+            prefix = f"{label}:"
+            if line.upper().startswith(prefix):
+                value = line[len(prefix):].strip()
+                if key == "key_terms":
+                    result[key] = [t.strip() for t in value.split(",") if t.strip()]
+                else:
+                    result[key] = value
+                break
+
+    return result
+
+
+def attach_to_slide(slide: Any, notes: dict[str, Any] | None) -> None:
+    """Attach formatted speaker notes to a python-pptx slide.
+
+    Lifted from ``bobby_slides._speaker.attach_to_slide``. No-op if
+    ``notes`` is ``None`` / empty.
+    """
+    formatted = format_speaker_notes(notes)
+    if not formatted:
+        return
+    notes_slide = slide.notes_slide
+    notes_slide.notes_text_frame.text = formatted
+
+
+__all__ = [
+    "DIVIDER",
+    "attach_to_slide",
+    "dual_format",
+    "format_speaker_notes",
+    "parse_dual_format",
+    "parse_speaker_notes",
+    "required_mental_map_keys",
+]

@@ -118,18 +118,59 @@ class AcquisitionResult:
 def doi_slug(doi: str) -> str:
     """Convert a DOI into a filesystem-safe slug.
 
+    ``10.1126/science.1225829`` -> ``10.1126_science.1225829``.
+
+    Delegates to :func:`vaultlab.kb.paths.slugify_doi` — the *one* source of
+    truth for DOI slug formatting across the codebase. Pre-2026-04-30 this
+    function used a dash-based variant
+    (``10.1126/science.1225829`` -> ``10-1126_science-1225829``) which
+    diverged from the ``slugify_doi`` dot-format; that mismatch caused
+    summary-frontmatter ``source_pdf`` paths to 404.  See :func:`cache_path_for`
+    for the back-compat resolver that still finds PDFs written under the
+    legacy dash format.
+    """
+    from vaultlab.kb.paths import slugify_doi
+
+    return slugify_doi(doi).lower()
+
+
+def _legacy_doi_slug(doi: str) -> str:
+    """Pre-2026-04-30 dash-format slug, kept only for back-compat lookups.
+
     ``10.1126/science.1225829`` -> ``10-1126_science-1225829``.
 
-    The mapping is reversible-enough for humans (slashes -> underscores,
-    dots -> dashes) without using percent encoding that confuses Windows
-    file explorers.
+    Do **not** use for new writes — see :func:`doi_slug`.  Existing PDFs
+    + extracted figures on disk under
+    ``Sources/Papers/<dash-slug>/...`` are still discoverable through
+    :func:`cache_path_for`'s fallback path.
     """
     return doi.strip().lower().replace("/", "_").replace(".", "-")
 
 
 def cache_path_for(doi: str, cache_dir: Path) -> Path:
-    """Return the canonical cache path for ``doi`` under ``cache_dir``."""
-    return Path(cache_dir) / f"{doi_slug(doi)}.pdf"
+    """Return the canonical cache path for ``doi`` under ``cache_dir``.
+
+    Resolution order:
+
+    1. The canonical dot-format path
+       (``cache_dir/<slugify_doi>.pdf``).  Returned unconditionally if the
+       file exists OR if no legacy dash-format file exists either — i.e.
+       this is *also* the path used for fresh writes.
+    2. **Back-compat**: if the dot-format file is absent but the legacy
+       dash-format file exists (399 PDFs + 3,771 figures landed under the
+       old slug before 2026-04-30), return the dash-format path so reads
+       still resolve.
+
+    Future writes always land at the dot-format path.
+    """
+    cache_dir = Path(cache_dir)
+    canonical = cache_dir / f"{doi_slug(doi)}.pdf"
+    if canonical.exists():
+        return canonical
+    legacy = cache_dir / f"{_legacy_doi_slug(doi)}.pdf"
+    if legacy.exists():
+        return legacy
+    return canonical
 
 
 def _looks_like_pdf(content: bytes, content_type: str = "") -> bool:
