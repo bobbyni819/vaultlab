@@ -29,11 +29,7 @@ Research at scale is fragmented. Meetings in Outlook. Papers in Drive. Notes on 
 
 VaultLab reads across those ecosystems and centralizes them inside Claude Code. KB is plain markdown — runs on whatever storage you already have.
 
-Notes on the shape:
-
-- Tried autonomous agent systems on the Claude API. Token cost isn't worth the marginal lift, yet. Hands-on LLM-as-amplifier inside Claude Code is the real game changer.
-- Inspired by [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist). Watching others ship research-specific agent systems is what made me ship mine.
-- Principles here adapt beyond research — KB, citation auditing, slide composition work on any topic.
+I've used the Claude API to automate workflows with autonomous agents. Token cost still doesn't justify the marginal lift. What's worked is being hands-on inside Claude Code with the LLM as an amplifier — that's been the real game changer. Watching others ship — [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist), other research-specific agent systems — was the push to ship mine and join the open-source wave. Most of what's here adapts beyond research; KB, citation auditing, and slide composition work on any topic.
 
 ---
 
