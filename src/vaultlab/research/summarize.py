@@ -5,12 +5,32 @@ paper's metadata, this module produces a structured :class:`PaperSummary`
 that maps directly onto the canonical ``Wiki/Summaries/<doi>.md`` format
 documented in ``kb-output-conventions-2026-04-29.md``.
 
+Two execution modes
+-------------------
+This module exposes **two parallel paths** for getting the LLM-generated
+JSON into a :class:`PaperSummary`:
+
+1. **SDK path** (:func:`summarize_paper`) — calls
+   ``anthropic.Messages.create`` directly using an Anthropic API key.
+   Use this when running from a plain Python script or service.
+
+2. **Claude-Code-callable path** (:func:`prepare_summary_task` +
+   :func:`render_summary_from_response`) — does NOT call any LLM. The
+   slash command body, running inside a Claude Code session, has Claude
+   itself read the PDF via the Read tool and call
+   :func:`render_summary_from_response` with the JSON it produces. Use
+   this from inside ``.claude/commands/<slash>.md`` bodies — Claude Code
+   provides LLM access via the active session, so no API key is needed.
+
+Both paths share :class:`PaperSummary`, :func:`build_summary_prompt`,
+``_populate_citation_stats``, and ``_build_connections``. They differ
+only in WHO runs the actual prompt → JSON step.
+
 Design constraints (per the F.7 grill, decision D6)
 ---------------------------------------------------
 * **Claude is the primary PDF reader.** No Grobid, no Marker, no PaperQA2
-  dependency. We invoke the Anthropic Messages API with the PDF attached
-  as a ``document`` content block — the model reads the bytes and emits
-  structured JSON matching the :class:`PaperSummary` shape.
+  dependency. The model reads the PDF bytes and emits structured JSON
+  matching the :class:`PaperSummary` shape.
 * **Tier C is a no-LLM stub.** When a PDF isn't available we still emit
   a summary file with the corpus metrics filled in, so the KB stays
   complete even for paywalled papers.
@@ -21,13 +41,13 @@ Design constraints (per the F.7 grill, decision D6)
   them; only when ``crossref_refs_missing=True`` do we ask Claude to
   extract the references list from the PDF itself.
 
-Authentication
---------------
-The Anthropic SDK reads ``ANTHROPIC_API_KEY`` from the environment by
-default. As a fallback we look for ``anthropic_api_key`` in the same
+Authentication (SDK path only)
+------------------------------
+The Anthropic SDK path reads ``ANTHROPIC_API_KEY`` from the environment
+by default. As a fallback we look for ``anthropic_api_key`` in the same
 ``research_apis.json`` config used by the rest of ``vaultlab.research``.
-If neither is present the module raises :class:`SummarizeAuthError` so
-callers know to set up credentials before retrying.
+If neither is present the SDK path raises :class:`SummarizeAuthError`.
+The Claude-Code-callable path needs no key.
 """
 
 from __future__ import annotations
@@ -53,10 +73,15 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "PaperSummary",
+    "SummarizationTask",
     "SummarizeAuthError",
+    "SummaryReader",
     "build_summary_prompt",
     "load_anthropic_api_key",
+    "prepare_summary_task",
+    "render_summary_from_response",
     "render_summary_markdown",
+    "summary_response_schema",
     "summarize_corpus",
     "summarize_paper",
     "write_summary_to_kb",
@@ -145,6 +170,62 @@ class PaperSummary:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+# ---------------------------------------------------------------------------
+# Response schema (shared by SDK + Claude-Code paths)
+# ---------------------------------------------------------------------------
+
+
+def summary_response_schema() -> dict[str, Any]:
+    """Return a JSON schema describing the LLM response shape.
+
+    Used by :class:`SummarizationTask` so the Claude-Code-callable path
+    can validate inputs the same way the SDK path does. Matches the
+    instructions baked into :func:`build_summary_prompt`.
+    """
+    return {
+        "type": "object",
+        "required": [
+            "tldr",
+            "why_it_matters",
+            "methods_summary",
+            "key_findings",
+            "extracted_references",
+        ],
+        "properties": {
+            "tldr": {
+                "type": "string",
+                "description": "Exactly 3 sentences summarizing the paper.",
+            },
+            "why_it_matters": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "2-5 bullets explaining novelty / impact.",
+            },
+            "methods_summary": {
+                "type": "string",
+                "description": "1-2 paragraphs on methodology.",
+            },
+            "key_findings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 3,
+                "description": (
+                    "At least 3 (ideally 5-8) findings, each ending in a "
+                    "[p<N>] page marker or [unknown]."
+                ),
+            },
+            "extracted_references": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "DOIs from the paper's References section. Empty unless "
+                    "crossref_refs_missing=True."
+                ),
+            },
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -563,7 +644,271 @@ def _build_connections(
 
 
 # ---------------------------------------------------------------------------
-# Public API: single-paper summarization
+# Public API: Claude-Code-callable preparation + render
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SummarizationTask:
+    """A prepared summarization task ready for a Claude Code session to execute.
+
+    No LLM is called when this object is built — it's the structured
+    "what to read + how to respond" envelope. The slash command body
+    (running inside Claude Code) reads :attr:`pdf_path` itself and
+    produces a JSON response matching :attr:`response_schema`, then
+    feeds the response into :func:`render_summary_from_response`.
+
+    Attributes:
+        doi: Lower-cased DOI of the paper.
+        pdf_path: Local path to the PDF Claude Code should read. May be
+            absent on disk for Tier-C cases (caller decides via
+            :attr:`tier`).
+        paper_metadata: ``title``, ``authors``, ``year``, ``journal``,
+            ``citation_count``, ``influential_citations`` from the
+            search result.
+        citation_stats: Pre-populated citation metrics (og_score,
+            forward_influence, year_bucket, role_in_set, tier).
+        crossref_refs_missing: When ``True``, the prompt asks Claude to
+            also extract a references list from the PDF.
+        output_path: Canonical destination for the summary markdown
+            (i.e. ``Wiki/Summaries/<doi-slug>.md`` via
+            :func:`vaultlab.kb.paths.summary_path`).
+        prompt: The full user-message prompt Claude should respond to.
+            The system prompt is :data:`_SYSTEM_PROMPT` (importable for
+            advanced callers via the module attribute).
+        system_prompt: The system message Claude should be given.
+        response_schema: JSON schema describing the expected response
+            shape.
+        tier: Pre-computed tier letter ("A" if a PDF is available,
+            otherwise "C"). Tier-C tasks should NOT be sent to the
+            LLM — call :func:`render_summary_from_response` with an
+            empty dict instead, or use the corpus orchestrator which
+            short-circuits.
+        acquisition_source: Tier label ("unpaywall", "pmc", ...) — flows
+            into the rendered summary's provenance section.
+        acquisition_license: License string — same.
+    """
+
+    doi: str
+    pdf_path: Path
+    paper_metadata: dict[str, Any]
+    citation_stats: dict[str, Any]
+    crossref_refs_missing: bool
+    output_path: Path
+    prompt: str
+    system_prompt: str
+    response_schema: dict[str, Any]
+    tier: str = "A"
+    acquisition_source: str = ""
+    acquisition_license: str = ""
+
+
+# Type alias for the Claude-Code-side reader callback.
+SummaryReader = Callable[["SummarizationTask"], dict[str, Any]]
+
+
+def _build_base_summary(
+    *,
+    doi: str,
+    paper_metadata: dict[str, Any],
+    corpus_metrics: "CorpusMetrics | None",
+    corpus: "Corpus | None",
+    acquisition_source: str,
+    acquisition_license: str,
+) -> PaperSummary:
+    """Build the PaperSummary with metadata, citation stats, and connections.
+
+    Shared by the SDK path and the prepare/render path. Does NOT touch
+    any LLM. The returned summary has empty content fields (tldr,
+    key_findings, ...) — the caller fills them from the LLM response.
+    """
+    doi = (doi or "").strip().lower()
+    summary = PaperSummary(
+        doi=doi,
+        title=paper_metadata.get("title", "") or "",
+        authors=list(paper_metadata.get("authors") or []),
+        year=int(paper_metadata.get("year") or 0),
+        journal=paper_metadata.get("journal", "") or "",
+        citation_count=int(paper_metadata.get("citation_count") or 0),
+        influential_citations=int(paper_metadata.get("influential_citations") or 0),
+        extracted_via="claude",
+        extracted_at=datetime.now().isoformat(timespec="seconds"),
+        acquisition_source=acquisition_source,
+        acquisition_license=acquisition_license,
+    )
+    seed_dois = corpus.seed_dois if corpus is not None else None
+    corpus_papers = corpus.papers if corpus is not None else None
+    _populate_citation_stats(
+        summary,
+        doi=doi,
+        corpus_metrics=corpus_metrics,
+        corpus_papers=corpus_papers,
+        seed_dois=seed_dois,
+    )
+    _build_connections(summary, doi=doi, corpus=corpus)
+    return summary
+
+
+def prepare_summary_task(
+    *,
+    doi: str,
+    pdf_path: Path,
+    paper_metadata: dict[str, Any],
+    corpus_metrics: "CorpusMetrics | None" = None,
+    corpus: "Corpus | None" = None,
+    crossref_refs_missing: bool = False,
+    kb_root: Path,
+    acquisition_source: str = "",
+    acquisition_license: str = "",
+) -> SummarizationTask:
+    """Prepare a summarization task. Does NOT call any LLM.
+
+    Returns the structured task with prompt + expected response schema.
+    The caller (the Claude Code session, or any custom orchestrator)
+    is responsible for reading the PDF and producing JSON matching the
+    schema, then feeding it into :func:`render_summary_from_response`.
+
+    Use this from a slash command body (no Anthropic API key needed —
+    Claude Code provides LLM access via the active session). For
+    plain-Python callers with an API key, :func:`summarize_paper`
+    bundles prepare + LLM call + render.
+
+    Args:
+        doi: DOI of the paper (case-insensitive; lower-cased internally).
+        pdf_path: Local path Claude Code will read in-session. Should
+            exist on disk; missing-file cases short-circuit to Tier C
+            via the corpus orchestrator and don't go through this
+            function.
+        paper_metadata: ``title``, ``authors``, ``year``, ``journal``
+            from the search result.
+        corpus_metrics: Optional :class:`CorpusMetrics`; populates
+            og_score / forward_influence / year_bucket on the eventual
+            summary.
+        corpus: Optional :class:`Corpus`; lets us build the
+            ``connections_*`` wikilink lists from the citation graph.
+        crossref_refs_missing: Forwarded to the prompt; when ``True``
+            asks Claude to also extract the references list.
+        kb_root: Vaultlab KB root (e.g.
+            ``G:/My Drive/Knowledge/vaultlab``). Determines the
+            canonical ``output_path``.
+        acquisition_source: Tier label from
+            :class:`AcquisitionResult` (e.g. ``unpaywall``).
+        acquisition_license: License string from acquisition.
+
+    Returns:
+        A :class:`SummarizationTask` ready for the Claude Code reader.
+    """
+    base = _build_base_summary(
+        doi=doi,
+        paper_metadata=paper_metadata,
+        corpus_metrics=corpus_metrics,
+        corpus=corpus,
+        acquisition_source=acquisition_source,
+        acquisition_license=acquisition_license,
+    )
+    prompt = build_summary_prompt(
+        paper_metadata={
+            "title": base.title,
+            "authors": base.authors,
+            "year": base.year,
+            "journal": base.journal,
+            "doi": base.doi,
+        },
+        crossref_refs_missing=crossref_refs_missing,
+        role_hint=base.role_in_set,
+    )
+    citation_stats = {
+        "og_score": base.og_score,
+        "forward_influence": base.forward_influence,
+        "year_bucket": base.year_bucket,
+        "role_in_set": base.role_in_set,
+        "citation_count": base.citation_count,
+        "influential_citations": base.influential_citations,
+    }
+    output_path = summary_path(Path(kb_root), base.doi)
+    return SummarizationTask(
+        doi=base.doi,
+        pdf_path=Path(pdf_path),
+        paper_metadata={
+            "title": base.title,
+            "authors": list(base.authors),
+            "year": base.year,
+            "journal": base.journal,
+            "doi": base.doi,
+            "citation_count": base.citation_count,
+            "influential_citations": base.influential_citations,
+        },
+        citation_stats=citation_stats,
+        crossref_refs_missing=crossref_refs_missing,
+        output_path=output_path,
+        prompt=prompt,
+        system_prompt=_SYSTEM_PROMPT,
+        response_schema=summary_response_schema(),
+        tier="A",
+        acquisition_source=acquisition_source,
+        acquisition_license=acquisition_license,
+    )
+
+
+def render_summary_from_response(
+    task: SummarizationTask,
+    response_json: dict[str, Any],
+    *,
+    corpus_metrics: "CorpusMetrics | None" = None,
+    corpus: "Corpus | None" = None,
+    tokens_input: int = 0,
+    tokens_output: int = 0,
+) -> PaperSummary:
+    """Take Claude Code's JSON response and produce a populated PaperSummary.
+
+    Reuses the same metadata / citation-stat / connections logic the SDK
+    path uses. Does NOT call any LLM and does NOT write to disk — the
+    caller decides whether to call :func:`write_summary_to_kb` next.
+
+    Args:
+        task: The :class:`SummarizationTask` produced by
+            :func:`prepare_summary_task`.
+        response_json: Parsed JSON dict matching ``task.response_schema``.
+            For Tier-C / no-LLM cases, pass an empty dict — content
+            fields will stay empty.
+        corpus_metrics: Same :class:`CorpusMetrics` used in the
+            prepare step (re-passed because it's not embedded in the
+            frozen task to keep that object lightweight).
+        corpus: Same :class:`Corpus` used in the prepare step.
+        tokens_input: Optional input-token count from the LLM call (for
+            provenance).
+        tokens_output: Optional output-token count.
+
+    Returns:
+        A populated :class:`PaperSummary` with content from
+        ``response_json`` plus the citation stats / connections already
+        derived during preparation.
+    """
+    summary = _build_base_summary(
+        doi=task.doi,
+        paper_metadata=task.paper_metadata,
+        corpus_metrics=corpus_metrics,
+        corpus=corpus,
+        acquisition_source=task.acquisition_source,
+        acquisition_license=task.acquisition_license,
+    )
+    summary.tier = task.tier
+    if task.tier == "A":
+        summary.source_pdf = f"Sources/Papers/{slugify_doi(task.doi)}.pdf"
+    summary.tldr = (response_json.get("tldr") or "").strip()
+    summary.why_it_matters = list(response_json.get("why_it_matters") or [])
+    summary.methods_summary = (response_json.get("methods_summary") or "").strip()
+    summary.key_findings = list(response_json.get("key_findings") or [])
+    summary.extracted_references = list(
+        response_json.get("extracted_references") or []
+    )
+    summary.tokens_input = int(tokens_input or 0)
+    summary.tokens_output = int(tokens_output or 0)
+    return summary
+
+
+# ---------------------------------------------------------------------------
+# Public API: single-paper summarization (SDK path)
 # ---------------------------------------------------------------------------
 
 
@@ -581,7 +926,13 @@ def summarize_paper(
     acquisition_license: str = "",
     _llm: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
 ) -> PaperSummary:
-    """Build a :class:`PaperSummary` for a single paper.
+    """Build a :class:`PaperSummary` for a single paper using the Anthropic SDK.
+
+    This is the **SDK path** — it makes a direct
+    ``anthropic.Messages.create`` call using an API key from the
+    environment / config. For the **Claude-Code-callable path** (no API
+    key required, uses the active Claude Code session) see
+    :func:`prepare_summary_task` + :func:`render_summary_from_response`.
 
     Args:
         doi: DOI of the paper (case-insensitive; lower-cased internally).
@@ -610,36 +961,14 @@ def summarize_paper(
     """
     doi = (doi or "").strip().lower()
 
-    summary = PaperSummary(
+    summary = _build_base_summary(
         doi=doi,
-        title=paper_metadata.get("title", "") or "",
-        authors=list(paper_metadata.get("authors") or []),
-        year=int(paper_metadata.get("year") or 0),
-        journal=paper_metadata.get("journal", "") or "",
-        citation_count=int(paper_metadata.get("citation_count") or 0),
-        influential_citations=int(
-            paper_metadata.get("influential_citations") or 0
-        ),
-        extracted_via="claude",
-        extracted_at=datetime.now().isoformat(timespec="seconds"),
+        paper_metadata=paper_metadata,
+        corpus_metrics=corpus_metrics,
+        corpus=corpus,
         acquisition_source=acquisition_source,
         acquisition_license=acquisition_license,
     )
-
-    # Citation stats (always available, no LLM needed).
-    seed_dois = corpus.seed_dois if corpus is not None else None
-    corpus_papers = corpus.papers if corpus is not None else None
-    _populate_citation_stats(
-        summary,
-        doi=doi,
-        corpus_metrics=corpus_metrics,
-        corpus_papers=corpus_papers,
-        seed_dois=seed_dois,
-    )
-
-    # Connections (wikilinks). Always derived from the corpus state, even
-    # for Tier C — Obsidian's graph view should still show the edge.
-    _build_connections(summary, doi=doi, corpus=corpus)
 
     # Tier C: no PDF -> stub.
     if pdf_path is None or not Path(pdf_path).exists():
@@ -875,13 +1204,25 @@ def summarize_corpus(
     model: str = DEFAULT_MODEL,
     overwrite: bool = False,
     progress: Callable[[str, int, int], None] | None = None,
+    reader: SummaryReader | None = None,
     _llm: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
 ) -> dict[str, PaperSummary]:
     """Build summaries for every paper in ``corpus.papers`` and write them.
 
     Each paper is checked against ``pdf_cache_dir`` (the same
-    ``acquire_pdf`` cache); papers with PDFs get full Tier-A LLM reads,
+    ``acquire_pdf`` cache); papers with PDFs get full Tier-A reads,
     papers without get Tier-C stubs.
+
+    Two modes:
+
+    * **SDK mode (default)** — calls Claude via the Anthropic SDK using
+      an API key (resolved per-paper from env / config).
+    * **Reader mode** (``reader`` given) — for use inside Claude Code
+      slash commands. The reader is invoked per Tier-A paper with the
+      :class:`SummarizationTask` and returns a JSON dict matching
+      :func:`summary_response_schema`. No Anthropic API key is needed
+      because the slash command body itself is running inside a Claude
+      Code session.
 
     Args:
         corpus: A built :class:`Corpus` (call ``compute_metrics`` first).
@@ -889,13 +1230,18 @@ def summarize_corpus(
             (``<doi-slug>.pdf`` / acquisition's ``doi_slug`` shape).
         kb_root: Vaultlab KB root (e.g. ``G:/My Drive/Knowledge/vaultlab``).
         parallel: Worker count for the thread pool. Default 2 keeps us
-            inside Anthropic rate limits comfortably.
-        api_key: Override key (otherwise resolved per-paper from env/config).
-        model: Anthropic model id.
+            inside Anthropic rate limits comfortably. Ignored in reader
+            mode (reader is called sequentially because Claude Code
+            sessions are single-threaded).
+        api_key: Override key (SDK mode only).
+        model: Anthropic model id (SDK mode only).
         overwrite: If False, existing summary files are kept (with a regen
             marker appended).
         progress: ``progress(doi, done, total)`` callback.
-        _llm: Test injection.
+        reader: Optional Claude-Code-side callback. When given,
+            replaces the SDK call. Receives a :class:`SummarizationTask`
+            and must return a dict matching ``task.response_schema``.
+        _llm: Test injection for the SDK path.
 
     Returns:
         ``doi -> PaperSummary``. Tier-C entries appear here too.
@@ -912,7 +1258,61 @@ def summarize_corpus(
     total = len(dois)
     results: dict[str, PaperSummary] = {}
 
-    def _one(doi: str) -> tuple[str, PaperSummary]:
+    def _one_reader(doi: str) -> tuple[str, PaperSummary]:
+        """Reader-mode path — no SDK, no API key."""
+        assert reader is not None
+        paper = corpus.papers[doi]
+        pdf_path = cache_path_for(doi, pdf_cache_dir)
+        refs_missing = doi in corpus.references and not corpus.references.get(doi)
+        if not pdf_path.exists():
+            # Tier C: build a stub and skip the reader.
+            summary = _build_base_summary(
+                doi=doi,
+                paper_metadata={
+                    "title": paper.title,
+                    "authors": paper.authors,
+                    "year": paper.year,
+                    "journal": paper.journal,
+                    "doi": paper.doi,
+                    "citation_count": paper.citation_count,
+                },
+                corpus_metrics=metrics,
+                corpus=corpus,
+                acquisition_source="",
+                acquisition_license="",
+            )
+            summary.tier = "C"
+            summary.source_pdf = ""
+            write_summary_to_kb(summary, kb_root, overwrite=overwrite)
+            return doi, summary
+
+        task = prepare_summary_task(
+            doi=doi,
+            pdf_path=pdf_path,
+            paper_metadata={
+                "title": paper.title,
+                "authors": paper.authors,
+                "year": paper.year,
+                "journal": paper.journal,
+                "doi": paper.doi,
+                "citation_count": paper.citation_count,
+            },
+            corpus_metrics=metrics,
+            corpus=corpus,
+            crossref_refs_missing=refs_missing,
+            kb_root=kb_root,
+        )
+        response_json = reader(task) or {}
+        summary = render_summary_from_response(
+            task,
+            response_json,
+            corpus_metrics=metrics,
+            corpus=corpus,
+        )
+        write_summary_to_kb(summary, kb_root, overwrite=overwrite)
+        return doi, summary
+
+    def _one_sdk(doi: str) -> tuple[str, PaperSummary]:
         paper = corpus.papers[doi]
         pdf_path = cache_path_for(doi, pdf_cache_dir)
         if not pdf_path.exists():
@@ -940,7 +1340,10 @@ def summarize_corpus(
         write_summary_to_kb(summary, kb_root, overwrite=overwrite)
         return doi, summary
 
-    if parallel <= 1:
+    _one = _one_reader if reader is not None else _one_sdk
+
+    # Reader mode is sequential because Claude Code sessions are single-threaded.
+    if reader is not None or parallel <= 1:
         for i, doi in enumerate(dois, 1):
             try:
                 _, summary = _one(doi)

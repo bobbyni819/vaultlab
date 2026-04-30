@@ -41,6 +41,22 @@ The lineage-narrative LLM call uses the same auth resolver as
 ``summarize.py`` (:func:`load_anthropic_api_key`). If no key is found
 we fall back to "structured tables only" — never raise — so dry-runs
 without keys still produce a fully-routed arc file.
+
+Two execution modes
+-------------------
+Like ``summarize.py``, this module exposes two parallel paths:
+
+1. **SDK path** (:func:`run_lit_arc` with no ``reader`` / ``narrator``
+   args, or :func:`_call_anthropic_arc`) — calls the Anthropic API
+   directly via an API key.
+2. **Claude-Code-callable path** (:func:`prepare_arc_task` +
+   :func:`render_arc_from_response`, plus ``run_lit_arc(reader=...,
+   narrator=...)``) — does NOT call any LLM. The slash command body
+   inside Claude Code reads PDFs / generates arc paragraphs in-session
+   and feeds the JSON back through the render functions.
+
+Use the Claude-Code-callable path from ``.claude/commands/lit-arc.md``
+so users without an Anthropic API key can still run the full pipeline.
 """
 
 from __future__ import annotations
@@ -69,6 +85,7 @@ from vaultlab.research.summarize import (
     DEFAULT_MODEL,
     PaperSummary,
     SummarizeAuthError,
+    SummaryReader,
     load_anthropic_api_key,
     summarize_corpus,
 )
@@ -80,8 +97,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "ArcNarrator",
+    "ArcTask",
     "LineageRunResult",
+    "arc_response_schema",
     "build_arc_prompt",
+    "prepare_arc_task",
+    "render_arc_from_response",
     "render_arc_markdown",
     "run_lit_arc",
 ]
@@ -454,6 +476,192 @@ def _call_anthropic_arc(
 
 
 # ---------------------------------------------------------------------------
+# Claude-Code-callable arc preparation + render
+# ---------------------------------------------------------------------------
+
+
+def arc_response_schema() -> dict[str, Any]:
+    """Return the JSON schema for the lineage-arc LLM response.
+
+    Mirrors the format described in :data:`_ARC_SYSTEM_PROMPT` and
+    :func:`build_arc_prompt`.
+    """
+    return {
+        "type": "object",
+        "required": ["history", "development", "sota"],
+        "properties": {
+            "history": {
+                "type": "string",
+                "description": (
+                    "3-6 sentence paragraph for the history bucket, "
+                    "with [[wikilinks]] using the provided slugs."
+                ),
+            },
+            "development": {
+                "type": "string",
+                "description": "3-6 sentence paragraph for the development bucket.",
+            },
+            "sota": {
+                "type": "string",
+                "description": "3-6 sentence paragraph for the state-of-the-art bucket.",
+            },
+        },
+    }
+
+
+@dataclass(frozen=True)
+class ArcTask:
+    """A prepared lineage-arc task ready for a Claude Code session to execute.
+
+    No LLM is called when this object is built. The slash command body
+    inside Claude Code reads ``summaries`` (already on disk under
+    ``Wiki/Summaries/<doi>.md``), generates the three narrative
+    paragraphs in-session, and feeds the response back through
+    :func:`render_arc_from_response`.
+
+    Attributes:
+        topic: The user-supplied topic (raw, not slugified).
+        date_str: ISO-format date for the arc filename.
+        summaries: Mapping of doi -> :class:`PaperSummary`.
+        output_path: Canonical destination for the arc markdown
+            (``Wiki/Concepts/<topic-slug>-lineage-<date>.md``).
+        method_relpath: Relative path used in frontmatter for the
+            method.md sidecar.
+        prompt: The full user-message prompt Claude should respond to.
+        system_prompt: The system message Claude should be given.
+        response_schema: JSON schema describing the expected response
+            shape.
+        top_og: Top OG-score papers (for provenance / re-emission).
+        top_co_citation: Top co-citation pairs.
+    """
+
+    topic: str
+    date_str: str
+    summaries: dict[str, PaperSummary]
+    output_path: Path
+    method_relpath: str
+    prompt: str
+    system_prompt: str
+    response_schema: dict[str, Any]
+    top_og: list[tuple[str, float]] = field(default_factory=list)
+    top_co_citation: list[tuple[str, str, int]] = field(default_factory=list)
+
+
+# Type alias for the Claude-Code-side arc narrator callback.
+ArcNarrator = Callable[["ArcTask"], dict[str, str]]
+
+
+def prepare_arc_task(
+    *,
+    topic: str,
+    corpus: Corpus,
+    summaries: dict[str, PaperSummary],
+    kb_root: Path,
+    date_str: str | None = None,
+) -> ArcTask:
+    """Prepare a lineage-arc task. Does NOT call any LLM.
+
+    Returns the structured task with prompt + expected response schema.
+    The Claude Code session reads the per-paper summaries, generates
+    the three narrative paragraphs, and feeds them back through
+    :func:`render_arc_from_response`.
+
+    For plain-Python callers with an Anthropic API key, the
+    :func:`run_lit_arc` orchestrator handles SDK calls automatically.
+
+    Args:
+        topic: The user-supplied topic (raw).
+        corpus: Built :class:`Corpus` with ``compute_metrics`` already
+            run.
+        summaries: Mapping of doi -> :class:`PaperSummary`.
+        kb_root: Vaultlab KB root.
+        date_str: Optional ISO date; defaults to today.
+
+    Returns:
+        An :class:`ArcTask` ready for the Claude Code narrator.
+    """
+    if date_str is None:
+        date_str = date.today().strftime("%Y-%m-%d")
+    metrics = corpus.metrics
+    top_og: list[tuple[str, float]] = (
+        sorted(metrics.og_score.items(), key=lambda kv: kv[1], reverse=True)[:10]
+        if metrics is not None
+        else []
+    )
+    top_co: list[tuple[str, str, int]] = (
+        list(metrics.co_citation_pairs[:10]) if metrics is not None else []
+    )
+    prompt = build_arc_prompt(
+        topic=topic,
+        summaries=summaries,
+        top_og=top_og,
+        top_co_citation=top_co,
+    )
+    output_path = ensure_parent(concept_path(Path(kb_root), topic, "lineage", date_str))
+    method_relpath = output_path.name + ".method.md"
+    return ArcTask(
+        topic=topic,
+        date_str=date_str,
+        summaries=dict(summaries),
+        output_path=output_path,
+        method_relpath=method_relpath,
+        prompt=prompt,
+        system_prompt=_ARC_SYSTEM_PROMPT,
+        response_schema=arc_response_schema(),
+        top_og=top_og,
+        top_co_citation=top_co,
+    )
+
+
+def render_arc_from_response(
+    task: ArcTask,
+    response_json: dict[str, Any],
+    corpus: Corpus,
+    *,
+    write: bool = True,
+) -> Path:
+    """Render the arc markdown from Claude's response and write to ``Wiki/Concepts``.
+
+    Args:
+        task: The :class:`ArcTask` produced by :func:`prepare_arc_task`.
+        response_json: Parsed JSON dict matching ``task.response_schema``.
+            Pass an empty dict (or ``None``-valued keys) to emit the
+            structured tables without prose.
+        corpus: Same :class:`Corpus` used in the prepare step. Re-passed
+            because tables are derived from the citation graph.
+        write: If True, write the rendered markdown to ``task.output_path``.
+            If False, the file is not written but the path is still
+            returned for use by the caller.
+
+    Returns:
+        Path to ``task.output_path`` (whether or not it was written).
+    """
+    narrative: dict[str, str] | None = None
+    if response_json:
+        cleaned = {
+            "history": str(response_json.get("history", "")).strip(),
+            "development": str(response_json.get("development", "")).strip(),
+            "sota": str(response_json.get("sota", "")).strip(),
+        }
+        if any(cleaned.values()):
+            narrative = cleaned
+    arc_md = render_arc_markdown(
+        topic=task.topic,
+        date_str=task.date_str,
+        summaries=task.summaries,
+        corpus=corpus,
+        method_relpath=task.method_relpath,
+        narrative=narrative,
+        narrative_skipped_reason=(
+            "" if narrative is not None else "no narrative provided"
+        ),
+    )
+    if write:
+        task.output_path.write_text(arc_md, encoding="utf-8")
+    return task.output_path
+
+
+# ---------------------------------------------------------------------------
 # Lineage-arc renderer (markdown body)
 # ---------------------------------------------------------------------------
 
@@ -648,6 +856,8 @@ def run_lit_arc(
     pdf_cache_dir: Path | None = None,
     apis: dict[str, str] | None = None,
     progress: _ProgressFn | None = None,
+    reader: SummaryReader | None = None,
+    narrator: ArcNarrator | None = None,
     # Test injection points (default to real implementations):
     _client: Any | None = None,
     _llm_summary: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
@@ -660,8 +870,24 @@ def run_lit_arc(
     """Run the full ``/lit-arc`` pipeline end-to-end.
 
     See module docstring for the canonical paths each phase writes.
-    Test injection points let unit tests stub every external call —
-    callers in production should leave them at their defaults.
+
+    Two execution modes:
+
+    * **SDK mode (default)** — phases 6 and 7 call the Anthropic API
+      via an API key for per-paper summaries and the lineage-arc
+      narration.
+    * **Claude-Code mode** (``reader`` and/or ``narrator`` given) —
+      phases 6 / 7 delegate to the supplied callbacks. The slash command
+      body inside Claude Code provides callbacks that read PDFs / write
+      paragraphs using the active Claude session, so no Anthropic API
+      key is required.
+
+    The two modes can be mixed (e.g. SDK summaries + Claude-Code
+    narrator) by passing only one of the callbacks.
+
+    Test injection points (``_client``, ``_llm_summary``, ``_llm_arc``,
+    etc.) take precedence over both modes; callers in production should
+    leave them at their defaults.
     """
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
@@ -770,14 +996,27 @@ def run_lit_arc(
         _emit(progress, "summarize_budget", kept=kept, skipped=skipped)
 
     summarize_fn = _summarize_corpus_fn if _summarize_corpus_fn is not None else summarize_corpus
-    summaries = summarize_fn(
-        corpus,
-        pdf_cache_dir=pdf_cache_dir,
-        kb_root=kb_root,
-        parallel=2,
-        overwrite=True,
-        _llm=_llm_summary,
-    )
+    if reader is not None:
+        # Claude-Code mode: reader replaces the SDK call. Pass it through
+        # to summarize_corpus, which routes Tier A papers through the
+        # reader and Tier C papers through the no-LLM stub.
+        summaries = summarize_fn(
+            corpus,
+            pdf_cache_dir=pdf_cache_dir,
+            kb_root=kb_root,
+            parallel=1,  # reader mode is sequential
+            overwrite=True,
+            reader=reader,
+        )
+    else:
+        summaries = summarize_fn(
+            corpus,
+            pdf_cache_dir=pdf_cache_dir,
+            kb_root=kb_root,
+            parallel=2,
+            overwrite=True,
+            _llm=_llm_summary,
+        )
 
     # Compute the per-doi summary path map.
     summary_paths: dict[str, Path] = {
@@ -820,6 +1059,29 @@ def run_lit_arc(
             narrative = _llm_arc(prompt=prompt, api_key="test", model=DEFAULT_MODEL)
         except Exception as exc:
             skipped_reason = f"injected LLM raised: {exc}"
+            narrative = None
+    elif narrator is not None:
+        # Claude-Code mode: hand the structured task to the slash-command
+        # narrator, which produces the JSON in-session (no API key).
+        arc_task = prepare_arc_task(
+            topic=topic,
+            corpus=corpus,
+            summaries=summaries,
+            kb_root=kb_root,
+            date_str=date_str,
+        )
+        try:
+            response = narrator(arc_task) or {}
+            cleaned = {
+                "history": str(response.get("history", "")).strip(),
+                "development": str(response.get("development", "")).strip(),
+                "sota": str(response.get("sota", "")).strip(),
+            }
+            narrative = cleaned if any(cleaned.values()) else None
+            if narrative is None:
+                skipped_reason = "narrator returned no narrative paragraphs"
+        except Exception as exc:
+            skipped_reason = f"narrator raised: {exc}"
             narrative = None
     else:
         try:

@@ -34,7 +34,15 @@ from vaultlab.research.corpus import Corpus, build_corpus_from_seeds, expand_cor
 from vaultlab.research.data_utils import detect_data_format
 from vaultlab.research.figures import extract_figures, write_figure_notes
 from vaultlab.research.graph_metrics import CorpusMetrics, compute_metrics
-from vaultlab.research.lineage import LineageRunResult, run_lit_arc
+from vaultlab.research.lineage import (
+    ArcNarrator,
+    ArcTask,
+    LineageRunResult,
+    arc_response_schema,
+    prepare_arc_task,
+    render_arc_from_response,
+    run_lit_arc,
+)
 
 if TYPE_CHECKING:
     from vaultlab.research.verification import (
@@ -47,9 +55,14 @@ from vaultlab.research.pdf import batch_extract, extract_and_save, extract_text
 from vaultlab.research.session import Finding, FindingStatus, ResearchSession
 from vaultlab.research.summarize import (
     PaperSummary,
+    SummarizationTask,
     SummarizeAuthError,
+    SummaryReader,
+    prepare_summary_task,
+    render_summary_from_response,
     summarize_corpus,
     summarize_paper,
+    summary_response_schema,
     write_summary_to_kb,
 )
 
@@ -58,6 +71,8 @@ logger = logging.getLogger(__name__)
 __all__ = [
     # PDF acquisition waterfall
     "AcquisitionResult",
+    "ArcNarrator",
+    "ArcTask",
     "CitationGraph",
     # Citation graph corpus / metrics (literature-search v2)
     "Corpus",
@@ -71,9 +86,12 @@ __all__ = [
     "Reference",
     "ResearchClient",
     "ResearchSession",
+    "SummarizationTask",
     "SummarizeAuthError",
+    "SummaryReader",
     "acquire_pdf",
     "acquire_pdfs_for_corpus",
+    "arc_response_schema",
     "batch_extract",
     "build_corpus_from_seeds",
     "compute_metrics",
@@ -90,10 +108,15 @@ __all__ = [
     "get_influential_count_via_s2",
     "get_paper",
     "get_references_via_crossref",
+    "prepare_arc_task",
+    "prepare_summary_task",
+    "render_arc_from_response",
+    "render_summary_from_response",
     "run_lit_arc",
     "search_papers",
     "summarize_corpus",
     "summarize_paper",
+    "summary_response_schema",
     "write_figure_notes",
     "write_summary_to_kb",
 ]

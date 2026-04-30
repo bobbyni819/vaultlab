@@ -32,13 +32,17 @@ from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.paper import Paper
 from vaultlab.research.summarize import (
     PaperSummary,
+    SummarizationTask,
     SummarizeAuthError,
     _extract_json,
     build_summary_prompt,
     load_anthropic_api_key,
+    prepare_summary_task,
+    render_summary_from_response,
     render_summary_markdown,
     summarize_corpus,
     summarize_paper,
+    summary_response_schema,
     write_summary_to_kb,
 )
 
@@ -524,3 +528,302 @@ def test_summarize_corpus_tier_c_stub_does_not_call_llm(tmp_path):
     # Files written for all three.
     for doi in summaries:
         assert summary_path(kb_root, doi).exists()
+
+
+# ---------------------------------------------------------------------------
+# Claude-Code-callable path: prepare_summary_task / render_summary_from_response
+# ---------------------------------------------------------------------------
+
+
+def test_summary_response_schema_is_valid_json_schema():
+    """Schema must be a dict with 'type' and 'properties' for a JSON object."""
+    schema = summary_response_schema()
+    assert schema["type"] == "object"
+    assert "properties" in schema
+    # Required keys match the prompt instructions.
+    assert set(schema["required"]) == {
+        "tldr",
+        "why_it_matters",
+        "methods_summary",
+        "key_findings",
+        "extracted_references",
+    }
+    # Each declared property has a 'type' annotation.
+    for key, spec in schema["properties"].items():
+        assert "type" in spec, f"missing type for property {key!r}"
+    # Schema round-trips through JSON.
+    assert json.loads(json.dumps(schema)) == schema
+
+
+def test_prepare_summary_task_makes_no_http_calls(tmp_path, monkeypatch):
+    """Sanity: prepare path must not import / call anthropic."""
+    # Force the anthropic SDK to blow up if loaded.
+    import sys
+
+    if "anthropic" in sys.modules:
+        # Replace with a guard module that raises on attribute access.
+        class _Guard:
+            def __getattr__(self, name):
+                raise AssertionError(
+                    f"prepare_summary_task touched anthropic.{name}"
+                )
+
+        monkeypatch.setitem(sys.modules, "anthropic", _Guard())
+
+    pdf = tmp_path / "p.pdf"
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+    corpus = _make_corpus_with_metrics()
+
+    task = prepare_summary_task(
+        doi="10.1126/science.1225829",
+        pdf_path=pdf,
+        paper_metadata={
+            "title": "Programmable RNA-Guided DNA Endonuclease",
+            "authors": ["Jinek M", "Doudna JA"],
+            "year": 2012,
+            "journal": "Science",
+        },
+        corpus_metrics=corpus.metrics,
+        corpus=corpus,
+        kb_root=tmp_path,
+        acquisition_source="unpaywall",
+        acquisition_license="cc-by",
+    )
+
+    assert isinstance(task, SummarizationTask)
+    assert task.doi == "10.1126/science.1225829"
+    assert task.pdf_path == pdf
+    assert task.tier == "A"
+    assert task.acquisition_source == "unpaywall"
+    assert task.output_path == summary_path(tmp_path, task.doi)
+    assert task.response_schema == summary_response_schema()
+    # Citation stats already populated.
+    assert task.citation_stats["og_score"] > 0
+    # Output path inside the KB tree.
+    assert task.output_path.parent.name == "Summaries"
+
+
+def test_prepare_summary_task_prompt_matches_sdk_prompt(tmp_path):
+    """The prompt produced by prepare_summary_task must be identical to the
+    prompt the SDK path would build for the same paper.
+
+    This is the contract that lets a Claude Code reader produce JSON
+    that ``render_summary_from_response`` happily consumes — both paths
+    are answering the SAME question.
+    """
+    pdf = tmp_path / "p.pdf"
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+    corpus = _make_corpus_with_metrics()
+
+    task = prepare_summary_task(
+        doi="10.1126/science.1225829",
+        pdf_path=pdf,
+        paper_metadata={
+            "title": "Seed A",
+            "authors": ["Jinek M"],
+            "year": 2012,
+            "journal": "Science",
+        },
+        corpus_metrics=corpus.metrics,
+        corpus=corpus,
+        kb_root=tmp_path,
+    )
+
+    # The same role_in_set is used in both paths.
+    expected_prompt = build_summary_prompt(
+        paper_metadata={
+            "title": "Seed A",
+            "authors": ["Jinek M"],
+            "year": 2012,
+            "journal": "Science",
+            "doi": "10.1126/science.1225829",
+        },
+        crossref_refs_missing=False,
+        role_hint=task.citation_stats["role_in_set"],
+    )
+    assert task.prompt == expected_prompt
+    # Critical schema cues are embedded in the prompt.
+    assert "tldr" in task.prompt
+    assert "key_findings" in task.prompt
+    assert "extracted_references" in task.prompt
+
+
+def test_render_summary_from_response_populates_paper_summary(tmp_path):
+    """A captured JSON response yields a fully-populated PaperSummary."""
+    pdf = tmp_path / "p.pdf"
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+    corpus = _make_corpus_with_metrics()
+    task = prepare_summary_task(
+        doi="10.1126/science.1225829",
+        pdf_path=pdf,
+        paper_metadata={
+            "title": "Seed A",
+            "authors": ["Jinek M", "Doudna JA"],
+            "year": 2012,
+            "journal": "Science",
+        },
+        corpus_metrics=corpus.metrics,
+        corpus=corpus,
+        kb_root=tmp_path,
+        acquisition_source="unpaywall",
+        acquisition_license="cc-by",
+    )
+
+    response = {
+        "tldr": "Sentence A. Sentence B. Sentence C.",
+        "why_it_matters": ["First", "Second"],
+        "methods_summary": "We did X with Y.",
+        "key_findings": ["alpha [p1]", "beta [p2]", "gamma [p3]"],
+        "extracted_references": [],
+    }
+    summary = render_summary_from_response(
+        task,
+        response,
+        corpus_metrics=corpus.metrics,
+        corpus=corpus,
+        tokens_input=1000,
+        tokens_output=500,
+    )
+
+    assert isinstance(summary, PaperSummary)
+    assert summary.tier == "A"
+    assert summary.tldr == "Sentence A. Sentence B. Sentence C."
+    assert summary.why_it_matters == ["First", "Second"]
+    assert summary.methods_summary == "We did X with Y."
+    assert summary.key_findings == ["alpha [p1]", "beta [p2]", "gamma [p3]"]
+    assert summary.extracted_references == []
+    # Citation stats survive the round-trip.
+    assert summary.og_score > 0
+    # Provenance applied.
+    assert summary.acquisition_source == "unpaywall"
+    assert summary.tokens_input == 1000
+    assert summary.tokens_output == 500
+    # Source pdf set.
+    assert summary.source_pdf == "Sources/Papers/10.1126_science.1225829.pdf"
+
+
+def test_render_summary_from_response_then_write(tmp_path):
+    """Full Claude-Code path: prepare -> render -> write_summary_to_kb."""
+    pdf = tmp_path / "p.pdf"
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+    corpus = _make_corpus_with_metrics()
+    task = prepare_summary_task(
+        doi="10.1126/science.1225829",
+        pdf_path=pdf,
+        paper_metadata={
+            "title": "Seed A",
+            "authors": ["Jinek M"],
+            "year": 2012,
+            "journal": "Science",
+        },
+        corpus_metrics=corpus.metrics,
+        corpus=corpus,
+        kb_root=tmp_path,
+    )
+    response = {
+        "tldr": "x. y. z.",
+        "why_it_matters": ["m"],
+        "methods_summary": "ms",
+        "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+        "extracted_references": [],
+    }
+    summary = render_summary_from_response(
+        task, response, corpus_metrics=corpus.metrics, corpus=corpus
+    )
+    written = write_summary_to_kb(summary, tmp_path, overwrite=True)
+    assert written == task.output_path
+    assert written.exists()
+    body = written.read_text(encoding="utf-8")
+    assert "x. y. z." in body
+    # Frontmatter parses.
+    assert body.startswith("---\n")
+    end = body.find("\n---\n", 4)
+    fm = yaml.safe_load(body[4:end])
+    assert fm["tier"] == "A"
+
+
+def test_summarize_corpus_with_reader(tmp_path):
+    """Reader mode: summarize_corpus invokes the reader callback per paper."""
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    from vaultlab.research.acquisition import cache_path_for
+
+    # Two PDFs => two reader calls + one Tier-C stub.
+    for doi in ("10.1126/science.1225829", "10.1038/nature17946"):
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    seen_tasks: list[SummarizationTask] = []
+
+    def _reader(task: SummarizationTask) -> dict[str, Any]:
+        seen_tasks.append(task)
+        return {
+            "tldr": f"[reader] {task.doi}. b. c.",
+            "why_it_matters": ["r1"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+    )
+
+    # Reader invoked exactly once per Tier-A paper.
+    assert len(seen_tasks) == 2
+    # All summaries written, including the Tier-C stub.
+    assert len(summaries) == 3
+    tiers = {doi: s.tier for doi, s in summaries.items()}
+    assert tiers["10.1126/science.1225829"] == "A"
+    assert tiers["10.1038/nature17946"] == "A"
+    assert tiers["10.1038/nature24644"] == "C"
+    # Tier-A summaries carry the reader's tldr.
+    assert "[reader]" in summaries["10.1126/science.1225829"].tldr
+    # Each task's output_path points at the canonical Wiki/Summaries location.
+    for task in seen_tasks:
+        assert task.output_path == summary_path(kb_root, task.doi)
+        assert task.output_path.exists()
+
+
+def test_summarize_corpus_reader_mode_does_not_use_anthropic(tmp_path, monkeypatch):
+    """Reader mode must not load the anthropic SDK at all."""
+    import sys
+
+    class _Guard:
+        def __getattr__(self, name):
+            raise AssertionError(
+                f"summarize_corpus(reader=...) touched anthropic.{name}"
+            )
+
+    monkeypatch.setitem(sys.modules, "anthropic", _Guard())
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+    from vaultlab.research.acquisition import cache_path_for
+
+    cache_path_for("10.1126/science.1225829", pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    def _reader(task):
+        return {
+            "tldr": "x. y. z.",
+            "why_it_matters": [],
+            "methods_summary": "",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+    )
+    assert len(summaries) == 3

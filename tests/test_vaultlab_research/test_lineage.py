@@ -42,8 +42,12 @@ from vaultlab.kb.paths import (
 )
 from vaultlab.research.acquisition import AcquisitionResult
 from vaultlab.research.lineage import (
+    ArcTask,
     LineageRunResult,
+    arc_response_schema,
     build_arc_prompt,
+    prepare_arc_task,
+    render_arc_from_response,
     render_arc_markdown,
     run_lit_arc,
 )
@@ -560,3 +564,198 @@ def test_run_lit_arc_arc_path_routes_via_kb_paths(tmp_path, monkeypatch):
     assert result.arc_path == expected
     # Slug used in filename.
     assert "galectin-4-sulfatide-lineage-2026-04-29.md" == expected.name
+
+
+# ---------------------------------------------------------------------------
+# Claude-Code-callable arc path: prepare_arc_task / render_arc_from_response
+# ---------------------------------------------------------------------------
+
+
+def test_arc_response_schema_is_valid_json_schema():
+    schema = arc_response_schema()
+    assert schema["type"] == "object"
+    assert set(schema["required"]) == {"history", "development", "sota"}
+    for key, spec in schema["properties"].items():
+        assert spec["type"] == "string", f"{key} should be string"
+    # Round-trip through JSON.
+    assert json.loads(json.dumps(schema)) == schema
+
+
+def test_prepare_arc_task_makes_no_http_calls(tmp_path, monkeypatch):
+    import sys
+
+    class _Guard:
+        def __getattr__(self, name):
+            raise AssertionError(
+                f"prepare_arc_task touched anthropic.{name}"
+            )
+
+    monkeypatch.setitem(sys.modules, "anthropic", _Guard())
+
+    summaries = _three_summaries()
+    corpus = _three_corpus()
+    task = prepare_arc_task(
+        topic="CRISPR base editing",
+        corpus=corpus,
+        summaries=summaries,
+        kb_root=tmp_path,
+        date_str="2026-04-29",
+    )
+    assert isinstance(task, ArcTask)
+    assert task.topic == "CRISPR base editing"
+    assert task.date_str == "2026-04-29"
+    assert task.summaries == summaries
+    assert task.response_schema == arc_response_schema()
+    # Prompt embeds the topic and bucketed wikilinks.
+    assert "CRISPR base editing" in task.prompt
+    assert "[[10.1126_science.1225829|Jinek 2012]]" in task.prompt
+    # Output path lands at the canonical concept location.
+    assert task.output_path == concept_path(
+        tmp_path, "CRISPR base editing", "lineage", "2026-04-29"
+    )
+    # method_relpath is consistent with the file we'd write.
+    assert task.method_relpath == task.output_path.name + ".method.md"
+
+
+def test_prepare_arc_task_prompt_matches_sdk_prompt(tmp_path):
+    """The arc prompt prepared for Claude Code must match what build_arc_prompt
+    produces directly with the same metrics inputs."""
+    summaries = _three_summaries()
+    corpus = _three_corpus()
+    metrics = corpus.metrics
+    top_og = sorted(metrics.og_score.items(), key=lambda kv: kv[1], reverse=True)[:10]
+    top_co = list(metrics.co_citation_pairs[:10])
+    task = prepare_arc_task(
+        topic="CRISPR base editing",
+        corpus=corpus,
+        summaries=summaries,
+        kb_root=tmp_path,
+        date_str="2026-04-29",
+    )
+    expected_prompt = build_arc_prompt(
+        topic="CRISPR base editing",
+        summaries=summaries,
+        top_og=top_og,
+        top_co_citation=top_co,
+    )
+    assert task.prompt == expected_prompt
+
+
+def test_render_arc_from_response_writes_arc_markdown(tmp_path):
+    summaries = _three_summaries()
+    corpus = _three_corpus()
+    task = prepare_arc_task(
+        topic="CRISPR base editing",
+        corpus=corpus,
+        summaries=summaries,
+        kb_root=tmp_path,
+        date_str="2026-04-29",
+    )
+    response = {
+        "history": "History prose [[10.1126_science.1225829|Jinek 2012]].",
+        "development": "Dev prose [[10.1038_nature17946|Komor 2016]].",
+        "sota": "SOTA prose [[10.1038_nature24644|Gaudelli 2017]].",
+    }
+    written = render_arc_from_response(task, response, corpus=corpus)
+    assert written == task.output_path
+    assert written.exists()
+    md = written.read_text(encoding="utf-8")
+    assert "# Lineage: CRISPR base editing" in md
+    assert "History prose" in md
+    assert "Dev prose" in md
+    assert "SOTA prose" in md
+    # No "skipped" note when narrative present.
+    assert "LLM narration was skipped" not in md
+    # Frontmatter parses.
+    assert md.startswith("---\n")
+    end = md.find("\n---\n", 4)
+    fm = yaml.safe_load(md[4:end])
+    assert fm["topic"] == "CRISPR base editing"
+
+
+def test_render_arc_from_response_empty_emits_skipped_note(tmp_path):
+    summaries = _three_summaries()
+    corpus = _three_corpus()
+    task = prepare_arc_task(
+        topic="CRISPR base editing",
+        corpus=corpus,
+        summaries=summaries,
+        kb_root=tmp_path,
+        date_str="2026-04-29",
+    )
+    written = render_arc_from_response(task, {}, corpus=corpus)
+    md = written.read_text(encoding="utf-8")
+    assert "LLM narration was skipped" in md
+    # Tables still emitted.
+    assert "## Top OG papers" in md
+
+
+def test_run_lit_arc_with_reader_and_narrator(tmp_path, monkeypatch):
+    """Claude-Code mode: reader + narrator replace SDK calls; no key required."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    seen_summary_tasks = []
+    seen_arc_tasks = []
+
+    def _reader(task):
+        seen_summary_tasks.append(task)
+        return {
+            "tldr": f"[reader] {task.doi}. b. c.",
+            "why_it_matters": ["r1"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    def _narrator(task):
+        seen_arc_tasks.append(task)
+        return {
+            "history": "[narrator] History prose.",
+            "development": "[narrator] Dev prose.",
+            "sota": "[narrator] SOTA prose.",
+        }
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_reader,
+        narrator=_narrator,
+        _today="2026-04-29",
+    )
+
+    # Reader called once per Tier-A paper (3 seeds get PDFs in _fake_acquire).
+    assert len(seen_summary_tasks) == 3
+    # Narrator called exactly once.
+    assert len(seen_arc_tasks) == 1
+    arc_task = seen_arc_tasks[0]
+    assert isinstance(arc_task, ArcTask)
+    assert arc_task.topic == "CRISPR base editing"
+
+    # Arc has the narrator's prose in it.
+    md = result.arc_path.read_text(encoding="utf-8")
+    assert "[narrator] History prose." in md
+    assert "[narrator] Dev prose." in md
+    assert "LLM narration was skipped" not in md
+
+    # Per-paper summaries carry the reader's tldr.
+    for doi, p in result.summary_paths.items():
+        assert p.exists()
+        if p.read_text(encoding="utf-8").startswith("---"):
+            # Tier-A files have [reader] markers; the Tier-C stub note instead.
+            body = p.read_text(encoding="utf-8")
+            assert "[reader]" in body or "Tier C stub" in body
+
+    # Provenance recorded.
+    json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
+    rec = json.loads(json_p.read_text(encoding="utf-8"))
+    assert rec["params"]["narration"] == "claude"

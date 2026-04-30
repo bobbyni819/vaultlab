@@ -29,7 +29,23 @@ Examples
 
 from __future__ import annotations
 
-from vaultlab.slides.deck import Deck, Slide
+from vaultlab.slides.deck import (
+    Deck,
+    DeckPlan,
+    DeckSlide,
+    Slide,
+    build_deck,
+    build_deck_from_lineage_result,
+)
 from vaultlab.slides.render import RenderError, render_pptx
 
-__all__ = ["Deck", "RenderError", "Slide", "render_pptx"]
+__all__ = [
+    "Deck",
+    "DeckPlan",
+    "DeckSlide",
+    "RenderError",
+    "Slide",
+    "build_deck",
+    "build_deck_from_lineage_result",
+    "render_pptx",
+]
