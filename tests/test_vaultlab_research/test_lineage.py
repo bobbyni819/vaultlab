@@ -1627,3 +1627,193 @@ def test_run_lit_arc_with_adversarial_picker_and_arc(tmp_path, monkeypatch):
     decisions = result.project_view_paths["decisions_log"].read_text(encoding="utf-8")
     assert "picker:adversarial" in decisions
     assert "arc:adversarial" in decisions
+
+
+# ---------------------------------------------------------------------------
+# LLM-driven binning integration (binner_callback)
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_arc_with_binner_callback_overrides_year_buckets(tmp_path, monkeypatch):
+    """binner_callback runs after compute_metrics and overrides the
+    deterministic year_buckets in place. Downstream summaries see the
+    LLM-driven bucket assignment.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    captured_buckets: dict[str, str] = {}
+
+    def _reader(task):
+        # Capture the year_bucket that summarize_corpus saw for this paper.
+        captured_buckets[task.doi] = task.citation_stats.get("year_bucket", "")
+        return {
+            "tldr": f"reader-{task.doi}.",
+            "why_it_matters": ["x"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    def _binner(task):
+        # Force EVERY paper into "history" so we can trivially assert
+        # the override took effect (deterministic quartiles would
+        # never put the 2017 paper in history).
+        return {
+            "assignments": [
+                {
+                    "doi": c.doi,
+                    "bucket": "history",
+                    "rationale": "test override",
+                }
+                for c in task.candidates
+            ]
+        }
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=3,
+        max_papers_to_summarize=3,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_reader,
+        binner_callback=_binner,
+        _today="2026-04-30",
+    )
+
+    # Every captured bucket should be "history" (the LLM override wins).
+    assert captured_buckets, "reader was never invoked"
+    for doi, bucket in captured_buckets.items():
+        assert bucket == "history", (
+            f"expected LLM-overridden 'history' bucket for {doi}, got {bucket}"
+        )
+    # The arc/result shape is unchanged.
+    assert isinstance(result, LineageRunResult)
+
+
+def test_run_lit_arc_without_binner_callback_keeps_deterministic(tmp_path, monkeypatch):
+    """Without a binner_callback, the deterministic year-quartile buckets stand."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    captured_buckets: dict[str, str] = {}
+
+    def _reader(task):
+        captured_buckets[task.doi] = task.citation_stats.get("year_bucket", "")
+        return {
+            "tldr": f"reader-{task.doi}.",
+            "why_it_matters": ["x"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    client = _FakeClient(_make_seeds())
+    run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=3,
+        max_papers_to_summarize=3,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_reader,
+        # NO binner_callback
+        _today="2026-04-30",
+    )
+    # 2012 paper -> history quartile, 2017 -> sota. Not all "history".
+    assert captured_buckets["10.1126/science.1225829"] == "history"
+    assert captured_buckets["10.1038/nature24644"] == "sota"
+
+
+def test_run_lit_arc_adversarial_picker_fallback_writes_decision_log(
+    tmp_path, monkeypatch
+):
+    """Bug #5: when the adversarial picker meeting yields no usable picks,
+    the mechanical fallback now ALSO records the decision in decisions-log.md
+    (or the per-run picker-decision.md fallback) so the audit trail isn't lost.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    def _reader(task):
+        return {
+            "tldr": f"reader-{task.doi}.",
+            "why_it_matters": ["x"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    # Crosstalk runner: synthesizer returns NO picks (empty list) so the
+    # orchestrator must fall back to the mechanical citation-graph picker.
+    def _crosstalk(meeting, roles):
+        outputs = []
+        agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
+        for r in roles:
+            if r.id == "synthesizer":
+                if "BEST papers" in agenda_text:
+                    payload = {"picks": []}  # empty -> triggers fallback
+                else:
+                    payload = {
+                        "history": "h.",
+                        "development": "d.",
+                        "sota": "s.",
+                    }
+                outputs.append({"output": json.dumps(payload)})
+            else:
+                outputs.append({"output": f"[{r.id}]"})
+        return outputs
+
+    run_dir = tmp_path / "_runs" / "test-adversarial-fallback"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=3,
+        max_papers_to_summarize=2,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_reader,
+        picker_mode="adversarial",
+        crosstalk_runner=_crosstalk,
+        crosstalk_n_rounds=2,
+        run_dir=run_dir,
+        _today="2026-04-30",
+    )
+
+    # The audit trail should have landed somewhere — either in the
+    # canonical project decisions-log.md OR in the per-run fallback.
+    decisions_log = result.project_view_paths.get("decisions_log")
+    fallback_file = run_dir / "picker-decision.md"
+
+    found_audit = False
+    audit_text = ""
+    if decisions_log is not None and decisions_log.exists():
+        audit_text = decisions_log.read_text(encoding="utf-8")
+        if "adversarial picker fallback" in audit_text:
+            found_audit = True
+    if not found_audit and fallback_file.exists():
+        audit_text = fallback_file.read_text(encoding="utf-8")
+        if "adversarial picker fallback" in audit_text:
+            found_audit = True
+
+    assert found_audit, (
+        "expected 'adversarial picker fallback' in decision audit trail; "
+        f"decisions_log={decisions_log}, fallback={fallback_file}"
+    )

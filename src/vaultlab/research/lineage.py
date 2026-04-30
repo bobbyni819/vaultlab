@@ -42,6 +42,21 @@ The lineage-narrative LLM call uses the same auth resolver as
 we fall back to "structured tables only" — never raise — so dry-runs
 without keys still produce a fully-routed arc file.
 
+LLM-driven binning (recommended)
+--------------------------------
+After :func:`compute_metrics` runs, the deterministic year-quartile
+``year_buckets`` can leave the HISTORY bucket EMPTY on corpora where
+every paper is recent (Bobby's L4 CODEX bug, 2026-04-30). Pass
+``binner_callback`` to ``run_lit_arc`` and the orchestrator routes the
+corpus through :func:`vaultlab.research.binning.assign_buckets_with_llm`
+between phases 4 and 6 — the LLM reads each abstract, decides whether
+the paper is HISTORY / DEVELOPMENT / SOTA *for the topic's lineage*,
+and the resulting buckets OVERRIDE
+``corpus.metrics.year_buckets`` (mutated in place) so summaries, arc
+narration, and slides all see the LLM-driven assignment. Without a
+callback, the deterministic year-quartile buckets are kept as the
+fallback path.
+
 Two execution modes
 -------------------
 Like ``summarize.py``, this module exposes two parallel paths:
@@ -85,11 +100,17 @@ from vaultlab.kb.paths import (
 )
 from vaultlab.provenance import ProvenanceRecord, write_receipts
 from vaultlab.research.acquisition import acquire_pdfs_for_corpus
+from vaultlab.research.binning import (
+    BinningCallback,
+    BinningTask,
+    assign_buckets_with_llm,
+)
 from vaultlab.research.corpus import build_corpus_from_seeds
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.picker import (
     PickerCallback,
     pick_top_n_content_aware,
+    write_picker_decision,
 )
 from vaultlab.research.summarize import (
     DEFAULT_MODEL,
@@ -1407,6 +1428,8 @@ def run_lit_arc(
     reader: SummaryReader | None = None,
     narrator: ArcNarrator | None = None,
     picker_callback: PickerCallback | None = None,
+    binner_callback: BinningCallback | None = None,
+    binner_max_candidates: int = 200,
     picker_coarse_n: int = 30,
     picker_mode: str = "fast",
     arc_mode: str = "fast",
@@ -1554,6 +1577,36 @@ def run_lit_arc(
         n_papers=corpus.n_papers,
         n_edges=corpus.n_edges,
     )
+
+    # ------------------------------------------------------------------
+    # Phase 4b: LLM-driven year-bucket assignment (recommended)
+    # ------------------------------------------------------------------
+    # Replace the deterministic year-quartile buckets with LLM-driven
+    # conceptual bucketing when a binner_callback is supplied. The LLM
+    # reads each paper's abstract and decides history/development/sota
+    # FOR THIS TOPIC — fixing the empty-history-bin failure mode that
+    # year quartiles produced on recent corpora (Bobby's L4 CODEX
+    # 2026-04-30 complaint). Without a callback, year quartiles stand.
+    if binner_callback is not None and corpus.metrics is not None:
+        _emit(progress, "phase", "binning", n_papers=corpus.n_papers)
+        binning_result = assign_buckets_with_llm(
+            corpus,
+            topic,
+            binner_callback=binner_callback,
+            max_candidates=binner_max_candidates,
+            fallback_to_deterministic=True,
+        )
+        # OVERRIDE corpus.metrics.year_buckets in place so all downstream
+        # consumers (summarize_corpus, prepare_arc_task, slides, etc.)
+        # see the LLM's conceptual buckets.
+        corpus.metrics.year_buckets.update(binning_result.bucket_by_doi)
+        _emit(
+            progress,
+            "binning",
+            history=binning_result.coverage_summary.get("history", 0),
+            development=binning_result.coverage_summary.get("development", 0),
+            sota=binning_result.coverage_summary.get("sota", 0),
+        )
 
     # ------------------------------------------------------------------
     # Phase 5: PDF acquisition (waterfall)
@@ -1716,6 +1769,39 @@ def run_lit_arc(
                 picker_method = (
                     "citation-graph (adversarial picker fallback)"
                 )
+                # Bug #5: when adversarial synth output is unusable and we
+                # fall through to the mechanical picker, the audit trail
+                # would otherwise be empty. Write a decision-log entry with
+                # the mechanical picks + a synthetic rationale so the run
+                # is still traceable.
+                try:
+                    from vaultlab.research.picker import PickerTask
+                    fallback_task = PickerTask(
+                        topic=topic,
+                        candidates=candidates,
+                        target_n=resolved_max_papers,
+                        prompt="(adversarial picker fallback)",
+                        system_prompt="(adversarial picker fallback)",
+                        response_schema={},
+                    )
+                    fallback_rationales = {
+                        d: "adversarial picker fallback after empty/invalid synthesizer output"
+                        for d in keep_list
+                    }
+                    write_picker_decision(
+                        kb_root=Path(kb_root),
+                        project=project,
+                        topic=topic,
+                        task=fallback_task,
+                        picks=keep_list,
+                        rationales=fallback_rationales,
+                        method=picker_method,
+                        fallback_dir=run_dir,
+                    )
+                except Exception:  # pragma: no cover — never break the run
+                    logger.exception(
+                        "write_picker_decision (adversarial fallback) failed"
+                    )
         elif picker_callback is not None:
             keep_list = pick_top_n_content_aware(
                 topic,

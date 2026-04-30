@@ -22,6 +22,16 @@ from vaultlab.research.acquisition import (
     acquire_pdf,
     acquire_pdfs_for_corpus,
 )
+from vaultlab.research.binning import (
+    BinningCallback,
+    BinningCandidate,
+    BinningResult,
+    BinningTask,
+    assign_buckets_with_llm,
+    binning_response_schema,
+    prepare_binning_task,
+    render_binning_from_response,
+)
 from vaultlab.research.citation_graph import CitationGraph
 from vaultlab.research.citation_lookup import (
     RateLimitError,
@@ -96,6 +106,10 @@ __all__ = [
     "AcquisitionResult",
     "ArcNarrator",
     "ArcTask",
+    "BinningCallback",
+    "BinningCandidate",
+    "BinningResult",
+    "BinningTask",
     "CandidatePaper",
     "CitationGraph",
     # Citation graph corpus / metrics (literature-search v2)
@@ -125,7 +139,9 @@ __all__ = [
     "acquire_pdf",
     "acquire_pdfs_for_corpus",
     "arc_response_schema",
+    "assign_buckets_with_llm",
     "batch_extract",
+    "binning_response_schema",
     "build_corpus_from_seeds",
     "build_section_prompt",
     "compute_metrics",
@@ -145,10 +161,12 @@ __all__ = [
     "pick_top_n_content_aware",
     "picker_response_schema",
     "prepare_arc_task",
+    "prepare_binning_task",
     "prepare_picker_task",
     "prepare_report_task",
     "prepare_summary_task",
     "render_arc_from_response",
+    "render_binning_from_response",
     "render_picks_from_response",
     "render_section_from_response",
     "render_summary_from_response",

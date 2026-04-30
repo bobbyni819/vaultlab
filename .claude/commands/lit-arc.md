@@ -86,6 +86,63 @@ def claude_code_picker(task: PickerTask) -> dict:
     ...
 ```
 
+### Step 2b — Define the LLM-driven binning callback (YOU read every abstract)
+
+Between corpus build and per-paper summarization, the orchestrator
+asks YOU to assign each corpus paper to **history / development / sota**
+based on its conceptual role in THIS topic's lineage — not just its
+publication year. This fixes the "empty history bucket" failure mode
+where every paper in the corpus is from 2018+ and the deterministic
+year-quartile bucketing produces zero foundational papers (Bobby's
+L4 CODEX bug, 2026-04-30).
+
+The orchestrator builds a `BinningTask` containing every corpus paper's
+title, year, abstract, og_score, forward_influence, and the deterministic
+year-quartile bucket as a hint. Your job per call:
+
+1. Inspect `task.candidates` — list of `BinningCandidate` (doi, title,
+   year, abstract, og_score, forward_influence, deterministic_bucket).
+2. Inspect `task.prompt` and `task.system` (already include the per-bucket
+   criteria and the "year is a hint, not a rule" guidance).
+3. Return JSON matching `task.response_schema`:
+
+```
+{
+  "assignments": [
+    {"doi": "10.1016/...", "bucket": "history", "rationale": "Introduces CODEX (foundational)..."},
+    {"doi": "10.1038/...", "bucket": "development", "rationale": "Application of CODEX..."},
+    {"doi": "10.1016/...", "bucket": "sota", "rationale": "Most recent meaningful advance..."},
+    ...
+  ]
+}
+```
+
+Bucket definitions (also in `task.system`):
+- `history`: foundational method, precursor concept, paradigm-defining
+  work for the topic — REGARDLESS of publication year.
+- `development`: intermediate refinement, scaling, methodological
+  adaptation, mid-arc work.
+- `sota`: current frontier — most recent meaningful advance, even if
+  not the most-recent paper by date. Incremental applications of older
+  methods are DEVELOPMENT, not SOTA.
+
+Aim for non-empty bins where the corpus reasonably supports it. If the
+deterministic system left HISTORY empty but a foundational paper is
+present, MOVE that paper to HISTORY.
+
+```python
+def claude_code_binner(task: BinningTask) -> dict:
+    # YOU implement this at runtime by reading abstracts and deciding
+    # the conceptual bucket per topic. Deterministic fallback runs if
+    # you raise / return non-dict.
+    ...
+```
+
+When `binner_callback` is None, the deterministic year-quartile buckets
+stand (the previous behaviour, preserved for backwards compat). The
+LLM-driven path is **recommended** — pass `binner_callback=claude_code_binner`
+to `run_lit_arc` to avoid empty-bucket failures on recent corpora.
+
 ### Step 3 — Define the per-paper reader (YOU read the PDF)
 
 When `run_lit_arc` reaches phase 6, it builds a `SummarizationTask` for each
@@ -196,6 +253,7 @@ result = run_lit_arc(
     
     # Single-shot LLM callbacks (always required)
     picker_callback=claude_code_picker,
+    binner_callback=claude_code_binner,   # recommended — fixes empty-bucket
     reader=claude_code_reader,
     narrator=claude_code_narrator,
     
