@@ -300,3 +300,190 @@ def test_backfill_only_dois_filter():
     assert visited == ["10.1/p1"]
     assert corpus.papers["10.1/p1"].authors == ["Test Author"]
     assert corpus.papers["10.1/p2"].authors == []  # filtered out
+
+
+# ---------------------------------------------------------------------------
+# Regression: chain-based author backfill (2026-04-30 — gap fix follow-up)
+# ---------------------------------------------------------------------------
+
+
+def test_backfill_chain_falls_through_to_openalex():
+    """When CrossRef + S2 both return empty, OpenAlex (last in our default
+    order would be first) should still close the gap — the chain wins on
+    the first successful fetcher."""
+    from vaultlab.research.corpus import backfill_authors_via_chain
+
+    sparse = Paper(
+        title="Sparse",
+        doi="10.1/sparse",
+        year=2020,
+        source_api="crossref-ref",
+        authors=[],
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/sparse"] = sparse
+
+    visited: list[str] = []
+
+    def _empty(name: str):
+        def _fetch(doi: str) -> list[str] | None:
+            visited.append(name)
+            return None
+
+        return _fetch
+
+    def _openalex(doi: str) -> list[str] | None:
+        visited.append("openalex")
+        return ["Smith J", "Doe A"]
+
+    chain = [
+        ("crossref-by-doi", _empty("crossref")),
+        ("semantic_scholar", _empty("s2")),
+        ("openalex", _openalex),
+    ]
+
+    result = backfill_authors_via_chain(corpus, chain=chain)
+
+    assert visited == ["crossref", "s2", "openalex"]
+    assert corpus.papers["10.1/sparse"].authors == ["Smith J", "Doe A"]
+    assert result == {
+        "10.1/sparse": {"authors": ["Smith J", "Doe A"], "source": "openalex"}
+    }
+
+
+def test_backfill_chain_first_hit_short_circuits():
+    """Once a fetcher returns authors, later fetchers in the chain are
+    skipped for that DOI — no wasted API calls."""
+    from vaultlab.research.corpus import backfill_authors_via_chain
+
+    sparse = Paper(
+        title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[]
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/sparse"] = sparse
+
+    visited: list[str] = []
+
+    def _openalex(doi: str) -> list[str] | None:
+        visited.append("openalex")
+        return ["Smith J"]
+
+    def _crossref(doi: str) -> list[str] | None:
+        visited.append("crossref")
+        return ["Should Not Be Called"]
+
+    chain = [
+        ("openalex", _openalex),
+        ("crossref-by-doi", _crossref),
+    ]
+    backfill_authors_via_chain(corpus, chain=chain)
+
+    assert visited == ["openalex"]
+    assert corpus.papers["10.1/sparse"].authors == ["Smith J"]
+
+
+def test_backfill_chain_handles_all_sources_failing():
+    """If every fetcher returns ``None`` / empty, the paper stays empty
+    and the result is empty — no fabricated data."""
+    from vaultlab.research.corpus import (
+        backfill_authors_via_chain,
+        has_anonymous_author,
+    )
+
+    p = Paper(
+        title="Truly anon", doi="10.1/anon", year=2020, source_api="ref", authors=[]
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/anon"] = p
+
+    chain = [
+        ("openalex", lambda d: None),
+        ("crossref-by-doi", lambda d: None),
+        ("semantic_scholar", lambda d: []),  # empty list also counts as miss
+        ("biorxiv", lambda d: None),
+    ]
+    result = backfill_authors_via_chain(corpus, chain=chain)
+
+    assert result == {}
+    assert corpus.papers["10.1/anon"].authors == []
+    assert has_anonymous_author(corpus.papers["10.1/anon"].authors)
+
+
+def test_backfill_chain_swallows_fetcher_exceptions():
+    """If a fetcher raises (network, parse, etc.), the chain should keep
+    going to the next source rather than crash the whole backfill."""
+    from vaultlab.research.corpus import backfill_authors_via_chain
+
+    p = Paper(
+        title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[]
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/sparse"] = p
+
+    def _boom(doi: str) -> list[str] | None:
+        raise RuntimeError("network down")
+
+    def _ok(doi: str) -> list[str] | None:
+        return ["Recovered Author"]
+
+    chain = [("openalex", _boom), ("crossref-by-doi", _ok)]
+    result = backfill_authors_via_chain(corpus, chain=chain)
+
+    assert result["10.1/sparse"]["source"] == "crossref-by-doi"
+    assert corpus.papers["10.1/sparse"].authors == ["Recovered Author"]
+
+
+def test_no_anonymous_in_summary_after_backfill():
+    """End-to-end: feed a Paper with empty authors and a real-ish DOI,
+    run the chain, assert the resulting authors are populated and
+    ``has_anonymous_author`` flips to False."""
+    from vaultlab.research.corpus import (
+        backfill_authors_via_chain,
+        has_anonymous_author,
+    )
+
+    p = Paper(
+        title="Some 2018 cited paper",
+        doi="10.1038/realish-doi",
+        year=2018,
+        source_api="crossref-ref",
+        authors=[],
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1038/realish-doi"] = p
+
+    assert has_anonymous_author(corpus.papers["10.1038/realish-doi"].authors)
+
+    chain = [
+        ("openalex", lambda d: ["Binnewies M", "Roberts E"] if "realish" in d else None),
+    ]
+    backfill_authors_via_chain(corpus, chain=chain)
+
+    assert not has_anonymous_author(corpus.papers["10.1038/realish-doi"].authors)
+    assert corpus.papers["10.1038/realish-doi"].authors == ["Binnewies M", "Roberts E"]
+
+
+def test_backfill_chain_skips_papers_with_existing_authors():
+    """Don't overwrite papers that already have authors."""
+    from vaultlab.research.corpus import backfill_authors_via_chain
+
+    p = Paper(
+        title="Already known",
+        doi="10.1/known",
+        year=2020,
+        source_api="ref",
+        authors=["Original Author"],
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/known"] = p
+
+    visited: list[str] = []
+
+    def _track(doi: str) -> list[str] | None:
+        visited.append(doi)
+        return ["Should Not Be Used"]
+
+    backfill_authors_via_chain(corpus, chain=[("openalex", _track)])
+
+    assert visited == []  # never even queried
+    assert corpus.papers["10.1/known"].authors == ["Original Author"]

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from vaultlab.research.citation_lookup import (
     Reference,
@@ -252,11 +252,37 @@ def expand_corpus(
 
 # ---------------------------------------------------------------------------
 # Anonymous-author backfill (Bug 5 — evening 3, 2026-04-30)
+#
+# Originally this only hit Semantic Scholar — but S2 rate-limits aggressively
+# (HTTP 429 on ~30% of requests in field tests) and CrossRef's reference-array
+# entries don't carry full author lists. Bobby's framing: "with a DOI we should
+# always be able to get full information." The chain below walks multiple
+# sources in priority order; the first one that returns authors wins.
 # ---------------------------------------------------------------------------
 
 
-# Optional injectable for tests — by default we hit Semantic Scholar.
+# Optional injectable for tests — each fetcher takes a DOI and returns
+# either a list of author strings or None (not found / API failure).
 S2AuthorFetcher = Callable[[str], "list[str] | None"]
+AuthorFetcher = Callable[[str], "list[str] | None"]
+
+
+def _default_openalex_authors(doi: str) -> list[str] | None:
+    """Look up authors on OpenAlex by DOI. ``None`` on failure / missing.
+
+    OpenAlex covers ~250M scholarly works (more than CrossRef's ~140M)
+    and very rarely rate-limits, so it sits at the front of the chain.
+    """
+    if not doi:
+        return None
+    try:
+        from vaultlab.research.sources.openalex import OpenAlexClient
+    except ImportError:  # pragma: no cover — defensive
+        return None
+    try:
+        return OpenAlexClient().get_authors_by_doi(doi.strip())
+    except Exception:  # pragma: no cover — never fail the run
+        return None
 
 
 def _default_s2_authors(doi: str) -> list[str] | None:
@@ -294,31 +320,139 @@ def _default_s2_authors(doi: str) -> list[str] | None:
     return out or None
 
 
+def _default_crossref_authors(doi: str) -> list[str] | None:
+    """Look up authors via CrossRef's per-work endpoint.
+
+    Distinct from the reference-array parsing in
+    :func:`vaultlab.research.citation_lookup.get_references_via_crossref` —
+    that path only sees the single-string ``author`` field CrossRef
+    stuffs into reference entries. Calling ``/works/<doi>`` returns the
+    full author array.
+    """
+    if not doi:
+        return None
+    try:
+        from vaultlab.research.sources.crossref import CrossRefClient
+    except ImportError:  # pragma: no cover — defensive
+        return None
+    try:
+        return CrossRefClient().get_authors_by_doi(doi.strip())
+    except Exception:  # pragma: no cover — never fail the run
+        return None
+
+
+def _default_biorxiv_authors(doi: str) -> list[str] | None:
+    """Look up authors on bioRxiv (only useful for bioRxiv preprint DOIs)."""
+    if not doi or not doi.startswith("10.1101/"):
+        # bioRxiv DOIs all live under the 10.1101/ prefix; skip otherwise
+        # to save a network round-trip.
+        return None
+    try:
+        from vaultlab.research.sources.biorxiv import BioRxivClient
+    except ImportError:  # pragma: no cover — defensive
+        return None
+    try:
+        paper = BioRxivClient().get_paper(doi.strip())
+    except Exception:  # pragma: no cover — never fail the run
+        return None
+    if paper is None or not paper.authors:
+        return None
+    return list(paper.authors)
+
+
+def _default_author_chain() -> list[tuple[str, AuthorFetcher]]:
+    """Default fallback order for author backfill.
+
+    OpenAlex first because it has the broadest coverage and rarely rate-
+    limits. CrossRef per-DOI second because it's effectively unlimited
+    via the polite pool. S2 third because it has the highest-quality
+    canonical names but rate-limits aggressively. bioRxiv last and only
+    for ``10.1101/`` DOIs.
+    """
+    return [
+        ("openalex", _default_openalex_authors),
+        ("crossref-by-doi", _default_crossref_authors),
+        ("semantic_scholar", _default_s2_authors),
+        ("biorxiv", _default_biorxiv_authors),
+    ]
+
+
+def backfill_authors_via_chain(
+    corpus: Corpus,
+    *,
+    chain: list[tuple[str, AuthorFetcher]] | None = None,
+    only_dois: set[str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Fill empty author lists on ``corpus.papers`` by walking a fallback chain.
+
+    Walks each paper with an empty ``authors`` list and calls each
+    fetcher in ``chain`` in order. The first fetcher that returns a
+    non-empty author list wins; remaining fetchers are skipped for that
+    DOI. Updates the corpus in place.
+
+    Args:
+        corpus: The corpus to backfill (mutated in place).
+        chain: Sequence of ``(source_name, fetcher)`` pairs. Defaults to
+            ``[(openalex), (crossref-by-doi), (semantic_scholar), (biorxiv)]``.
+            Tests inject fakes here.
+        only_dois: If given, restrict backfill to these DOIs. Useful
+            when callers know which papers are about to be rendered.
+
+    Returns:
+        Mapping ``doi -> {"authors": [...], "source": "<name>"}`` for
+        every paper actually updated. Empty when no papers needed
+        backfill or every fetcher failed.
+    """
+    walk = chain if chain is not None else _default_author_chain()
+    out: dict[str, dict[str, Any]] = {}
+    for doi, paper in corpus.papers.items():
+        if only_dois is not None and doi not in only_dois:
+            continue
+        if paper.authors:
+            continue
+        for source_name, fetcher in walk:
+            try:
+                authors = fetcher(doi)
+            except Exception as exc:  # never let one source crash the run
+                logger.warning(
+                    "Backfill source %s raised for %s: %s", source_name, doi, exc
+                )
+                continue
+            if not authors:
+                continue
+            paper.authors = list(authors)
+            out[doi] = {"authors": list(authors), "source": source_name}
+            logger.info(
+                "Backfilled %d authors for %s via %s",
+                len(authors),
+                doi,
+                source_name,
+            )
+            break
+    return out
+
+
 def backfill_authors_via_s2(
     corpus: Corpus,
     *,
     s2_fetcher: S2AuthorFetcher | None = None,
     only_dois: set[str] | None = None,
 ) -> dict[str, list[str]]:
-    """Fill empty author lists on ``corpus.papers`` using Semantic Scholar.
+    """S2-only author backfill (kept for backwards compatibility).
 
-    Bug 5 fix: CrossRef-walked references frequently have empty / sparse
-    author metadata, so the resulting Tier-C stubs render as ``Anon ND`` in
-    arc + report wikilinks. This helper walks ``corpus.papers``, finds
-    every paper with an empty ``authors`` list, and asks Semantic Scholar
-    by DOI to fill it. Updates the corpus in place.
+    .. deprecated::
+        Prefer :func:`backfill_authors_via_chain`, which falls through
+        OpenAlex → CrossRef-by-DOI → S2 → bioRxiv. This function still
+        works but only ever queries Semantic Scholar — when S2 returns
+        an HTTP 429 it gives up rather than trying another source.
 
     Args:
         corpus: The corpus to backfill (mutated in place).
         s2_fetcher: Override for the S2 author lookup (used in tests).
-            Default queries the live S2 API.
         only_dois: If given, restricts the backfill to these DOIs.
-            Useful when callers know which papers are about to be
-            rendered in arc/report and don't want the full graph traffic.
 
     Returns:
         Mapping ``doi -> authors`` for every paper actually updated.
-        Empty when no papers needed backfill or every lookup failed.
     """
     fetcher = s2_fetcher or _default_s2_authors
     out: dict[str, list[str]] = {}
@@ -348,9 +482,11 @@ def has_anonymous_author(paper_authors: list[str] | None) -> bool:
 
 
 __all__ = [
+    "AuthorFetcher",
     "Corpus",
     "ReferenceFetcher",
     "S2AuthorFetcher",
+    "backfill_authors_via_chain",
     "backfill_authors_via_s2",
     "build_corpus_from_seeds",
     "expand_corpus",

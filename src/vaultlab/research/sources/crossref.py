@@ -129,18 +129,56 @@ class CrossRefClient:
             return None
 
     def _parse_authors(self, authors: list[dict]) -> list[str]:
-        """Parse CrossRef author objects into 'Last First' strings."""
+        """Parse CrossRef author objects into 'Last First' strings.
+
+        CrossRef populates several different shapes:
+
+        * Personal author: ``{"family": "Smith", "given": "Jane"}`` →
+          ``"Smith J"``
+        * Family-only or given-only: handled by falling through.
+        * Consortium / group author: ``{"name": "ENCODE Project Consortium"}``
+          (CrossRef's group-author shape). We pass the name through as-is.
+        * Literal author (older/imported records): ``{"literal": "Some Group"}``.
+
+        Skipping these last two was the historical gap that caused empty
+        ``authors`` lists in summaries when the only author was a
+        consortium or imported as a literal string.
+        """
         result = []
         for a in authors:
-            family = a.get("family", "")
-            given = a.get("given", "")
+            if not isinstance(a, dict):
+                continue
+            family = a.get("family", "") or ""
+            given = a.get("given", "") or ""
             if family and given:
                 result.append(f"{family} {given[0]}")
             elif family:
                 result.append(family)
             elif given:
                 result.append(given)
+            elif a.get("name"):
+                # Consortium / group author.
+                result.append(a["name"])
+            elif a.get("literal"):
+                # Older CrossRef records (often imported) use a literal string.
+                result.append(a["literal"])
         return result
+
+    def get_authors_by_doi(self, doi: str) -> list[str] | None:
+        """Look up author list for ``doi`` via the per-work CrossRef endpoint.
+
+        Distinct from the reference-list parsing in
+        :mod:`vaultlab.research.citation_lookup` (which only sees the
+        single ``author`` string CrossRef stuffs into reference entries).
+        Calling ``/works/<doi>`` returns the full author array — the
+        same data CrossRef serves to its own search results.
+
+        Returns ``None`` on failure / unknown DOI / empty author list.
+        """
+        paper = self.resolve_doi(doi)
+        if paper is None:
+            return None
+        return paper.authors or None
 
     def _parse_year(self, date_obj: dict | None) -> int:
         """Extract year from a CrossRef date object."""
