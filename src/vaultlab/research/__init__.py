@@ -34,6 +34,7 @@ from vaultlab.research.corpus import Corpus, build_corpus_from_seeds, expand_cor
 from vaultlab.research.data_utils import detect_data_format
 from vaultlab.research.figures import extract_figures, write_figure_notes
 from vaultlab.research.graph_metrics import CorpusMetrics, compute_metrics
+from vaultlab.research.lineage import LineageRunResult, run_lit_arc
 
 if TYPE_CHECKING:
     from vaultlab.research.verification import (
@@ -63,6 +64,7 @@ __all__ = [
     "CorpusMetrics",
     "Finding",
     "FindingStatus",
+    "LineageRunResult",
     "Paper",
     "PaperSummary",
     "RateLimitError",
@@ -88,6 +90,7 @@ __all__ = [
     "get_influential_count_via_s2",
     "get_paper",
     "get_references_via_crossref",
+    "run_lit_arc",
     "search_papers",
     "summarize_corpus",
     "summarize_paper",
