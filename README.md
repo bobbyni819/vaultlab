@@ -17,11 +17,11 @@
 
 ## About
 
-I'm Bobby Ni, a PhD student in Biomedical Engineering at Duke. I do wet-lab spatial omics and computational work.
+I'm Bobby Ni, a PhD student in Biomedical Engineering at Duke. I do wet-lab spatial omics and a lot of computational work.
 
-Research at scale is fragmented: meetings in Outlook, papers in Drive, notes on a lab NAS, archives on University OneDrive, updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
+Research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers piling up in Drive; notes on a lab NAS; archives on University OneDrive; updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
 
-VaultLab reads across those ecosystems and centralizes them in a knowledge base inside Claude Code. The KB is plain markdown — runs on whatever storage you already have.
+VaultLab puts all of it into an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have.
 
 I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I've found more value operating inside Claude Code. Watching others ship — [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist), other research-specific agent systems — was the push to ship mine and join the open-source wave. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
 
@@ -33,7 +33,7 @@ I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I
 
 ---
 
-## What VaultLab actually does
+## Centralized memory
 
 Inside Claude Code, VaultLab reads your whole research ecosystem and writes back into it. Five context sources, one place the LLM looks:
 
@@ -41,7 +41,7 @@ Inside Claude Code, VaultLab reads your whole research ecosystem and writes back
 |---|---|
 | **Knowledge base** (Obsidian-native markdown) | Per-paper summaries with citation graph, lineage arcs, project pages, manuscript drafts — all linked by `[[wikilinks]]`. Grows with your work. |
 | **Literature** (NCBI, Semantic Scholar, Springer, Elsevier, bioRxiv, CrossRef) | Multi-source search → citation-graph metrics (OG-score, forward-influence, year-buckets) → LLM-driven lineage binning → grounded summaries with `[pN]` page markers. |
-| **Meeting transcripts** | Record + auto-transcribe (local Whisper or cloud). *"What did we decide about cluster 7 last Tuesday?"* — answered from the transcript. |
+| **Meeting transcripts** | Record any meeting on your machine — Zoom, Teams, or any Windows audio source — and auto-transcribe (local Whisper or cloud). Ask *"what did we decide about cluster 7 last Tuesday?"* and the answer comes from the transcript. |
 | **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
 | **Project state** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* |
 
@@ -49,7 +49,7 @@ Onboard a lab member by sharing the Drive folder. That's the whole onboarding.
 
 ---
 
-## What VaultLab does on top of that memory
+## Features
 
 <table>
 <tr>
