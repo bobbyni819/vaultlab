@@ -122,11 +122,20 @@ def write_with_provenance(
     body: str,
     provenance: Provenance,
     index_dir: Optional[str] = None,
+    *,
+    emit_sidecars: bool = True,
 ) -> str:
     """Write a file with a provenance frontmatter block + append to index.
 
     ``index_dir`` defaults to the directory containing ``path``. The index
     is a JSONL file so refinement-over-time queries stay cheap.
+
+    When ``emit_sidecars`` is True (default), ALSO writes the canonical
+    ``<path>.provenance.json`` + ``<path>.method.md`` sidecars via
+    :mod:`vaultlab.provenance`. This unifies the workflow-frontmatter form
+    with the project-wide sidecar form so audit tools have a single
+    source of truth. The frontmatter form remains primary for in-file
+    visibility (so an Agent reading the file sees its own provenance).
     """
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     frontmatter = provenance.render_frontmatter()
@@ -137,6 +146,33 @@ def write_with_provenance(
         f.write("\n")
         f.write(body)
     _append_to_index(path, provenance, index_dir)
+
+    if emit_sidecars:
+        try:
+            from pathlib import Path
+
+            from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+            record = ProvenanceRecord(
+                generated_by=provenance.generated_by,
+                generated_at=provenance.generated_at,
+                project=provenance.project,
+                meeting_mode=provenance.meeting_mode,
+                investigation_mode=provenance.investigation_mode,
+                topic=provenance.topic,
+                round=provenance.round if provenance.round is not None else 0,
+                inputs=list(provenance.inputs),
+                related_outputs=list(provenance.related_outputs),
+                kind=provenance.kind,
+                tags=list(provenance.tags),
+                finding_ids=list(provenance.finding_ids),
+                notes=provenance.notes,
+            )
+            write_receipts(Path(path), record)
+        except Exception:
+            # Sidecar emission is best-effort — never fail the primary write.
+            pass
+
     return path
 
 
