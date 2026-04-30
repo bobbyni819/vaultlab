@@ -10,8 +10,7 @@ import tempfile
 
 import pytest
 
-# TODO(config-lift): switch to vaultlab.config.ProjectConfig when it lands.
-from bobby_ailab._config import ProjectConfig
+from vaultlab.config import ProjectConfig
 
 from vaultlab.runner.models import InvestigationMode
 

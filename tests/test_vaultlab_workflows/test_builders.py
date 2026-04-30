@@ -1,8 +1,6 @@
 """Tests for vaultlab.workflows public builders.
 
-Lifted from ``bobby-tools/tests/test_bobby_ailab/test_workflows.py``. The
-project config still comes from ``bobby_ailab._config.ProjectConfig`` —
-swap to ``vaultlab.config.ProjectConfig`` once that module lands.
+Lifted from ``bobby-tools/tests/test_bobby_ailab/test_workflows.py``.
 """
 
 from __future__ import annotations
@@ -13,8 +11,7 @@ import tempfile
 
 import pytest
 
-# TODO(config-lift): switch to vaultlab.config.ProjectConfig when it lands.
-from bobby_ailab._config import ProjectConfig
+from vaultlab.config import ProjectConfig
 
 from vaultlab.runner.models import (
     Agenda,

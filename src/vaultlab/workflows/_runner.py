@@ -114,10 +114,7 @@ def run_workflow_with_reflection(
 
     The ``resume`` and ``force_steps`` semantics mirror :func:`run_workflow`.
     """
-    # TODO(reflection-lift): replace bobby_ailab._reflection.run_with_reflection
-    # with a vaultlab-native reflection loop. Today the helper still lives in
-    # bobby_ailab — small (130 LOC) and stable, so deferred.
-    from bobby_ailab._reflection import run_with_reflection
+    from vaultlab.runner.reflection import run_with_reflection
 
     if max_reflections <= 0:
         return run_workflow(

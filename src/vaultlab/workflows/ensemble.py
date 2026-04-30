@@ -25,6 +25,50 @@ from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows.synthesis import plan_synthesis
 
 
+# ---------------------------------------------------------------------------
+# Meta-reviewer system prompt
+# ---------------------------------------------------------------------------
+# Inlined from ``bobby_ailab._ensemble.META_REVIEWER_SYSTEM_PROMPT``. The rest
+# of the legacy ``_ensemble`` module (pick_strictest, dedupe_tests, etc.) is
+# workflow logic that already lifted into this file's siblings; this constant
+# is the only piece still consumed by ``plan_ensemble_critic``.
+META_REVIEWER_SYSTEM_PROMPT = """\
+You are the Area Chair of a Methods Review panel.
+
+You will receive N independent Methods Critic reviews of the same findings.
+Your job is to synthesize them into one canonical meta-review that preserves
+the strictest concerns of any individual reviewer.
+
+Aggregation rules:
+- Per-finding rating: pick the STRICTEST rating from the ensemble. If any
+  critic rated a finding UNSUPPORTED, the meta-verdict is UNSUPPORTED.
+  Do not majority-vote. Minority dissent matters.
+- Strength: ROBUST < NEEDS_VALIDATION = NEEDS_FOLLOWUP < WEAK < UNSUPPORTED.
+- Priority tests: union of all critics' tests, deduplicated by description.
+  If two critics proposed the same test at different priorities, keep the
+  higher priority (CRITICAL > HIGH > MEDIUM > LOW).
+- Disagreements: when critics disagree on a rating, call it out explicitly.
+  Say "Critic A said ROBUST, Critic B said WEAK — going with WEAK because X".
+
+Output format:
+
+    ## F<id> — <one-line summary>
+    - **Rating:** <strictest rating>
+    - **Ensemble votes:** <list per-critic ratings>
+    - **Verdict:** <3 sentences explaining the final call>
+
+    [... one block per finding ...]
+
+    **Priority next-round checks (deduplicated, ranked):**
+
+    1. [CRITICAL] <test description>
+    2. [HIGH] <test description>
+    [... etc ...]
+
+    **Ensemble provenance:** <brief note on which critic raised each test>
+"""
+
+
 def plan_ensemble_critic(
     cfg,
     topic: str,
@@ -48,12 +92,6 @@ def plan_ensemble_critic(
     """
     if n_critics < 2:
         raise ValueError("plan_ensemble_critic requires n_critics >= 2")
-
-    # TODO(ensemble-lift): the area-chair system prompt still lives in
-    # bobby_ailab._ensemble. Small (~140 LOC); deferred until ensemble
-    # aggregation utilities (pick_strictest, dedupe_tests) are lifted as
-    # a unit.
-    from bobby_ailab._ensemble import META_REVIEWER_SYSTEM_PROMPT
 
     critic_agenda = Agenda(
         topic=topic,

@@ -145,10 +145,7 @@ def plan_round_from_critic_tests(
     Raises :class:`ValueError` if no priority tests parse from
     ``critic_output``.
     """
-    # TODO(parsers-lift): replace bobby_ailab._parsers.parse_next_round_tests
-    # with a vaultlab-native parser. Today the helper still lives in
-    # bobby_ailab — small (220 LOC) and stable, deferred.
-    from bobby_ailab._parsers import parse_next_round_tests
+    from vaultlab.parsers import parse_next_round_tests
 
     tests = parse_next_round_tests(critic_output)
     if priority_filter:
