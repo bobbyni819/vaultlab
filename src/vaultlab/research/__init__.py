@@ -10,6 +10,22 @@ Usage:
     results = client.search("lysophosphatidylinositol intestine", max_results=10)
     for paper in results:
         print(f"{paper.title} ({paper.year}) - {paper.journal}")
+
+Citation methodology
+--------------------
+The lineage-arc pipeline ranks papers by **og_score** — Kessler (1963)
+bibliographic coupling against the seed set: ``og_score(p) = fraction of
+seed papers that cite p``. Co-citation pairs follow Small (1973). For a
+full treatment of the metrics, year-bucketing, anonymous-author
+handling, and "when og_score is misleading", see
+``vaultlab/docs/methodology.md`` (canonical reference).
+
+A high og_score does NOT mean a paper is topically relevant — it means
+the seed set's authors thought it was foundational. The content-aware
+picker (``vaultlab.research.picker``) reads abstracts before ranking so
+it can override og_score when an abstract disagrees with the citation
+signal. Run with ``picker_mode="adversarial"`` whenever the seed set is
+heterogeneous or the topic is application-heavy.
 """
 
 from __future__ import annotations

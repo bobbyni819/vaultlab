@@ -812,6 +812,7 @@ def _write_project_view(
     picker_method: str = "citation-graph",
     crosstalk: str = "none",
     timestamp: str | None = None,
+    pdfs_acquired: int | None = None,
 ) -> dict[str, Path]:
     """Write ``Wiki/Projects/<slug>/{START_HERE,papers,lineage,decisions-log}.md``.
 
@@ -921,7 +922,12 @@ def _write_project_view(
     )
 
     # 4. decisions-log.md — APPEND new entry (or seed file with header).
+    # Bug 3 fix (evening 3, 2026-04-30): use the caller-supplied `pdfs_acquired`
+    # (actual successful acquisition count from `LineageRunResult.pdfs_acquired`)
+    # rather than conflating with the Tier-A bucket count. The two can diverge
+    # — e.g. a paper can be Tier A from cache without a fresh acquisition.
     n_tier_a = sum(1 for s in summaries.values() if s.tier == "A")
+    pdfs_acquired_for_log = pdfs_acquired if pdfs_acquired is not None else n_tier_a
     new_entry = _render_decisions_log_entry(
         topic=topic,
         speaker=speaker,
@@ -929,9 +935,7 @@ def _write_project_view(
         sources_n=sources_n,
         corpus_size=len(summaries),
         tier_a_n=n_tier_a,
-        pdfs_acquired=sum(
-            1 for s in summaries.values() if s.tier == "A"
-        ),  # Tier-A means PDF was read
+        pdfs_acquired=pdfs_acquired_for_log,
         picker_method=picker_method,
         crosstalk=crosstalk,
         run_id=run_id,
@@ -1413,12 +1417,30 @@ def _bucket_papers_table(
     if not rows:
         return "_(no papers in this bucket)_\n"
     lines = ["| Year | Paper | Tier | OG | Forward |", "|---|---|---|---|---|"]
+    n_skipped_anon = 0
     for s in rows[:max_rows]:
         slug = slugify_doi(s.doi) if s.doi else "?"
+        # Bug 5: when authors are completely missing AND year is unknown, the
+        # wikilink would render as "[[<slug>|Anon n.d.]]" — uninformative and
+        # noisy. Emit a plain DOI-only row with a footnote rather than a
+        # named wikilink, and tally the count for the table footer.
+        from vaultlab.research.corpus import has_anonymous_author
+        if has_anonymous_author(s.authors) and not s.year:
+            lines.append(
+                f"| ? | _(metadata-only stub: {s.doi})_ | {s.tier} | "
+                f"{s.og_score:.2f} | {s.forward_influence} |"
+            )
+            n_skipped_anon += 1
+            continue
         label = _author_year_label(s)
         lines.append(
             f"| {s.year} | [[{slug}|{label}]] | {s.tier} | "
             f"{s.og_score:.2f} | {s.forward_influence} |"
+        )
+    if n_skipped_anon:
+        lines.append(
+            f"\n_(skipped {n_skipped_anon} wikilink(s) for "
+            "metadata-only stubs without authors or year)_"
         )
     return "\n".join(lines) + "\n"
 
@@ -1463,6 +1485,11 @@ def render_arc_markdown(
         f"papers_with_full_text: {n_full_text}",
         "generated_by: vaultlab.research.lineage.run_lit_arc",
         f"provenance: {method_relpath}",
+        # Bug 6: surface the og_score definition in the document itself so a
+        # reviewer who lands on the arc without reading the methodology page
+        # still understands what the score means.
+        'og_score_methodology: "og_score: Kessler 1963 bibliographic '
+        "coupling — fraction of seed papers that cite each candidate.\"",
         "---",
     ]
 
@@ -1473,6 +1500,15 @@ def render_arc_markdown(
         f"Corpus: {n_papers} papers ({n_full_text} with full-text Tier-A summaries; "
         f"the rest are Tier-C stubs grounded in citation metrics). "
         f"Seeds: {len(corpus.seeds)}. Date: {date_str}."
+    )
+    body.append("")
+    # Bug 6: one-line citation methodology in the first section so the reader
+    # doesn't have to chase frontmatter or the docs/methodology.md page.
+    body.append(
+        "> **og_score:** Kessler 1963 bibliographic coupling — fraction of "
+        "seed papers that cite each candidate. See "
+        "`vaultlab/docs/methodology.md` for the full definition + "
+        "edge cases."
     )
     body.append("")
 
@@ -2252,6 +2288,7 @@ def run_lit_arc(
         picker_method=picker_method,
         crosstalk=crosstalk,
         timestamp=_now,
+        pdfs_acquired=pdfs_acquired,
     )
     _emit(
         progress,

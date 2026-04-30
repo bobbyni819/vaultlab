@@ -373,6 +373,13 @@ def test_render_arc_with_narrative_paragraphs_present():
     assert "[[10.1126_science.1225829|Jinek 2012]]" in md
     # No "narration skipped" note when narrative is present.
     assert "LLM narration was skipped" not in md
+    # Bug 6: og_score methodology blockquote present in arc body.
+    assert "Kessler 1963 bibliographic coupling" in md
+    assert "fraction of seed papers that cite" in md
+    # Bug 6: og_score_methodology key in frontmatter.
+    assert fm.get("og_score_methodology"), (
+        "frontmatter should carry og_score_methodology one-liner"
+    )
 
 
 def test_render_arc_without_narrative_emits_skipped_note():
@@ -820,6 +827,77 @@ def _two_corpus() -> Corpus:
     for s in seeds:
         corpus.papers[s.doi.lower()] = s
     return corpus
+
+
+def test_write_project_view_uses_explicit_pdfs_acquired(tmp_path: Path) -> None:
+    """decisions-log.md must report the actual pdfs_acquired count, not Tier-A.
+
+    Regression test for evening-3 Bug 3 (2026-04-30): previously the writer
+    computed `sum(1 for s in summaries.values() if s.tier == "A")` and labelled
+    it "PDFs acquired", conflating the Tier-A bucket with actual successful
+    acquisitions. Fix: pass `pdfs_acquired` explicitly from
+    LineageRunResult.pdfs_acquired so the two can diverge.
+    """
+    summaries = _two_summaries()  # 1 Tier-A, 1 Tier-C
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "bug3-arc.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    # Simulate a real run where 7 PDFs were acquired but only 1 made the
+    # Tier-A bucket — e.g. some were Tier-B candidates that didn't get summarized.
+    out = _write_project_view(
+        kb_root=tmp_path,
+        project_slug="bug3-test",
+        topic="bug-3 verification",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        run_id="2026-04-30T18-00-00",
+        date_str="2026-04-30",
+        speaker="Bobby",
+        sources_n=3,
+        picker_method="content-aware",
+        crosstalk="none",
+        timestamp="2026-04-30T18:00:00",
+        pdfs_acquired=7,
+    )
+
+    log_md = out["decisions_log"].read_text(encoding="utf-8")
+    # Tier-A is 1, but pdfs_acquired should be 7 in the log.
+    assert "**Tier-A picks:** 1" in log_md
+    assert "**PDFs acquired:** 7" in log_md, (
+        f"decisions-log should report 7 PDFs acquired, not the Tier-A count.\n"
+        f"Got:\n{log_md}"
+    )
+
+
+def test_write_project_view_falls_back_to_tier_a_when_pdfs_acquired_omitted(
+    tmp_path: Path,
+) -> None:
+    """If caller omits pdfs_acquired, fall back to Tier-A count for back-compat."""
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "bug3-fallback.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    out = _write_project_view(
+        kb_root=tmp_path,
+        project_slug="bug3-fallback",
+        topic="bug-3 fallback",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        run_id="run",
+        date_str="2026-04-30",
+        timestamp="2026-04-30T18:00:00",
+        # pdfs_acquired NOT passed
+    )
+
+    log_md = out["decisions_log"].read_text(encoding="utf-8")
+    # Falls back to Tier-A count (1).
+    assert "**PDFs acquired:** 1" in log_md
 
 
 def test_write_project_view_writes_all_four_files(tmp_path: Path) -> None:

@@ -195,3 +195,108 @@ def test_corpus_dataclass_helpers():
 def test_corpus_metrics_attribute_starts_none():
     corpus = Corpus(topic="t", seeds=[])
     assert corpus.metrics is None
+
+
+# ---------------------------------------------------------------------------
+# Regression: anonymous-author backfill via S2 (Bug 5 — evening 3, 2026-04-30)
+# ---------------------------------------------------------------------------
+
+
+def test_backfill_authors_via_s2_fills_empty_authors():
+    """Tier-C papers with empty authors should be backfilled from S2."""
+    from vaultlab.research.corpus import (
+        backfill_authors_via_s2,
+        has_anonymous_author,
+    )
+
+    seed = _seed("10.1/seed", 2020, title="Seed")
+    seed.authors = ["Doe Jane"]
+    corpus = Corpus(topic="t", seeds=[seed])
+    corpus.papers["10.1/seed"] = seed
+    # Tier-C ref with NO authors — would render as "Anon" without the fix.
+    sparse = Paper(
+        title="Sparse Tier-C ref",
+        doi="10.1/sparse",
+        year=2018,
+        source_api="crossref-ref",
+        authors=[],
+    )
+    corpus.papers["10.1/sparse"] = sparse
+
+    fake_s2_calls: list[str] = []
+
+    def _fake_s2(doi: str) -> list[str] | None:
+        fake_s2_calls.append(doi)
+        if doi == "10.1/sparse":
+            return ["S2 Author One", "S2 Author Two"]
+        return None
+
+    updated = backfill_authors_via_s2(corpus, s2_fetcher=_fake_s2)
+
+    assert updated == {"10.1/sparse": ["S2 Author One", "S2 Author Two"]}
+    assert corpus.papers["10.1/sparse"].authors == [
+        "S2 Author One",
+        "S2 Author Two",
+    ]
+    # Seed shouldn't be touched (already had authors).
+    assert "10.1/seed" not in updated
+    assert "10.1/seed" not in fake_s2_calls
+    # has_anonymous_author flips from True -> False.
+    assert not has_anonymous_author(corpus.papers["10.1/sparse"].authors)
+
+
+def test_backfill_authors_skips_when_s2_returns_none():
+    """When S2 has no authors either, the paper stays empty (caller decides
+    to skip its wikilink)."""
+    from vaultlab.research.corpus import (
+        backfill_authors_via_s2,
+        has_anonymous_author,
+    )
+
+    sparse = Paper(
+        title="Truly anonymous",
+        doi="10.1/no-authors-anywhere",
+        year=2018,
+        source_api="crossref-ref",
+        authors=[],
+    )
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/no-authors-anywhere"] = sparse
+
+    updated = backfill_authors_via_s2(corpus, s2_fetcher=lambda d: None)
+    assert updated == {}
+    assert corpus.papers["10.1/no-authors-anywhere"].authors == []
+    assert has_anonymous_author(corpus.papers["10.1/no-authors-anywhere"].authors)
+
+
+def test_has_anonymous_author_truthy_cases():
+    from vaultlab.research.corpus import has_anonymous_author
+
+    assert has_anonymous_author(None)
+    assert has_anonymous_author([])
+    assert has_anonymous_author([""])
+    assert has_anonymous_author(["", "  "])
+    assert not has_anonymous_author(["Smith"])
+    assert not has_anonymous_author(["", "Smith"])  # at least one real name
+
+
+def test_backfill_only_dois_filter():
+    from vaultlab.research.corpus import backfill_authors_via_s2
+
+    p1 = Paper(title="p1", doi="10.1/p1", year=2020, source_api="ref", authors=[])
+    p2 = Paper(title="p2", doi="10.1/p2", year=2020, source_api="ref", authors=[])
+    corpus = Corpus(topic="t", seeds=[])
+    corpus.papers["10.1/p1"] = p1
+    corpus.papers["10.1/p2"] = p2
+
+    visited: list[str] = []
+
+    def _fake_s2(doi: str) -> list[str] | None:
+        visited.append(doi)
+        return ["Test Author"]
+
+    backfill_authors_via_s2(corpus, s2_fetcher=_fake_s2, only_dois={"10.1/p1"})
+
+    assert visited == ["10.1/p1"]
+    assert corpus.papers["10.1/p1"].authors == ["Test Author"]
+    assert corpus.papers["10.1/p2"].authors == []  # filtered out

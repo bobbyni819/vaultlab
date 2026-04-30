@@ -335,6 +335,13 @@ def _build_candidates(
 ) -> list[CandidatePaper]:
     """Pick the top ``coarse_n`` candidates from the citation graph.
 
+    Bug 2 fix (evening 3, 2026-04-30): Seed DOIs are ALWAYS preserved in the
+    candidate pool, even when their og_score is 0 because they're not yet
+    cited within the corpus. The sort key is now
+    ``(is_seed, has_pdf, og_score + forward_influence)`` so seeds rank above
+    non-seeds; only after seeds are placed do og_score-driven non-seeds
+    fill the remaining ``coarse_n`` slots.
+
     Hydrates each row's abstract from (in priority order):
 
     1. ``Sources/Articles/<doi-slug>.md`` (already-written stub)
@@ -342,19 +349,7 @@ def _build_candidates(
     3. ``"[no abstract]"`` placeholder
     """
     metrics = corpus.metrics
-    if metrics is None:
-        # Without metrics we can't rank; fall back to seed order.
-        ranked_dois = [s.doi.lower() for s in corpus.seeds if s.doi]
-    else:
-        def _coarse_score(doi: str) -> float:
-            return float(metrics.og_score.get(doi, 0.0)) + float(
-                metrics.forward_influence.get(doi, 0)
-            )
-
-        ranked_dois = sorted(
-            corpus.papers.keys(), key=_coarse_score, reverse=True
-        )
-    ranked_dois = ranked_dois[:coarse_n]
+    seed_dois: set[str] = {s.doi.lower() for s in corpus.seeds if s.doi}
 
     if pdf_cache_dir is not None:
         from vaultlab.research.acquisition import cache_path_for
@@ -364,6 +359,32 @@ def _build_candidates(
     else:
         def _has_pdf(doi: str) -> bool:
             return False
+
+    if metrics is None:
+        # Without metrics we can't rank; emit seeds first then everything else.
+        ranked_dois = list(seed_dois) + [
+            d for d in corpus.papers.keys() if d not in seed_dois
+        ]
+    else:
+        def _full_score(doi: str) -> tuple[int, int, float]:
+            return (
+                1 if doi in seed_dois else 0,
+                1 if _has_pdf(doi) else 0,
+                float(metrics.og_score.get(doi, 0.0)) + float(
+                    metrics.forward_influence.get(doi, 0)
+                ),
+            )
+
+        ranked_dois = sorted(
+            corpus.papers.keys(), key=_full_score, reverse=True
+        )
+        # Defensive: ensure any seed DOIs not present in corpus.papers are
+        # ALSO included (they get appended to the end so they won't outrank
+        # corpus papers, but they'll still be considered if coarse_n is wide).
+        for sd in seed_dois:
+            if sd not in corpus.papers:
+                ranked_dois.append(sd)
+    ranked_dois = ranked_dois[:coarse_n]
 
     out: list[CandidatePaper] = []
     for doi in ranked_dois:

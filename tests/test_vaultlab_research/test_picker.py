@@ -762,3 +762,91 @@ def test_run_lit_arc_without_picker_callback_uses_citation_graph(
         _today="2026-04-30",
     )
     assert result.arc_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# Regression: seed DOIs survive coarse_n cutoff (Bug 2, evening 3 — 2026-04-30)
+# ---------------------------------------------------------------------------
+
+
+def test_seed_doi_with_zero_og_score_survives_coarse_n_cutoff(tmp_path):
+    """A seed DOI with og_score=0 must NOT be silently dropped by coarse_n.
+
+    Regression test: previously _build_candidates sorted by og_score+forward_influence
+    only, so a freshly-seeded paper that wasn't yet cited within the corpus could be
+    truncated out before it ever reached the LLM picker. Fix: sort by
+    (is_seed, has_pdf, og_score+forward_influence) so seeds always rank first.
+    """
+    # Seed paper that nobody cites (og_score=0).
+    seed = Paper(
+        title="Brand New Seed Paper",
+        authors=["Newauthor A"],
+        year=2026,
+        journal="Preprint",
+        doi="10.1234/seed.zero.og",
+        citation_count=0,
+        source_api="manual",
+        abstract="Seed paper with zero og_score because nothing cites it yet.",
+    )
+    # An existing well-cited seed that DOES cite the popular papers, giving them og_score > 0.
+    citing_seed = Paper(
+        title="Citing Seed Paper",
+        authors=["Citer S"],
+        year=2024,
+        journal="Hot Journal",
+        doi="10.5555/citing.seed",
+        citation_count=50,
+        source_api="pubmed",
+        abstract="A second seed that cites all the popular papers.",
+    )
+    seeds = [seed, citing_seed]
+    corpus = Corpus(topic="seed-survival", seeds=seeds)
+    corpus.papers[seed.doi.lower()] = seed
+    corpus.papers[citing_seed.doi.lower()] = citing_seed
+    # Add many highly-cited non-seed papers that crowd out coarse_n.
+    pop_dois: list[str] = []
+    for i in range(20):
+        doi = f"10.9999/popular.paper.{i:03d}"
+        pop_dois.append(doi)
+        p = Paper(
+            title=f"Popular Paper {i}",
+            authors=[f"Author{i} A"],
+            year=2024,
+            journal="Hot Journal",
+            doi=doi,
+            citation_count=1000,
+            source_api="pubmed",
+            abstract=f"Popular paper number {i} with lots of citations.",
+        )
+        corpus.papers[doi] = p
+    # citing_seed cites every popular paper -> og_score > 0 for popular dois.
+    corpus.references = {
+        seed.doi.lower(): [],
+        citing_seed.doi.lower(): list(pop_dois),
+    }
+    for d in pop_dois:
+        corpus.references[d] = []
+    compute_metrics(corpus)
+
+    # Sanity check: seed has og_score=0
+    assert corpus.metrics is not None
+    assert corpus.metrics.og_score.get(seed.doi.lower(), 0.0) == 0.0
+    # Sanity check: at least one popular paper has og_score > 0
+    assert any(corpus.metrics.og_score.get(d, 0.0) > 0 for d in pop_dois)
+
+    # Run with coarse_n=5 — without the fix, the og_score=0 seed gets cut.
+    task = prepare_picker_task(
+        "seed-survival",
+        corpus=corpus,
+        target_n=3,
+        coarse_n=5,
+        kb_root=tmp_path,
+    )
+    candidate_dois = {c.doi for c in task.candidates}
+    assert seed.doi.lower() in candidate_dois, (
+        f"Seed DOI with og_score=0 was dropped by coarse_n=5 cutoff. "
+        f"Got candidates: {candidate_dois}"
+    )
+    assert citing_seed.doi.lower() in candidate_dois, (
+        "Citing seed should also survive."
+    )

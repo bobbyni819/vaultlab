@@ -250,9 +250,109 @@ def expand_corpus(
     return corpus
 
 
+# ---------------------------------------------------------------------------
+# Anonymous-author backfill (Bug 5 — evening 3, 2026-04-30)
+# ---------------------------------------------------------------------------
+
+
+# Optional injectable for tests — by default we hit Semantic Scholar.
+S2AuthorFetcher = Callable[[str], "list[str] | None"]
+
+
+def _default_s2_authors(doi: str) -> list[str] | None:
+    """Look up authors on Semantic Scholar by DOI. ``None`` on failure / missing."""
+    if not doi:
+        return None
+    try:
+        # Local import to avoid pulling requests at module import time.
+        from vaultlab.research.citation_lookup import (
+            S2_BASE,
+            _get_json,
+            _s2_headers,
+        )
+    except ImportError:  # pragma: no cover — defensive
+        return None
+    url = f"{S2_BASE}/paper/DOI:{doi.strip()}"
+    params = {"fields": "authors"}
+    try:
+        data = _get_json(
+            url,
+            params=params,
+            headers=_s2_headers(None),
+            timeout=10.0,
+            source="semantic_scholar",
+        )
+    except Exception:  # pragma: no cover — never fail the run
+        return None
+    if not data:
+        return None
+    out: list[str] = []
+    for author_obj in data.get("authors", []) or []:
+        name = (author_obj or {}).get("name", "")
+        if name:
+            out.append(name)
+    return out or None
+
+
+def backfill_authors_via_s2(
+    corpus: Corpus,
+    *,
+    s2_fetcher: S2AuthorFetcher | None = None,
+    only_dois: set[str] | None = None,
+) -> dict[str, list[str]]:
+    """Fill empty author lists on ``corpus.papers`` using Semantic Scholar.
+
+    Bug 5 fix: CrossRef-walked references frequently have empty / sparse
+    author metadata, so the resulting Tier-C stubs render as ``Anon ND`` in
+    arc + report wikilinks. This helper walks ``corpus.papers``, finds
+    every paper with an empty ``authors`` list, and asks Semantic Scholar
+    by DOI to fill it. Updates the corpus in place.
+
+    Args:
+        corpus: The corpus to backfill (mutated in place).
+        s2_fetcher: Override for the S2 author lookup (used in tests).
+            Default queries the live S2 API.
+        only_dois: If given, restricts the backfill to these DOIs.
+            Useful when callers know which papers are about to be
+            rendered in arc/report and don't want the full graph traffic.
+
+    Returns:
+        Mapping ``doi -> authors`` for every paper actually updated.
+        Empty when no papers needed backfill or every lookup failed.
+    """
+    fetcher = s2_fetcher or _default_s2_authors
+    out: dict[str, list[str]] = {}
+    for doi, paper in corpus.papers.items():
+        if only_dois is not None and doi not in only_dois:
+            continue
+        if paper.authors:
+            continue
+        authors = fetcher(doi)
+        if not authors:
+            continue
+        paper.authors = list(authors)
+        out[doi] = list(authors)
+        logger.info("Backfilled %d authors for %s via S2", len(authors), doi)
+    return out
+
+
+def has_anonymous_author(paper_authors: list[str] | None) -> bool:
+    """True iff ``paper_authors`` is empty / contains only blanks.
+
+    Used by arc / report renderers to decide whether to skip a wikilink
+    rather than emit ``[Anon ND]``.
+    """
+    if not paper_authors:
+        return True
+    return not any(a and a.strip() for a in paper_authors)
+
+
 __all__ = [
     "Corpus",
     "ReferenceFetcher",
+    "S2AuthorFetcher",
+    "backfill_authors_via_s2",
     "build_corpus_from_seeds",
     "expand_corpus",
+    "has_anonymous_author",
 ]

@@ -1182,6 +1182,27 @@ def _add_references_slide(pres, ds: DeckSlide, layout) -> None:
             run.font.size = Pt(11)
             run.font.color.rgb = RGBColor(*text_color_for_theme(layout.theme_variant))
 
+    # Bug 6: og_score methodology footer on the References slide.
+    footer_box = s.shapes.add_textbox(
+        Inches(0.6),
+        Inches(layout.slide_h_in - 0.4),
+        Inches(layout.slide_w_in - 1.2),
+        Inches(0.3),
+    )
+    footer_box.name = "refs_methodology_footer"
+    ftf = footer_box.text_frame
+    ftf.word_wrap = True
+    fp = ftf.paragraphs[0]
+    fr = fp.add_run()
+    fr.text = (
+        "og_score: Kessler 1963 bibliographic coupling — fraction of seed "
+        "papers that cite each candidate. See vaultlab/docs/methodology.md."
+    )
+    fr.font.name = "Arial"
+    fr.font.size = Pt(8)
+    fr.font.italic = True
+    fr.font.color.rgb = RGBColor(*text_color_for_theme(layout.theme_variant))
+
     if ds.notes:
         s.notes_slide.notes_text_frame.text = ds.notes
 
