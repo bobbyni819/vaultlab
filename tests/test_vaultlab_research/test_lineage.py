@@ -2176,3 +2176,302 @@ def test_run_lit_arc_explicit_project_slug_overrides_cwd(
     assert (tmp_path / "Wiki" / "Projects" / "explicit" / "START_HERE.md").exists()
     # The cwd-derived slug must NOT have been adopted.
     assert not (tmp_path / "Wiki" / "Projects" / "cwd-slug").exists()
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 (2026-04-30 evening-4): acquire_figures kwarg
+# ---------------------------------------------------------------------------
+
+
+class _FakeFigure:
+    """Minimal stand-in for vaultlab.figures.acquisition.Figure."""
+
+    def __init__(self, file_path: Path):
+        self.file_path = str(file_path)
+        self.label = "Figure 1"
+        self.caption = "fake caption"
+
+
+class _FakeFigureResult:
+    """Minimal stand-in for FigureAcquisitionResult."""
+
+    def __init__(self, figures: list[_FakeFigure]):
+        self.figures = figures
+        self.source = "fake"
+
+
+def test_run_lit_arc_with_acquire_figures_triggers_figure_acquisition(
+    tmp_path, monkeypatch
+):
+    """``run_lit_arc(..., acquire_figures=True)`` runs Phase 5b and
+    populates ``LineageRunResult.figure_assignments``."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+
+    fig_calls: list[tuple[Path, dict]] = []
+
+    def _fake_acquire_figures(corpus, cache_dir, **kwargs):
+        cache_dir = Path(cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        fig_calls.append((cache_dir, dict(kwargs)))
+        out: dict[str, _FakeFigureResult] = {}
+        for doi in corpus.papers:
+            slug = doi.replace("/", "_")
+            doi_dir = cache_dir / slug
+            doi_dir.mkdir(parents=True, exist_ok=True)
+            # Two figures so we can verify the picker chose the larger one.
+            small = doi_dir / "fig1-small.png"
+            small.write_bytes(b"\x89PNG\r\n" + b"x" * 50)
+            big = doi_dir / "fig2-big.png"
+            big.write_bytes(b"\x89PNG\r\n" + b"x" * 5000)
+            out[doi] = _FakeFigureResult(
+                [_FakeFigure(small), _FakeFigure(big)]
+            )
+        return out
+
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        acquire_figures=True,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _acquire_figures=_fake_acquire_figures,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+
+    # Fake was invoked exactly once with the corpus + figures cache dir.
+    assert len(fig_calls) == 1
+    cache_dir, _kwargs = fig_calls[0]
+    assert cache_dir == tmp_path / "Sources" / "Figures"
+
+    # Result carries the figure_assignments.
+    assert isinstance(result.figure_assignments, dict)
+    assert len(result.figure_assignments) >= 3
+    # Picker must prefer the LARGER file.
+    for doi, fp in result.figure_assignments.items():
+        assert fp.exists(), f"figure for {doi} missing on disk: {fp}"
+        assert fp.name == "fig2-big.png"
+        assert fp.stat().st_size >= 1000
+    assert result.figures_acquired == len(result.figure_assignments)
+
+
+def test_run_lit_arc_without_acquire_figures_skips_figure_phase(
+    tmp_path, monkeypatch
+):
+    """When ``acquire_figures=False`` (the default), no figure fetcher is
+    called and ``LineageRunResult.figure_assignments`` stays empty."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+    invoked = {"count": 0}
+
+    def _spy(*args, **kwargs):
+        invoked["count"] += 1
+        return {}
+
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        # acquire_figures defaults to False
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _acquire_figures=_spy,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+
+    assert invoked["count"] == 0
+    assert result.figure_assignments == {}
+    assert result.figures_acquired == 0
+
+
+def test_run_lit_arc_acquire_figures_custom_cache_dir(tmp_path, monkeypatch):
+    """``figure_cache_dir`` overrides the default ``<kb>/Sources/Figures``."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    custom = tmp_path / "alt" / "fig-cache"
+    seen: list[Path] = []
+
+    def _fake_acquire_figures(corpus, cache_dir, **kwargs):
+        seen.append(Path(cache_dir))
+        return {}
+
+    client = _FakeClient(_make_seeds())
+    run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        acquire_figures=True,
+        figure_cache_dir=custom,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _acquire_figures=_fake_acquire_figures,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+    assert seen == [custom]
+    assert custom.exists()
+
+
+# ---------------------------------------------------------------------------
+# Fix 3 (2026-04-30 evening-4): same-day arc collision detection
+# ---------------------------------------------------------------------------
+
+
+def test_arc_collision_writes_rerun_suffix_when_content_differs(
+    tmp_path, monkeypatch
+):
+    """Second same-day run with different content writes ``-rerun-1.md``."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+
+    # First run — produces the canonical arc on disk.
+    prompts1: list[str] = []
+    result1 = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _llm_arc=_fake_llm_arc(prompts1),
+        _today="2026-04-30",
+    )
+    arc1_path = result1.arc_path
+    assert arc1_path.exists()
+    assert arc1_path.name.endswith("lineage-2026-04-30.md")
+
+    # Second same-day run with a DIFFERENT narrative — this changes the
+    # arc content, so the collision detector must avoid clobbering arc1.
+    def _different_arc_caller(prompts_seen):
+        def _caller(*, prompt, api_key, model):
+            prompts_seen.append(prompt)
+            return {
+                "history": "DIFFERENT history paragraph for rerun.",
+                "development": "DIFFERENT development paragraph.",
+                "sota": "DIFFERENT sota paragraph.",
+            }
+        return _caller
+
+    prompts2: list[str] = []
+    result2 = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _llm_arc=_different_arc_caller(prompts2),
+        _today="2026-04-30",
+    )
+    arc2_path = result2.arc_path
+
+    # Original arc preserved.
+    assert arc1_path.exists()
+    text1 = arc1_path.read_text(encoding="utf-8")
+    assert "Foundational work" in text1  # from _fake_llm_arc
+    assert "DIFFERENT history" not in text1
+
+    # Rerun arc lives at the suffixed path with the new content.
+    assert arc2_path != arc1_path
+    assert arc2_path.name.endswith("lineage-2026-04-30-rerun-1.md")
+    text2 = arc2_path.read_text(encoding="utf-8")
+    assert "DIFFERENT history" in text2
+
+    # method.md sidecar uses the suffixed path so the frontmatter pointer
+    # in arc2 is correct (suffix consistency requirement).
+    assert "lineage-2026-04-30-rerun-1.md.method.md" in text2
+
+    # Provenance for the rerun lives at the suffixed path too.
+    prov2 = arc2_path.with_name(arc2_path.name + ".provenance.json")
+    method2 = arc2_path.with_name(arc2_path.name + ".method.md")
+    assert prov2.exists(), f"missing {prov2}"
+    assert method2.exists(), f"missing {method2}"
+
+
+def test_arc_collision_idempotent_rerun_keeps_base_path(tmp_path, monkeypatch):
+    """Same content + same date -> no rerun suffix, base path stays."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+
+    prompts1: list[str] = []
+    result1 = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _llm_arc=_fake_llm_arc(prompts1),
+        _today="2026-04-30",
+    )
+    arc1_path = result1.arc_path
+
+    # Second run with IDENTICAL inputs -> same content -> idempotent.
+    prompts2: list[str] = []
+    result2 = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _llm_arc=_fake_llm_arc(prompts2),
+        _today="2026-04-30",
+    )
+
+    # Both runs share the canonical arc path.
+    assert result2.arc_path == arc1_path
+    assert "rerun-1" not in result2.arc_path.name
+
+
+def test_arc_collision_walks_through_multiple_rerun_suffixes(
+    tmp_path, monkeypatch
+):
+    """Third same-day run with new content gets ``-rerun-2.md``."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    from vaultlab.research.lineage import _resolve_arc_path_with_collision
+
+    base = tmp_path / "Wiki" / "Concepts" / "topic-lineage-2026-04-30.md"
+    base.parent.mkdir(parents=True, exist_ok=True)
+    base.write_text("v1 content", encoding="utf-8")
+
+    rerun1 = base.with_name("topic-lineage-2026-04-30-rerun-1.md")
+    rerun1.write_text("v2 content", encoding="utf-8")
+
+    # Third run with newer content must walk to rerun-2.
+    resolved = _resolve_arc_path_with_collision(
+        base, expected_content="v3 content"
+    )
+    assert resolved.name == "topic-lineage-2026-04-30-rerun-2.md"
+
+    # Idempotent: matching v2 content returns rerun-1 unchanged.
+    resolved2 = _resolve_arc_path_with_collision(
+        rerun1, expected_content="v2 content"
+    )
+    assert resolved2 == rerun1

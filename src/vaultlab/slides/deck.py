@@ -16,6 +16,7 @@ a ``run_lit_arc`` corpus into a journal-club deck.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1298,25 +1299,37 @@ def _plan_from_lineage(
         )
     )
 
-    # 3. Figure or bullets — history bucket
-    # Bobby 2026-04-30 (Bug #5): figure-slide subjects must be Tier-A
-    # papers (LLM-read full text). Tier-C stubs without summaries leak
-    # off-topic figures (e.g. Gjerstorff 2006 cancer figure on a spatial-tx
-    # deck) when they happen to have a cached PMC figure.
-    history_figure = _pick_figure_for_bucket(
-        history_papers, figure_assignments, summaries=summaries
+    # Fix 2 (2026-04-30 evening-4): allocate a global figure budget across
+    # buckets BEFORE we start emitting slides. Previously the deck only
+    # ever produced ONE figure-slide (history bucket leader). Now every
+    # Tier-A paper that has a representative figure can become a figure
+    # slide, capped globally at _FIGURE_TOTAL_CAP (default 8) so the deck
+    # doesn't blow out.
+    development_papers = bucketed.get("development", [])
+    sota_papers = bucketed.get("sota", [])
+    figure_budget = _allocate_figure_budget(
+        history_papers=history_papers,
+        development_papers=development_papers,
+        sota_papers=sota_papers,
+        figure_assignments=figure_assignments,
+        summaries=summaries,
     )
-    if history_figure is not None:
-        claim_doi, fig_doi, fig_path = history_figure
+
+    def _emit_figure_slide(
+        pick: tuple[str, str, Path],
+        *,
+        bucket_title: str,
+    ) -> None:
+        """Append a figure slide for ``pick`` and update ``cited_dois``.
+
+        Centralised so the same caption + substitution + manifest logic
+        runs for every bucket (history / development / sota), not just
+        history (which used to be the only path).
+        """
+        claim_doi, fig_doi, fig_path = pick
         cited_dois.add(fig_doi)
         if claim_doi and claim_doi != fig_doi:
             cited_dois.add(claim_doi)
-        # Bobby 2026-04-30 (Bug #6): slide titles must stay short — moving
-        # the paper citation into the caption keeps the title from
-        # wrapping into the figure area.
-        # Bobby 2026-04-30 (figure substitution): when the figure DOI
-        # differs from the claim DOI, the caption MUST flag this so the
-        # audience doesn't think the figure came from the leader paper.
         fig_label = _label_for_doi(summaries, fig_doi)
         is_substituted = bool(claim_doi) and claim_doi != fig_doi
         if is_substituted:
@@ -1336,15 +1349,12 @@ def _plan_from_lineage(
         slides.append(
             DeckSlide(
                 kind="figure",
-                title="Foundational findings",
+                title=bucket_title,
                 content={
                     "figure_path": fig_path,
                     "annotations": [],
                     "motif_colors": {},
                     "caption": caption,
-                    # citation_doi is the slide's *claim* paper (what the
-                    # slide is about); figure_doi is the actual source of
-                    # the image. They differ only on substitution.
                     "citation_doi": claim_doi or fig_doi,
                     "claim_paper_doi": claim_doi or fig_doi,
                     "figure_paper_doi": fig_doi,
@@ -1361,6 +1371,16 @@ def _plan_from_lineage(
                 ),
             )
         )
+
+    # 3. Figure(s) or bullets — history bucket
+    # Bobby 2026-04-30 (Bug #5): figure-slide subjects must be Tier-A
+    # papers (LLM-read full text). Tier-C stubs without summaries leak
+    # off-topic figures (e.g. Gjerstorff 2006 cancer figure on a spatial-tx
+    # deck) when they happen to have a cached PMC figure.
+    history_picks = figure_budget.get("history", [])
+    if history_picks:
+        for pick in history_picks:
+            _emit_figure_slide(pick, bucket_title="Foundational findings")
     else:
         # Drop the figure slide; replace with bullets from history TL;DRs.
         # Bug #4: never ship "(no history-bucket summaries available)" —
@@ -1392,7 +1412,6 @@ def _plan_from_lineage(
         )
 
     # 4. Section intro: Development
-    development_papers = bucketed.get("development", [])
     development_bullets = [_one_line_label(s) for s in development_papers[:3]]
     for s in development_papers[:3]:
         if s.get("doi"):
@@ -1411,8 +1430,13 @@ def _plan_from_lineage(
         )
     )
 
+    # 4b. Figure(s) — development bucket (Fix 2, 2026-04-30 evening-4).
+    # Each Tier-A development paper that has a cached figure gets its own
+    # slide, subject to the global cap.
+    for pick in figure_budget.get("development", []):
+        _emit_figure_slide(pick, bucket_title="Development milestone")
+
     # 5. Bullets: SOTA findings
-    sota_papers = bucketed.get("sota", [])
     sota_bullets = [_bullet_from_summary(s) for s in sota_papers[:5]]
     sota_dois = [s.get("doi", "") for s in sota_papers[:5] if s.get("doi")]
     cited_dois.update(sota_dois)
@@ -1434,6 +1458,10 @@ def _plan_from_lineage(
             ),
         )
     )
+
+    # 5b. Figure(s) — SOTA bucket (Fix 2, 2026-04-30 evening-4).
+    for pick in figure_budget.get("sota", []):
+        _emit_figure_slide(pick, bucket_title="State-of-the-art result")
 
     # 6. Section intro: Synthesis (use arc narrative when present)
     # Bobby 2026-04-30 (Bug #3): the synthesis slide was previously
@@ -1809,6 +1837,289 @@ def _pick_figure_for_bucket(
         if path is not None and Path(path).exists():
             return claim_doi or doi, doi, Path(path)
     return None
+
+
+# Fix 2 (2026-04-30 evening-4): aggressive figure picker
+#
+# The original ``_pick_figure_for_bucket`` returned at most ONE figure per
+# bucket, so a corpus with 43 cached figures across 3 Tier-A papers
+# produced AT MOST 3 figure-slides (one per bucket) — and in practice only
+# 1 (since most bucket leaders had no figure assignment). The new
+# ``_pick_figures_for_bucket_multi`` walks every Tier-A paper in the
+# bucket, picks the largest available figure per paper (skipping decorative
+# crops < 100 KB), and returns a list of figure picks. The caller decides
+# how many to render based on the global cap.
+
+_FIGURE_MIN_BYTES = 100 * 1024  # 100 KB — skip decorative crops/labels
+_FIGURE_TOTAL_CAP = 8           # global ceiling on figure-slides per deck
+
+
+def _figure_size_bytes(path: Path) -> int:
+    """Return file size in bytes, or 0 if the file is missing."""
+    try:
+        return Path(path).stat().st_size
+    except OSError:
+        return 0
+
+
+def _list_cached_figures_for_doi(
+    doi: str,
+    figure_assignments: dict[str, Path],
+) -> list[Path]:
+    """Return all cached figures on disk for ``doi``.
+
+    The ``figure_assignments`` map only carries ONE Path per DOI (the
+    "default pick" the orchestrator chose). To pick the LARGEST figure
+    we also enumerate sibling files in the same directory and consult
+    the ``.figures.json`` manifest when present.
+    """
+    seed = figure_assignments.get(doi)
+    if seed is None:
+        return []
+    seed = Path(seed)
+    parent = seed.parent
+    if not parent.exists():
+        return [seed] if seed.exists() else []
+    # Prefer the manifest order (only files that the acquirer actually
+    # extracted as figures, not stray PDFs/XML in the same dir).
+    manifest = parent / ".figures.json"
+    figs: list[Path] = []
+    if manifest.exists():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            data = {}
+        for entry in data.get("figures", []):
+            fp = Path(entry.get("file_path") or "")
+            if fp.exists():
+                figs.append(fp)
+    if not figs:
+        # No manifest — fall back to scanning common image extensions.
+        exts = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".gif"}
+        for child in sorted(parent.iterdir()):
+            if child.is_file() and child.suffix.lower() in exts:
+                figs.append(child)
+    if seed not in figs and seed.exists():
+        figs.append(seed)
+    return figs
+
+
+def _pick_largest_figure_for_doi(
+    doi: str,
+    figure_assignments: dict[str, Path],
+    *,
+    min_size_bytes: int = _FIGURE_MIN_BYTES,
+) -> Path | None:
+    """Pick the largest figure on disk for ``doi``.
+
+    Logic:
+
+    * When multiple figures are cached for the DOI, prefer the largest
+      figure that is at least ``min_size_bytes`` (filters decorative
+      panel labels / cropped legends < 100 KB).
+    * When ZERO figures meet the size threshold, fall back to the largest
+      cached figure overall — better one small figure than no figure
+      (Tier-A papers have something to show even when only a small
+      thumbnail was extracted).
+    * When no figures are cached at all for the DOI, returns ``None``.
+    """
+    figs = _list_cached_figures_for_doi(doi, figure_assignments)
+    if not figs:
+        return None
+    sized = [(f, _figure_size_bytes(f)) for f in figs]
+    above_threshold = [t for t in sized if t[1] >= min_size_bytes]
+    if above_threshold:
+        above_threshold.sort(key=lambda t: t[1], reverse=True)
+        return above_threshold[0][0]
+    # Soft fallback — use whatever's cached.
+    sized.sort(key=lambda t: t[1], reverse=True)
+    return sized[0][0]
+
+
+def _pick_figures_for_bucket_multi(
+    bucket_papers: list[dict[str, Any]],
+    figure_assignments: dict[str, Path],
+    *,
+    summaries: dict[str, dict[str, Any]] | None = None,
+    max_per_bucket: int = 4,
+    min_size_bytes: int = _FIGURE_MIN_BYTES,
+) -> list[tuple[str, str, Path]]:
+    """Pick MULTIPLE figures for a bucket — one per Tier-A paper that has one.
+
+    Returns a list of ``(claim_doi, figure_doi, figure_path)`` tuples.
+    The first entry pairs the bucket leader (claim paper) with the best
+    Tier-A figure (its own when available, otherwise a substitute). Each
+    subsequent Tier-A paper that has a representative figure produces an
+    additional entry where ``claim_doi == figure_doi``.
+
+    Tier-C papers are NEVER used as figure-slide subjects (Bug #5).
+    Figures < ``min_size_bytes`` are skipped (likely decorative crops or
+    panel labels rather than the main result figure).
+
+    Cap with ``max_per_bucket`` — when more Tier-A papers than slots
+    have a figure, the highest-og_score papers win.
+    """
+    summaries = summaries if summaries is not None else {}
+    if not bucket_papers:
+        return []
+    leader_row = bucket_papers[0]
+    claim_doi = (leader_row.get("doi") or "").strip()
+    leader_tier = (
+        (leader_row.get("tier") or summaries.get(claim_doi, {}).get("tier") or "")
+        .upper()
+    )
+    leader_is_tier_a = leader_tier in ("", "A")
+
+    # Collect Tier-A papers in the bucket along with the largest figure
+    # available for each (or None when the paper has no usable figure).
+    tier_a: list[tuple[str, dict[str, Any], Path | None]] = []
+    for s in bucket_papers:
+        doi = (s.get("doi") or "").strip()
+        if not doi:
+            continue
+        tier = (s.get("tier") or summaries.get(doi, {}).get("tier") or "").upper()
+        if tier and tier != "A":
+            continue
+        fig = _pick_largest_figure_for_doi(
+            doi,
+            figure_assignments,
+            min_size_bytes=min_size_bytes,
+        )
+        tier_a.append((doi, s, fig))
+
+    if not tier_a:
+        return []
+
+    # Order: bucket leader first (when leader IS Tier-A), then remaining
+    # Tier-A papers by og_score descending so when we exceed
+    # max_per_bucket the most influential papers' figures win.
+    leader = next((t for t in tier_a if t[0] == claim_doi), None)
+    rest = [t for t in tier_a if t[0] != claim_doi]
+    rest.sort(
+        key=lambda t: float(
+            t[1].get("og_score")
+            or summaries.get(t[0], {}).get("og_score")
+            or 0.0
+        ),
+        reverse=True,
+    )
+
+    picks: list[tuple[str, str, Path]] = []
+
+    # 1. Leader slot.
+    if leader_is_tier_a and leader is not None and leader[2] is not None:
+        # Leader is Tier-A and has its own figure.
+        picks.append((leader[0], leader[0], leader[2]))
+    elif leader_is_tier_a and leader is not None:
+        # Leader is Tier-A but has no figure of its own — substitute
+        # from the highest-ranked Tier-A paper that does.
+        sub = next((t for t in rest if t[2] is not None), None)
+        if sub is not None:
+            picks.append((leader[0], sub[0], sub[2]))
+            rest = [t for t in rest if t[0] != sub[0]]
+    else:
+        # Leader is Tier-C (or non-A) — keep claim_doi pointing at the
+        # leader (the slide is still ABOUT the leader paper) but the
+        # figure MUST come from a Tier-A bucket member. This preserves
+        # the contract from the original ``_pick_figure_for_bucket`` so
+        # _plan_from_lineage still surfaces the leader's claim while
+        # showing a topical figure.
+        sub = next((t for t in rest if t[2] is not None), None)
+        if sub is None:
+            # See if a Tier-A paper IS in tier_a but happened to be
+            # ordered first (claim_doi == first Tier-A doi).
+            sub = next((t for t in tier_a if t[2] is not None), None)
+            if sub is not None:
+                # Drop it from rest so it doesn't double-count.
+                rest = [t for t in rest if t[0] != sub[0]]
+        else:
+            rest = [t for t in rest if t[0] != sub[0]]
+        if sub is not None:
+            picks.append((claim_doi, sub[0], sub[2]))
+
+    # 2. Additional slots — one per remaining Tier-A paper with a figure,
+    # capped at max_per_bucket.
+    for doi, _row, fig in rest:
+        if fig is None:
+            continue
+        if len(picks) >= max_per_bucket:
+            break
+        picks.append((doi, doi, fig))
+
+    return picks
+
+
+def _allocate_figure_budget(
+    *,
+    history_papers: list[dict[str, Any]],
+    development_papers: list[dict[str, Any]],
+    sota_papers: list[dict[str, Any]],
+    figure_assignments: dict[str, Path],
+    summaries: dict[str, dict[str, Any]],
+    total_cap: int = _FIGURE_TOTAL_CAP,
+    min_size_bytes: int = _FIGURE_MIN_BYTES,
+) -> dict[str, list[tuple[str, str, Path]]]:
+    """Distribute a global figure-slide budget across the three buckets.
+
+    Returns ``{"history": [...], "development": [...], "sota": [...]}``.
+    When the per-bucket maximum across all buckets exceeds ``total_cap``,
+    we trim from buckets with more papers proportionally so the deck
+    doesn't blow out (e.g. 5 history + 5 dev + 5 sota = 15 -> capped at
+    8 = roughly 3+3+2).
+    """
+    # Compute the maximum each bucket COULD produce.
+    raw = {
+        "history": _pick_figures_for_bucket_multi(
+            history_papers,
+            figure_assignments,
+            summaries=summaries,
+            max_per_bucket=total_cap,  # we'll cap at the end
+            min_size_bytes=min_size_bytes,
+        ),
+        "development": _pick_figures_for_bucket_multi(
+            development_papers,
+            figure_assignments,
+            summaries=summaries,
+            max_per_bucket=total_cap,
+            min_size_bytes=min_size_bytes,
+        ),
+        "sota": _pick_figures_for_bucket_multi(
+            sota_papers,
+            figure_assignments,
+            summaries=summaries,
+            max_per_bucket=total_cap,
+            min_size_bytes=min_size_bytes,
+        ),
+    }
+    total_available = sum(len(v) for v in raw.values())
+    if total_available <= total_cap:
+        return raw
+
+    # Need to trim. Round-robin removal from the bucket with the most
+    # remaining picks, working from the LOWEST-og_score figure forward
+    # (so the figure-with-the-highest-OG paper survives).
+    # Implementation: rebuild each bucket sorted by og_score descending,
+    # then pop from the end of whichever bucket is currently largest
+    # until the total fits within total_cap.
+    def _og(doi: str) -> float:
+        return float(
+            (summaries.get(doi) or {}).get("og_score") or 0.0
+        )
+
+    out = {
+        b: sorted(picks, key=lambda t: _og(t[1]), reverse=True)
+        for b, picks in raw.items()
+    }
+    while sum(len(v) for v in out.values()) > total_cap:
+        # Pick the bucket with the most picks; ties broken by alphabetic
+        # bucket order for determinism.
+        bucket_name = max(
+            out, key=lambda b: (len(out[b]), -ord(b[0]))
+        )
+        if not out[bucket_name]:
+            break
+        out[bucket_name].pop()  # drop the lowest-og_score pick in that bucket
+    return out
 
 
 def _read_figures_manifest_for(

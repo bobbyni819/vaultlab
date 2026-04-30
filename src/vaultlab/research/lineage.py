@@ -205,6 +205,64 @@ def _derive_max_papers(
 
 
 # ---------------------------------------------------------------------------
+# Same-day arc collision detection (Fix 3, 2026-04-30 evening-4)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_arc_path_with_collision(
+    base_path: Path,
+    *,
+    expected_content: str | None = None,
+) -> Path:
+    """Pick an arc path that does NOT clobber an existing same-day arc.
+
+    Same-day re-runs of ``/lit-arc`` previously overwrote
+    ``Wiki/Concepts/<topic>-lineage-<date>.md`` (and its
+    ``.method.md`` + ``.provenance.json`` sidecars) every time the user
+    re-ran the pipeline on the same date. That wiped the prior arc with
+    no warning. This helper preserves the prior arc by picking
+    ``<topic>-lineage-<date>-rerun-1.md`` (and ``-rerun-2.md`` etc.) on
+    collision.
+
+    Args:
+        base_path: The desired path
+            (``Wiki/Concepts/<topic>-lineage-<date>.md``).
+        expected_content: When given, compare the existing file's text
+            against this. Identical content (deterministic re-run with
+            same inputs) means the rerun is idempotent — return
+            ``base_path`` unchanged so the on-disk file is left alone.
+            When the existing content differs, walk the rerun-N suffix
+            until a free slot is found.
+
+    Returns:
+        The resolved path. The file at ``base_path`` is **never** touched
+        by this helper; the caller writes to the returned path.
+    """
+    base_path = Path(base_path)
+    if not base_path.exists():
+        return base_path
+    if expected_content is not None:
+        try:
+            existing = base_path.read_text(encoding="utf-8")
+        except OSError:
+            existing = ""
+        if existing == expected_content:
+            # Idempotent re-run with identical content — keep the existing
+            # path, no rename needed.
+            return base_path
+    # Walk rerun-1, rerun-2, ... until a free slot exists.
+    parent = base_path.parent
+    stem = base_path.stem  # e.g. "topic-lineage-2026-04-30"
+    suffix = base_path.suffix  # ".md"
+    n = 1
+    while True:
+        candidate = parent / f"{stem}-rerun-{n}{suffix}"
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
+# ---------------------------------------------------------------------------
 # Result dataclass
 # ---------------------------------------------------------------------------
 
@@ -237,6 +295,16 @@ class LineageRunResult:
             corpus from on-disk frontmatters (F-13 in the
             pipeline-integration-map audit). May be ``None`` for callers
             that only need paths.
+        figure_assignments: Mapping ``doi -> figure_path`` populated when
+            ``run_lit_arc(..., acquire_figures=True)`` ran the
+            figure-acquisition phase between PDF acquisition and
+            summarization. Empty dict otherwise. The deck builder reads
+            this directly via ``build_deck_from_lineage_result(...,
+            figure_assignments=result.figure_assignments)`` so the
+            slash-command body no longer has to call
+            ``acquire_figures_for_corpus`` itself.
+        figures_acquired: Count of papers with at least one figure on
+            disk after Phase 4b. ``0`` when ``acquire_figures`` was False.
     """
 
     topic: str
@@ -250,6 +318,8 @@ class LineageRunResult:
     project_slug: str = ""
     project_view_paths: dict[str, Path] = field(default_factory=dict)
     corpus: "Corpus | None" = None
+    figure_assignments: dict[str, Path] = field(default_factory=dict)
+    figures_acquired: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -1632,12 +1702,15 @@ def run_lit_arc(
     run_dir: Path | None = None,
     deck_path: Path | None = None,
     speaker: str = "Bobby",
+    acquire_figures: bool = False,
+    figure_cache_dir: Path | None = None,
     # Test injection points (default to real implementations):
     _client: Any | None = None,
     _llm_summary: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
     _llm_arc: Callable[..., dict[str, str]] | None = None,
     _fetch_refs: Any | None = None,
     _acquire: Any | None = None,
+    _acquire_figures: Any | None = None,
     _summarize_corpus_fn: Any | None = None,
     _today: str | None = None,
     _now: str | None = None,
@@ -1699,10 +1772,31 @@ def run_lit_arc(
     Pass ``max_papers_to_summarize=N`` (an explicit int) to override the
     depth-derived budget — the explicit value always wins.
 
+    **Figure acquisition (Fix 1, 2026-04-30 evening-4).** Pass
+    ``acquire_figures=True`` to fetch native-resolution figures + captions
+    for the corpus between Phase 5 (PDF acquisition) and Phase 6
+    (summarization) via the API waterfall in
+    :mod:`vaultlab.figures.acquisition` (PMC OA tar → Elsevier
+    ScienceDirect XML → Springer OA JSON). The resulting ``figure_assignments``
+    map travels on the LineageRunResult so
+    :func:`vaultlab.slides.deck.build_deck_from_lineage_result` can
+    populate figure-slides directly. Cache directory defaults to
+    ``<kb_root>/Sources/Figures/`` and may be overridden via
+    ``figure_cache_dir``.
+
+    **Same-day rerun collision detection (Fix 3, 2026-04-30 evening-4).**
+    When ``Wiki/Concepts/<topic>-lineage-<date>.md`` already exists from
+    an earlier run on the same date AND its content differs from the
+    new arc text, the orchestrator picks
+    ``<topic>-lineage-<date>-rerun-1.md`` (then ``-rerun-2.md`` etc.) and
+    keeps the suffix consistent across the arc + ``.method.md`` +
+    ``.provenance.json`` triplet. Idempotent re-runs (identical text)
+    are detected and the path is left unchanged.
+
     Test injection points (``_client``, ``_llm_summary``, ``_llm_arc``,
-    etc.) take precedence over both modes; callers in production should
-    leave them at their defaults. ``_now`` overrides the timestamp used in
-    the decisions-log entry (test only).
+    ``_acquire_figures``, etc.) take precedence over both modes; callers
+    in production should leave them at their defaults. ``_now`` overrides
+    the timestamp used in the decisions-log entry (test only).
     """
     # Validate depth eagerly so callers get a clean error.
     if depth not in ("fast", "balanced", "thorough", "complete"):
@@ -1856,6 +1950,82 @@ def run_lit_arc(
         1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None
     )
     _emit(progress, "pdfs_acquired", n=pdfs_acquired)
+
+    # ------------------------------------------------------------------
+    # Phase 5b: figure acquisition (opt-in)
+    # ------------------------------------------------------------------
+    # When ``acquire_figures=True`` is passed, fetch native-resolution
+    # figures + captions for every paper in the corpus via the API
+    # waterfall in :mod:`vaultlab.figures.acquisition` (PMC OA tar →
+    # Elsevier ScienceDirect XML → Springer OA JSON). The resulting
+    # ``figure_assignments`` map (one figure path per DOI) is carried
+    # on the LineageRunResult so ``build_deck_from_lineage_result`` can
+    # populate figure-slides without a second acquisition pass.
+    figure_assignments: dict[str, Path] = {}
+    figures_acquired = 0
+    if acquire_figures:
+        _emit(
+            progress,
+            "phase",
+            "acquire_figures",
+            n_papers=corpus.n_papers,
+        )
+        if figure_cache_dir is None:
+            figure_cache_dir_resolved = kb_root / "Sources" / "Figures"
+        else:
+            figure_cache_dir_resolved = Path(figure_cache_dir)
+        figure_cache_dir_resolved.mkdir(parents=True, exist_ok=True)
+        if _acquire_figures is not None:
+            acq_fig = _acquire_figures
+        else:
+            from vaultlab.figures.acquisition import acquire_figures_for_corpus
+            acq_fig = acquire_figures_for_corpus
+        try:
+            fig_results = acq_fig(
+                corpus,
+                figure_cache_dir_resolved,
+                apis=apis,
+            )
+        except TypeError:
+            # Tolerate stubs that don't accept ``apis=`` kwarg.
+            try:
+                fig_results = acq_fig(corpus, figure_cache_dir_resolved)
+            except Exception as exc:  # pragma: no cover — never break run
+                logger.exception("acquire_figures_for_corpus raised: %s", exc)
+                fig_results = {}
+        except Exception as exc:  # pragma: no cover — never break run
+            logger.exception("acquire_figures_for_corpus raised: %s", exc)
+            fig_results = {}
+        for doi, res in (fig_results or {}).items():
+            figs = getattr(res, "figures", None) or []
+            if not figs:
+                continue
+            # Pick the largest figure on disk as the default assignment so
+            # the bucket picker has the best representative on hand. The
+            # deck-side picker can override per-bucket if multiple figures
+            # are needed (Fix 2).
+            best_path: Path | None = None
+            best_size = -1
+            for f in figs:
+                fpath = Path(getattr(f, "file_path", "") or "")
+                if not fpath or not fpath.exists():
+                    continue
+                try:
+                    size = fpath.stat().st_size
+                except OSError:
+                    size = 0
+                if size > best_size:
+                    best_size = size
+                    best_path = fpath
+            if best_path is not None:
+                figure_assignments[doi] = best_path
+        figures_acquired = len(figure_assignments)
+        _emit(
+            progress,
+            "figures_acquired",
+            n_papers=figures_acquired,
+            cache_dir=str(figure_cache_dir_resolved),
+        )
 
     # ------------------------------------------------------------------
     # Resolve the Tier-A budget: explicit override > depth-derived.
@@ -2200,19 +2370,44 @@ def run_lit_arc(
                 skipped_reason = f"anthropic call raised: {exc}"
                 narrative = None
 
-    # method.md sidecar will be written next to the arc; we hint at the
-    # canonical relpath so the frontmatter "provenance:" key is correct.
-    method_relpath = arc_path.name + ".method.md"
-
-    arc_md = render_arc_markdown(
+    # Render the arc text first (without method_relpath) so we can detect
+    # whether this is an idempotent rerun (same text, same date) vs a
+    # genuine new run that would otherwise clobber the prior arc.
+    # Fix 3 (2026-04-30 evening-4): same-day re-runs previously
+    # overwrote ``Wiki/Concepts/<topic>-lineage-<date>.md`` along with
+    # its method.md + provenance.json sidecars. We now walk the rerun-N
+    # suffix on collision so prior runs survive.
+    provisional_method_relpath = arc_path.name + ".method.md"
+    arc_md_provisional = render_arc_markdown(
         topic=topic,
         date_str=date_str,
         summaries=summaries,
         corpus=corpus,
-        method_relpath=method_relpath,
+        method_relpath=provisional_method_relpath,
         narrative=narrative,
         narrative_skipped_reason=skipped_reason,
     )
+    resolved_arc_path = _resolve_arc_path_with_collision(
+        arc_path, expected_content=arc_md_provisional
+    )
+    if resolved_arc_path != arc_path:
+        # Collision: re-render with the corrected method.md relpath so
+        # the arc's frontmatter "provenance:" key matches the suffixed
+        # sidecar that will actually be written.
+        method_relpath = resolved_arc_path.name + ".method.md"
+        arc_md = render_arc_markdown(
+            topic=topic,
+            date_str=date_str,
+            summaries=summaries,
+            corpus=corpus,
+            method_relpath=method_relpath,
+            narrative=narrative,
+            narrative_skipped_reason=skipped_reason,
+        )
+        arc_path = resolved_arc_path
+    else:
+        method_relpath = provisional_method_relpath
+        arc_md = arc_md_provisional
     arc_path.write_text(arc_md, encoding="utf-8")
     _emit(progress, "arc_written", path=str(arc_path))
 
@@ -2313,4 +2508,10 @@ def run_lit_arc(
         # ``corpus.metrics.co_citation_pairs`` etc. without rebuilding a
         # synthetic stand-in from on-disk frontmatters.
         corpus=corpus,
+        # Fix 1 (2026-04-30 evening-4): figure acquisition is now an
+        # optional phase wired into run_lit_arc — when enabled, the
+        # resulting DOI -> figure_path map travels with the result so
+        # the deck builder can plumb it directly without a second pass.
+        figure_assignments=figure_assignments,
+        figures_acquired=figures_acquired,
     )

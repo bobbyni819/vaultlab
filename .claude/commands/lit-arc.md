@@ -283,7 +283,24 @@ result = run_lit_arc(
     arc_mode="adversarial",          # "fast" | "adversarial"
     crosstalk_runner=claude_code_runner,
     crosstalk_n_rounds=3,            # default 3, hard cap 5
+
+    # Figure acquisition (Fix 1, 2026-04-30 evening-4) - opt-in.
+    # When True, the orchestrator runs Phase 5b after PDF acquisition,
+    # fetching native-resolution figures + captions via the API
+    # waterfall (PMC OA tar -> Elsevier ScienceDirect XML ->
+    # Springer OA JSON). The resulting figure_assignments map
+    # (DOI -> figure_path) is carried on the LineageRunResult so
+    # build_deck_from_lineage_result can populate figure-slides
+    # without a second acquisition pass. Default False.
+    acquire_figures=True,            # figures land at <kb_root>/Sources/Figures/
 )
+
+# Then plumb figures into the deck (no need to call
+# acquire_figures_for_corpus a second time):
+#   from vaultlab.slides.deck import build_deck_from_lineage_result
+#   build_deck_from_lineage_result(
+#       result, ..., figure_assignments=result.figure_assignments,
+#   )
 ```
 
 When the user requests `/lit-arc <topic> --mode fast`, set

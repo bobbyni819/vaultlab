@@ -1444,3 +1444,330 @@ class TestDeckProvenanceReceipts:
         method_text = method_p.read_text(encoding="utf-8")
         assert "Method" in method_text
         assert "build_deck_from_lineage_result" in method_text
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 (2026-04-30 evening-4): aggressive figure picker
+# ---------------------------------------------------------------------------
+
+
+class TestAggressiveFigurePicker:
+    """Fix 2 — corpus with N Tier-A papers + N figures must produce
+    multiple figure-slides, not just one."""
+
+    def _make_summary(
+        self,
+        kb_root: Path,
+        doi: str,
+        *,
+        title: str,
+        year: int,
+        bucket: str,
+        og_score: float = 1.0,
+    ) -> Path:
+        slug = doi.replace("/", "_")
+        p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        body = (
+            f"---\n"
+            f"doi: {doi}\n"
+            f"title: {title}\n"
+            f"authors: ['Author{year}']\n"
+            f"year: {year}\n"
+            f"year_bucket: {bucket}\n"
+            f"tier: A\n"
+            f"og_score: {og_score}\n"
+            f"---\n\n"
+            f"## TL;DR\n{title}: TL;DR sentence.\n"
+        )
+        p.write_text(body, encoding="utf-8")
+        return p
+
+    def _make_fig(self, root: Path, doi: str, size: int = 200_000) -> Path:
+        slug = doi.replace("/", "_")
+        d = root / slug
+        d.mkdir(parents=True, exist_ok=True)
+        # Use Pillow to create a real PNG of the requested rough size.
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+        # Create an image of dimensions that approximate the target
+        # filesize (ballpark — actual PNG size depends on entropy).
+        # Use a noisy image so PNG compression doesn't make it tiny.
+        import random
+        side = max(64, int((size / 3) ** 0.5))
+        img = Image.new("RGB", (side, side))
+        rng = random.Random(hash(doi) & 0xFFFF)
+        pixels = [
+            (rng.randint(0, 255), rng.randint(0, 255), rng.randint(0, 255))
+            for _ in range(side * side)
+        ]
+        img.putdata(pixels)
+        p = d / "fig1-main.png"
+        img.save(p, "PNG")
+        return p
+
+    def test_corpus_with_5_tier_a_papers_yields_at_least_4_figure_slides(
+        self, tmp_path
+    ) -> None:
+        """5 Tier-A papers each with one large figure -> >=4 figure-slides."""
+        from pptx import Presentation
+
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides.deck import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        kb_root.mkdir()
+        figs_dir = tmp_path / "figs"
+        figs_dir.mkdir()
+
+        # 6 Tier-A papers spread across all three buckets.
+        papers = [
+            ("10.1/h1", "Foundational A", 2010, "history", 5.0),
+            ("10.1/h2", "Foundational B", 2011, "history", 4.5),
+            ("10.1/d1", "Development A", 2015, "development", 3.0),
+            ("10.1/d2", "Development B", 2016, "development", 2.5),
+            ("10.1/s1", "SOTA A", 2024, "sota", 2.0),
+            ("10.1/s2", "SOTA B", 2025, "sota", 1.8),
+        ]
+
+        summary_paths: dict[str, Path] = {}
+        figure_assignments: dict[str, Path] = {}
+        for doi, title, year, bucket, og in papers:
+            sp = self._make_summary(
+                kb_root,
+                doi,
+                title=title,
+                year=year,
+                bucket=bucket,
+                og_score=og,
+            )
+            summary_paths[doi] = sp
+            fig = self._make_fig(figs_dir, doi, size=200_000)
+            figure_assignments[doi] = fig
+
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text(
+            "# Lineage: x\n\n## History\n\n## Development\n\n## SOTA\n",
+            encoding="utf-8",
+        )
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=6,
+        )
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            figure_assignments=figure_assignments,
+        )
+        pres = Presentation(str(out))
+
+        # Count slides containing pictures (shape_type==13).
+        n_figure_slides = sum(
+            1
+            for s in pres.slides
+            if any(sh.shape_type == 13 for sh in s.shapes)
+        )
+        assert n_figure_slides >= 4, (
+            f"expected >=4 figure-slides but got {n_figure_slides} "
+            f"(corpus has 6 Tier-A papers, each with a cached figure)"
+        )
+
+    def test_total_cap_keeps_deck_from_blowing_out(self, tmp_path) -> None:
+        """20 Tier-A papers each with figure -> total figure-slides
+        capped at _FIGURE_TOTAL_CAP=8."""
+        from pptx import Presentation
+
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides.deck import (
+            _FIGURE_TOTAL_CAP,
+            build_deck_from_lineage_result,
+        )
+
+        kb_root = tmp_path / "kb"
+        kb_root.mkdir()
+        figs_dir = tmp_path / "figs"
+        figs_dir.mkdir()
+
+        summary_paths: dict[str, Path] = {}
+        figure_assignments: dict[str, Path] = {}
+        for i in range(20):
+            doi = f"10.1/p{i:02d}"
+            bucket = ["history", "development", "sota"][i % 3]
+            sp = self._make_summary(
+                kb_root,
+                doi,
+                title=f"Paper {i}",
+                year=2010 + i,
+                bucket=bucket,
+                og_score=20 - i,
+            )
+            summary_paths[doi] = sp
+            fig = self._make_fig(figs_dir, doi, size=200_000)
+            figure_assignments[doi] = fig
+
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text(
+            "# Lineage: x\n\n## History\n\n## Development\n\n## SOTA\n",
+            encoding="utf-8",
+        )
+
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=20,
+        )
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            figure_assignments=figure_assignments,
+        )
+        pres = Presentation(str(out))
+        n_figure_slides = sum(
+            1
+            for s in pres.slides
+            if any(sh.shape_type == 13 for sh in s.shapes)
+        )
+        assert n_figure_slides <= _FIGURE_TOTAL_CAP, (
+            f"figure-slide count exceeded cap {_FIGURE_TOTAL_CAP}: got {n_figure_slides}"
+        )
+
+    def test_largest_figure_chosen_per_paper(self, tmp_path) -> None:
+        """When a DOI's cache dir has 5 figures, the picker chooses the largest."""
+        from vaultlab.slides.deck import (
+            _FIGURE_MIN_BYTES,
+            _pick_largest_figure_for_doi,
+        )
+
+        # Simulate a manifest with 5 figures of varying sizes, only one
+        # of which is above the threshold.
+        d = tmp_path / "10-1_x"
+        d.mkdir(parents=True, exist_ok=True)
+        sizes = [
+            ("fig1.png", 5_000),     # decorative crop
+            ("fig2.png", 8_000),     # decorative crop
+            ("fig3.png", 250_000),   # main result figure
+            ("fig4.png", 30_000),    # mid-size
+            ("fig5.png", 12_000),    # decorative
+        ]
+        files = []
+        for name, size in sizes:
+            p = d / name
+            p.write_bytes(b"x" * size)
+            files.append(p)
+        # Manifest lists all 5 in order.
+        import json as _json
+        manifest = d / ".figures.json"
+        manifest.write_text(
+            _json.dumps({
+                "figures": [
+                    {"figure_id": f"fig{i+1}", "file_path": str(p)}
+                    for i, p in enumerate(files)
+                ]
+            }),
+            encoding="utf-8",
+        )
+        # figure_assignments: only the SEED path (fig1) is registered;
+        # the picker must enumerate siblings via the manifest.
+        figure_assignments = {"10.1/x": files[0]}
+        chosen = _pick_largest_figure_for_doi(
+            "10.1/x", figure_assignments, min_size_bytes=_FIGURE_MIN_BYTES
+        )
+        assert chosen is not None
+        assert chosen.name == "fig3.png", (
+            f"picker chose {chosen.name} instead of the 250 KB main figure"
+        )
+
+    def test_pick_figures_for_bucket_multi_returns_one_per_paper(
+        self, tmp_path
+    ) -> None:
+        """A bucket with 3 Tier-A papers each having a figure produces 3 picks."""
+        from vaultlab.slides.deck import _pick_figures_for_bucket_multi
+
+        # Three real PNG-shaped files large enough to clear the threshold.
+        figs: list[Path] = []
+        for i in range(3):
+            p = tmp_path / f"fig_{i}.png"
+            p.write_bytes(b"\x89PNG\r\n" + b"x" * 200_000)
+            figs.append(p)
+
+        bucket_papers = [
+            {"doi": "10.1/a", "tier": "A", "og_score": 5.0},
+            {"doi": "10.1/b", "tier": "A", "og_score": 4.0},
+            {"doi": "10.1/c", "tier": "A", "og_score": 3.0},
+        ]
+        figure_assignments = {
+            "10.1/a": figs[0],
+            "10.1/b": figs[1],
+            "10.1/c": figs[2],
+        }
+        picks = _pick_figures_for_bucket_multi(
+            bucket_papers, figure_assignments, max_per_bucket=4
+        )
+        assert len(picks) == 3
+        # Leader is first; each pick has claim_doi == fig_doi (no
+        # substitution because every paper has its own figure).
+        for claim_doi, fig_doi, _path in picks:
+            assert claim_doi == fig_doi
+        assert picks[0][0] == "10.1/a"  # leader
+
+    def test_pick_figures_for_bucket_multi_respects_max_per_bucket(
+        self, tmp_path
+    ) -> None:
+        """``max_per_bucket=2`` caps the result list at 2 entries."""
+        from vaultlab.slides.deck import _pick_figures_for_bucket_multi
+
+        figs: list[Path] = []
+        for i in range(5):
+            p = tmp_path / f"fig_{i}.png"
+            p.write_bytes(b"\x89PNG\r\n" + b"x" * 200_000)
+            figs.append(p)
+
+        bucket_papers = [
+            {"doi": f"10.1/p{i}", "tier": "A", "og_score": 5.0 - i}
+            for i in range(5)
+        ]
+        figure_assignments = {
+            f"10.1/p{i}": figs[i] for i in range(5)
+        }
+        picks = _pick_figures_for_bucket_multi(
+            bucket_papers, figure_assignments, max_per_bucket=2
+        )
+        assert len(picks) == 2
+
+    def test_pick_figures_for_bucket_multi_skips_tier_c_papers(
+        self, tmp_path
+    ) -> None:
+        """Tier-C papers must NEVER be picked as figure-slide subjects."""
+        from vaultlab.slides.deck import _pick_figures_for_bucket_multi
+
+        fig_a = tmp_path / "a.png"
+        fig_a.write_bytes(b"\x89PNG\r\n" + b"x" * 200_000)
+        fig_c = tmp_path / "c.png"
+        fig_c.write_bytes(b"\x89PNG\r\n" + b"x" * 200_000)
+
+        bucket_papers = [
+            {"doi": "10.1/c", "tier": "C"},  # Tier-C leader
+            {"doi": "10.1/a", "tier": "A"},  # Tier-A
+        ]
+        figure_assignments = {"10.1/c": fig_c, "10.1/a": fig_a}
+        picks = _pick_figures_for_bucket_multi(
+            bucket_papers, figure_assignments
+        )
+        # Exactly one pick — the Tier-A paper. The Tier-C paper, even
+        # with a cached figure, must never appear as fig_doi.
+        assert len(picks) == 1
+        claim_doi, fig_doi, _path = picks[0]
+        # Leader is Tier-C (claim_doi reflects that), figure substitutes
+        # from Tier-A.
+        assert fig_doi == "10.1/a"
+        assert claim_doi == "10.1/c"
