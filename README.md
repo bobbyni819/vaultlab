@@ -21,6 +21,18 @@
 
 ---
 
+## About
+
+Built by a PhD student in biomedical engineering at Duke (Hickey Lab) working across wet-lab spatial omics and computational biology.
+
+Being a researcher means juggling many projects at once — a ton of meetings, papers piling up, floating knowledge from collaborator conversations, half-finished manuscripts, decisions made days ago that need to surface this morning. The context lives across Outlook, Google Drive, your inbox, half a dozen analysis notebooks. An LLM can only help when you've already pulled the right context into the prompt.
+
+VaultLab reads across those ecosystems and centralizes them inside Claude Code. Switch between three projects in a single day; each one keeps full context. A new lab member shares the Drive folder and is caught up. These are real shortcomings of doing research at PhD scale — that's what the system is built to fix.
+
+The design takes the best parts of open-source projects already at scale and combines them: [gstack](https://github.com/garrytan/gstack) (Garry Tan) for the Claude Code skill-bundle pattern, [nanoGPT](https://github.com/karpathy/nanoGPT) (Andrej Karpathy) for the fork-and-clone distribution model, [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) for adversarial multi-agent meetings, [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) for the bounded plan→verify loop. Novel pieces extend the bundle for research workloads — meeting-transcript ingestion (Windows + Outlook + Whisper for now), citation-graph-driven literature pipelines, LLM-driven lineage binning, evidence-tied citation auditing.
+
+---
+
 ## What VaultLab actually does
 
 Inside Claude Code, VaultLab reads your whole research ecosystem and writes back into it. Five context sources, one place the LLM looks:
@@ -233,7 +245,7 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 
 ## Methodological lineage
 
-VaultLab is alpha software — no published paper has been written using it yet. **The credibility comes from what it draws on.** Patterns are deliberately lifted from established, peer-reviewed, or widely-used open-source projects, then adapted into a Claude-Code-native harness:
+The patterns VaultLab uses are deliberately lifted from established, peer-reviewed, or widely-used open-source projects, then adapted into a Claude-Code-native harness:
 
 | What VaultLab does | Pattern source |
 |---|---|
@@ -249,18 +261,6 @@ VaultLab is alpha software — no published paper has been written using it yet.
 Each row represents a method or interface design choice that I read, understood, and adapted — not invented from scratch. The implementations are mine, but the patterns have track records elsewhere.
 
 Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). For a project-level breakdown of design choices novel to VaultLab vs. synthesis vs. borrowed: [`docs/design-rationale.md`](docs/design-rationale.md).
-
----
-
-## About
-
-Built by a PhD student in biomedical engineering working across wet-lab spatial omics and computational biology. The credential matters because the design decisions reflect what working researchers actually need from a Claude Code setup — not what looks elegant from outside the lab.
-
-**Use it as a full research assistant.** Literature, data analysis, figures, manuscripts, slides — VaultLab covers the full project cycle without leaving Claude Code. Slash commands compose: results from `/lit-arc` flow into `/build-deck`; context from `/onboard-project` carries forward into every later command. Once a project is onboarded, you stop re-explaining it every session — Claude Code already knows.
-
-**Use it outside research too.** A personal-finance reading list, scoping a class project, a competitive-landscape doc, a long-running personal investigation — the literature pipeline + KB + slide composer don't care whether the topic is biomedical. The whole core is domain-agnostic. Modality-specific modules (CODEX, MALDI, scRNA-seq) are opt-in.
-
-**The main use is research, in any field.** That bias shows in what's polished — but the same machinery extends in every direction work tends to drift.
 
 ---
 
