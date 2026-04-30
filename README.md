@@ -17,13 +17,13 @@
 
 ## About
 
-PhD student in biomedical engineering at Duke (Hickey Lab) — wet-lab spatial omics + computational.
+I'm Bobby Ni, a PhD student in Biomedical Engineering at Duke. I do wet-lab spatial omics and computational work.
 
-Research at scale is fragmented. Meetings in Outlook. Papers in Drive. Notes on a lab NAS. Archives on university OneDrive. Decisions made in conversations nobody wrote down. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
+Research at scale is fragmented: meetings in Outlook, papers in Drive, notes on a lab NAS, archives on University OneDrive, updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
 
-VaultLab reads across those ecosystems and centralizes them inside Claude Code. KB is plain markdown — runs on whatever storage you already have.
+VaultLab reads across those ecosystems and centralizes them in a knowledge base inside Claude Code. The KB is plain markdown — runs on whatever storage you already have.
 
-I've used the Claude API to automate workflows with autonomous agents. Token cost still doesn't justify the marginal lift. What's worked is being hands-on inside Claude Code with the LLM as an amplifier — that's been the real game changer. Watching others ship — [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist), other research-specific agent systems — was the push to ship mine and join the open-source wave. Most of what's here adapts beyond research; KB, citation auditing, and slide composition work on any topic.
+I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I've found more value operating inside Claude Code. Watching others ship — [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist), other research-specific agent systems — was the push to ship mine and join the open-source wave. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
 
 ---
 
