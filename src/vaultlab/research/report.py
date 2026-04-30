@@ -76,6 +76,7 @@ from vaultlab.kb.paths import (
     article_stub_path,
     concept_path,
     ensure_parent,
+    slugify_doi,
     slugify_topic,
     summary_path,
 )
@@ -378,7 +379,12 @@ def _bucketed_summaries_md(summaries: dict[str, PaperSummary]) -> str:
     }
     for s in summaries.values():
         bucket = s.year_bucket or "unknown"
-        slug = (s.doi or "").replace("/", "_")
+        # Closes L4 audit bug #6: route through slugify_doi so the
+        # wikilink slug matches the actual file written by
+        # write_summary_to_kb (which uses summary_path -> slugify_doi).
+        # The previous .replace("/", "_") only handled `/` and broke on
+        # rarer DOI characters like `:` `*` `?` `<` `>` `|`.
+        slug = slugify_doi(s.doi) if s.doi else ""
         first_author = s.authors[0].split()[0] if s.authors else "Anon"
         label = f"{first_author} {s.year}" if s.year else first_author
         tldr = (s.tldr or "_(Tier-C stub — no TL;DR)_").strip()[:280]
@@ -660,7 +666,10 @@ def _references_from_summaries(
     """Render References section listing cited papers (alphabetical by author)."""
     rows: list[tuple[str, str]] = []
     for doi, s in summaries.items():
-        slug = (s.doi or doi).replace("/", "_")
+        # Closes L4 audit bug #6: same slugify_doi routing so the
+        # references list lines up with the actual summary filenames.
+        slug_source = s.doi or doi
+        slug = slugify_doi(slug_source) if slug_source else ""
         if cited_slugs and slug not in cited_slugs:
             continue
         first_author = s.authors[0] if s.authors else "Anon"

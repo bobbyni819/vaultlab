@@ -827,3 +827,70 @@ def test_summarize_corpus_reader_mode_does_not_use_anthropic(tmp_path, monkeypat
         reader=_reader,
     )
     assert len(summaries) == 3
+
+
+def test_summarize_corpus_sdk_honors_tier_a_dois(tmp_path):
+    """Regression for L4 audit bug #1: in SDK mode, ``tier_a_dois`` must
+    short-circuit non-budget papers to Tier-C even when a PDF is cached.
+
+    Before the fix, ``_one_sdk`` ignored ``tier_a_dois`` entirely; every
+    paper with a cached PDF received a full Tier-A summary, blowing the
+    budget. After the fix, only papers in ``tier_a_dois`` reach the LLM.
+    """
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    from vaultlab.research.acquisition import cache_path_for
+
+    # Cache PDFs for ALL three seeds so the budget is the only thing
+    # that can hold the SDK path back from a Tier-A summary.
+    for doi in (
+        "10.1126/science.1225829",
+        "10.1038/nature17946",
+        "10.1038/nature24644",
+    ):
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    seen_llm_calls: list[str] = []
+
+    def _llm_tracking(*, pdf_bytes, prompt, api_key, model, **_):
+        # Pull the DOI off the prompt so we can tell who the LLM saw.
+        # The prompt embeds ``DOI: <doi>`` near the top.
+        doi_line = next(
+            (ln for ln in prompt.splitlines() if ln.lstrip().startswith("DOI:")),
+            "DOI: <unknown>",
+        )
+        seen_llm_calls.append(doi_line)
+        return (
+            {
+                "tldr": "a. b. c.",
+                "why_it_matters": [],
+                "methods_summary": "",
+                "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+                "extracted_references": [],
+            },
+            10,
+            10,
+        )
+
+    keep = {"10.1126/science.1225829"}
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        parallel=1,
+        tier_a_dois=keep,
+        _llm=_llm_tracking,
+    )
+
+    # Exactly one paper should get a Tier-A summary; the other two
+    # should be Tier-C stubs even though they had cached PDFs.
+    tiers = {doi: s.tier for doi, s in summaries.items()}
+    assert tiers["10.1126/science.1225829"] == "A"
+    assert tiers["10.1038/nature17946"] == "C"
+    assert tiers["10.1038/nature24644"] == "C"
+    # And the LLM was only ever invoked for the budgeted paper.
+    assert len(seen_llm_calls) == 1
+    assert "10.1126/science.1225829" in seen_llm_calls[0]

@@ -1259,6 +1259,16 @@ def summarize_corpus(
     total = len(dois)
     results: dict[str, PaperSummary] = {}
 
+    # Closes L4 audit bug #1: log the Tier-A budget so a silently-empty
+    # set is easier to spot, and so the SDK path's enforcement (below)
+    # is observable in run logs.
+    if tier_a_dois is not None:
+        logger.debug(
+            "summarize_corpus: tier_a_dois budget = %d paper(s); "
+            "all other papers fall through to Tier-C stubs",
+            len(tier_a_dois),
+        )
+
     def _one_reader(doi: str) -> tuple[str, PaperSummary]:
         """Reader-mode path — no SDK, no API key."""
         assert reader is not None
@@ -1324,6 +1334,15 @@ def summarize_corpus(
         pdf_path = cache_path_for(doi, pdf_cache_dir)
         if not pdf_path.exists():
             pdf_path = None  # Tier C stub
+        # Closes L4 audit bug #1: mirror the reader-mode tier_a_dois
+        # enforcement in the SDK path. Without this guard, callers who
+        # pass tier_a_dois with reader=None would silently get a Tier-A
+        # summary for every paper that happens to have a cached PDF —
+        # blowing the budget. Force pdf_path=None for non-budget papers
+        # so they short-circuit to the Tier-C stub branch in
+        # summarize_paper.
+        if tier_a_dois is not None and doi not in tier_a_dois:
+            pdf_path = None
         # CrossRef gives us refs unless the entry exists with empty list.
         refs_missing = doi in corpus.references and not corpus.references.get(doi)
         summary = summarize_paper(

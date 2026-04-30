@@ -844,3 +844,52 @@ def test_run_lit_report_provenance_records_word_counts(tmp_path, monkeypatch):
     assert rec["params"]["section_word_counts"] == result.section_word_counts
     assert rec["params"]["depth"] == "thorough"
     assert rec["kind"] == "deep_research_report"
+
+
+def test_render_summary_block_uses_slugify_doi():
+    """Regression for L4 audit bug #6: ``_bucketed_summaries_md`` must
+    route DOI->slug through :func:`slugify_doi` so wikilinks resolve to
+    the actual ``Wiki/Summaries/<slug>.md`` files. Before the fix the
+    code did ``s.doi.replace("/", "_")`` which broke on DOIs containing
+    rarer filesystem-illegal characters like ``:``, ``*``, ``?``.
+
+    The same guarantee covers ``_references_from_summaries`` because it
+    uses the same slug source.
+    """
+    from vaultlab.research.report import (
+        _bucketed_summaries_md,
+        _references_from_summaries,
+    )
+
+    weird_doi = "10.1234/foo:bar*baz"
+    expected_slug = slugify_doi(weird_doi)
+    # Sanity: the slug must NOT just be the raw "/"->"_" substitution.
+    assert expected_slug != weird_doi.replace("/", "_")
+    assert ":" not in expected_slug
+    assert "*" not in expected_slug
+
+    summary = PaperSummary(
+        doi=weird_doi,
+        title="Weird-char DOI paper",
+        authors=["Smith J"],
+        year=2024,
+        journal="J. Edge Cases",
+        og_score=0.5,
+        forward_influence=7,
+        year_bucket="sota",
+        tier="A",
+        tldr="Edge-case characters in the DOI shouldn't break wikilinks.",
+        key_findings=["finding one [p1]", "finding two [p2]"],
+    )
+    summaries = {weird_doi: summary}
+
+    block = _bucketed_summaries_md(summaries)
+    assert f"[[{expected_slug}|" in block, (
+        f"_bucketed_summaries_md did not use slugify_doi: {block!r}"
+    )
+
+    # _references_from_summaries with cited_slugs should still match.
+    refs = _references_from_summaries(summaries, cited_slugs={expected_slug})
+    assert f"[[{expected_slug}|" in refs, (
+        f"_references_from_summaries did not use slugify_doi: {refs!r}"
+    )

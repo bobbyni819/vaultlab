@@ -460,6 +460,69 @@ class TestRenderPlanFromResponse:
         assert "Scaffolding" in text
         assert "Breakthrough" in text
 
+    def test_normalize_figure_slide_composes_substitution_caption(
+        self, synth_corpus, synth_summaries, fig_assignments, tmp_path
+    ):
+        """Regression for L4 audit bug #2: when claim_doi != figure_doi,
+        the caption MUST be prefixed with ``Substituted figure from
+        [[<slug>|Author Year]]:`` so the audience sees the attribution
+        flag. Before the fix, the LLM-supplied caption was used verbatim
+        and the figure looked like it came from the claim paper.
+        """
+        task = prepare_deck_plan_task(
+            topic="trial",
+            corpus=synth_corpus,
+            summaries=synth_summaries,
+            figure_assignments=fig_assignments,
+            kb_root=tmp_path,
+        )
+        response = {
+            "slides": [
+                {"type": "title", "title": "Trial"},
+                {
+                    "type": "figure",
+                    "title": "Substituted figure",
+                    "image_path": str(fig_assignments["10.1/breakthrough-2014"]),
+                    "claim_paper_doi": "10.1/scaffolding-2002",
+                    "figure_paper_doi": "10.1/breakthrough-2014",
+                    "caption": "Original caption text",
+                },
+                {
+                    "type": "figure",
+                    "title": "Non-substituted figure",
+                    "image_path": str(fig_assignments["10.1/foundations-1990"]),
+                    "claim_paper_doi": "10.1/foundations-1990",
+                    "figure_paper_doi": "10.1/foundations-1990",
+                    "caption": "Same-paper caption",
+                },
+            ],
+        }
+        plan = render_plan_from_response(task, response)
+        figure_slides = [s for s in plan["slides"] if s.get("type") == "figure"]
+        assert len(figure_slides) == 2
+
+        sub_slide = next(s for s in figure_slides if s["title"] == "Substituted figure")
+        cap = sub_slide["caption"]
+        # The substitution prefix must be present and lead the caption.
+        assert cap.startswith("Substituted figure from "), (
+            f"caption did not get the substitution prefix: {cap!r}"
+        )
+        # The wikilink slug must come from slugify_doi (so it resolves to
+        # the actual Wiki/Summaries/<slug>.md file).
+        from vaultlab.kb.paths import slugify_doi
+        expected_slug = slugify_doi("10.1/breakthrough-2014")
+        assert f"[[{expected_slug}|" in cap, (
+            f"caption is missing wikilink to figure source: {cap!r}"
+        )
+        # The original caption text must be preserved after the prefix.
+        assert "Original caption text" in cap
+
+        # Non-substituted figure (claim == figure) must NOT get the prefix.
+        non_sub_slide = next(
+            s for s in figure_slides if s["title"] == "Non-substituted figure"
+        )
+        assert "Substituted figure from" not in non_sub_slide["caption"]
+
     def test_speaker_notes_dual_format_preserved(
         self, synth_corpus, synth_summaries, tmp_path
     ):

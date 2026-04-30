@@ -788,6 +788,25 @@ def _normalize_figure_slide(
         # Provide a sensible default caption.
         label = _author_year_for_doi(figure_doi, summaries_by_doi)
         caption = f"Figure from {label}"
+
+    # Closes L4 audit bug #2: when the LLM picks a figure from a paper
+    # other than the slide's claim source, the audience needs a visible
+    # attribution flag that the figure is substituted. Mirror the
+    # ``_compose_substitution_caption`` convention from
+    # :mod:`vaultlab.slides.deck` so adversarial / plan-callback decks
+    # carry the same prefix as the mechanical decks. We don't reuse the
+    # helper directly because deck_plan.py works with summary dicts and
+    # builds simpler "Author Year" labels rather than the one-line
+    # "Author Year — Title" labels deck.py prefers.
+    if claim_doi and figure_doi and claim_doi != figure_doi:
+        fig_label = _author_year_for_doi(figure_doi, summaries_by_doi)
+        fig_slug = slugify_doi(figure_doi)
+        prefix = f"Substituted figure from [[{fig_slug}|{fig_label}]]"
+        if caption:
+            caption = f"{prefix}: {caption}"
+        else:
+            caption = prefix
+
     citation_source = slide.get("citation_source") or _author_year_for_doi(
         claim_doi or figure_doi, summaries_by_doi
     )

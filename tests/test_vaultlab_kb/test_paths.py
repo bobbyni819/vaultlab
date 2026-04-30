@@ -64,6 +64,24 @@ class TestSlugifyDoi:
         with pytest.raises(ValueError):
             paths.slugify_doi("")
 
+    def test_slugify_doi_idempotent_with_lowercase(self) -> None:
+        """Regression for L4 audit bug #4: slugify_doi must lowercase its
+        output so summary paths and PDF cache paths agree on slug form
+        even when a mixed-case DOI sneaks in from a search engine.
+        """
+        # Mixed-case and all-lowercase DOIs must produce the same slug.
+        assert (
+            paths.slugify_doi("10.1126/Science.xyz")
+            == paths.slugify_doi("10.1126/science.xyz")
+            == "10.1126_science.xyz"
+        )
+        # Output is always lowercase regardless of input casing.
+        assert paths.slugify_doi("10.1038/S41586-023-XYZ") == "10.1038_s41586-023-xyz"
+        # Idempotent: applying twice yields the same slug.
+        once = paths.slugify_doi("10.1234/Foo:Bar")
+        twice = paths.slugify_doi(once)
+        assert once == twice == "10.1234_foo_bar"
+
 
 class TestSlugifyTopic:
     def test_basic_lowercase_kebab(self) -> None:

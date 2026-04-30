@@ -71,7 +71,9 @@ def slugify_doi(doi: str) -> str:
 
     Replaces characters that are illegal or awkward on Windows / POSIX
     filesystems (``/``, ``\\``, ``:``, ``*``, ``?``, ``"``, ``<``, ``>``,
-    ``|``) with underscores. Whitespace is stripped.
+    ``|``) with underscores. Whitespace is stripped. The result is
+    lowercased so summary paths and PDF cache paths agree on slug form
+    even if a mixed-case DOI sneaks in from a search engine.
 
     Examples
     --------
@@ -79,6 +81,8 @@ def slugify_doi(doi: str) -> str:
     '10.1126_science.1225829'
     >>> slugify_doi("10.1038/s41586-023-05915-x")
     '10.1038_s41586-023-05915-x'
+    >>> slugify_doi("10.1126/Science.xyz") == slugify_doi("10.1126/science.xyz")
+    True
     """
     if not doi:
         raise ValueError("slugify_doi requires a non-empty DOI")
@@ -92,7 +96,9 @@ def slugify_doi(doi: str) -> str:
     s = re.sub(r'[\\/:*?"<>|]+', "_", s)
     # Collapse whitespace to single underscore.
     s = re.sub(r"\s+", "_", s)
-    return s
+    # Lowercase the result so the slug is canonical regardless of how the
+    # DOI was capitalised by the upstream source.
+    return s.lower()
 
 
 def slugify_topic(topic: str) -> str:
