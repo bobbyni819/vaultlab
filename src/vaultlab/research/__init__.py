@@ -44,6 +44,13 @@ if TYPE_CHECKING:
 from vaultlab.research.paper import Paper
 from vaultlab.research.pdf import batch_extract, extract_and_save, extract_text
 from vaultlab.research.session import Finding, FindingStatus, ResearchSession
+from vaultlab.research.summarize import (
+    PaperSummary,
+    SummarizeAuthError,
+    summarize_corpus,
+    summarize_paper,
+    write_summary_to_kb,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +64,12 @@ __all__ = [
     "Finding",
     "FindingStatus",
     "Paper",
+    "PaperSummary",
     "RateLimitError",
     "Reference",
     "ResearchClient",
     "ResearchSession",
+    "SummarizeAuthError",
     "acquire_pdf",
     "acquire_pdfs_for_corpus",
     "batch_extract",
@@ -80,7 +89,10 @@ __all__ = [
     "get_paper",
     "get_references_via_crossref",
     "search_papers",
+    "summarize_corpus",
+    "summarize_paper",
     "write_figure_notes",
+    "write_summary_to_kb",
 ]
 
 
