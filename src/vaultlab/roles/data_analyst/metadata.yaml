@@ -25,3 +25,5 @@ output_format: |
 tools_allowed:
   - Bash
   - Read
+kb_outputs:
+  - paths.turn_path  # per-turn analyst output inside a meeting run

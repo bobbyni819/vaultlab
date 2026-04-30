@@ -99,17 +99,25 @@ class Agenda:
 
 @dataclass
 class Role:
-    """A named agent persona with a specific posture."""
+    """A named agent persona with a specific posture.
+
+    This is the canonical Role shape in vaultlab. Loaded from
+    ``vaultlab.roles`` (markdown + YAML on disk per Invariant 7) and
+    consumed by the runner via :meth:`prompt_for` to render per-task
+    system prompts that wrap the Agenda block.
+    """
 
     id: str
     name: str
     system_prompt: str
+    description: str = ""
     focus_areas: list[str] = field(default_factory=list)
     evaluation_criteria: list[str] = field(default_factory=list)
     communication_style: str = ""
     mode: Mode = Mode.DATA_ANALYSIS
     output_format: str = ""
     icon: Optional[str] = None
+    tools_allowed: tuple[str, ...] = field(default_factory=tuple)
 
     def prompt_for(
         self,

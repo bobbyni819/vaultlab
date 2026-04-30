@@ -16,39 +16,23 @@ Public API:
     - Role           — dataclass with prompt + metadata fields
     - load_role(id)  — load one role by directory name
     - list_roles()   — sorted list of available role ids
+
+The returned :class:`Role` is :class:`vaultlab.runner.models.Role` — the
+single canonical shape in vaultlab. The loader's job is to read disk
+state and project it into that class. Behaviour (e.g. ``prompt_for``)
+lives on the Role itself, so callers downstream of the loader never need
+to bridge between two structurally different ``Role`` types.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
+from vaultlab.runner.models import Mode, Role
+
 _ROLES_DIR = Path(__file__).resolve().parent
-
-
-@dataclass(frozen=True)
-class Role:
-    """A named agent persona loaded from prompt.md + metadata.yaml.
-
-    Field semantics mirror the legacy `bobby_ailab._models.Role` so existing
-    pipeline code can swap in this loader with minimal change. The prompt
-    body lives in `system_prompt`; everything else comes from metadata.yaml.
-    """
-
-    id: str
-    name: str
-    system_prompt: str
-    description: str = ""
-    mode: str = "data_analysis"
-    icon: Optional[str] = None
-    focus_areas: tuple[str, ...] = field(default_factory=tuple)
-    evaluation_criteria: tuple[str, ...] = field(default_factory=tuple)
-    communication_style: str = ""
-    output_format: str = ""
-    tools_allowed: tuple[str, ...] = field(default_factory=tuple)
 
 
 class RoleNotFoundError(KeyError):
@@ -72,6 +56,25 @@ def _is_role_dir(path: Path) -> bool:
 def list_roles() -> list[str]:
     """Return sorted list of role ids discovered on disk."""
     return sorted(p.name for p in _ROLES_DIR.iterdir() if _is_role_dir(p))
+
+
+def _coerce_mode(value: object) -> Mode:
+    """Project a YAML scalar into the runner's ``Mode`` enum.
+
+    YAML stores ``mode`` as a string (``"data_analysis"`` /
+    ``"literature_review"``); the runner expects an enum so equality and
+    set membership are unambiguous. ``Mode`` is a ``str, Enum``, so the
+    string form still compares equal to the enum value for callers that
+    test ``role.mode == "data_analysis"``.
+    """
+    if isinstance(value, Mode):
+        return value
+    if isinstance(value, str):
+        try:
+            return Mode(value)
+        except ValueError as exc:
+            raise ValueError(f"unknown mode value in metadata.yaml: {value!r}") from exc
+    raise TypeError(f"metadata.yaml mode must be a string, got {type(value).__name__}")
 
 
 def load_role(role_id: str) -> Role:
@@ -99,10 +102,10 @@ def load_role(role_id: str) -> Role:
         name=str(meta.get("name", role_id.replace("_", " ").title())),
         system_prompt=prompt_text,
         description=str(meta.get("description", "")),
-        mode=str(meta.get("mode", "data_analysis")),
+        mode=_coerce_mode(meta.get("mode", "data_analysis")),
         icon=meta.get("icon"),
-        focus_areas=tuple(meta.get("focus_areas") or ()),
-        evaluation_criteria=tuple(meta.get("evaluation_criteria") or ()),
+        focus_areas=list(meta.get("focus_areas") or ()),
+        evaluation_criteria=list(meta.get("evaluation_criteria") or ()),
         communication_style=str(meta.get("communication_style", "")),
         output_format=str(meta.get("output_format", "")).rstrip(),
         tools_allowed=tuple(meta.get("tools_allowed") or ()),

@@ -39,3 +39,6 @@ output_format: |
   ## Figure 2: ...
 tools_allowed:
   - Read
+kb_outputs:
+  - paths.turn_path  # per-turn figure-plan output inside a meeting run
+  - paths.figure_path  # generated figure PNGs in Output/<project>/figures/

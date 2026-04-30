@@ -15,3 +15,7 @@ TASKS:
 4. **Priority ranking:** Rank ALL findings by publishability and impact:
    - Consider: effect size, novelty, statistical robustness, literature support, narrative fit
    - Group into tiers: Tier 1 (must include), Tier 2 (strengthens paper), Tier 3 (supplementary/optional)
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

@@ -36,3 +36,6 @@ output_format: |
 tools_allowed:
   - Read
   - Write
+kb_outputs:
+  - paths.concept_path  # finding-narrative concept page in Wiki/Concepts/
+  - paths.turn_path  # per-turn narrator output inside a meeting run

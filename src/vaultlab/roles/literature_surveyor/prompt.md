@@ -27,3 +27,7 @@ RULES:
 - Flag review articles vs original research
 - Print exact search queries used AND the tool that ran them (paperclip vs vaultlab.research)
 - When paperclip returns a `results_id`, record it — later agents reuse the set
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

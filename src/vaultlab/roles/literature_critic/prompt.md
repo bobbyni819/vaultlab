@@ -15,3 +15,7 @@ TASKS:
    - SINGLE_STUDY — only one paper supports this claim
    - CONTESTED — papers disagree, evidence is contradictory
 4. For EMERGING_EVIDENCE and SINGLE_STUDY findings, specify what additional evidence would strengthen the claim
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

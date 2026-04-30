@@ -20,3 +20,7 @@ RULES:
 - Every figure has a visual hook in one sentence.
 - Do not propose figures that exceed what the findings actually show.
 - Prefer fewer, stronger figures over many weak ones.
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

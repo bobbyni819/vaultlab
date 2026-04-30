@@ -15,3 +15,7 @@ RULES:
 - Prose, not tables. Markdown headings sparingly.
 - Every number comes from the provided chain of reasoning — do not invent values.
 - Link to the branch documents ([[Sources/Notes/{slug}/analysis.md]]) for depth.
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

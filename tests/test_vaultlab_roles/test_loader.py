@@ -20,6 +20,8 @@ EXPECTED_ROLE_IDS = {
     "synthesizer",
     "narrator",
     "figure_lead",
+    "team_lead",
+    "figure_reader",
 }
 
 
@@ -82,15 +84,29 @@ ROUND_TRIP_SIGNATURES: dict[str, list[str]] = {
         "visual hook",
         "2-6 panels",
     ],
+    "team_lead": [
+        "Principal Investigator",
+        "Team Member Input",
+        "Recommendation",
+        "Next Steps",
+    ],
+    "figure_reader": [
+        "You are a Figure Reader.",
+        "block structure",
+        "sign reversals",
+        "Read tool",
+    ],
 }
 
 
 class TestListRoles:
-    def test_returns_exactly_eight(self) -> None:
+    def test_returns_full_catalog(self) -> None:
         from vaultlab.roles import list_roles
 
         roles = list_roles()
-        assert len(roles) == 8, f"expected 8 roles, got {len(roles)}: {roles}"
+        assert len(roles) == len(EXPECTED_ROLE_IDS), (
+            f"expected {len(EXPECTED_ROLE_IDS)} roles, got {len(roles)}: {roles}"
+        )
 
     def test_returns_expected_ids(self) -> None:
         from vaultlab.roles import list_roles
@@ -183,7 +199,7 @@ class TestRoundTrip:
 
 
 class TestLoadAllRoles:
-    def test_returns_all_eight(self) -> None:
+    def test_returns_all_roles(self) -> None:
         from vaultlab.roles import load_all_roles
 
         roles = load_all_roles()

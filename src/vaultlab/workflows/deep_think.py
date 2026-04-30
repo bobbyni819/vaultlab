@@ -29,8 +29,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
+from vaultlab.roles import load_role
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
-from vaultlab.runner.meetings import ROLE_TEMPLATES
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
 
 from vaultlab.workflows._models import DeepThinkEnsembleBundle, WorkflowPlan
@@ -47,14 +47,11 @@ from vaultlab.workflows.synthesis import plan_synthesis
 def _get_role(role_id: str):
     """Look up a role by id from the vaultlab role catalog.
 
-    TODO(roles-lift): replace this with ``vaultlab.roles.load_role`` once
-    that loader returns ``vaultlab.runner.models.Role`` (currently it
-    returns a frozen, structurally-different ``Role`` from
-    :mod:`vaultlab.roles._loader`). For now we go through
-    :mod:`vaultlab.runner.meetings` ``ROLE_TEMPLATES`` which already re-
-    packs bobby_ailab roles into the runner-compatible shape.
+    Thin wrapper around :func:`vaultlab.roles.load_role` so the workflow
+    code reads the markdown+YAML role definitions directly — no
+    intermediate cache, no bobby_ailab lookup.
     """
-    return ROLE_TEMPLATES[role_id]
+    return load_role(role_id)
 
 
 # ---------------------------------------------------------------------------

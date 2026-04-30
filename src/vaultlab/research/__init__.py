@@ -17,6 +17,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from vaultlab.research.acquisition import (
+    AcquisitionResult,
+    acquire_pdf,
+    acquire_pdfs_for_corpus,
+)
 from vaultlab.research.citation_graph import CitationGraph
 from vaultlab.research.citation_lookup import (
     RateLimitError,
@@ -43,6 +48,8 @@ from vaultlab.research.session import Finding, FindingStatus, ResearchSession
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    # PDF acquisition waterfall
+    "AcquisitionResult",
     "CitationGraph",
     # Citation graph corpus / metrics (literature-search v2)
     "Corpus",
@@ -54,6 +61,8 @@ __all__ = [
     "Reference",
     "ResearchClient",
     "ResearchSession",
+    "acquire_pdf",
+    "acquire_pdfs_for_corpus",
     "batch_extract",
     "build_corpus_from_seeds",
     "compute_metrics",

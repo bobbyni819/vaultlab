@@ -27,3 +27,7 @@ tools_allowed:
   - Bash
   - WebSearch
   - WebFetch
+kb_outputs:
+  - paths.summary_path  # per-paper LLM summary in Wiki/Summaries/
+  - paths.search_log_path  # session log in Sources/Notes/
+  - paths.turn_path  # per-turn surveyor output inside a meeting run

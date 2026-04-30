@@ -16,8 +16,8 @@ from __future__ import annotations
 import os
 from datetime import date
 
+from vaultlab.roles import ROLE_TEMPLATES
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
-from vaultlab.runner.meetings import ROLE_TEMPLATES
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
 
 from vaultlab.workflows._models import WorkflowPlan

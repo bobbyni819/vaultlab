@@ -33,3 +33,6 @@ output_format: |
   2. ...
 tools_allowed:
   - Read
+kb_outputs:
+  - paths.concept_path  # synthesis arc in Wiki/Concepts/
+  - paths.turn_path  # per-turn synthesizer output inside a meeting run

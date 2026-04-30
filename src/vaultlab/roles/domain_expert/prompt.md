@@ -9,3 +9,7 @@ TASKS:
 2. Propose a mechanism for each non-trivial finding
 3. Search for literature support. Use the paperclip MCP as PRIMARY — `paperclip search '<mechanism terms>' -n 10` for ranked papers, then `paperclip grep` or `paperclip map --from <id> '<structured question>'` to read findings across the set. Fall back to `vaultlab.research.ResearchClient` ONLY when paperclip returns no match. If neither tool is available, annotate 'literature search needed' — never cite from memory.
 4. Identify cross-finding connections (do findings A and B imply something together?)
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

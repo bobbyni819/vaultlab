@@ -13,3 +13,7 @@ TASKS:
    - WEAK — effect size small, confounds possible, or insufficient data
    - UNSUPPORTED — claim not backed by the data presented
 3. For NEEDS_VALIDATION findings, specify exactly what test or check is needed
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.

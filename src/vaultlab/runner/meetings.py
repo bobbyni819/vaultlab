@@ -17,18 +17,10 @@ Slash commands consume these by rendering meetings into instructions the
 ``Agent`` tool can spawn; the future harness server consumes the same
 meetings and runs them against the Claude API directly.
 
-Lifted from ``bobby_ailab._meetings``. Behaviourally identical except:
-
-- ``adversarial_inject`` accepts an optional ``roles_by_id`` mapping for
-  display-name lookup (replacing the implicit global ``ROLE_TEMPLATES``
-  dependency). When omitted it falls back to the bobby_ailab catalog so
-  existing callers keep working through the roles-lift transition.
-- ``build_merge_meeting`` and ``save_meeting`` still consult the role
-  catalog for display names; they currently import from ``bobby_ailab._roles``
-  pending the parallel roles-lift.
-
-When ``vaultlab.roles`` lands, the bobby_ailab import paths below should be
-swapped for the vaultlab counterparts (see TODO markers).
+Roles come from :mod:`vaultlab.roles` — markdown + YAML on disk, loaded
+into the canonical :class:`vaultlab.runner.models.Role` shape. There is
+exactly one Role class in vaultlab; ``compose_turns`` calls ``role.prompt_for``
+directly with no adapter layer.
 """
 
 from __future__ import annotations
@@ -45,54 +37,68 @@ from vaultlab.runner.models import (
     Role,
 )
 
-# TODO(roles-lift): from vaultlab.roles import ROLE_TEMPLATES, roles_for
-from bobby_ailab._roles import ROLE_TEMPLATES as _BOBBY_ROLE_TEMPLATES
-from bobby_ailab._roles import roles_for as _bobby_roles_for
 
+def _catalog():
+    """Return the live vaultlab.roles catalog (imported lazily).
 
-def _to_vaultlab_role(bobby_role: object) -> Role:
-    """Re-pack a ``bobby_ailab._models.Role`` into a ``vaultlab.runner.models.Role``.
-
-    The two classes are structurally identical (same dataclass fields), but
-    ``Role.prompt_for`` does ``isinstance(task, Agenda)`` against its own
-    module's ``Agenda`` class — so a bobby_ailab Role mishandles a vaultlab
-    Agenda (and vice-versa). We rebuild the Role inside vaultlab's namespace
-    so isinstance checks land correctly. Drop this helper when ``vaultlab.roles``
-    ships and the catalog returns vaultlab Roles natively.
+    The runner package is imported by :mod:`vaultlab.roles` (which needs
+    ``Role`` and ``Mode`` from :mod:`vaultlab.runner.models`); importing
+    :mod:`vaultlab.roles` at the top of this module would close the
+    circular reference. Deferring the import to call time keeps the
+    package-load order clean while still letting callers treat
+    ``ROLE_TEMPLATES`` as a module-level dict.
     """
-    return Role(
-        id=bobby_role.id,
-        name=bobby_role.name,
-        system_prompt=bobby_role.system_prompt,
-        focus_areas=list(bobby_role.focus_areas),
-        evaluation_criteria=list(bobby_role.evaluation_criteria),
-        communication_style=bobby_role.communication_style,
-        mode=Mode(bobby_role.mode.value) if hasattr(bobby_role.mode, "value") else Mode(bobby_role.mode),
-        output_format=bobby_role.output_format,
-        icon=bobby_role.icon,
-    )
+    from vaultlab.roles import ROLE_TEMPLATES as _RT
+    return _RT
+
+
+def _roles_for(meeting_type: str, mode: Mode = Mode.DATA_ANALYSIS) -> list[Role]:
+    """Lazy passthrough to :func:`vaultlab.roles.roles_for`. See :func:`_catalog`."""
+    from vaultlab.roles import roles_for as _rf
+    return _rf(meeting_type, mode)
+
+
+# Backwards-compatible re-exports. Callers may still do
+# ``from vaultlab.runner.meetings import ROLE_TEMPLATES`` — the proxy
+# resolves lazily on access. New code should prefer
+# ``from vaultlab.roles import ROLE_TEMPLATES`` directly.
+class _LazyRoleTemplates:
+    """Dict-style proxy that resolves to vaultlab.roles.ROLE_TEMPLATES on access."""
+
+    def _resolve(self):
+        return _catalog()
+
+    def __getitem__(self, role_id: str) -> Role:
+        return self._resolve()[role_id]
+
+    def __contains__(self, role_id: object) -> bool:
+        return role_id in self._resolve()
+
+    def __iter__(self):
+        return iter(self._resolve())
+
+    def __len__(self) -> int:
+        return len(self._resolve())
+
+    def keys(self):
+        return self._resolve().keys()
+
+    def values(self):
+        return self._resolve().values()
+
+    def items(self):
+        return self._resolve().items()
+
+    def get(self, role_id: str, default=None):
+        return self._resolve().get(role_id, default)
+
+
+ROLE_TEMPLATES = _LazyRoleTemplates()
 
 
 def roles_for(meeting_type: str, mode: Mode = Mode.DATA_ANALYSIS) -> list[Role]:
-    """Look up the canonical role set for a named meeting type.
-
-    Thin wrapper around ``bobby_ailab._roles.roles_for`` that re-packs each
-    returned Role into vaultlab's namespace so cross-module ``isinstance``
-    checks (notably ``Role.prompt_for`` recognising a vaultlab ``Agenda``)
-    continue to work. When ``vaultlab.roles`` ships, this wrapper is replaced
-    by a direct re-export.
-    """
-    return [_to_vaultlab_role(r) for r in _bobby_roles_for(meeting_type, mode)]
-
-
-# Vaultlab-namespaced role catalog — built lazily by re-packing the bobby_ailab
-# entries. Used by ``build_merge_meeting`` and ``adversarial_inject`` for
-# display-name lookups; the wrapping ensures any returned Role plays well with
-# vaultlab's Agenda type.
-ROLE_TEMPLATES: dict[str, Role] = {
-    role_id: _to_vaultlab_role(role)
-    for role_id, role in _BOBBY_ROLE_TEMPLATES.items()
-}
+    """Re-export of :func:`vaultlab.roles.roles_for` — see :func:`_roles_for`."""
+    return _roles_for(meeting_type, mode)
 
 
 def build_meeting(
@@ -312,8 +318,6 @@ def build_merge_meeting(
     """
     if not prior_results:
         raise ValueError("build_merge_meeting needs at least one prior result")
-    # TODO(roles-lift): replace bobby_ailab._roles.ROLE_TEMPLATES lookup with
-    # the vaultlab.roles equivalent once the roles module is lifted.
     synthesizer = ROLE_TEMPLATES["synthesizer"]
     blocks = []
     for i, result in enumerate(prior_results, start=1):
@@ -396,9 +400,6 @@ def adversarial_inject(turns: list[MeetingTurn]) -> list[MeetingTurn]:
         else:
             rewritten.append(turn)
         if turn.output.strip():
-            # TODO(roles-lift): replace ROLE_TEMPLATES lookup with
-            # vaultlab.roles equivalent (or pass a roles_by_id mapping like
-            # vaultlab.runner._compose.adversarial_inject does).
             display_name = (
                 ROLE_TEMPLATES[turn.role_id].name
                 if turn.role_id in ROLE_TEMPLATES
@@ -452,8 +453,6 @@ def save_meeting(result: MeetingResult, out_dir: str, slug: str = "meeting") -> 
         "",
     ]
     for i, turn in enumerate(result.turns, start=1):
-        # TODO(roles-lift): replace ROLE_TEMPLATES lookup with vaultlab.roles
-        # equivalent once that module is lifted.
         name = (
             ROLE_TEMPLATES[turn.role_id].name
             if turn.role_id in ROLE_TEMPLATES

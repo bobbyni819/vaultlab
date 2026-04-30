@@ -24,3 +24,5 @@ tools_allowed:
   - Bash
   - WebSearch
   - WebFetch
+kb_outputs:
+  - paths.turn_path  # per-turn critique output inside a meeting run

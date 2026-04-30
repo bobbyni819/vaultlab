@@ -6,6 +6,22 @@ vaultlab is in active alpha development; some invariants may evolve, but each ch
 
 ---
 
+## KB Output Routing (mandatory)
+
+When any VaultLab module or agent produces output (a paper summary, a lineage arc, a meeting transcript, a slide deck), it MUST route to the KB via `vaultlab.kb.paths` helpers. **NEVER build path strings by hand.**
+
+The three-layer rule:
+
+- `Sources/` — immutable inputs (raw PDFs, search-result stubs, manual notes)
+- `Wiki/` — LLM-written content (per-paper summaries, cross-source concepts, project state)
+- `Output/` — generated artifacts for delivery (slides, reports, run-id directories)
+
+Use `paths.summary_path` / `paths.concept_path` / `paths.run_dir` / `paths.deck_path` etc. — see `src/vaultlab/kb/paths.py` for the full API. Path-builders return `pathlib.Path` and do not mkdir; call `paths.ensure_parent(p)` before writing.
+
+Full reference: `G:/My Drive/Knowledge/vaultlab/Sources/Notes/kb-output-conventions-2026-04-29.md`.
+
+---
+
 ## The eleven invariants
 
 ### Invariant 1 — Data-first Analyst

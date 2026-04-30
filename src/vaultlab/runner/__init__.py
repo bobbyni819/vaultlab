@@ -29,9 +29,9 @@ Notes
 -----
 This module was lifted from ``bobby_ailab`` (``_runner.py``,
 ``_local_runner.py``, ``_models.py``, ``_meetings.py``). The role catalog
-(``ROLE_TEMPLATES``, ``roles_for``) is a separate parallel migration —
-``vaultlab.runner.meetings`` currently imports those names from
-``bobby_ailab._roles`` until ``vaultlab.roles`` ships.
+lives at :mod:`vaultlab.roles` (markdown + YAML on disk); this module
+re-exports a lazy proxy of ``ROLE_TEMPLATES`` for backward compatibility,
+but new code should import from :mod:`vaultlab.roles` directly.
 """
 
 from __future__ import annotations

@@ -16,3 +16,7 @@ RULES:
 - Flag outliers (>2 SD from mean) explicitly
 - Flag unexpected patterns (values that break expected monotonicity, sign flips, etc.)
 - Print exact values from code output (not approximations)
+
+
+### KB output routing
+Outputs from this role are routed via `vaultlab.kb.paths` to the conventional locations. Don't build paths by hand. See `AGENTS.md` § KB Output Routing.
