@@ -48,9 +48,12 @@ kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
 
 # F-1 onboarding handoff: when /onboard-project ran earlier in this
 # project folder (or a parent), pick up slug + kb_root + topic from the
-# .vaultlab-project.json instead of re-asking. Explicit-over-magic: the
-# orchestrator below still takes explicit kwargs — this helper just
-# sources the values from disk.
+# .vaultlab-project.json instead of re-asking. Threading explicitly is
+# still recommended; the orchestrator (run_lit_arc) ALSO falls back to
+# load_project_config_from_cwd() internally when project_slug is None
+# (G-2 fix from conceptual-flow audit 2026-04-30), so a forgetful caller
+# no longer silently spawns a parallel Wiki/Projects/<topic-slug>/.
+# Explicit kwargs still win when the values disagree.
 from vaultlab.onboarding import load_project_config_from_cwd
 project_cfg = load_project_config_from_cwd()
 project_slug: str | None = None

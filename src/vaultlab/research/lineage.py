@@ -1674,6 +1674,28 @@ def run_lit_arc(
             f"unknown depth: {depth!r} (expected one of "
             f"'fast', 'balanced', 'thorough', 'complete')"
         )
+
+    # G-2 fix (option b): if project_slug wasn't threaded explicitly, walk
+    # up from cwd looking for ``.vaultlab-project.json`` and adopt its
+    # slug. Aligns with the "state-aware, additive, read-before-write"
+    # memory rule — explicit kwarg still wins, but a forgetful slash-
+    # command body no longer creates a parallel ``Wiki/Projects/<slug>/``.
+    if project_slug is None:
+        try:
+            from vaultlab.onboarding import load_project_config_from_cwd
+            _cfg = load_project_config_from_cwd()
+        except Exception:  # pragma: no cover — never break a run
+            logger.exception("load_project_config_from_cwd failed")
+            _cfg = None
+        if _cfg is not None and getattr(_cfg, "slug", ""):
+            project_slug = _cfg.slug
+            logger.info(
+                "auto-discovered project_slug=%s from "
+                ".vaultlab-project.json (cwd=%s)",
+                project_slug,
+                Path.cwd(),
+            )
+
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
     kb_root = Path(kb_root)

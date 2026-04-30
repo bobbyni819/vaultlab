@@ -1072,3 +1072,174 @@ def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
     )
     assert result.report_path == expected
     assert result.report_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# G-2 regression: orchestrator-side cwd auto-discovery for project_slug
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_report_auto_discovers_project_slug(tmp_path, monkeypatch):
+    """G-2: when project_slug is None, walk up from cwd looking for
+    ``.vaultlab-project.json`` and adopt its slug.
+
+    Mirrors the run_lit_arc auto-discovery test — same orchestrator-side
+    fallback ("option b" in the conceptual-flow audit).
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    # Drop a .vaultlab-project.json in a fresh project dir, then chdir
+    # there so load_project_config_from_cwd() finds it.
+    from vaultlab.onboarding import VaultLabProjectConfig, save_config
+
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    cfg = VaultLabProjectConfig(slug="auto-report-slug", topic="x")
+    save_config(cfg, project_dir)
+
+    monkeypatch.chdir(project_dir)
+
+    def _canned(_section_id):
+        text = (
+            "Background prose "
+            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]]. "
+        ) * 80
+        return {
+            "section_text": " ".join(text.split()[:600]),
+            "claims_with_evidence": [
+                {
+                    "claim": "x",
+                    "doi_slugs": ["10.1016_j.cell.2018.07.010"],
+                },
+            ],
+        }
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_report(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        # NOTE: project_slug intentionally omitted — fallback should fire.
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        depth="thorough",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_stub_reader,
+        crosstalk_runner=_make_crosstalk_runner(_canned),
+        crosstalk_n_rounds=1,
+        _today="2026-04-30",
+    )
+
+    # The orchestrator must have picked up the slug from the config file
+    # and routed the report path through it.
+    expected = concept_path(tmp_path, "auto-report-slug", "report", "2026-04-30")
+    topic_only = concept_path(
+        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
+    )
+    assert result.report_path == expected, (
+        f"expected slug-derived path {expected}, got {result.report_path}"
+    )
+    assert result.report_path.exists()
+    assert not topic_only.exists(), (
+        f"unexpected parallel write at topic-derived path {topic_only}; "
+        "auto-discovery fallback failed"
+    )
+
+
+# ---------------------------------------------------------------------------
+# G-5 regression: per-section adversarial transcripts persist to disk
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_report_persists_per_section_transcripts(tmp_path, monkeypatch):
+    """G-5: every section's adversarial meeting must drop a transcript on
+    disk per AGENTS.md Invariant 4 (ChainLink-per-turn).
+
+    Asserts that for each of the 5 sections the canonical
+    ``meeting-report-<section>-transcript.md`` exists under
+    ``Output/<slug>/runs/<run_id>/`` and contains a per-role turn block
+    for each role rotation.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    def _canned(_section_id):
+        text = (
+            "Cellular-neighborhood research "
+            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]] "
+            "operationalized indexed niches. "
+        ) * 80
+        return {
+            "section_text": " ".join(text.split()[:600]),
+            "claims_with_evidence": [
+                {
+                    "claim": "x",
+                    "doi_slugs": ["10.1016_j.cell.2018.07.010"],
+                },
+            ],
+        }
+
+    client = _FakeClient(_make_seeds())
+    runner = _make_crosstalk_runner(_canned)
+
+    result = run_lit_report(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        project_slug="codex-cn-test",
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        depth="thorough",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_stub_reader,
+        crosstalk_runner=runner,
+        crosstalk_n_rounds=1,
+        _today="2026-04-30",
+    )
+
+    # Locate the run_dir: Output/<slug>/runs/<run_id>/.
+    runs_root = tmp_path / "Output" / "codex-cn-test" / "runs"
+    assert runs_root.exists(), (
+        f"runs dir was never created at {runs_root}; section transcripts "
+        "would have nowhere to land"
+    )
+    run_dirs = sorted(p for p in runs_root.iterdir() if p.is_dir())
+    assert len(run_dirs) == 1, (
+        f"expected exactly one run_dir under {runs_root}, got {run_dirs}"
+    )
+    run_dir = run_dirs[0]
+
+    # Every section must have a per-meeting transcript on disk.
+    for section in SECTION_ORDER:
+        transcript = run_dir / f"meeting-report-{section}-transcript.md"
+        assert transcript.exists(), (
+            f"missing transcript for section {section}: {transcript}"
+        )
+        body = transcript.read_text(encoding="utf-8")
+        # The header carries the meeting purpose; the body has one
+        # ``## Turn <n>: <role-id>`` heading per role-turn.
+        assert f"# Crosstalk meeting — report-{section}" in body
+        assert "## Turn 1:" in body, (
+            f"transcript {transcript} missing per-turn structure"
+        )
+
+        # And the per-turn files (one per role per round) must exist
+        # under the canonical ``meeting-<purpose>-turn-<n>-<role>.md`` shape.
+        per_turn_files = list(
+            run_dir.glob(f"meeting-report-{section}-turn-*.md")
+        )
+        assert per_turn_files, (
+            f"no per-turn files for section {section} in {run_dir}"
+        )
+
+    # Sanity: the run still produced a valid report.
+    assert result.report_path.exists()

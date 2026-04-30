@@ -75,8 +75,13 @@ kb_root = Path("G:/My Drive/Knowledge/vaultlab")  # or research KB
 
 # F-1 onboarding handoff: when /onboard-project ran earlier in this
 # project folder (or a parent), pick up slug + kb_root + topic from the
-# .vaultlab-project.json instead of re-asking. The orchestrator below
-# still takes explicit kwargs -- this helper just sources the values.
+# .vaultlab-project.json instead of re-asking. Threading explicitly is
+# still recommended; the orchestrators (run_lit_arc, run_lit_report,
+# build_deck_from_lineage_result) ALSO fall back to
+# load_project_config_from_cwd() internally when project_slug is None
+# (G-2 fix from conceptual-flow audit 2026-04-30), so a forgetful caller
+# no longer silently spawns a parallel Wiki/Projects/<topic-slug>/.
+# Explicit kwargs still win when the values disagree.
 from vaultlab.onboarding import load_project_config_from_cwd
 project_cfg = load_project_config_from_cwd()
 project_slug = "lit-arc"  # default — overridden by onboarding cfg below

@@ -270,6 +270,75 @@ def test_adversarial_deck_plan_meeting_with_stub_runner(tmp_path) -> None:
     assert result.purpose == "deck-plan"
 
 
+def test_adversarial_deck_plan_meeting_loads_narrator_and_figure_lead(
+    tmp_path,
+) -> None:
+    """G-1 regression: deck-plan meeting must instantiate the deck-pipeline
+    roles (``narrator`` + ``figure_lead``), not the Mode.DATA_ANALYSIS
+    default (``data_analyst`` + ``domain_expert``).
+
+    The runner_callback receives ``(meeting, list(meeting.roles))`` —
+    we capture that argument and assert on the role IDs directly.
+    """
+    summaries = _make_summaries()
+    fig_path = tmp_path / "fig.png"
+    fig_path.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    captured_roles: list[list[str]] = []
+
+    def _capturing_runner(meeting, roles):
+        captured_roles.append([r.id for r in roles])
+        # Mirror _stub_runner_for_deck_plan so the wrapper still
+        # extracts a structured synthesizer payload.
+        outputs: list[dict[str, str]] = []
+        for r in roles:
+            if r.id == "synthesizer":
+                payload = {
+                    "story_arc_summary": "h -> d -> s",
+                    "slides": [
+                        {"type": "title", "title": "T", "subtitle": "",
+                         "author": "B"},
+                    ],
+                }
+                outputs.append({"output": json.dumps(payload)})
+            else:
+                outputs.append({"output": f"[{r.id} commentary]"})
+        return outputs
+
+    result = adversarial_deck_plan_meeting(
+        topic="test topic",
+        summaries=summaries,
+        figure_assignments={"10.1/found-1990": fig_path},
+        target_slide_count=1,
+        n_rounds=1,
+        runner_callback=_capturing_runner,
+    )
+
+    assert result.crosstalk_status == "complete"
+    # Captured at least once (one round).
+    assert captured_roles, "runner_callback was never invoked"
+    role_ids = captured_roles[0]
+    # The deck-pipeline roles MUST be instantiated.
+    assert "narrator" in role_ids, (
+        f"deck-plan meeting did not load 'narrator' role; got {role_ids}"
+    )
+    assert "figure_lead" in role_ids, (
+        f"deck-plan meeting did not load 'figure_lead' role; got {role_ids}"
+    )
+    # And the wrong roles must NOT be present (this is the regression).
+    assert "data_analyst" not in role_ids, (
+        f"deck-plan meeting loaded 'data_analyst' (Mode.DATA_ANALYSIS "
+        f"default) instead of 'narrator'; got {role_ids}"
+    )
+    assert "domain_expert" not in role_ids, (
+        f"deck-plan meeting loaded 'domain_expert' (Mode.DATA_ANALYSIS "
+        f"default) instead of 'figure_lead'; got {role_ids}"
+    )
+    # Critic + synthesizer round out the meeting.
+    assert "methods_critic" in role_ids
+    assert "synthesizer" in role_ids
+
+
 # ---------------------------------------------------------------------------
 # rigor_audit
 # ---------------------------------------------------------------------------

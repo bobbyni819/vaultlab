@@ -1998,3 +1998,103 @@ def test_lineage_run_result_carries_corpus(tmp_path, monkeypatch):
     )
     # corpus_size on the result must agree with corpus.n_papers.
     assert result.corpus_size == result.corpus.n_papers
+
+
+# ---------------------------------------------------------------------------
+# G-2 regression: orchestrator-side cwd auto-discovery for project_slug
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_arc_auto_discovers_project_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """G-2: when project_slug is None, walk up from cwd looking for
+    ``.vaultlab-project.json`` and adopt its slug.
+
+    This is the orchestrator-side fallback ("option b" in the
+    conceptual-flow audit). Aligns with the
+    ``feedback_kb_additive_state_aware`` memory rule.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    # Drop a .vaultlab-project.json in a fresh project dir, then chdir
+    # there so load_project_config_from_cwd() finds it.
+    from vaultlab.onboarding import VaultLabProjectConfig, save_config
+
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    cfg = VaultLabProjectConfig(slug="auto-discovered-slug", topic="x")
+    save_config(cfg, project_dir)
+
+    monkeypatch.chdir(project_dir)
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        # NOTE: project_slug intentionally omitted — fallback should fire.
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+
+    # The orchestrator must have picked up the slug from the config file
+    # and used it as the project_slug throughout (rather than falling
+    # back to slugify_topic(topic)).
+    assert result.project_slug == "auto-discovered-slug"
+    proj_dir = tmp_path / "Wiki" / "Projects" / "auto-discovered-slug"
+    assert (proj_dir / "START_HERE.md").exists()
+    # The topic-derived slug should NOT have been used.
+    other_dir = tmp_path / "Wiki" / "Projects" / "codex-cellular-neighborhoods"
+    assert not other_dir.exists(), (
+        f"unexpected parallel project dir at {other_dir}; auto-discovery "
+        "fallback failed"
+    )
+
+
+def test_run_lit_arc_explicit_project_slug_overrides_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """G-2: explicit ``project_slug=`` always wins over cwd auto-discovery."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    from vaultlab.onboarding import VaultLabProjectConfig, save_config
+
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    cfg = VaultLabProjectConfig(slug="cwd-slug", topic="x")
+    save_config(cfg, project_dir)
+
+    monkeypatch.chdir(project_dir)
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        project_slug="explicit",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+
+    # Explicit kwarg wins.
+    assert result.project_slug == "explicit"
+    assert (tmp_path / "Wiki" / "Projects" / "explicit" / "START_HERE.md").exists()
+    # The cwd-derived slug must NOT have been adopted.
+    assert not (tmp_path / "Wiki" / "Projects" / "cwd-slug").exists()

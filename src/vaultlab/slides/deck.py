@@ -463,6 +463,27 @@ def build_deck_from_lineage_result(
     """
     from vaultlab.kb.paths import deck_path, slugify_topic
 
+    # G-2 fix (option b): if project_slug wasn't threaded explicitly, walk
+    # up from cwd looking for ``.vaultlab-project.json`` and adopt its
+    # slug. Aligns with the "state-aware, additive, read-before-write"
+    # memory rule — explicit kwarg still wins, but a forgetful slash-
+    # command body no longer creates a parallel ``Wiki/Projects/<slug>/``.
+    if project_slug is None:
+        try:
+            from vaultlab.onboarding import load_project_config_from_cwd
+            _cfg = load_project_config_from_cwd()
+        except Exception:  # pragma: no cover — never break a run
+            logger.exception("load_project_config_from_cwd failed")
+            _cfg = None
+        if _cfg is not None and getattr(_cfg, "slug", ""):
+            project_slug = _cfg.slug
+            logger.info(
+                "auto-discovered project_slug=%s from "
+                ".vaultlab-project.json (cwd=%s)",
+                project_slug,
+                Path.cwd(),
+            )
+
     project = project_slug or "lit-arc"
     deck_name = f"{slugify_topic(lineage_result.topic)}-deck.pptx"
     out = deck_path(Path(kb_root), project, deck_name)

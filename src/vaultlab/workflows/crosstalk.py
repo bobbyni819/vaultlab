@@ -606,12 +606,27 @@ def adversarial_deck_plan_meeting(
         + ("\n".join(fig_lines) if fig_lines else "(none)")
     )
 
+    # G-1 fix: explicitly select narrator + figure_lead + methods_critic +
+    # synthesizer instead of riding the Mode.DATA_ANALYSIS default
+    # (which would have given us data_analyst + domain_expert +
+    # methods_critic + synthesizer — wrong for a deck plan). The two
+    # purpose-built deck-pipeline roles must actually instantiate.
+    from vaultlab.roles import ROLE_TEMPLATES as _ROLE_TEMPLATES
+
+    deck_plan_roles = [
+        _ROLE_TEMPLATES["narrator"],
+        _ROLE_TEMPLATES["figure_lead"],
+        _ROLE_TEMPLATES["methods_critic"],
+        _ROLE_TEMPLATES["synthesizer"],
+    ]
+
     meeting = build_meeting(
         topic=topic,
         meeting_type="deep_think",
         session_context=session_context,
         mode=Mode.DATA_ANALYSIS,
         agenda=agenda,
+        roles=deck_plan_roles,
     )
 
     del metrics  # currently unused — reserved for later

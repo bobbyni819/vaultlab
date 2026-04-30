@@ -855,14 +855,20 @@ def _build_section_meeting(
     n_rounds: int,
     runner_callback: "RunnerCallback | None",
     timeout_seconds: int,
-) -> dict[str, Any]:
-    """Run an ADVERSARIAL section meeting and return the synthesizer JSON.
+) -> tuple[dict[str, Any], Any]:
+    """Run an ADVERSARIAL section meeting and return (JSON, CrosstalkResult).
 
     The role mix comes from :data:`SECTION_ROLES`. We build the meeting
     by hand (rather than via :func:`build_meeting`) because the role mix
     is section-specific, not one of the named meeting types.
 
-    Returns the parsed JSON (possibly empty on callback failure).
+    Returns ``(parsed_json, crosstalk_result)``. The
+    :class:`vaultlab.workflows.crosstalk.CrosstalkResult` is returned so
+    the caller can persist per-turn transcripts via
+    :func:`vaultlab.workflows.crosstalk.write_crosstalk_artifacts` —
+    AGENTS.md Invariant 4 (ChainLink-per-turn) requires every role-turn
+    to land on disk. Both halves are populated even on callback failure
+    (JSON may be empty; CrosstalkResult records the fallback status).
     """
     from vaultlab.roles import ROLE_TEMPLATES
     from vaultlab.runner.models import Agenda, Meeting, MeetingMode
@@ -921,7 +927,7 @@ def _build_section_meeting(
         timeout_seconds=timeout_seconds,
         purpose=f"report-{task.section}",
     )
-    return result.final_output or {}
+    return (result.final_output or {}), result
 
 
 # ---------------------------------------------------------------------------
@@ -1042,6 +1048,27 @@ def run_lit_report(
     Returns:
         :class:`ReportRunResult` with paths + word counts.
     """
+    # G-2 fix (option b): if project_slug wasn't threaded explicitly, walk
+    # up from cwd looking for ``.vaultlab-project.json`` and adopt its
+    # slug. Aligns with the "state-aware, additive, read-before-write"
+    # memory rule — explicit kwarg still wins, but a forgetful slash-
+    # command body no longer creates a parallel ``Wiki/Projects/<slug>/``.
+    if project_slug is None:
+        try:
+            from vaultlab.onboarding import load_project_config_from_cwd
+            _cfg = load_project_config_from_cwd()
+        except Exception:  # pragma: no cover — never break a run
+            logger.exception("load_project_config_from_cwd failed")
+            _cfg = None
+        if _cfg is not None and getattr(_cfg, "slug", ""):
+            project_slug = _cfg.slug
+            logger.info(
+                "auto-discovered project_slug=%s from "
+                ".vaultlab-project.json (cwd=%s)",
+                project_slug,
+                Path.cwd(),
+            )
+
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
     kb_root = Path(kb_root)
@@ -1228,6 +1255,15 @@ def run_lit_report(
     report_drafts_dir = report_path.with_suffix("")  # strip .md
     report_drafts_dir.mkdir(parents=True, exist_ok=True)
 
+    # G-5 fix: per-section adversarial meetings produce ~50 role-turns; we
+    # must persist every turn to disk per AGENTS.md Invariant 4
+    # (ChainLink-per-turn). Build the canonical run_dir up-front so each
+    # section's transcripts can be dropped under
+    # ``Output/<slug>/runs/<run_id>/`` via write_crosstalk_artifacts.
+    from vaultlab.kb.paths import run_dir as _run_dir_path
+    section_run_dir = _run_dir_path(kb_root, resolved_slug)
+    section_run_dir.mkdir(parents=True, exist_ok=True)
+
     metrics = corpus.metrics
     sections_text: dict[str, str] = {}
     section_paths: dict[str, Path] = {}
@@ -1245,10 +1281,11 @@ def run_lit_report(
         )
 
         response_json: dict[str, Any] = {}
+        section_ct_result = None
         # Crosstalk path (preferred default for /lit-report).
         if crosstalk_runner is not None:
             try:
-                response_json = _build_section_meeting(
+                response_json, section_ct_result = _build_section_meeting(
                     task,
                     n_rounds=crosstalk_n_rounds,
                     runner_callback=crosstalk_runner,
@@ -1259,6 +1296,26 @@ def run_lit_report(
                     "section meeting failed for %s: %s", section, exc
                 )
                 response_json = {}
+                section_ct_result = None
+
+            # G-5 fix: persist per-turn transcripts for the section
+            # meeting (AGENTS.md Invariant 4). The artifact writer drops
+            # ``meeting-report-<section>-transcript.md`` plus per-turn
+            # files into the run_dir; we never break the run on a write
+            # failure.
+            if section_ct_result is not None:
+                try:
+                    from vaultlab.workflows.crosstalk import (
+                        write_crosstalk_artifacts,
+                    )
+                    write_crosstalk_artifacts(
+                        section_ct_result, run_dir=section_run_dir
+                    )
+                except Exception:
+                    logger.exception(
+                        "write_crosstalk_artifacts (section=%s) failed",
+                        section,
+                    )
 
         # Single-shot fallback (callable-LLM mode without crosstalk).
         if not response_json and section_writer is not None:
