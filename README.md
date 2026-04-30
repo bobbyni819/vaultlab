@@ -15,7 +15,7 @@
 
 > *"Most lit-search tools answer one question. VaultLab is what happens when your literature, your wet-lab data, your meeting transcripts, your inbox, and your manuscript live in one place that an LLM can read."*
 
-**VaultLab lives inside [Claude Code](https://claude.com/claude-code).** You don't run it as a chat-bot, a SaaS, or a Python notebook. You open Claude Code in a folder; VaultLab adds ~30 slash commands (`/lit-arc`, `/build-deck`, `/cite audit`, `/onboard-project`, `/lit-report`, …) that Claude Code reads as plain markdown. No Anthropic API key required for the slash-command UX — Claude Code provides the LLM. Your KB sits in plain markdown on Google Drive (or any folder), so labs share it like any other folder. **If you've used Claude Code, you already know how to use VaultLab.**
+**VaultLab lives inside [Claude Code](https://claude.com/claude-code).** Open Claude Code in a folder. VaultLab adds ~30 slash commands (`/lit-arc`, `/build-deck`, `/cite audit`, `/onboard-project`, `/lit-report`) that Claude Code reads as plain markdown. No Anthropic API key needed — Claude Code provides the LLM. KB is plain markdown on Google Drive, OneDrive, a lab NAS, or any folder that syncs. **If you've used Claude Code, you already know how to use VaultLab.**
 
 > **Alpha software.** v0.1.0 target: late May 2026. Honest gap inventory: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
@@ -23,13 +23,17 @@
 
 ## About
 
-Built by a PhD student in biomedical engineering at Duke (Hickey Lab) working across wet-lab spatial omics and computational biology.
+PhD student in biomedical engineering at Duke (Hickey Lab) — wet-lab spatial omics + computational.
 
-Being a researcher means juggling many projects at once — a ton of meetings, papers piling up, floating knowledge from collaborator conversations, half-finished manuscripts, decisions made days ago that need to surface this morning. The context lives across Outlook, Google Drive, your inbox, half a dozen analysis notebooks. An LLM can only help when you've already pulled the right context into the prompt.
+Research at scale is fragmented. Meetings in Outlook. Papers in Drive. Notes on a lab NAS. Archives on university OneDrive. Decisions made in conversations nobody wrote down. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
 
-VaultLab reads across those ecosystems and centralizes them inside Claude Code. Switch between three projects in a single day; each one keeps full context. A new lab member shares the Drive folder and is caught up. These are real shortcomings of doing research at PhD scale — that's what the system is built to fix.
+VaultLab reads across those ecosystems and centralizes them inside Claude Code. KB is plain markdown — runs on whatever storage you already have.
 
-The design takes the best parts of open-source projects already at scale and combines them: [gstack](https://github.com/garrytan/gstack) (Garry Tan) for the Claude Code skill-bundle pattern, [nanoGPT](https://github.com/karpathy/nanoGPT) (Andrej Karpathy) for the fork-and-clone distribution model, [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) for adversarial multi-agent meetings, [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) for the bounded plan→verify loop. Novel pieces extend the bundle for research workloads — meeting-transcript ingestion (Windows + Outlook + Whisper for now), citation-graph-driven literature pipelines, LLM-driven lineage binning, evidence-tied citation auditing.
+Notes on the shape:
+
+- Tried autonomous agent systems on the Claude API. Token cost isn't worth the marginal lift, yet. Hands-on LLM-as-amplifier inside Claude Code is the real game changer.
+- Inspired by [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist). Watching others ship research-specific agent systems is what made me ship mine.
+- Principles here adapt beyond research — KB, citation auditing, slide composition work on any topic.
 
 ---
 
@@ -103,7 +107,7 @@ Reads abstracts of every paper in a corpus and decides *history / development / 
 </table>
 
 > [!IMPORTANT]
-> **VaultLab is a companion you customize, build upon, and direct.** Take the agent as far as you want — quick assist or full lab-wide deep-dive. *Other tools force a single mode; VaultLab adapts to the depth your work needs.*
+> **A companion you customize and direct.** Quick assist or full lab-wide deep-dive — pick the depth. Other tools force a single mode; VaultLab adapts.
 
 ---
 
