@@ -1,6 +1,6 @@
 ---
 name: lit-arc
-purpose: Generate a literature lineage arc (history → development → SOTA) for a topic, using Claude Code itself as the LLM (no API key needed).
+purpose: Generate a literature lineage arc (history -> development -> SOTA) for a topic, using Claude Code itself as the LLM (no API key needed).
 arguments: <topic>
 ---
 
@@ -28,24 +28,99 @@ You (Claude Code) are the LLM. The Python pipeline does deterministic work
 summaries + arc narrative. No Anthropic API key is needed because YOU are
 the API.
 
+The whole pipeline is wired through `run_lit_arc(..., reader=..., narrator=...)`.
+The `reader` and `narrator` callbacks are filled in BY YOU at runtime — when
+the orchestrator invokes them, you (Claude) read the PDF / summaries with
+the Read tool and produce a JSON response matching the task's schema.
+
 ### Step 1 — Set up
 
 ```python
 from pathlib import Path
-from vaultlab.context.locations import get_kb_root
-from vaultlab.research.lineage import run_lit_arc
+from vaultlab.context import locations as _loc
+from vaultlab.research import (
+    ArcTask, SummarizationTask, run_lit_arc,
+)
 
 topic = "<topic from $ARGUMENTS>"
-kb_root = get_kb_root("vaultlab")  # or whichever KB the user is in
+kb_locations = _loc.load_locations()
+kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
 ```
 
 If `kb_root` is not set, ask the user which KB they want this written to
 (they may have multiple — `research`, `tools`, `dcp`, etc.).
 
-### Step 2 — Run phases 1-5 (deterministic, no LLM)
+### Step 2 — Define the per-paper reader (YOU read the PDF)
 
-These use the ResearchClient + corpus + acquisition pipeline. They don't
-need you to do anything beyond invoking the orchestrator.
+When `run_lit_arc` reaches phase 6, it builds a `SummarizationTask` for each
+Tier-A paper (one with an acquired PDF) and calls your reader with it.
+Your job per call:
+
+1. Read `task.pdf_path` with the Read tool.
+2. Inspect `task.prompt` (already includes title / authors / refs guidance).
+3. Inspect `task.system_prompt` (the "be faithful, cite pages" guard rail).
+4. Return JSON matching `task.response_schema`:
+
+```
+{
+  "tldr": "<3 sentences>",
+  "why_it_matters": ["<bullet 1>", "<bullet 2>", ...],
+  "methods_summary": "<1-2 paragraphs>",
+  "key_findings": [
+    "<finding 1 [p<N>]>",
+    "<finding 2 [p<N>]>",
+    "<finding 3 [p<N>]>"
+  ],
+  "extracted_references": []  # only populate when task.crossref_refs_missing
+}
+```
+
+Rules:
+- Every key_finding MUST end with `[p<N>]` (page number) or `[unknown]`.
+- TL;DR is exactly 3 sentences; first sentence states the central contribution.
+- Tier-C papers (no PDF) are NEVER passed to your reader — the orchestrator
+  emits a citation-stat-only stub for them automatically.
+
+```python
+def claude_code_reader(task: SummarizationTask) -> dict:
+    # YOU implement this at runtime by:
+    #   1. Read(file_path=str(task.pdf_path))
+    #   2. produce JSON matching task.response_schema
+    ...
+```
+
+### Step 3 — Define the lineage-arc narrator (YOU read the summaries)
+
+After all per-paper summaries are written, `run_lit_arc` builds a single
+`ArcTask` and calls your narrator. Your job:
+
+1. The summaries are embedded in `task.summaries` (a dict of doi -> PaperSummary)
+   AND already on disk under `Wiki/Summaries/<doi>.md`. Use whichever is more
+   convenient — the in-memory dict has fields like `tldr`, `key_findings`,
+   `og_score`, `year_bucket`.
+2. Inspect `task.prompt` (it already feeds you the bucketed summaries +
+   top-OG papers + top co-citation pairs and the exact wikilink targets to use).
+3. Return JSON matching `task.response_schema`:
+
+```
+{
+  "history":     "<3-6 sentence paragraph with [[<doi-slug>|Author Year]] wikilinks>",
+  "development": "<3-6 sentence paragraph>",
+  "sota":        "<3-6 sentence paragraph>"
+}
+```
+
+Each paragraph must cite 3-5 papers. Use ONLY the slugs / labels listed in
+`task.prompt` — never invent citations.
+
+```python
+def claude_code_narrator(task: ArcTask) -> dict:
+    # YOU implement this at runtime by reading task.summaries + answering
+    # task.prompt with three paragraphs of JSON.
+    ...
+```
+
+### Step 4 — Run the orchestrator
 
 ```python
 result = run_lit_arc(
@@ -53,100 +128,21 @@ result = run_lit_arc(
     kb_root=kb_root,
     max_seeds=15,
     max_papers_to_summarize=20,
-    skip_summarization=True,   # YOU will do summaries, not the SDK path
-    skip_arc=True,              # YOU will write the arc, not the SDK path
+    reader=claude_code_reader,
+    narrator=claude_code_narrator,
 )
 ```
 
-`result.summary_paths` will contain Tier C stubs only at this point (frontmatter
-populated; LLM-written sections empty).
+This will:
+1. Search PubMed / Semantic Scholar / CrossRef for seeds.
+2. Write the search log + article stubs (no LLM).
+3. Build the corpus + metrics (CrossRef ref-walk, no LLM).
+4. Acquire OA PDFs via the Unpaywall / PMC / publisher waterfall (no LLM).
+5. Call your reader once per Tier-A paper (you read each PDF, return JSON).
+6. Call your narrator once with all summaries (you read summaries, return JSON).
+7. Write provenance receipts.
 
-### Step 3 — Per-paper summaries (you read the PDFs)
-
-For each paper in `result.summary_paths` that has a corresponding PDF in
-`Sources/Papers/<doi-slug>.pdf`:
-
-```python
-from vaultlab.research.summarize import (
-    prepare_summary_task, render_summary_from_response,
-    summary_response_schema,
-)
-from vaultlab.research.corpus import build_corpus_from_seeds  # already done
-# corpus, metrics already in result
-
-for doi, summary_path in result.summary_paths.items():
-    pdf_path = ...  # Sources/Papers/<doi>.pdf, check it exists
-    if not pdf_path.exists():
-        continue  # leave Tier C stub
-    
-    task = prepare_summary_task(
-        doi=doi,
-        pdf_path=pdf_path,
-        paper_metadata=...,        # title, authors, year, journal from corpus
-        corpus_metrics=result.metrics,
-        corpus_papers=result.corpus_papers,
-        crossref_refs_missing=...,
-        kb_root=kb_root,
-    )
-    
-    # YOU now read the PDF and respond with JSON matching task.response_schema
-    pdf_bytes = pdf_path.read_bytes()  # or use Read tool
-    # Read the PDF with multimodal capability + emit JSON per task.prompt
-    response_json = <your structured JSON response>
-    
-    summary = render_summary_from_response(task, response_json)
-    summary_path.write_text(render_summary_markdown(summary), encoding="utf-8")
-```
-
-For each PDF you read:
-- TL;DR: 3 sentences max
-- key_findings: each MUST have a `[p<N>]` page marker
-- methods_summary: paragraph
-- If `crossref_refs_missing=True`: also extract the References list as DOIs
-
-### Step 4 — Lineage arc narrative
-
-Once all summaries are written, generate the arc:
-
-```python
-from vaultlab.research.lineage import (
-    prepare_arc_task, render_arc_from_response, arc_response_schema,
-)
-
-arc_task = prepare_arc_task(
-    topic=topic,
-    corpus=result.corpus,
-    summaries=result.summaries,  # PaperSummary dict
-    kb_root=kb_root,
-)
-
-# Read arc_task.prompt; respond with JSON per arc_response_schema()
-# (3 paragraphs: history / development / sota; each cites 3-5 [[doi-slug]] wikilinks)
-response_json = <your JSON arc response>
-
-arc_path = render_arc_from_response(arc_task, response_json)
-```
-
-The arc reads ONLY the per-paper summaries (TL;DRs + key findings), not full
-PDFs — so it fits comfortably in your context.
-
-### Step 5 — Provenance receipts
-
-```python
-from vaultlab.provenance import write_receipts, ProvenanceRecord
-
-record = ProvenanceRecord(
-    generated_by="vaultlab.research.lineage.run_lit_arc",
-    project="lit-arc",
-    topic=topic,
-    inputs=[str(p) for p in result.summary_paths.values()],
-    params={"max_seeds": 15, "max_papers_to_summarize": 20},
-    model="claude-code-session",  # YOU are the LLM
-)
-write_receipts(arc_path, record)
-```
-
-### Step 6 — Print results
+### Step 5 — Print results
 
 ```
 Lit-arc complete for <topic>:
@@ -154,7 +150,7 @@ Lit-arc complete for <topic>:
   - Corpus:        <corpus_size> papers, <pdfs_acquired> with full-text
   - Summaries:     <summaries_written> at Wiki/Summaries/
   - Arc:           <arc_path>
-  
+
 To open: bobby-kb open vaultlab/Wiki/Concepts/<topic-slug>-lineage-<date>
 ```
 
@@ -168,3 +164,15 @@ To open: bobby-kb open vaultlab/Wiki/Concepts/<topic-slug>-lineage-<date>
   arc by metadata.
 - Total runtime: ~15-30 min for a 15-seed, 20-summary topic depending on PDF
   acquisition success rate.
+- For non-Claude-Code users: `run_lit_arc(topic, kb_root=...)` (no `reader` /
+  `narrator` kwargs) calls the Anthropic SDK directly. See
+  `docs/setup-api-keys.md` for the "Anthropic API key — do you need one?"
+  decision tree.
+
+## Test plan
+
+- Trial dry-run (canned reader / narrator):
+  `python scripts/_trial_lit_arc_claude_code.py`
+- Unit tests:
+  `tests/test_vaultlab_research/test_summarize.py::test_summarize_corpus_with_reader`
+  `tests/test_vaultlab_research/test_lineage.py::test_run_lit_arc_with_reader_and_narrator`

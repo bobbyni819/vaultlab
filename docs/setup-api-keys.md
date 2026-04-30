@@ -1,8 +1,44 @@
 # Literature API key setup for vaultlab
 
-This walks through getting the **literature search API keys** that power vaultlab's `vaultlab.research` module.
+This walks through getting the **literature search API keys** that power vaultlab's `vaultlab.research` module, and clarifies when (if ever) you need an Anthropic API key.
 
-> **About LLM access:** vaultlab does **NOT** require an Anthropic API key. vaultlab is a Claude Code-native tool — Claude Code handles LLM auth via your existing subscription. You only need the literature keys below. (If you later want to run vaultlab from a non-Claude-Code surface like an MCP server or headless CLI, you'd need an Anthropic key then; that's v0.2 territory.)
+## Anthropic API key — do you need one?
+
+Short answer: **most users do not.** It depends on how you call vaultlab.
+
+| How you call vaultlab | Anthropic API key? | Why |
+|---|---|---|
+| Slash commands inside a Claude Code session (e.g. `/lit-arc`, `/build-deck`) | **No** | Claude Code provides LLM access via your existing subscription. The vaultlab slash command body delegates the "read this PDF, write this paragraph" work back to your Claude Code session via the `reader=` / `narrator=` callbacks on `run_lit_arc` (and the equivalent prepare/render pairs on individual functions). No SDK call is made. |
+| Plain Python script that calls `summarize_paper(...)` or `run_lit_arc(...)` directly with no callbacks | **Yes** | Those functions hit `anthropic.Messages.create` via the SDK. Get a key at https://console.anthropic.com and put it in `ANTHROPIC_API_KEY` (or `anthropic_api_key` in `~/.config/research/research_apis.json`). |
+| MCP server / headless CLI / CI job | **Yes** | Same as Python-API mode — there is no Claude Code session to delegate to. |
+
+If you only ever invoke vaultlab from inside a Claude Code session, you can skip the Anthropic section entirely and just configure the literature keys below.
+
+### Force the Claude-Code-callable path explicitly
+
+The new path is opt-in via callbacks. Concretely:
+
+```python
+from vaultlab.research import run_lit_arc, prepare_summary_task, render_summary_from_response
+
+# Inside a slash command body — Claude Code reads the PDF in-session.
+result = run_lit_arc(
+    topic,
+    kb_root=kb_root,
+    reader=my_claude_code_reader,      # Read PDF in-session, return JSON
+    narrator=my_claude_code_narrator,  # Read summaries, return arc paragraphs
+)
+```
+
+If you call `run_lit_arc(topic, kb_root=...)` with no callbacks, vaultlab uses the SDK path — and **that** path needs an Anthropic API key.
+
+See `.claude/commands/lit-arc.md` for the canonical Claude-Code body.
+
+---
+
+## Literature API keys
+
+This walks through getting the **literature search API keys** that power vaultlab's `vaultlab.research` module.
 
 ## Quick summary
 
