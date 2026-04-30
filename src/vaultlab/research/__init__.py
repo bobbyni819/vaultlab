@@ -18,8 +18,17 @@ import logging
 from typing import TYPE_CHECKING
 
 from vaultlab.research.citation_graph import CitationGraph
+from vaultlab.research.citation_lookup import (
+    RateLimitError,
+    Reference,
+    get_citations_via_s2,
+    get_influential_count_via_s2,
+    get_references_via_crossref,
+)
+from vaultlab.research.corpus import Corpus, build_corpus_from_seeds, expand_corpus
 from vaultlab.research.data_utils import detect_data_format
 from vaultlab.research.figures import extract_figures, write_figure_notes
+from vaultlab.research.graph_metrics import CorpusMetrics, compute_metrics
 
 if TYPE_CHECKING:
     from vaultlab.research.verification import (
@@ -35,21 +44,32 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "CitationGraph",
+    # Citation graph corpus / metrics (literature-search v2)
+    "Corpus",
+    "CorpusMetrics",
     "Finding",
     "FindingStatus",
     "Paper",
+    "RateLimitError",
+    "Reference",
     "ResearchClient",
     "ResearchSession",
     "batch_extract",
+    "build_corpus_from_seeds",
+    "compute_metrics",
     # Data format detection
     "detect_data_format",
     "download_pdf",
+    "expand_corpus",
     "extract_and_save",
     # Figure extraction
     "extract_figures",
     # PDF extraction
     "extract_text",
+    "get_citations_via_s2",
+    "get_influential_count_via_s2",
     "get_paper",
+    "get_references_via_crossref",
     "search_papers",
     "write_figure_notes",
 ]
