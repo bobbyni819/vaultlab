@@ -65,6 +65,7 @@ papers, then composes a 7-slide deck via
 from pathlib import Path
 from vaultlab.research.lineage import run_lit_arc, LineageRunResult
 from vaultlab.slides import build_deck_from_lineage_result
+from vaultlab.workflows import DeckPlanTask
 from vaultlab.kb.paths import concept_path, slugify_topic, summary_path
 
 # Step 1-2: parse args, resolve kb_root
@@ -87,7 +88,45 @@ try:
 except ImportError:
     pass  # falls back to bullets
 
-# Step 5: compose
+# Step 5: define the content-aware plan generator (YOU read summaries)
+# When given a plan_callback, build_deck_from_lineage_result routes through
+# vaultlab.workflows.deck_plan.generate_deck_plan instead of the mechanical
+# synthesizer. The LLM (Claude Code itself) reads ALL Tier-A summaries +
+# corpus metrics + figure assignments and produces a typed slide plan.
+
+def claude_code_plan_generator(task: DeckPlanTask) -> dict:
+    """LLM-driven story-arc reasoning. YOU implement at runtime by:
+      1. Reading task.corpus_summaries (Tier-A papers' TL;DR + key_findings)
+      2. Reading task.corpus_metrics (OG-score, year_buckets, top co-citations)
+      3. Reading task.figure_assignments (doi -> figure path)
+      4. Deciding 3-5 story beats (history -> dev -> SOTA OR another arc shape)
+      5. Picking which figures illustrate which claims (substitution OK —
+         claim_paper_doi can differ from figure_paper_doi)
+      6. Returning JSON matching task.response_schema:
+
+    {
+      "story_arc_summary": "<one sentence>",
+      "slides": [
+        {"type": "title", "title": "...", ...},
+        {"type": "section_divider", "title": "..."},
+        {"type": "figure", "image_path": "...",
+         "claim_paper_doi": "10.1126/...",
+         "figure_paper_doi": "10.1126/...",  # may differ
+         "caption": "...", "bullets": [...], "speaker_notes": {...}},
+        {"type": "text", "title": "...", "bullets": [...], "speaker_notes": {...}},
+        ...
+      ]
+    }
+
+    The references slide is auto-appended by the renderer from cited DOIs.
+    Do NOT include it in your response.
+
+    Pick exactly task.target_slide_count slides (default 7).
+    """
+    # YOU read summaries + return JSON. No SDK; Claude Code IS the LLM.
+    ...
+
+# Step 6: compose with content-aware plan generation + crosstalk + audit
 out = build_deck_from_lineage_result(
     result,
     speaker=speaker,
@@ -95,9 +134,29 @@ out = build_deck_from_lineage_result(
     project_slug="lit-arc",
     figure_assignments=figure_assignments,
     kb_root=kb_root,
+    plan_callback=claude_code_plan_generator,  # LLM-driven plan
+    audience="journal-club",                   # shapes the prompt
+    target_slide_count=7,
+    
+    # Crosstalk integration (tiered default ON per Bobby's decision)
+    plan_mode="adversarial",          # "fast" | "adversarial"
+                                       # adversarial: narrator+figure_lead+
+                                       # methods_critic+synthesizer ADVERSARIAL
+                                       # meeting on the plan; fast: single-shot
+    crosstalk_runner=claude_code_runner,  # see lit-arc.md for runner shape
+    final_audit=True,                  # rigor_auditor reviews the deck before
+                                        # ship; flags claims without evidence,
+                                        # missing wikilinks, etc.
+    audit_strict=False,                # False: prepends warning slide listing
+                                        # issues; True: refuses to write .pptx
+                                        # if rigor issues found
 )
 
-# Step 6: print open command
+# Pass plan_callback=None + plan_mode="fast" to fall back to mechanical
+# synthesis (faster, but doesn't reason about story arc — used to be the
+# only path).
+
+# Step 7: print open command
 rel = out.relative_to(kb_root)
 print(f"To open: bobby-kb open {rel.as_posix()}")
 ```

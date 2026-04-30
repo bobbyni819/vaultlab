@@ -364,6 +364,12 @@ def build_deck_from_lineage_result(
     plan_callback: Any = None,
     audience: str = "journal-club",
     target_slide_count: int = 7,
+    plan_mode: str = "fast",
+    crosstalk_runner: Any = None,
+    crosstalk_n_rounds: int = 3,
+    final_audit: bool = False,
+    audit_strict: bool = False,
+    run_dir: Path | None = None,
 ) -> Path:
     """Take a ``/lit-arc`` result and synthesize a ~7-slide deck.
 
@@ -403,6 +409,89 @@ def build_deck_from_lineage_result(
     out = deck_path(Path(kb_root), project, deck_name)
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # Adversarial plan path — multi-agent crosstalk over plan generation.
+    if plan_mode == "adversarial" and crosstalk_runner is not None:
+        from vaultlab.workflows.crosstalk import (
+            adversarial_deck_plan_meeting,
+            rigor_audit,
+            write_crosstalk_artifacts,
+        )
+
+        summaries = _summaries_to_paper_summaries(
+            _read_summary_frontmatters(lineage_result.summary_paths)
+        )
+        ct = adversarial_deck_plan_meeting(
+            topic=lineage_result.topic,
+            summaries=summaries,
+            figure_assignments=figure_assignments or {},
+            target_slide_count=target_slide_count,
+            n_rounds=crosstalk_n_rounds,
+            runner_callback=crosstalk_runner,
+        )
+        if run_dir is not None:
+            try:
+                write_crosstalk_artifacts(ct, run_dir=Path(run_dir))
+            except Exception:
+                logger.exception("write_crosstalk_artifacts (deck-plan) failed")
+
+        # Render the dict-plan from the synthesizer's final_output.
+        from vaultlab.workflows.deck_plan import (
+            prepare_deck_plan_task,
+            render_plan_from_response,
+        )
+
+        corpus = _synthetic_corpus_from_summaries(
+            topic=lineage_result.topic,
+            summaries=summaries,
+        )
+        task = prepare_deck_plan_task(
+            topic=lineage_result.topic,
+            corpus=corpus,
+            summaries=summaries,
+            figure_assignments=figure_assignments or {},
+            speaker=speaker,
+            affiliation=affiliation,
+            audience=audience,
+            target_slide_count=target_slide_count,
+            kb_root=Path(kb_root),
+        )
+        dict_plan = render_plan_from_response(task, ct.final_output or {})
+
+        # Final-gate rigor audit before .pptx ships.
+        if final_audit:
+            text = _render_plan_for_audit(dict_plan)
+            audit = rigor_audit(
+                document=text,
+                summaries=summaries,
+                audit_kind="deck",
+                runner_callback=crosstalk_runner,
+            )
+            blockers = [
+                i for i in audit.get("issues", [])
+                if i.get("severity") == "blocker"
+            ]
+            if blockers and audit_strict:
+                raise RuntimeError(
+                    f"rigor_audit found {len(blockers)} blocker issue(s) "
+                    "and audit_strict=True; refusing to ship deck."
+                )
+            if not audit.get("passed", True):
+                # Prepend a warning slide noting the audit issues.
+                dict_plan.setdefault("slides", []).insert(
+                    1,
+                    {
+                        "type": "text",
+                        "title": "[Audit warnings]",
+                        "bullets": [
+                            f"{i.get('severity', '?')}: "
+                            f"{i.get('loc', '?')} — {i.get('fix', '')}"
+                            for i in audit.get("issues", [])[:6]
+                        ],
+                    },
+                )
+
+        return build_from_plan(dict_plan, out, write_marp=False)["pptx"]
+
     if plan_callback is not None:
         # v0.1+ rigor path — content-aware deck plan via Claude Code.
         # Lazy imports so the slides module stays light when the deck-
@@ -428,6 +517,41 @@ def build_deck_from_lineage_result(
             kb_root=Path(kb_root),
             plan_callback=plan_callback,
         )
+
+        # Optional rigor audit on the single-shot path too.
+        if final_audit and crosstalk_runner is not None:
+            from vaultlab.workflows.crosstalk import rigor_audit
+
+            text = _render_plan_for_audit(dict_plan)
+            audit = rigor_audit(
+                document=text,
+                summaries=summaries,
+                audit_kind="deck",
+                runner_callback=crosstalk_runner,
+            )
+            blockers = [
+                i for i in audit.get("issues", [])
+                if i.get("severity") == "blocker"
+            ]
+            if blockers and audit_strict:
+                raise RuntimeError(
+                    f"rigor_audit found {len(blockers)} blocker issue(s) "
+                    "and audit_strict=True; refusing to ship deck."
+                )
+            if not audit.get("passed", True):
+                dict_plan.setdefault("slides", []).insert(
+                    1,
+                    {
+                        "type": "text",
+                        "title": "[Audit warnings]",
+                        "bullets": [
+                            f"{i.get('severity', '?')}: "
+                            f"{i.get('loc', '?')} — {i.get('fix', '')}"
+                            for i in audit.get("issues", [])[:6]
+                        ],
+                    },
+                )
+
         return build_from_plan(dict_plan, out, write_marp=False)["pptx"]
 
     plan = _plan_from_lineage(
@@ -437,6 +561,25 @@ def build_deck_from_lineage_result(
         figure_assignments=figure_assignments or {},
     )
     return build_deck(plan, out, citations=_collect_citations_from_summaries(lineage_result))
+
+
+def _render_plan_for_audit(dict_plan: dict[str, Any]) -> str:
+    """Flatten a dict-plan into plain text suitable for rigor_audit input."""
+    lines: list[str] = [f"# {dict_plan.get('title', '')}"]
+    for slide in dict_plan.get("slides", []):
+        lines.append("")
+        lines.append(f"## [{slide.get('type', '?')}] {slide.get('title', '')}")
+        if slide.get("subtitle"):
+            lines.append(slide["subtitle"])
+        for b in slide.get("bullets", []) or []:
+            lines.append(f"- {b}")
+        if slide.get("caption"):
+            lines.append(slide["caption"])
+        if slide.get("citation_source"):
+            lines.append(f"_(source: {slide['citation_source']})_")
+        for ref in slide.get("references", []) or []:
+            lines.append(f"- {ref}")
+    return "\n".join(lines)
 
 
 def _summaries_to_paper_summaries(

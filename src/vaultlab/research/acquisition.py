@@ -766,6 +766,7 @@ def acquire_pdfs_for_corpus(
     parallel: int = 4,
     apis: dict[str, str] | None = None,
     skip_paywalled: bool = False,
+    aggressive_retry: bool = False,
     timeout: int = _DEFAULT_TIMEOUT,
     progress: Callable[[str, int, int], None] | None = None,
 ) -> dict[str, AcquisitionResult]:
@@ -778,6 +779,14 @@ def acquire_pdfs_for_corpus(
         parallel: Worker count for the thread pool.  ``1`` is sequential.
         apis: API key map (forwarded to :func:`acquire_pdf`).
         skip_paywalled: If ``True``, only OA tiers are tried.
+        aggressive_retry: If ``True``, papers that came back ``failed`` in
+            the first acquisition pass get a second chance through the full
+            Springer/Elsevier waterfall — used by ``depth="complete"`` runs
+            (see :func:`vaultlab.research.lineage.run_lit_arc`). Implies
+            ``skip_paywalled=False`` for the retry pass regardless of the
+            top-level ``skip_paywalled`` argument. Only takes effect after
+            an initial pass has run, and only re-attempts DOIs whose first
+            pass produced ``source="failed"``.
         timeout: Per-request HTTP timeout.
         progress: Optional callback ``progress(doi, done, total)``.
 
@@ -792,7 +801,7 @@ def acquire_pdfs_for_corpus(
     total = len(dois)
     results: dict[str, AcquisitionResult] = {}
 
-    def _one(doi: str) -> AcquisitionResult:
+    def _one(doi: str, *, force_skip_paywalled: bool | None = None) -> AcquisitionResult:
         # Each worker uses its own session so per-source rate limits stay
         # local to the thread; otherwise ``_PoliteSession`` would funnel
         # all calls through one delay clock.
@@ -800,7 +809,11 @@ def acquire_pdfs_for_corpus(
             doi,
             cache_dir=cache_dir,
             apis=apis,
-            skip_paywalled=skip_paywalled,
+            skip_paywalled=(
+                force_skip_paywalled
+                if force_skip_paywalled is not None
+                else skip_paywalled
+            ),
             timeout=timeout,
         )
 
@@ -810,27 +823,45 @@ def acquire_pdfs_for_corpus(
             results[doi] = res
             if progress is not None:
                 progress(doi, i, total)
-        return results
+    else:
+        with ThreadPoolExecutor(max_workers=parallel) as pool:
+            futures = {pool.submit(_one, doi): doi for doi in dois}
+            done = 0
+            for fut in futures:
+                doi = futures[fut]
+                try:
+                    res = fut.result()
+                except Exception as exc:
+                    res = AcquisitionResult(
+                        doi=doi,
+                        pdf_path=None,
+                        source="failed",
+                        license=None,
+                        error=f"worker exception: {exc}",
+                    )
+                results[doi] = res
+                done += 1
+                if progress is not None:
+                    progress(doi, done, total)
 
-    with ThreadPoolExecutor(max_workers=parallel) as pool:
-        futures = {pool.submit(_one, doi): doi for doi in dois}
-        done = 0
-        for fut in futures:
-            doi = futures[fut]
-            try:
-                res = fut.result()
-            except Exception as exc:
-                res = AcquisitionResult(
-                    doi=doi,
-                    pdf_path=None,
-                    source="failed",
-                    license=None,
-                    error=f"worker exception: {exc}",
-                )
-            results[doi] = res
-            done += 1
-            if progress is not None:
-                progress(doi, done, total)
+    # Aggressive retry: re-attempt the waterfall (with paywalled tiers
+    # enabled) for any DOI whose first pass failed. This matches the
+    # ``depth="complete"`` contract — read every PDF we can possibly get.
+    if aggressive_retry:
+        retry_dois = [
+            d for d, r in results.items()
+            if r.pdf_path is None and r.source == "failed"
+        ]
+        if retry_dois:
+            logger.info(
+                "acquire_pdfs_for_corpus: aggressive_retry on %d paywalled papers",
+                len(retry_dois),
+            )
+            for d in retry_dois:
+                # Force paywalled tiers ON for the retry, regardless of
+                # the top-level skip_paywalled flag.
+                results[d] = _one(d, force_skip_paywalled=False)
+
     return results
 
 

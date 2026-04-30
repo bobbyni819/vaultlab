@@ -37,6 +37,7 @@ from vaultlab.research.graph_metrics import CorpusMetrics, compute_metrics
 from vaultlab.research.lineage import (
     ArcNarrator,
     ArcTask,
+    DepthLevel,
     LineageRunResult,
     arc_response_schema,
     prepare_arc_task,
@@ -87,6 +88,7 @@ __all__ = [
     # Citation graph corpus / metrics (literature-search v2)
     "Corpus",
     "CorpusMetrics",
+    "DepthLevel",
     "Finding",
     "FindingStatus",
     "LineageRunResult",

@@ -22,6 +22,7 @@ EXPECTED_ROLE_IDS = {
     "figure_lead",
     "team_lead",
     "figure_reader",
+    "rigor_auditor",
 }
 
 
@@ -95,6 +96,12 @@ ROUND_TRIP_SIGNATURES: dict[str, list[str]] = {
         "block structure",
         "sign reversals",
         "Read tool",
+    ],
+    "rigor_auditor": [
+        "You are a Rigor Auditor.",
+        "final gate before a document ships",
+        "Page-marker integrity",
+        "passed",
     ],
 }
 

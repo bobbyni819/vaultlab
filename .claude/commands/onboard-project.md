@@ -1,98 +1,189 @@
 ---
 name: onboard-project
 type: orchestrated
-backed_by: vaultlab.kb + vaultlab.runner.bounded_loop
+backed_by: vaultlab.onboarding.init_project_from_intake
 purpose: Walk vaultlab through a new project so it knows what's there + what to read first
+arguments: [path-to-project-folder]
 ---
 
 # /onboard-project [path]
 
-When you point vaultlab at a new project (a folder with code, data, papers, notes), it doesn't know what's in there yet. This command does the discovery + verification flow so vaultlab can then act as a competent companion for that project.
-
-## What it does
-
-1. **Walk the folder structure** — list directories, count files by type, identify large directories
-2. **Read top-level docs** — README, CLAUDE.md, docs/, any .vaultlab-project.json
-3. **Identify file types and patterns** — Python source, Jupyter notebooks, data files (.h5ad, .tiff, .csv), figure outputs, manuscripts
-4. **Build a draft project understanding** — written to `<kb>/Wiki/Projects/<slug>.md`
-5. **Run grill-me verification** — pose 5-10 questions to the human about things vaultlab can't infer (the science, the conventions, the priorities)
-6. **Update the human-answered understanding** into the project page
-7. **Initialize `<kb>/Wiki/Projects/<slug>/START_HERE.md`** with current state + suggested next-step files to read
-8. **Suggest a `.vaultlab-project.json`** if one doesn't exist (data sources, validation files, KB path)
+Onboards a new project into vaultlab so future commands (`/lit-arc`,
+`/build-deck`, `/cite audit`, etc.) know the context. The fast path: the
+user fills out `project_intake.md` (5 minutes), then runs this command.
+The Python side scans the folder, writes the project view, and you (the
+slash command) ask 3-5 follow-up questions for any gaps.
 
 ## Inputs
 
-- `path` (optional): project root directory. Defaults to current working directory.
-- `--name <slug>`: project slug (default: derived from folder name)
-- `--kb <name>`: which KB to write the project page into (default: from vaultlab config)
-- `--skip-grill`: skip the verification grill (faster but less accurate)
+- `path` (optional): project root directory. Defaults to current working
+  directory.
+- `--slug <slug>`: explicit project slug (default: derived from intake topic)
 
-## Outputs
+## How to execute
 
-```
-<kb>/Wiki/Projects/<slug>.md                # canonical understanding
-<kb>/Wiki/Projects/<slug>/START_HERE.md     # current focus + files to read
-<project>/.vaultlab-project.json            # config (if didn't exist)
-```
+The Python orchestrator does the deterministic work. YOU (Claude Code)
+do the conversational fill + the follow-up questions.
 
-## Implementation
+### Step 1 — Resolve the project path
 
 ```python
 from pathlib import Path
 
-from vaultlab.kb import get_kb_path, ingest_file
-from vaultlab.kb.start_here import init_start_here, update_start_here
-from vaultlab.runner.bounded_loop import bounded_loop
-from vaultlab.workflows import onboard
+project_path = Path("$ARGUMENTS").expanduser().resolve() if "$ARGUMENTS" else Path.cwd()
+```
 
-def main(path: Path, name: str | None = None, skip_grill: bool = False):
-    kb_path = get_kb_path()
-    slug = name or path.name.lower().replace(" ", "_")
+If `$ARGUMENTS` is empty, default to `Path.cwd()`. If the resolved path
+doesn't exist, ask the user where the project lives.
 
-    # Step 1-3: walk + identify
-    inventory = onboard.scan_project(path)
+### Step 2 — Check for `project_intake.md`
 
-    # Step 4: build draft understanding (Claude reads + summarizes)
-    draft = onboard.draft_understanding(inventory, kb_path=kb_path)
+```python
+intake_path = project_path / "project_intake.md"
+```
 
-    # Step 5: verification grill (skip-able)
-    if not skip_grill:
-        questions = onboard.compose_grill_questions(draft, inventory)
-        # Saves to <kb>/Wiki/Projects/<slug>/onboarding-grill.md
-        # Human answers later; on next /onboard-project run, answers get folded in
-        onboard.write_grill(kb_path, slug, questions)
+**If `intake_path` exists:** skip to Step 3.
 
-    # Step 6: write the project page
-    onboard.write_project_page(kb_path, slug, draft)
+**If it doesn't exist:** offer the user two paths:
 
-    # Step 7: initialize START_HERE
-    init_start_here(kb_path, slug, draft, suggested_files=onboard.priority_files(inventory))
+> I don't see a `project_intake.md` in this folder. Two options:
+>
+> **Option A — Quick interactive fill (~3 min).** I'll ask you the
+> 9 intake questions one at a time and save your answers as
+> `project_intake.md` in this folder.
+>
+> **Option B — You fill it yourself.** I'll drop a blank template at
+> `<path>/project_intake.md` for you to fill in your editor, and you
+> re-run `/onboard-project` when done.
 
-    # Step 8: suggest .vaultlab-project.json
-    if not (path / ".vaultlab-project.json").exists():
-        onboard.suggest_project_config(path, slug, inventory)
+If the user picks **A**: walk through the 9 sections in order
+(topic, goal, audience, what-they-have, exclusions, style, PI prefs,
+deadlines, free-form). After each answer, build up an `IntakeForm` in
+memory. When all 9 are answered, write it:
 
-    return {"slug": slug, "kb_page": kb_path / "Wiki/Projects" / f"{slug}.md"}
+```python
+from vaultlab.onboarding import IntakeForm
+
+form = IntakeForm(
+    topic=...,
+    goals=[...],         # snake_case keys: understand_literature, build_journal_club_deck, etc.
+    audiences=[...],     # self, lab_members, pi, journal_club, conference, ...
+    have=[...],          # pdfs, notes, wet_lab_data, prior_drafts, citations_file, nothing
+    exclusions={...},    # exclude_preprints: bool, min_year: int, english_only: bool
+    style=[...],         # hedged, direct, match_papers, match_prior_writing, no_preference
+    pi_preferences="...",
+    deadlines=[...],     # one_shot, weekly, specific_date
+    free_form="...",
+)
+intake_path.write_text(form.to_markdown(), encoding="utf-8")
+```
+
+If the user picks **B**:
+
+```python
+from vaultlab.onboarding import copy_intake_template_to
+copy_intake_template_to(project_path)
+```
+
+Then print: `Template at <path>. Fill it in and re-run /onboard-project.`
+and stop.
+
+### Step 3 — Run the orchestrator
+
+```python
+from vaultlab.context import locations as _loc
+from vaultlab.onboarding import init_project_from_intake
+
+kb_locations = _loc.load_locations()
+kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
+
+result = init_project_from_intake(
+    intake_path=intake_path,
+    kb_root=kb_root,
+    project_path=project_path,
+)
+```
+
+If `kb_root` is not set, ask the user which KB to write into (most users
+have only one — vaultlab — but some have multiple: research / dcp / tools).
+
+### Step 4 — Ask the follow-up questions
+
+`result.follow_up_questions` is a list of 3-5 specific gaps. Ask them
+one at a time in chat. After each answer, log it as a decision:
+
+```python
+from vaultlab.kb.feedback import log_decision
+
+log_decision(
+    kb_path=kb_root,
+    project_slug=result.slug,
+    decision=user_answer,
+    why=f"Answered onboarding follow-up: {question}",
+)
+```
+
+If the answer changes any structured field (e.g. user gave a data path),
+update `result.config` and re-save:
+
+```python
+from vaultlab.onboarding import save_config
+result.config.data_dirs.append(user_provided_path)
+save_config(result.config, project_path)
+```
+
+### Step 5 — Print the summary + open command
+
+```
+Project onboarded: <slug>
+
+Files written:
+  - <kb>/Wiki/Projects/<slug>/START_HERE.md
+  - <kb>/Wiki/Projects/<slug>/intake.md
+  - <kb>/Wiki/Projects/<slug>/decisions-log.md
+  - <project>/.vaultlab-project.json
+
+What I learned:
+  Topic: <topic>
+  Goals: <comma-separated goals>
+  Audience: <comma-separated>
+  Folder: <total_files> files (<top categories>)
+
+Next steps:
+  - /lit-arc "<topic>"        — build the literature lineage arc
+  - /build-deck "<topic>"     — compose a deck from your KB (v0.1.0)
+  - /cite audit               — verify citations in any draft
+
+To open: bobby-kb open vaultlab/Wiki/Projects/<slug>/START_HERE
 ```
 
 ## Anti-laziness rules (per AGENTS.md)
 
-When Claude reads files for the draft understanding:
-1. QUOTE specific filenames + their purpose
-2. If unsure what a file is for, mark it `[unknown — ask user]` rather than guessing
-3. Hedge interpretations: *"`pipeline/run_codex.py` appears to be the main analysis driver"* not *"`run_codex.py` is the main driver"*
-4. Don't fabricate dependencies — only list what's actually in `pyproject.toml` / `requirements.txt`
+When asking follow-ups:
+
+1. Quote specific filenames from `result.inventory.samples` so the user
+   knows you actually read the folder.
+2. If the user's answer is ambiguous, mark it `[unconfirmed]` rather
+   than guessing.
+3. Don't fabricate data dirs — only list paths from `result.inventory`
+   or paths the user explicitly typed.
+4. The follow-up loop is capped at 5 questions. Stop after 5 even if
+   gaps remain — log them as open questions in `decisions-log.md`.
 
 ## Test plan
 
-- [ ] Run on `~/Downloads/CODEX_MALDIIMS/` — should produce a draft that recognizes the lipid-annotation pipeline
-- [ ] Run on a freshly-created empty folder — should produce a minimal draft suggesting next steps
-- [ ] Verify the grill questions are answerable by Bobby in <5 minutes (not 50 questions)
-- [ ] Verify START_HERE.md has actionable "files to read first"
-- [ ] Verify .vaultlab-project.json suggestion is valid JSON
+- [ ] Trial dry-run: `python scripts/_trial_onboarding.py`
+- [ ] Run on `~/Downloads/CODEX_MALDIIMS/` with a hand-filled intake —
+   should produce a START_HERE that lists the wet-lab data dirs
+- [ ] Run on a folder without `project_intake.md` — should offer the
+   interactive fill OR template-drop choice
+- [ ] Run twice on the same folder — second run should refresh
+   `last_updated` in `.vaultlab-project.json` without losing data
 
 ## Related commands
 
-- `/discover-data <path>` — narrower; just for wet-lab data folders
-- `/research-status` — once a project is onboarded, this shows current focus
-- `/groom-kb` — periodically tidies the KB; complements onboarding
+- `/start-project "<topic>"` — faster path for users without an existing
+  folder yet (no folder-walk, no intake)
+- `/lit-arc <topic>` — once a project is onboarded, the lit-arc lineage
+  arc is the canonical next step
+- `/research-status` — quick status of an onboarded project

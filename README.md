@@ -81,16 +81,17 @@ git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
 pip install -e ".[all]"
 ```
 
-Then open [Claude Code](https://claude.com/claude-code) in the folder and paste:
+Then open [Claude Code](https://claude.com/claude-code) in the folder. Pick the path that fits you:
 
-```
-I've just cloned VaultLab. Read README.md, CLAUDE.md, AGENTS.md, and
-docs/getting-started.md, then walk me through what it does, what I
-need to install, set up my first project, and run my first slash command.
-Hedged voice on placeholder capabilities.
-```
+| Path | When | First command |
+|---|---|---|
+| **A — Full project** | You have a folder with code, data, papers, notes | Copy `templates/project_intake.md` into your folder, fill it (5 min), then run `/onboard-project <path>` |
+| **B — Quick scoping** | Just curious about a topic — no folder yet | `/start-project "<your topic>"` |
+| **C — Non-research** | Any knowledge-management use case | Same as B — VaultLab works for any topic, not just biomedical |
 
-That's it. Claude Code interviews you about your work, sets up your KB + first project, walks you through the first command. ~10–15 minutes.
+The intake form has 9 sections (topic, goal, audience, what-you-have, exclusions, style, PI prefs, deadlines, free-form). Required: topic + goal + audience. Everything else is optional. After onboarding, `/lit-arc`, `/build-deck`, `/cite audit`, etc. all know your context.
+
+Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15 minutes total from clone to first useful KB entry.
 
 > **No Anthropic API key needed.** VaultLab is Claude-Code-native — Claude Code provides LLM access. The optional API keys are for **literature search** (NCBI, Semantic Scholar, etc.) — see [`docs/setup-api-keys.md`](docs/setup-api-keys.md). NCBI is free + 5 min and is the only one most users need.
 

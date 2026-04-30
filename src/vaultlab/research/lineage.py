@@ -68,7 +68,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from vaultlab.kb.paths import (
     article_stub_path,
@@ -109,6 +109,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "ArcNarrator",
     "ArcTask",
+    "DepthLevel",
     "LineageRunResult",
     "arc_response_schema",
     "build_arc_prompt",
@@ -117,6 +118,69 @@ __all__ = [
     "render_arc_markdown",
     "run_lit_arc",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Depth control (Task #63, 2026-04-30)
+# ---------------------------------------------------------------------------
+
+DepthLevel = Literal["fast", "balanced", "thorough", "complete"]
+"""Depth knob exposed by ``/lit-arc`` so users can dial Tier-A read budget
+to match how much wall-clock time they have. Mapped to a Tier-A budget by
+:func:`_derive_max_papers` once PDF acquisition has finished (so the
+ceiling is the actual count of cached PDFs).
+
+* ``fast`` — ~20 Tier-A papers, ~15 min. Quick scoping.
+* ``balanced`` — ~50 Tier-A papers, ~30 min. Daily literature review (default).
+* ``thorough`` — read every cached PDF, ~60 min. Deep review.
+* ``complete`` — read every cached PDF AND retry paywalled-acquisition
+  once more before deciding the budget, ~90 min. Publication-grade.
+"""
+
+# Soft thresholds the orchestrator uses to derive the Tier-A budget when
+# ``max_papers_to_summarize`` is left at its default (None). Kept module-level
+# so tests / docs don't drift from runtime behaviour.
+_DEPTH_CAP_FAST = 20
+_DEPTH_CAP_BALANCED = 50
+_LARGE_CORPUS_WARNING_THRESHOLD = 200
+
+
+def _derive_max_papers(
+    depth: DepthLevel,
+    n_pdfs_cached: int,
+    corpus_size: int,
+) -> int:
+    """Map ``depth`` -> Tier-A paper budget.
+
+    Args:
+        depth: One of ``"fast" | "balanced" | "thorough" | "complete"``.
+        n_pdfs_cached: How many corpus papers ended up with a usable PDF
+            after the acquisition phase (the ceiling for read-everything
+            depth modes — there's no point budgeting for papers we can't
+            full-text read).
+        corpus_size: Total papers in the corpus (search seeds + walked refs).
+            Currently informational, but kept in the signature so future
+            extensions can use it (e.g. abstract-only fallback for Tier-C).
+
+    Returns:
+        Tier-A paper budget (an int >= 0).
+    """
+    del corpus_size  # kept for forward compatibility; not used today
+    n_pdfs_cached = max(0, int(n_pdfs_cached))
+    if depth == "fast":
+        return min(_DEPTH_CAP_FAST, n_pdfs_cached)
+    if depth == "balanced":
+        return min(_DEPTH_CAP_BALANCED, n_pdfs_cached)
+    if depth == "thorough":
+        return n_pdfs_cached
+    if depth == "complete":
+        # The aggressive_retry happens at acquisition time, so by the time
+        # we get here ``n_pdfs_cached`` already reflects the retried count.
+        return n_pdfs_cached
+    raise ValueError(
+        f"unknown depth: {depth!r} (expected one of "
+        f"'fast', 'balanced', 'thorough', 'complete')"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1334,8 +1398,9 @@ def run_lit_arc(
     topic: str,
     *,
     kb_root: Path,
+    depth: DepthLevel = "balanced",
     max_seeds: int = 15,
-    max_papers_to_summarize: int = 20,
+    max_papers_to_summarize: int | None = None,
     pdf_cache_dir: Path | None = None,
     apis: dict[str, str] | None = None,
     progress: _ProgressFn | None = None,
@@ -1343,6 +1408,10 @@ def run_lit_arc(
     narrator: ArcNarrator | None = None,
     picker_callback: PickerCallback | None = None,
     picker_coarse_n: int = 30,
+    picker_mode: str = "fast",
+    arc_mode: str = "fast",
+    crosstalk_runner: Any | None = None,
+    crosstalk_n_rounds: int = 3,
     project: str | None = None,
     project_slug: str | None = None,
     run_dir: Path | None = None,
@@ -1397,11 +1466,35 @@ def run_lit_arc(
     short slug (e.g. ``project_slug="codex-cn-test"``) when the project's
     canonical folder name should diverge from the topic.
 
+    **Depth control (Task #63, 2026-04-30).** ``depth`` is the user-facing
+    knob for "how aggressively should the LLM read this corpus". When
+    ``max_papers_to_summarize`` is left at its default (``None``), the
+    Tier-A budget is derived from ``depth`` AFTER PDF acquisition finishes,
+    using :func:`_derive_max_papers` (so the ceiling is the actual count of
+    cached PDFs):
+
+    * ``"fast"`` — cap at 20 Tier-A papers (~15 min). Quick scoping.
+    * ``"balanced"`` — cap at 50 Tier-A papers (~30 min). Default.
+    * ``"thorough"`` — read every cached PDF (~60 min).
+    * ``"complete"`` — read every cached PDF AND retry paywalled
+      acquisition once more before computing the budget (~90 min).
+      Forwards ``aggressive_retry=True`` and ``skip_paywalled=False`` to
+      :func:`acquire_pdfs_for_corpus`.
+
+    Pass ``max_papers_to_summarize=N`` (an explicit int) to override the
+    depth-derived budget — the explicit value always wins.
+
     Test injection points (``_client``, ``_llm_summary``, ``_llm_arc``,
     etc.) take precedence over both modes; callers in production should
     leave them at their defaults. ``_now`` overrides the timestamp used in
     the decisions-log entry (test only).
     """
+    # Validate depth eagerly so callers get a clean error.
+    if depth not in ("fast", "balanced", "thorough", "complete"):
+        raise ValueError(
+            f"unknown depth: {depth!r} (expected one of "
+            f"'fast', 'balanced', 'thorough', 'complete')"
+        )
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
     kb_root = Path(kb_root)
@@ -1467,20 +1560,79 @@ def run_lit_arc(
     # ------------------------------------------------------------------
     _emit(progress, "phase", "acquire_pdfs", n_papers=corpus.n_papers)
     acq = _acquire if _acquire is not None else acquire_pdfs_for_corpus
+    # Depth=complete: try paywalled tiers AND retry hard before deciding
+    # the Tier-A budget. Other depths stick with the OA-only fast path.
+    skip_paywalled_arg = depth != "complete"
+    aggressive_retry_arg = depth == "complete"
     try:
         acq_results = acq(
             corpus,
             pdf_cache_dir,
             apis=apis,
-            skip_paywalled=True,  # keep dry-runs fast / OA-only
+            skip_paywalled=skip_paywalled_arg,
+            aggressive_retry=aggressive_retry_arg,
         )
     except TypeError:
-        # The injected fake may not accept all kwargs — fall back to positional.
-        acq_results = acq(corpus, pdf_cache_dir)
+        # The injected fake may not accept all kwargs — fall back through a
+        # cascade so we tolerate older injection points (tests) and still
+        # honor depth in real runs.
+        try:
+            acq_results = acq(
+                corpus,
+                pdf_cache_dir,
+                apis=apis,
+                skip_paywalled=skip_paywalled_arg,
+            )
+        except TypeError:
+            acq_results = acq(corpus, pdf_cache_dir)
     pdfs_acquired = sum(
         1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None
     )
     _emit(progress, "pdfs_acquired", n=pdfs_acquired)
+
+    # ------------------------------------------------------------------
+    # Resolve the Tier-A budget: explicit override > depth-derived.
+    # We do this AFTER acquisition so depth=thorough/complete can use the
+    # actual cached-PDF count as the ceiling (we only spend Tier-A budget
+    # on papers we can full-text read — L4-CODEX bug #2 lesson).
+    # ------------------------------------------------------------------
+    if max_papers_to_summarize is None:
+        resolved_max_papers = _derive_max_papers(
+            depth, n_pdfs_cached=pdfs_acquired, corpus_size=corpus.n_papers
+        )
+        _emit(
+            progress,
+            "depth_budget",
+            depth=depth,
+            n_pdfs_cached=pdfs_acquired,
+            budget=resolved_max_papers,
+        )
+    else:
+        resolved_max_papers = int(max_papers_to_summarize)
+
+    # Corpus-size warning for read-everything depths on big corpora.
+    if (
+        max_papers_to_summarize is None
+        and depth in ("thorough", "complete")
+        and corpus.n_papers > _LARGE_CORPUS_WARNING_THRESHOLD
+    ):
+        # Rough wall-time guess: 60-90 min for ~150 PDFs read.
+        wall_estimate = "60-90 minutes" if depth == "thorough" else "90-120 minutes"
+        logger.warning(
+            "[lit-arc] depth=%s on a %d-paper corpus. "
+            "Estimated runtime: ~%s. ~%d PDFs will be read.",
+            depth,
+            corpus.n_papers,
+            wall_estimate,
+            pdfs_acquired,
+        )
+        _emit(
+            progress,
+            "large_corpus_warning",
+            depth=depth,
+            corpus_size=corpus.n_papers,
+            n_pdfs_cached=pdfs_acquired,
+        )
 
     # ------------------------------------------------------------------
     # Phase 6: summaries (Tier A vs C, top-N gets prioritised by ranking)
@@ -1497,12 +1649,78 @@ def run_lit_arc(
     # Picker now also biases toward papers WITH cached PDFs.
     tier_a_dois: set[str] | None = None
     picker_method: str = "citation-graph"
-    if max_papers_to_summarize and max_papers_to_summarize < corpus.n_papers:
-        if picker_callback is not None:
+    crosstalk_picker_result = None
+    if resolved_max_papers and resolved_max_papers < corpus.n_papers:
+        # Adversarial crosstalk path — only when explicitly enabled AND a
+        # crosstalk_runner is available. Falls through to single-shot
+        # picker_callback / mechanical pick on any failure.
+        if (
+            picker_mode == "adversarial"
+            and crosstalk_runner is not None
+        ):
+            from vaultlab.research.picker import _build_candidates  # type: ignore[attr-defined]
+            from vaultlab.workflows.crosstalk import (
+                adversarial_picker_meeting,
+                write_crosstalk_artifacts,
+            )
+
+            candidates = _build_candidates(
+                corpus,
+                coarse_n=picker_coarse_n,
+                kb_root=Path(kb_root),
+                pdf_cache_dir=pdf_cache_dir,
+            )
+            abstracts_md = "\n\n".join(
+                f"[{i + 1}] {c.doi} — {c.title or '(untitled)'}\n"
+                f"  Abstract: {c.abstract[:600]}"
+                for i, c in enumerate(candidates)
+            ) or "(no candidates)"
+            ct_result = adversarial_picker_meeting(
+                topic=topic,
+                candidates=candidates,
+                target_n=resolved_max_papers,
+                abstracts_md=abstracts_md,
+                n_rounds=crosstalk_n_rounds,
+                runner_callback=crosstalk_runner,
+            )
+            crosstalk_picker_result = ct_result
+            if run_dir is not None:
+                try:
+                    write_crosstalk_artifacts(ct_result, run_dir=Path(run_dir))
+                except Exception:
+                    logger.exception("write_crosstalk_artifacts (picker) failed")
+            picks = (ct_result.final_output or {}).get("picks") or []
+            valid_dois = {c.doi for c in candidates}
+            keep_list = []
+            for item in picks:
+                if not isinstance(item, dict):
+                    continue
+                d = (item.get("doi") or "").strip().lower()
+                if d in valid_dois and d not in keep_list:
+                    keep_list.append(d)
+                if len(keep_list) >= resolved_max_papers:
+                    break
+            if keep_list:
+                picker_method = "adversarial"
+            else:
+                # Fallback to mechanical pick if synthesizer produced nothing.
+                logger.warning(
+                    "adversarial picker meeting returned no usable picks; "
+                    "falling back to citation graph"
+                )
+                keep_list = _pick_top_n_for_summarization(
+                    corpus,
+                    n=resolved_max_papers,
+                    pdf_cache_dir=pdf_cache_dir,
+                )
+                picker_method = (
+                    "citation-graph (adversarial picker fallback)"
+                )
+        elif picker_callback is not None:
             keep_list = pick_top_n_content_aware(
                 topic,
                 corpus,
-                target_n=max_papers_to_summarize,
+                target_n=resolved_max_papers,
                 coarse_n=picker_coarse_n,
                 kb_root=kb_root,
                 pdf_cache_dir=pdf_cache_dir,
@@ -1515,7 +1733,7 @@ def run_lit_arc(
         else:
             keep_list = _pick_top_n_for_summarization(
                 corpus,
-                n=max_papers_to_summarize,
+                n=resolved_max_papers,
                 pdf_cache_dir=pdf_cache_dir,
             )
         keep = set(keep_list)
@@ -1581,7 +1799,50 @@ def run_lit_arc(
 
     narrative: dict[str, str] | None = None
     skipped_reason = ""
-    if _llm_arc is not None:
+    crosstalk_arc_result = None
+    if (
+        arc_mode == "adversarial"
+        and crosstalk_runner is not None
+        and _llm_arc is None
+    ):
+        # Adversarial crosstalk path for arc generation.
+        from vaultlab.workflows.crosstalk import (
+            adversarial_arc_meeting,
+            write_crosstalk_artifacts,
+        )
+
+        ct_arc = adversarial_arc_meeting(
+            topic=topic,
+            summaries=summaries,
+            metrics=metrics,
+            n_rounds=crosstalk_n_rounds,
+            runner_callback=crosstalk_runner,
+        )
+        crosstalk_arc_result = ct_arc
+        if run_dir is not None:
+            try:
+                write_crosstalk_artifacts(ct_arc, run_dir=Path(run_dir))
+            except Exception:
+                logger.exception("write_crosstalk_artifacts (arc) failed")
+        cleaned = {
+            "history": str(ct_arc.final_output.get("history", "")).strip(),
+            "development": str(
+                ct_arc.final_output.get("development", "")
+            ).strip(),
+            "sota": str(ct_arc.final_output.get("sota", "")).strip(),
+        }
+        if any(cleaned.values()):
+            narrative = cleaned
+        else:
+            skipped_reason = (
+                "adversarial arc meeting returned no narrative paragraphs"
+            )
+            narrative = None
+
+    if narrative is not None:
+        # Adversarial path already produced narrative — skip remaining paths.
+        pass
+    elif _llm_arc is not None:
         # Test injection: never hit the real API.
         prompt = build_arc_prompt(
             topic=topic,
@@ -1666,7 +1927,9 @@ def run_lit_arc(
         inputs=[str(p) for p in summary_paths.values()],
         params={
             "max_seeds": max_seeds,
-            "max_papers_to_summarize": max_papers_to_summarize,
+            "depth": depth,
+            "max_papers_to_summarize": resolved_max_papers,
+            "max_papers_to_summarize_explicit": max_papers_to_summarize,
             "pdf_cache_dir": str(pdf_cache_dir),
             "narration": "claude" if narrative is not None else "skipped",
         },
@@ -1696,9 +1959,17 @@ def run_lit_arc(
 
     # Decide the multi-agent crosstalk descriptor for the decisions log.
     crosstalk_parts: list[str] = []
-    if picker_callback is not None:
+    if picker_mode == "adversarial" and crosstalk_picker_result is not None:
+        crosstalk_parts.append(
+            f"picker:adversarial({crosstalk_picker_result.crosstalk_status})"
+        )
+    elif picker_callback is not None:
         crosstalk_parts.append("picker")
-    if narrator is not None or _llm_arc is not None:
+    if arc_mode == "adversarial" and crosstalk_arc_result is not None:
+        crosstalk_parts.append(
+            f"arc:adversarial({crosstalk_arc_result.crosstalk_status})"
+        )
+    elif narrator is not None or _llm_arc is not None:
         crosstalk_parts.append("arc")
     crosstalk = "+".join(crosstalk_parts) if crosstalk_parts else "none"
 

@@ -101,7 +101,7 @@ See [`docs/setup-api-keys.md`](setup-api-keys.md) for the full walkthrough, incl
 
 ---
 
-## Step 4 — Run your first slash command (3 minutes)
+## Step 4 — Onboard your first project (5 minutes)
 
 Open Claude Code in the vaultlab folder:
 
@@ -110,7 +110,51 @@ cd vaultlab
 claude
 ```
 
-Claude Code reads `CLAUDE.md` automatically — it knows what VaultLab is and how to navigate the codebase. The first command to try is `/lit-search`, which does multi-source paper search and writes results to your KB. (`/lit-arc`, the deeper end-to-end orchestrator that builds a citation graph and lineage narrative, lands fully in v0.1.0.)
+Claude Code reads `CLAUDE.md` automatically — it knows what VaultLab is and how to navigate the codebase. Now pick the path that matches you:
+
+### Path A — Full project (you have a folder + data)
+
+For an existing research project (a folder with code, papers, wet-lab data, notes). Best onboarding fidelity.
+
+```bash
+# 1. Copy the intake template into your project folder
+cp templates/project_intake.md /path/to/your/project/
+
+# 2. Open it in your editor and fill it in (~5 minutes — required:
+#    topic, goal, audience; everything else optional)
+
+# 3. Onboard
+> /onboard-project /path/to/your/project
+```
+
+VaultLab reads your intake, scans the folder (counts files by type, finds your data dirs and PDFs), writes `Wiki/Projects/<slug>/START_HERE.md`, and asks 3-5 specific follow-up questions for any gaps. After that every command (`/lit-arc`, `/build-deck`, `/cite audit`) knows your project context.
+
+### Path B — Quick scoping (just curious about a topic)
+
+You don't have a project folder yet — you just want to explore a topic and see what VaultLab can do. ~30 seconds.
+
+```
+> /start-project "spatial transcriptomics in PDAC"
+> /lit-arc "spatial transcriptomics in PDAC"
+```
+
+That writes a minimal `Wiki/Projects/<slug>/` scaffold and runs the literature lineage arc immediately. No intake form, no folder scan. Upgrade to full Path A onboarding later with `/onboard-project` if the topic gets serious.
+
+### Path C — Non-research use cases
+
+VaultLab is a knowledge-management tool, not a lab-only tool. The intake template's required fields (`topic`, `goal`, `audience`) are generic — biomedical fields just stay blank if they don't apply.
+
+```
+> /start-project "evidence-based insomnia interventions"
+> /start-project "personal finance and tax-loss harvesting"
+> /start-project "marathon training plans for masters runners"
+```
+
+Open-access papers exist for almost any topic. The KB doesn't care whether the topic is biomedical. If you ticked "Yourself (personal notes)" as the audience and the goal as "Understand a literature field," VaultLab works the same way.
+
+---
+
+If you skipped to here without a topic in mind, the simplest first command is just `/lit-search` against any topic that interests you. It does multi-source paper search and writes results to your KB without needing a project at all. (`/lit-arc`, the deeper end-to-end orchestrator that builds a citation graph and lineage narrative, lands fully in v0.1.0.)
 
 Pick a generic topic — *"T cell exhaustion"*, *"spatial transcriptomics methods"*, *"insomnia interventions"*, anything you'd actually want to read about. In Claude Code:
 

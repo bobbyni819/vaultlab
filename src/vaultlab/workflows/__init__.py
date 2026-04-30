@@ -61,6 +61,18 @@ from vaultlab.workflows._runner import (
 
 # Public builders
 from vaultlab.workflows.brainstorm import plan_brainstorm_figures
+from vaultlab.workflows.crosstalk import (
+    CrosstalkResult,
+    MAX_N_ROUNDS,
+    MEETING_TIMEOUT_SECONDS,
+    RunnerCallback,
+    adversarial_arc_meeting,
+    adversarial_deck_plan_meeting,
+    adversarial_picker_meeting,
+    append_decisions_log_entry,
+    rigor_audit,
+    write_crosstalk_artifacts,
+)
 from vaultlab.workflows.deck_plan import (
     DeckPlanTask,
     PlanGeneratorCallback,
@@ -84,11 +96,15 @@ from vaultlab.workflows.synthesis import plan_synthesis
 
 __all__ = [
     # Data classes
+    "CrosstalkResult",
     "DeckPlanTask",
     "DeepThinkEnsembleBundle",
+    "MAX_N_ROUNDS",
+    "MEETING_TIMEOUT_SECONDS",
     "PROVENANCE_INDEX",
     "PlanGeneratorCallback",
     "Provenance",
+    "RunnerCallback",
     "WorkflowPlan",
     "read_provenance",
     "write_with_provenance",
@@ -96,6 +112,10 @@ __all__ = [
     "run_workflow",
     "run_workflow_with_reflection",
     # Public builders
+    "adversarial_arc_meeting",
+    "adversarial_deck_plan_meeting",
+    "adversarial_picker_meeting",
+    "append_decisions_log_entry",
     "deck_plan_response_schema",
     "generate_deck_plan",
     "plan_brainstorm_figures",
@@ -109,5 +129,7 @@ __all__ = [
     "plan_synthesis",
     "prepare_deck_plan_task",
     "render_plan_from_response",
+    "rigor_audit",
     "run_deep_think_with_ensemble_critic",
+    "write_crosstalk_artifacts",
 ]

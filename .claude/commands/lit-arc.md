@@ -156,18 +156,60 @@ def claude_code_narrator(task: ArcTask) -> dict:
     ...
 ```
 
-### Step 4 — Run the orchestrator
+### Step 4 — Define the runner callback (for crosstalk; tiered default ON)
+
+Per Bobby's "tiered + dynamic" crosstalk decision, `/lit-arc` defaults
+to ADVERSARIAL meetings on **picker** and **arc** (analyst → critic →
+synthesizer over 3 rounds, hard cap 5, 10-min wall-clock timeout).
+Each role outputs structured JSON to prevent spirals. To opt into
+crosstalk, define a `runner_callback`:
+
+```python
+from vaultlab.workflows import RunnerCallback
+from vaultlab.runner.models import Meeting, Role
+from typing import Sequence
+
+def claude_code_runner(meeting: Meeting, members: Sequence[Role]) -> list[dict]:
+    """Execute one ADVERSARIAL meeting in this Claude Code session.
+    Each round: each role gets meeting.task + the prior turns,
+    returns structured JSON per their role's schema. The orchestrator
+    composes the turns into the meeting transcript.
+    
+    YOU implement at runtime — no SDK call. Reads role.system_prompt
+    + meeting state, returns analyst draft / critic objections /
+    synthesizer integration as JSON dicts in turn order.
+    """
+    ...
+```
+
+When `runner_callback` is None, picker_mode and arc_mode FALL BACK to
+single-shot picker_callback / narrator. Backwards compat preserved.
+
+### Step 5 — Run the orchestrator
 
 ```python
 result = run_lit_arc(
     topic,
     kb_root=kb_root,
+    depth="balanced",                # see "Depth modes" below
     max_seeds=15,
-    max_papers_to_summarize=20,
+    
+    # Single-shot LLM callbacks (always required)
+    picker_callback=claude_code_picker,
     reader=claude_code_reader,
     narrator=claude_code_narrator,
+    
+    # Crosstalk integration (tiered default ON per Bobby's decision)
+    picker_mode="adversarial",       # "fast" | "adversarial"
+    arc_mode="adversarial",          # "fast" | "adversarial"
+    crosstalk_runner=claude_code_runner,
+    crosstalk_n_rounds=3,            # default 3, hard cap 5
 )
 ```
+
+When the user requests `/lit-arc <topic> --mode fast`, set
+`picker_mode="fast"` and `arc_mode="fast"` to bypass crosstalk
+(fast scope mode).
 
 This will:
 1. Search PubMed / Semantic Scholar / CrossRef for seeds.
@@ -177,6 +219,34 @@ This will:
 5. Call your reader once per Tier-A paper (you read each PDF, return JSON).
 6. Call your narrator once with all summaries (you read summaries, return JSON).
 7. Write provenance receipts.
+
+## Depth modes
+
+By default `/lit-arc` runs with `depth="balanced"`. Pass `depth="fast"` for
+quick scoping (~15 min, ~20 Tier-A) or `depth="thorough"` for deep work
+(~60 min, every cached PDF read). Defaults:
+
+| Depth      | Tier A budget        | Wall time | Use case                    |
+|------------|----------------------|-----------|-----------------------------|
+| fast       | 20                   | ~15 min   | Quick scoping               |
+| balanced   | 50                   | ~30 min   | Daily literature review     |
+| thorough   | All cached PDFs      | ~60 min   | Writing a deep review       |
+| complete   | All + retry paywall  | ~90 min   | Publication-grade research  |
+
+`depth="complete"` additionally re-runs the acquisition waterfall with the
+full Springer/Elsevier tier on any DOI that came back unavailable on the
+first pass — use this when the user explicitly says they want every paper
+that can possibly be acquired (institutional license required for the
+paywalled tiers to actually return PDFs).
+
+Pass `max_papers_to_summarize=N` (an explicit int) to override the
+depth-derived budget — explicit always wins. Default is `None`, meaning
+"derive from `depth`" (the budget is computed AFTER PDF acquisition so
+the ceiling is the actual count of cached PDFs).
+
+When the corpus is large (>200 papers) and depth is `thorough` or
+`complete`, the orchestrator logs a warning at the start of Phase 6
+(summarization) so the user can Ctrl-C if they didn't mean it.
 
 ### Step 5 — Print results
 
@@ -199,7 +269,8 @@ To open: bobby-kb open vaultlab/Wiki/Concepts/<topic-slug>-lineage-<date>
   with citation stats but no LLM-generated TL;DR. They're still cited in the
   arc by metadata.
 - Total runtime: ~15-30 min for a 15-seed, 20-summary topic depending on PDF
-  acquisition success rate.
+  acquisition success rate. Use `depth="thorough"` or `depth="complete"` for
+  larger corpora — see the **Depth modes** table above.
 - For non-Claude-Code users: `run_lit_arc(topic, kb_root=...)` (no `reader` /
   `narrator` kwargs) calls the Anthropic SDK directly. See
   `docs/setup-api-keys.md` for the "Anthropic API key — do you need one?"
@@ -209,6 +280,9 @@ To open: bobby-kb open vaultlab/Wiki/Concepts/<topic-slug>-lineage-<date>
 
 - Trial dry-run (canned reader / narrator):
   `python scripts/_trial_lit_arc_claude_code.py`
+- Trial depth-flag budget check:
+  `python scripts/_trial_depth_flag.py`
 - Unit tests:
   `tests/test_vaultlab_research/test_summarize.py::test_summarize_corpus_with_reader`
   `tests/test_vaultlab_research/test_lineage.py::test_run_lit_arc_with_reader_and_narrator`
+  `tests/test_vaultlab_research/test_lineage.py::test_run_lit_arc_depth_fast_caps_at_20`

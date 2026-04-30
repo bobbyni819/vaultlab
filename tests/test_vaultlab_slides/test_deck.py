@@ -1162,3 +1162,195 @@ class TestDeckSmokeWithBugTriggers:
                     assert "Anon" not in shape.text_frame.text, (
                         f"citation footer fell back to Anon: {shape.text_frame.text!r}"
                     )
+
+
+class TestBuildDeckAdversarial:
+    """Coverage for plan_mode='adversarial' + final_audit on build_deck_from_lineage_result."""
+
+    def _write_synthetic_kb(self, kb_root: Path) -> tuple[Path, dict[str, Path]]:
+        from vaultlab.kb.paths import slugify_doi as _sd
+        summary_paths: dict[str, Path] = {}
+        for doi, year, bucket, title in [
+            ("10.1/h", 1995, "history", "Foundation"),
+            ("10.1/d", 2010, "development", "Development"),
+            ("10.1/s", 2024, "sota", "SOTA"),
+        ]:
+            slug = _sd(doi)
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: {title}\nauthors: [Smith J]\n"
+                f"year: {year}\njournal: J\nyear_bucket: {bucket}\ntier: A\n---\n\n"
+                f"## TL;DR\n{bucket} tldr.\n\n## Key findings (with [page] provenance)\n"
+                f"- Finding [p1]\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+        arc = kb_root / "Wiki" / "Concepts" / "x-lineage-2026.md"
+        arc.parent.mkdir(parents=True, exist_ok=True)
+        arc.write_text("# Arc\n\nNarrative.\n", encoding="utf-8")
+        return arc, summary_paths
+
+    def test_adversarial_plan_with_stub_runner(self, tmp_path, pptx) -> None:
+        import json as _json
+        from pptx import Presentation as _Presentation
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        arc, summary_paths = self._write_synthetic_kb(kb_root)
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=3,
+        )
+
+        def _crosstalk(meeting, roles):
+            outs = []
+            for r in roles:
+                if r.id == "synthesizer":
+                    payload = {
+                        "story_arc_summary": "arc",
+                        "slides": [
+                            {"type": "title", "title": "x", "author": "B"},
+                            {"type": "text", "title": "Findings",
+                             "bullets": ["[[10.1_h|Smith 1995]] foundation"]},
+                        ],
+                    }
+                    outs.append({"output": _json.dumps(payload)})
+                else:
+                    outs.append({"output": "x"})
+            return outs
+
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            plan_mode="adversarial",
+            crosstalk_runner=_crosstalk,
+            crosstalk_n_rounds=1,
+            target_slide_count=2,
+        )
+        assert out.exists()
+        pres = _Presentation(str(out))
+        # title + text slide (references slide isn't auto-added when no DOIs cited)
+        assert len(pres.slides) >= 2
+
+    def test_adversarial_plan_with_final_audit_warning(self, tmp_path, pptx) -> None:
+        """When rigor_audit returns blocker issues + audit_strict=False, deck still builds + adds a warning slide."""
+        import json as _json
+        from pptx import Presentation as _Presentation
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        arc, summary_paths = self._write_synthetic_kb(kb_root)
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=3,
+        )
+
+        # The runner has to handle BOTH the deck-plan meeting (4 roles) and the
+        # rigor_audit (1 role) — branch on number of roles.
+        def _crosstalk(meeting, roles):
+            outs = []
+            if len(roles) == 1:
+                payload = {
+                    "passed": False,
+                    "issues": [
+                        {"loc": "slide 1", "severity": "blocker",
+                         "kind": "ungrounded_claim", "fix": "ground claim"},
+                    ],
+                }
+                outs.append({"output": _json.dumps(payload)})
+            else:
+                for r in roles:
+                    if r.id == "synthesizer":
+                        payload = {
+                            "story_arc_summary": "arc",
+                            "slides": [
+                                {"type": "title", "title": "x", "author": "B"},
+                                {"type": "text", "title": "Findings",
+                                 "bullets": ["[[10.1_h|Smith 1995]] foundation"]},
+                            ],
+                        }
+                        outs.append({"output": _json.dumps(payload)})
+                    else:
+                        outs.append({"output": "x"})
+            return outs
+
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            plan_mode="adversarial",
+            crosstalk_runner=_crosstalk,
+            crosstalk_n_rounds=1,
+            target_slide_count=2,
+            final_audit=True,
+            audit_strict=False,
+        )
+        assert out.exists()
+        pres = _Presentation(str(out))
+        # Audit warning slide gets prepended before the bullets slide
+        # — search slide titles for the audit marker.
+        titles: list[str] = []
+        for s in pres.slides:
+            for sh in s.shapes:
+                if sh.has_text_frame:
+                    titles.append(sh.text_frame.text)
+        assert any("Audit warnings" in t for t in titles)
+
+    def test_adversarial_plan_with_final_audit_strict_blockers_raises(
+        self, tmp_path, pptx
+    ) -> None:
+        import json as _json
+        import pytest as _pytest
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        arc, summary_paths = self._write_synthetic_kb(kb_root)
+        result = LineageRunResult(
+            topic="x",
+            arc_path=arc,
+            summary_paths=summary_paths,
+            corpus_size=3,
+        )
+
+        def _crosstalk(meeting, roles):
+            outs = []
+            if len(roles) == 1:
+                payload = {
+                    "passed": False,
+                    "issues": [
+                        {"loc": "x", "severity": "blocker",
+                         "kind": "ungrounded_claim", "fix": "fix"},
+                    ],
+                }
+                outs.append({"output": _json.dumps(payload)})
+            else:
+                for r in roles:
+                    if r.id == "synthesizer":
+                        outs.append({"output": _json.dumps({
+                            "slides": [{"type": "title", "title": "x", "author": "B"}],
+                        })})
+                    else:
+                        outs.append({"output": "x"})
+            return outs
+
+        with _pytest.raises(RuntimeError, match="rigor_audit"):
+            build_deck_from_lineage_result(
+                result,
+                speaker="B",
+                kb_root=kb_root,
+                plan_mode="adversarial",
+                crosstalk_runner=_crosstalk,
+                crosstalk_n_rounds=1,
+                target_slide_count=1,
+                final_audit=True,
+                audit_strict=True,
+            )

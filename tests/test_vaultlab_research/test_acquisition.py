@@ -694,3 +694,77 @@ class TestBatchAcquireForCorpus:
             progress=lambda d, done, total: events.append((d, done, total)),
         )
         assert [e[1:] for e in events] == [(1, 2), (2, 2)]
+
+    def test_aggressive_retry_reattempts_failed_dois_with_paywalled(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        """``aggressive_retry=True`` re-runs failed DOIs with skip_paywalled=False."""
+        calls: list[tuple[str, bool]] = []
+
+        def fake_acquire(
+            doi, *, cache_dir, apis, skip_paywalled, timeout
+        ) -> AcquisitionResult:
+            calls.append((doi, skip_paywalled))
+            # First pass (skip_paywalled=True): a fails, b succeeds.
+            # Second pass (skip_paywalled=False) for a: succeeds.
+            if doi == "10.1/a" and skip_paywalled:
+                return AcquisitionResult(
+                    doi=doi, pdf_path=None, source="failed",
+                    license=None, error="paywalled",
+                )
+            return AcquisitionResult(
+                doi=doi,
+                pdf_path=tmp_path / f"{doi}.pdf",
+                source="springer" if doi == "10.1/a" else "cache",
+                license="subscription" if doi == "10.1/a" else "cc-by",
+            )
+
+        monkeypatch.setattr(acq, "acquire_pdf", fake_acquire)
+        corpus = _make_corpus(["10.1/a", "10.1/b"])
+        results = acquire_pdfs_for_corpus(
+            corpus,
+            cache_dir=tmp_path,
+            parallel=1,
+            apis={},
+            skip_paywalled=True,
+            aggressive_retry=True,
+        )
+        # 10.1/a was first tried with skip_paywalled=True (failed), then
+        # retried with skip_paywalled=False (succeeded via Springer).
+        a_calls = [sp for d, sp in calls if d == "10.1/a"]
+        assert a_calls == [True, False], f"unexpected call order: {calls}"
+        # Final result for 10.1/a is the retry's success.
+        assert results["10.1/a"].source == "springer"
+        assert results["10.1/a"].pdf_path is not None
+        # 10.1/b was only called once (it succeeded the first time).
+        b_calls = [sp for d, sp in calls if d == "10.1/b"]
+        assert b_calls == [True]
+
+    def test_aggressive_retry_off_skips_paywalled_retry(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        """Default (aggressive_retry=False) leaves failed DOIs alone."""
+        calls: list[tuple[str, bool]] = []
+
+        def fake_acquire(
+            doi, *, cache_dir, apis, skip_paywalled, timeout
+        ) -> AcquisitionResult:
+            calls.append((doi, skip_paywalled))
+            return AcquisitionResult(
+                doi=doi, pdf_path=None, source="failed",
+                license=None, error="paywalled",
+            )
+
+        monkeypatch.setattr(acq, "acquire_pdf", fake_acquire)
+        corpus = _make_corpus(["10.1/a", "10.1/b"])
+        results = acquire_pdfs_for_corpus(
+            corpus,
+            cache_dir=tmp_path,
+            parallel=1,
+            apis={},
+            skip_paywalled=True,
+            aggressive_retry=False,
+        )
+        # Each DOI called exactly once — no retry.
+        assert len(calls) == 2
+        assert all(r.source == "failed" for r in results.values())

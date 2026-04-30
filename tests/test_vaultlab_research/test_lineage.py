@@ -49,6 +49,7 @@ from vaultlab.research.acquisition import AcquisitionResult
 from vaultlab.research.lineage import (
     ArcTask,
     LineageRunResult,
+    _derive_max_papers,
     _write_project_view,
     arc_response_schema,
     build_arc_prompt,
@@ -1177,3 +1178,452 @@ def test_run_lit_arc_decisions_log_appends_across_runs(
     assert log_md.count("# Decisions log — crispr-test") == 1
     assert "## 2026-04-29T10:00:00 — lit-arc run" in log_md
     assert "## 2026-04-30T11:00:00 — lit-arc run" in log_md
+
+
+# ---------------------------------------------------------------------------
+# Task #63: depth flag (fast / balanced / thorough / complete)
+# ---------------------------------------------------------------------------
+
+
+def _synthetic_seeds(n: int) -> list[Paper]:
+    """Build ``n`` synthetic seeds with unique DOIs / years for depth tests."""
+    return [
+        Paper(
+            title=f"Synthetic paper {i}",
+            authors=[f"Author{i} I"],
+            year=2010 + (i % 15),
+            journal="Synth J",
+            doi=f"10.9999/synth.{i:03d}",
+            citation_count=100 - i,
+            source_api="synth",
+            abstract=f"Abstract for paper {i}.",
+        )
+        for i in range(n)
+    ]
+
+
+def _make_fake_acquire(
+    n_with_pdf: int | None = None,
+    *,
+    capture_kwargs: dict | None = None,
+):
+    """Build a fake acquisition function honouring an explicit PDF-cached count.
+
+    If ``n_with_pdf`` is None, every seed gets a PDF (matches the original
+    ``_fake_acquire`` behaviour). Otherwise the first ``n_with_pdf`` corpus
+    DOIs (sorted) get PDFs and the rest are marked failed.
+    """
+
+    def _acq(corpus, cache_dir, **kwargs):
+        if capture_kwargs is not None:
+            capture_kwargs.update(kwargs)
+        from vaultlab.research.acquisition import cache_path_for
+
+        cache_dir = Path(cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        out: dict[str, AcquisitionResult] = {}
+        dois = sorted(corpus.papers.keys())
+        cap = len(dois) if n_with_pdf is None else min(n_with_pdf, len(dois))
+        for i, doi in enumerate(dois):
+            target = cache_path_for(doi, cache_dir)
+            if i < cap:
+                target.write_bytes(b"%PDF-1.4\n" + b"x" * 4000)
+                out[doi] = AcquisitionResult(
+                    doi=doi,
+                    pdf_path=target,
+                    source="unpaywall",
+                    license="cc-by",
+                )
+            else:
+                out[doi] = AcquisitionResult(
+                    doi=doi,
+                    pdf_path=None,
+                    source="failed",
+                    license=None,
+                    error="paywalled",
+                )
+        return out
+
+    return _acq
+
+
+# ---- _derive_max_papers (pure helper) ------------------------------------
+
+
+def test_derive_max_papers_fast_caps_at_20() -> None:
+    assert _derive_max_papers("fast", n_pdfs_cached=80, corpus_size=100) == 20
+    assert _derive_max_papers("fast", n_pdfs_cached=10, corpus_size=100) == 10
+
+
+def test_derive_max_papers_balanced_caps_at_50() -> None:
+    assert _derive_max_papers("balanced", n_pdfs_cached=80, corpus_size=100) == 50
+    assert _derive_max_papers("balanced", n_pdfs_cached=30, corpus_size=100) == 30
+
+
+def test_derive_max_papers_thorough_uses_all_pdfs() -> None:
+    assert _derive_max_papers("thorough", n_pdfs_cached=25, corpus_size=30) == 25
+    assert _derive_max_papers("thorough", n_pdfs_cached=200, corpus_size=378) == 200
+
+
+def test_derive_max_papers_complete_uses_all_pdfs() -> None:
+    # ``complete`` uses cached count post-retry; the retry happens at
+    # acquisition time, so by the time _derive_max_papers is called the
+    # input already reflects retried PDFs.
+    assert _derive_max_papers("complete", n_pdfs_cached=42, corpus_size=378) == 42
+
+
+def test_derive_max_papers_rejects_unknown_depth() -> None:
+    with pytest.raises(ValueError, match="unknown depth"):
+        _derive_max_papers("aggressive", n_pdfs_cached=10, corpus_size=10)  # type: ignore[arg-type]
+
+
+# ---- run_lit_arc end-to-end (depth flag wiring) --------------------------
+
+
+def test_run_lit_arc_depth_fast_caps_at_20(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Synthetic 100-paper corpus, depth=fast → 20-paper Tier-A budget."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(100)
+    client = _FakeClient(seeds)
+    events: list[tuple[str, dict]] = []
+
+    def _progress(*args, **kwargs):
+        events.append((args[0] if args else "", dict(kwargs)))
+
+    result = run_lit_arc(
+        "synthetic-fast",
+        kb_root=tmp_path,
+        depth="fast",
+        max_seeds=100,
+        _client=client,
+        _fetch_refs=lambda doi: [],  # no refs walk
+        _acquire=_make_fake_acquire(),  # all 100 get PDFs
+        _llm_summary=_fake_llm_summary(),
+        progress=_progress,
+        _today="2026-04-30",
+    )
+    # The orchestrator emitted the depth_budget event with budget=20.
+    budget_events = [
+        kw for tag, kw in events if tag == "depth_budget"
+    ]
+    assert budget_events, "depth_budget event was not emitted"
+    assert budget_events[0]["depth"] == "fast"
+    assert budget_events[0]["budget"] == 20
+    # Provenance reflects the resolved budget.
+    json_p = result.arc_path.with_name(
+        result.arc_path.name + ".provenance.json"
+    )
+    rec = json.loads(json_p.read_text(encoding="utf-8"))
+    assert rec["params"]["depth"] == "fast"
+    assert rec["params"]["max_papers_to_summarize"] == 20
+    assert rec["params"]["max_papers_to_summarize_explicit"] is None
+
+
+def test_run_lit_arc_depth_balanced_caps_at_50(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Synthetic 100-paper corpus, depth=balanced → 50-paper Tier-A budget."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(100)
+    client = _FakeClient(seeds)
+    events: list[tuple[str, dict]] = []
+
+    def _progress(*args, **kwargs):
+        events.append((args[0] if args else "", dict(kwargs)))
+
+    result = run_lit_arc(
+        "synthetic-balanced",
+        kb_root=tmp_path,
+        depth="balanced",
+        max_seeds=100,
+        _client=client,
+        _fetch_refs=lambda doi: [],
+        _acquire=_make_fake_acquire(),
+        _llm_summary=_fake_llm_summary(),
+        progress=_progress,
+        _today="2026-04-30",
+    )
+    budget_events = [kw for tag, kw in events if tag == "depth_budget"]
+    assert budget_events
+    assert budget_events[0]["depth"] == "balanced"
+    assert budget_events[0]["budget"] == 50
+    json_p = result.arc_path.with_name(
+        result.arc_path.name + ".provenance.json"
+    )
+    rec = json.loads(json_p.read_text(encoding="utf-8"))
+    assert rec["params"]["max_papers_to_summarize"] == 50
+
+
+def test_run_lit_arc_depth_thorough_uses_all_cached_pdfs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """30-paper corpus with 25 PDFs cached, depth=thorough → budget=25."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(30)
+    client = _FakeClient(seeds)
+    events: list[tuple[str, dict]] = []
+
+    def _progress(*args, **kwargs):
+        events.append((args[0] if args else "", dict(kwargs)))
+
+    result = run_lit_arc(
+        "synthetic-thorough",
+        kb_root=tmp_path,
+        depth="thorough",
+        max_seeds=30,
+        _client=client,
+        _fetch_refs=lambda doi: [],
+        _acquire=_make_fake_acquire(n_with_pdf=25),
+        _llm_summary=_fake_llm_summary(),
+        progress=_progress,
+        _today="2026-04-30",
+    )
+    budget_events = [kw for tag, kw in events if tag == "depth_budget"]
+    assert budget_events
+    assert budget_events[0]["depth"] == "thorough"
+    assert budget_events[0]["budget"] == 25
+    assert budget_events[0]["n_pdfs_cached"] == 25
+    assert result.pdfs_acquired == 25
+
+
+def test_run_lit_arc_explicit_max_papers_overrides_depth(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """depth=fast + explicit max_papers_to_summarize=100 → uses 100, not 20."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(100)
+    client = _FakeClient(seeds)
+    events: list[tuple[str, dict]] = []
+
+    def _progress(*args, **kwargs):
+        events.append((args[0] if args else "", dict(kwargs)))
+
+    result = run_lit_arc(
+        "synthetic-explicit",
+        kb_root=tmp_path,
+        depth="fast",
+        max_seeds=100,
+        max_papers_to_summarize=100,  # explicit override beats depth=fast cap
+        _client=client,
+        _fetch_refs=lambda doi: [],
+        _acquire=_make_fake_acquire(),
+        _llm_summary=_fake_llm_summary(),
+        progress=_progress,
+        _today="2026-04-30",
+    )
+    # Explicit override -> no depth_budget event (we skip the derivation).
+    assert not any(tag == "depth_budget" for tag, _ in events)
+    json_p = result.arc_path.with_name(
+        result.arc_path.name + ".provenance.json"
+    )
+    rec = json.loads(json_p.read_text(encoding="utf-8"))
+    assert rec["params"]["max_papers_to_summarize"] == 100
+    assert rec["params"]["max_papers_to_summarize_explicit"] == 100
+
+
+def test_run_lit_arc_complete_passes_aggressive_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """depth=complete forwards aggressive_retry=True to acquisition."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(10)
+    client = _FakeClient(seeds)
+    captured: dict = {}
+    fake_acq = _make_fake_acquire(capture_kwargs=captured)
+
+    run_lit_arc(
+        "synthetic-complete",
+        kb_root=tmp_path,
+        depth="complete",
+        max_seeds=10,
+        _client=client,
+        _fetch_refs=lambda doi: [],
+        _acquire=fake_acq,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+    # complete -> aggressive_retry=True AND skip_paywalled=False
+    assert captured.get("aggressive_retry") is True
+    assert captured.get("skip_paywalled") is False
+
+
+def test_run_lit_arc_balanced_does_not_set_aggressive_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Default depth keeps the OA-only fast path (aggressive_retry=False)."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    seeds = _synthetic_seeds(5)
+    client = _FakeClient(seeds)
+    captured: dict = {}
+    fake_acq = _make_fake_acquire(capture_kwargs=captured)
+
+    run_lit_arc(
+        "synthetic-balanced-default",
+        kb_root=tmp_path,
+        max_seeds=5,
+        _client=client,
+        _fetch_refs=lambda doi: [],
+        _acquire=fake_acq,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+    )
+    assert captured.get("aggressive_retry") is False
+    assert captured.get("skip_paywalled") is True
+
+
+def test_run_lit_arc_rejects_unknown_depth(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bad depth string fails fast with a clear error."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    client = _FakeClient(_make_seeds())
+    with pytest.raises(ValueError, match="unknown depth"):
+        run_lit_arc(
+            "CRISPR base editing",
+            kb_root=tmp_path,
+            depth="aggressive",  # type: ignore[arg-type]
+            max_seeds=5,
+            _client=client,
+            _fetch_refs=_fake_fetch_refs,
+            _acquire=_fake_acquire,
+            _llm_summary=_fake_llm_summary(),
+            _today="2026-04-30",
+        )
+
+
+def test_run_lit_arc_thorough_warns_on_large_corpus(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """thorough on a >200 paper corpus emits a wall-time warning + progress event."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    # 250-paper synthetic corpus crosses the 200-paper threshold.
+    seeds = _synthetic_seeds(250)
+    client = _FakeClient(seeds)
+    events: list[tuple[str, dict]] = []
+
+    def _progress(*args, **kwargs):
+        events.append((args[0] if args else "", dict(kwargs)))
+
+    with caplog.at_level("WARNING"):
+        run_lit_arc(
+            "synthetic-thorough-big",
+            kb_root=tmp_path,
+            depth="thorough",
+            max_seeds=250,
+            _client=client,
+            _fetch_refs=lambda doi: [],
+            _acquire=_make_fake_acquire(),
+            _llm_summary=_fake_llm_summary(),
+            progress=_progress,
+            _today="2026-04-30",
+        )
+    # Warning logged + event emitted.
+    assert any(
+        "depth=thorough" in r.message and "250-paper" in r.message
+        for r in caplog.records
+    )
+    assert any(tag == "large_corpus_warning" for tag, _ in events)
+
+
+# ---------------------------------------------------------------------------
+# Adversarial crosstalk integration (picker_mode / arc_mode = "adversarial")
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_arc_with_adversarial_picker_and_arc(tmp_path, monkeypatch):
+    """When picker_mode=arc_mode='adversarial' + crosstalk_runner is set,
+    the adversarial wrappers fire; the arc and project view reflect that.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    def _reader(task):
+        return {
+            "tldr": f"reader-{task.doi}.",
+            "why_it_matters": ["x"],
+            "methods_summary": "m",
+            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+            "extracted_references": [],
+        }
+
+    # Crosstalk runner that returns canned analyst/critic/synthesizer outputs.
+    # Synthesizer payload differs depending on whether it's a picker or arc
+    # meeting (we sniff via the agenda statement).
+    seeds_dois = ["10.1126/science.1225829", "10.1038/nature17946"]
+
+    def _crosstalk(meeting, roles):
+        outputs = []
+        agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
+        for r in roles:
+            if r.id == "synthesizer":
+                if "BEST papers" in agenda_text:
+                    payload = {
+                        "picks": [
+                            {"doi": d, "rank": i + 1, "rationale": "x"}
+                            for i, d in enumerate(seeds_dois)
+                        ]
+                    }
+                else:
+                    payload = {
+                        "history": "Adversarial history.",
+                        "development": "Adversarial dev.",
+                        "sota": "Adversarial sota.",
+                    }
+                outputs.append({"output": json.dumps(payload)})
+            else:
+                outputs.append({"output": f"[{r.id}]"})
+        return outputs
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=3,
+        max_papers_to_summarize=2,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_reader,
+        picker_mode="adversarial",
+        arc_mode="adversarial",
+        crosstalk_runner=_crosstalk,
+        crosstalk_n_rounds=2,
+        _today="2026-04-30",
+    )
+
+    md = result.arc_path.read_text(encoding="utf-8")
+    assert "Adversarial history." in md
+    assert "Adversarial dev." in md
+    # Decisions log should record the adversarial crosstalk descriptor.
+    decisions = result.project_view_paths["decisions_log"].read_text(encoding="utf-8")
+    assert "picker:adversarial" in decisions
+    assert "arc:adversarial" in decisions
