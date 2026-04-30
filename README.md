@@ -127,6 +127,14 @@ From inside Claude Code, pick the path that fits you:
 
 The intake form has 9 sections (topic, goal, audience, what-you-have, exclusions, style, PI prefs, deadlines, free-form). Required: topic + goal + audience. Everything else is optional. After onboarding, `/lit-arc`, `/build-deck`, `/cite audit`, `/lit-report` etc. all know your context — you don't re-explain the project to Claude every session.
 
+Three ways to invoke any of these:
+
+- **Natural language** — describe what you want. *"Build me a journal-club deck on cellular neighborhoods in tonsil tissue."* Claude Code routes to the right slash command automatically. This is the default mode and the one most people stay in.
+- **Slash commands** — type `/lit-arc <topic>` or `/build-deck <source>` directly when you know exactly what you want.
+- **Python API** — `import vaultlab` and call the modules directly for scripted workflows.
+
+You don't have to memorize the slash commands. Just talk.
+
 Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15 minutes total from clone to first useful KB entry.
 
 > **No Anthropic API key needed.** VaultLab is Claude-Code-native — Claude Code provides LLM access. The optional API keys are for **literature search** (NCBI, Semantic Scholar, etc.) — see [`docs/setup-api-keys.md`](docs/setup-api-keys.md). NCBI is free + 5 min and is the only one most users need.
