@@ -1,8 +1,8 @@
 <h1 align="center">VaultLab</h1>
 
 <p align="center">
-  <b>An AI research companion for biological scientists.</b><br>
-  Goes as deep as you want — literature, data, figures, manuscripts, slides. <i>Driven by you, on your terms.</i>
+  <b>The Claude Code setup for biological research.</b><br>
+  Centralized lab memory + literature + data analysis + figures + manuscripts + slides — directed by you, run by Claude Code.
 </p>
 
 <p align="center">
@@ -13,22 +13,27 @@
   <a href="docs/KNOWN_LIMITATIONS.md"><img src="https://img.shields.io/badge/status-alpha-orange.svg" alt="Status: Alpha"></a>
 </p>
 
-> 🚧 **Alpha software** — see [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md). v0.1.0 target: late May 2026.
+> *"Most lit-search tools answer one question. VaultLab is what happens when your literature, your wet-lab data, your meeting transcripts, your inbox, and your manuscript live in one place that an LLM can read."*
+
+**VaultLab lives inside [Claude Code](https://claude.com/claude-code).** You don't run it as a chat-bot, a SaaS, or a Python notebook. You open Claude Code in a folder; VaultLab adds ~30 slash commands (`/lit-arc`, `/build-deck`, `/cite audit`, `/onboard-project`, `/lit-report`, …) that Claude Code reads as plain markdown. No Anthropic API key required for the slash-command UX — Claude Code provides the LLM. Your KB sits in plain markdown on Google Drive (or any folder), so labs share it like any other folder. **If you've used Claude Code, you already know how to use VaultLab.**
+
+> **Alpha software.** v0.1.0 target: late May 2026. Honest gap inventory: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
 ---
 
-## 🌟 The flagship — centralized memory for your whole research life
+## What VaultLab actually does
 
-VaultLab pulls every source of context about your work into one place the LLM reads:
+Inside Claude Code, VaultLab reads your whole research ecosystem and writes back into it. Five context sources, one place the LLM looks:
 
-| | |
+| Source | What VaultLab does with it |
 |---|---|
-| 📓 **Knowledge base** | Plain-markdown KB (Obsidian-native). Papers, notes, findings, manuscripts, figures — all here. |
-| 🎤 **Meeting transcripts** | Record + auto-transcribe (local Whisper or cloud). *"What did we decide about cluster 7 last Tuesday?"* — answered from the transcript. |
-| 📥 **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
-| 🚀 **Auto-resumed projects** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. |
+| **Knowledge base** (Obsidian-native markdown) | Per-paper summaries with citation graph, lineage arcs, project pages, manuscript drafts — all linked by `[[wikilinks]]`. Grows with your work. |
+| **Literature** (NCBI, Semantic Scholar, Springer, Elsevier, bioRxiv, CrossRef) | Multi-source search → citation-graph metrics (OG-score, forward-influence, year-buckets) → LLM-driven lineage binning → grounded summaries with `[pN]` page markers. |
+| **Meeting transcripts** | Record + auto-transcribe (local Whisper or cloud). *"What did we decide about cluster 7 last Tuesday?"* — answered from the transcript. |
+| **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
+| **Project state** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* |
 
-Onboard a lab member by sharing the Drive folder. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."*
+Onboard a lab member by sharing the Drive folder. That's the whole onboarding.
 
 ---
 
@@ -38,14 +43,14 @@ Onboard a lab member by sharing the Drive folder. Cross-project insights surface
 <tr>
 <td width="50%">
 
-### 📊 **Drafts entire figures from your data**
+### Drafts entire figures from your data
 
 Not just "wraps matplotlib." VaultLab has a curated **recipe library** — every recipe cites ≥3 published examples. Tell it *"make a marker dot-plot for these clusters"* and you get a publication-tight figure with auto-generated caption, drawn from a pattern that's been used in real Cell / Nature papers. No invented visualizations.
 
 </td>
 <td width="50%">
 
-### 📄 **Citations with traceable evidence**
+### Citations with traceable evidence
 
 Drafts methods sections with `[N]` markers, then verifies every one **semantically** against the actual source paper. Hover a citation in your draft to see the exact passage that supports it. Hallucinated citations get flagged automatically; VaultLab refuses to ship if any are unresolved.
 
@@ -54,16 +59,32 @@ Drafts methods sections with `[N]` markers, then verifies every one **semantical
 <tr>
 <td width="50%">
 
-### 🎤 **Slide decks from anything**
+### Slide decks from anything
 
 `/build-deck <source>` composes a deck — figures, captions, speaker notes, click-through animations — from whatever you point it at. A paper PDF, your own wet-lab data, a manuscript draft, or just a topic VaultLab pulls from your KB. Exports `.pptx`. Works for journal clubs, lab meetings, conference talks, dissertation defenses.
 
 </td>
 <td width="50%">
 
-### 🧬 **Wraps the analysis tools you trust**
+### Wraps the analysis tools you trust
 
 scanpy, squidpy, scikit-image, Cellpose, scipy.stats, statsmodels, pingouin — VaultLab has a curated index so the LLM picks **real functions from real packages**, not raw web searches that hallucinate function names.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Multi-agent crosstalk for hard questions
+
+`/lit-report` runs analyst → critic → synthesizer over a corpus to produce a 3000–5000 word grounded review. Adversarial picker meeting catches off-topic seminal papers; rigor auditor blocks decks that ship with unverified claims. The bigger the question, the more agents weigh in.
+
+</td>
+<td width="50%">
+
+### LLM-driven lineage binning
+
+Reads abstracts of every paper in a corpus and decides *history / development / state-of-the-art* by conceptual lineage, not just publication year. A 2018 method paper goes in *history* if it's foundational; a 2024 incremental application goes in *development*, not *sota*. Solves the empty-history-bin failure pure-quartile binning produces.
 
 </td>
 </tr>
@@ -74,22 +95,25 @@ scanpy, squidpy, scikit-image, Cellpose, scipy.stats, statsmodels, pingouin — 
 
 ---
 
-## Get started
+## Get started — inside Claude Code
+
+If you don't have Claude Code yet, install it from [claude.com/claude-code](https://claude.com/claude-code). VaultLab is the bundle of slash commands + role prompts + Python machinery you point Claude Code at.
 
 ```bash
 git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
 pip install -e ".[all]"
+claude   # opens Claude Code in this folder; VaultLab's slash commands are now available
 ```
 
-Then open [Claude Code](https://claude.com/claude-code) in the folder. Pick the path that fits you:
+From inside Claude Code, pick the path that fits you:
 
-| Path | When | First command |
+| Path | When | First slash command |
 |---|---|---|
-| **A — Full project** | You have a folder with code, data, papers, notes | Copy `templates/project_intake.md` into your folder, fill it (5 min), then run `/onboard-project <path>` |
+| **A — Full project** | You have a folder with code, data, papers, notes | Copy `templates/project_intake.md` into your folder, fill it (5 min), then `/onboard-project <path>` |
 | **B — Quick scoping** | Just curious about a topic — no folder yet | `/start-project "<your topic>"` |
 | **C — Non-research** | Any knowledge-management use case | Same as B — VaultLab works for any topic, not just biomedical |
 
-The intake form has 9 sections (topic, goal, audience, what-you-have, exclusions, style, PI prefs, deadlines, free-form). Required: topic + goal + audience. Everything else is optional. After onboarding, `/lit-arc`, `/build-deck`, `/cite audit`, etc. all know your context.
+The intake form has 9 sections (topic, goal, audience, what-you-have, exclusions, style, PI prefs, deadlines, free-form). Required: topic + goal + audience. Everything else is optional. After onboarding, `/lit-arc`, `/build-deck`, `/cite audit`, `/lit-report` etc. all know your context — you don't re-explain the project to Claude every session.
 
 Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15 minutes total from clone to first useful KB entry.
 
@@ -98,7 +122,7 @@ Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15
 <details>
 <summary><b>Prefer to read setup docs yourself first?</b></summary>
 
-- ⭐ [`docs/getting-started.md`](docs/getting-started.md) — full first-10-minutes walkthrough + 10 best practices
+- [`docs/getting-started.md`](docs/getting-started.md) — full first-10-minutes walkthrough + 10 best practices
 - [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + recommended plugins
 - [`docs/setup-api-keys.md`](docs/setup-api-keys.md) — literature API keys (NCBI, S2, Springer, Elsevier)
 - [`docs/setup-google.md`](docs/setup-google.md) — Google Cloud Console + OAuth (~10 min)
@@ -226,7 +250,17 @@ Each row represents a method or interface design choice that I read, understood,
 
 Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). For a project-level breakdown of design choices novel to VaultLab vs. synthesis vs. borrowed: [`docs/design-rationale.md`](docs/design-rationale.md).
 
-VaultLab is developed by a member of the Hickey Lab at Duke University Biomedical Engineering.
+---
+
+## About
+
+Built by a PhD student in biomedical engineering working across wet-lab spatial omics and computational biology. The credential matters because the design decisions reflect what working researchers actually need from a Claude Code setup — not what looks elegant from outside the lab.
+
+**Use it as a full research assistant.** Literature, data analysis, figures, manuscripts, slides — VaultLab covers the full project cycle without leaving Claude Code. Slash commands compose: results from `/lit-arc` flow into `/build-deck`; context from `/onboard-project` carries forward into every later command. Once a project is onboarded, you stop re-explaining it every session — Claude Code already knows.
+
+**Use it outside research too.** A personal-finance reading list, scoping a class project, a competitive-landscape doc, a long-running personal investigation — the literature pipeline + KB + slide composer don't care whether the topic is biomedical. The whole core is domain-agnostic. Modality-specific modules (CODEX, MALDI, scRNA-seq) are opt-in.
+
+**The main use is research, in any field.** That bias shows in what's polished — but the same machinery extends in every direction work tends to drift.
 
 ---
 
@@ -242,4 +276,4 @@ VaultLab is developed by a member of the Hickey Lab at Duke University Biomedica
 
 **Privacy:** prompt content is sent to Anthropic's Claude API via Claude Code. **Not HIPAA-compliant.** Do not use with PHI/PII/IRB-restricted data. See [`docs/data-privacy.md`](docs/data-privacy.md) for the quick-compliance check.
 
-**License:** [MIT](LICENSE). Author: Bobby Y.X. Ni — Hickey Lab, Duke University Biomedical Engineering.
+**License:** [MIT](LICENSE).
