@@ -29,8 +29,6 @@ I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I
 
 **VaultLab lives inside [Claude Code](https://claude.com/claude-code).** Open Claude Code in a folder. VaultLab adds ~30 slash commands (`/lit-arc`, `/build-deck`, `/cite audit`, `/onboard-project`, `/lit-report`) that Claude Code reads as plain markdown. No Anthropic API key needed — Claude Code provides the LLM. KB is plain markdown on Google Drive, OneDrive, a lab NAS, or any folder that syncs. **If you've used Claude Code, you already know how to use VaultLab.**
 
-> **Alpha software.** v0.1.0 target: late May 2026. Honest gap inventory: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
-
 ---
 
 ## Centralized memory
@@ -51,56 +49,46 @@ Onboard a lab member by sharing the Drive folder. That's the whole onboarding.
 
 ## Features
 
-<table>
-<tr>
-<td width="50%">
+### Multi-agent crosstalk
 
-### Drafts entire figures from your data
+For decisions where one-shot LLM output isn't enough — `/lit-report` (deep-research mode), the picker step in `/lit-arc`, the rigor pass in `/build-deck` — VaultLab runs an adversarial meeting: an analyst proposes, a critic challenges, a synthesizer integrates. Bounded at five rounds, 10-minute wall-clock cap, structured-JSON-only outputs to prevent the spiral.
 
-Not just "wraps matplotlib." VaultLab has a curated **recipe library** — every recipe cites ≥3 published examples. Tell it *"make a marker dot-plot for these clusters"* and you get a publication-tight figure with auto-generated caption, drawn from a pattern that's been used in real Cell / Nature papers. No invented visualizations.
-
-</td>
-<td width="50%">
-
-### Citations with traceable evidence
-
-Drafts methods sections with `[N]` markers, then verifies every one **semantically** against the actual source paper. Hover a citation in your draft to see the exact passage that supports it. Hallucinated citations get flagged automatically; VaultLab refuses to ship if any are unresolved.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
+The picker meeting catches off-topic seminal papers that a pure citation-graph rank would miss (the spatial-transcriptomics run nearly used a cancer-testis-antigen paper as the foundational figure because it had a cached PMC figure — the literature critic caught that). The rigor auditor walks the finished output before it's saved, flagging claims without page-marker evidence and references that aren't actually cited in the body. The bigger the question, the more agents weigh in.
 
 ### Slide decks from anything
 
-`/build-deck <source>` composes a deck — figures, captions, speaker notes, click-through animations — from whatever you point it at. A paper PDF, your own wet-lab data, a manuscript draft, or just a topic VaultLab pulls from your KB. Exports `.pptx`. Works for journal clubs, lab meetings, conference talks, dissertation defenses.
+`/build-deck <source>` composes a deck — figures, captions, speaker notes, click-through animations — from whatever you point it at:
 
-</td>
-<td width="50%">
+- A paper PDF — auto-extracts figures, summarizes claims, drafts speaker notes
+- Your wet-lab data — picks a recipe, renders the figure, drafts caption + interpretation
+- A manuscript draft — turns each section into a slide block
+- Just a topic — VaultLab pulls relevant context from your KB and composes from scratch
 
-### Wraps the analysis tools you trust
+Exports `.pptx` using native PowerPoint shapes (animatable, editable post-export — not rasterized images). Works for journal clubs, lab meetings, conference talks, dissertation defenses. Speaker notes come in two formats: a tight outline for talks and a paragraph script for rehearsal.
 
-scanpy, squidpy, scikit-image, Cellpose, scipy.stats, statsmodels, pingouin — VaultLab has a curated index so the LLM picks **real functions from real packages**, not raw web searches that hallucinate function names.
+### Drafts figures from your data
 
-</td>
-</tr>
-<tr>
-<td width="50%">
+Not just "wraps matplotlib." VaultLab carries a recipe library — every recipe cites at least three published examples. Tell it *"make a marker dot-plot for these clusters"* and you get a publication-tight figure rendered from a recipe (axis ticks, colorbar position, font sizes drawn from a layout used in real Cell or Nature papers), plus an auto-generated caption that references the source method paper.
 
-### Multi-agent crosstalk for hard questions
+Recipes cover marker dot-plots, UMAP embeddings with cluster overlays, neighborhood-enrichment plots, statistical-test result panels, and multi-panel composites. No invented visualizations — every layout traces back to published work, and the recipe metadata records which paper each pattern came from.
 
-`/lit-report` runs analyst → critic → synthesizer over a corpus to produce a 3000–5000 word grounded review. Adversarial picker meeting catches off-topic seminal papers; rigor auditor blocks decks that ship with unverified claims. The bigger the question, the more agents weigh in.
+### Citations with traceable evidence
 
-</td>
-<td width="50%">
+Drafts methods or background sections with `[N]` markers, then verifies every one *semantically* against the actual source paper. For each citation: VaultLab pulls the candidate sentence from the draft, reads the relevant passages in the cited PDF, and checks that the source actually supports the specific claim being made.
+
+Hover a citation in your draft to see the exact passage. Hallucinated citations get flagged automatically. VaultLab refuses to ship a manuscript section if any citations are unresolved — no "trust me" output where the reader has to chase down whether the citations are real.
 
 ### LLM-driven lineage binning
 
-Reads abstracts of every paper in a corpus and decides *history / development / state-of-the-art* by conceptual lineage, not just publication year. A 2018 method paper goes in *history* if it's foundational; a 2024 incremental application goes in *development*, not *sota*. Solves the empty-history-bin failure pure-quartile binning produces.
+Reads the abstract of every paper in a corpus and decides *history* / *development* / *state-of-the-art* by conceptual lineage, not just publication year. A 2018 method paper goes in *history* if it's foundational. A 2024 incremental application goes in *development*, not *sota*. The LLM gets the deterministic year-quartile assignment as a hint, then overrides it where conceptual lineage and chronology disagree.
 
-</td>
-</tr>
-</table>
+Solves the empty-history-bin failure that pure-quartile binning produces. When every paper in a CODEX corpus is from 2018 onward, there's still a foundational method in there somewhere — the LLM finds it. The arc-generation step then has real history-bucket content to work with instead of placeholder text.
+
+### Wraps the analysis tools you trust
+
+scanpy, squidpy, scikit-image, Cellpose, scipy.stats, statsmodels, pingouin — VaultLab carries a curated index so the LLM picks *real functions from real packages*, not raw web searches that hallucinate function names. Ask for *"a Wilcoxon rank-sum test on these two groups"* and you get `scipy.stats.ranksums` with the right argument order, not a made-up signature.
+
+The index records which package version each function lives in and which papers cite that function as the canonical method. New tools get added via PRs; the curation step is what keeps the choices defensible.
 
 > [!IMPORTANT]
 > **A companion you customize and direct.** Quick assist or full lab-wide deep-dive — pick the depth. Other tools force a single mode; VaultLab adapts.
@@ -137,10 +125,11 @@ You don't have to memorize the slash commands. Just talk.
 
 Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15 minutes total from clone to first useful KB entry.
 
-> **No Anthropic API key needed.** VaultLab is Claude-Code-native — Claude Code provides LLM access. The optional API keys are for **literature search** (NCBI, Semantic Scholar, etc.) — see [`docs/setup-api-keys.md`](docs/setup-api-keys.md). NCBI is free + 5 min and is the only one most users need.
+> **Cost: just your Claude Code subscription.** No separate Anthropic API key — Claude Code provides LLM access. Optional API keys for literature search (NCBI, Semantic Scholar, Springer, Elsevier) are free or have generous free tiers; NCBI takes five minutes and covers most users. For a second LLM in adversarial cross-checks, Gemini's free API key wires in. Local models work too if you'd rather not call out. Full setup: [`docs/setup-api-keys.md`](docs/setup-api-keys.md).
 
-<details>
-<summary><b>Prefer to read setup docs yourself first?</b></summary>
+### Setup docs
+
+If you'd rather read the setup docs first before installing:
 
 - [`docs/getting-started.md`](docs/getting-started.md) — full first-10-minutes walkthrough + 10 best practices
 - [`docs/setup-obsidian.md`](docs/setup-obsidian.md) — Obsidian + recommended plugins
@@ -148,19 +137,17 @@ Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15
 - [`docs/setup-google.md`](docs/setup-google.md) — Google Cloud Console + OAuth (~10 min)
 - [`docs/setup-outlook-windows.md`](docs/setup-outlook-windows.md) — Outlook (Windows only)
 
-</details>
-
 ---
 
-<details>
-<summary><b>Specialty module</b> (in progress — accessory)</summary>
+## Specialty module (in progress)
 
 I work in a spatial-omics lab, so VaultLab has the start of an optional module covering the tools I use day-to-day — CODEX multiplex IF, MALDI imaging, spatial transcriptomics, scRNA-seq, generic imaging / flow. It's not required to use VaultLab and isn't a focus of v0.1; it's an accessory for people whose work touches the same modalities. Most of it is still being built out.
 
-</details>
+---
 
-<details>
-<summary><b>Architecture philosophy</b> (4 commitments)</summary>
+## Architecture philosophy
+
+Four commitments that shape every design decision:
 
 1. **Markdown is the user-facing interface; Python is the engine.** Slash commands, role prompts, recipes are markdown — Claude Code reads them directly.
 2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence. No surface-skim.
@@ -169,10 +156,11 @@ I work in a spatial-omics lab, so VaultLab has the start of an optional module c
 
 Full spec: [`docs/architecture.md`](docs/architecture.md). Invariants for contributors: [`AGENTS.md`](AGENTS.md).
 
-</details>
+---
 
-<details>
-<summary><b>How VaultLab compares to PaperQA, scanpy, FutureHouse, scverse, Aider</b></summary>
+## How VaultLab compares
+
+Against tools that overlap on one or two capabilities — PaperQA, scanpy, FutureHouse, scverse, Aider:
 
 | Capability | VaultLab | PaperQA2 | scanpy | FutureHouse | scverse | Aider |
 |---|---|---|---|---|---|---|
@@ -190,10 +178,9 @@ Full spec: [`docs/architecture.md`](docs/architecture.md). Invariants for contri
 
 The combination is the value. Several rows nobody else even attempts. If you only need one piece, those tools are great. If you want a research companion that knows your whole lab, VaultLab is the only option.
 
-</details>
+---
 
-<details>
-<summary><b>Documentation index</b></summary>
+## Docs
 
 **Reference:** [`docs/architecture.md`](docs/architecture.md) · [`.claude/commands/COMMANDS.md`](.claude/commands/COMMANDS.md) · [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md)
 
@@ -204,8 +191,6 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 **Lineage:** [`INSPIRATIONS.md`](INSPIRATIONS.md) · [`docs/design-rationale.md`](docs/design-rationale.md)
 
 **Contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`docs/graphics-guide.md`](docs/graphics-guide.md)
-
-</details>
 
 ---
 
