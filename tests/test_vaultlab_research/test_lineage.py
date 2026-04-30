@@ -36,14 +36,20 @@ import yaml
 from vaultlab.kb.paths import (
     article_stub_path,
     concept_path,
+    project_decisions_path,
+    project_lineage_pointer_path,
+    project_papers_path,
+    project_state_path,
     search_log_path,
     slugify_doi,
+    slugify_topic,
     summary_path,
 )
 from vaultlab.research.acquisition import AcquisitionResult
 from vaultlab.research.lineage import (
     ArcTask,
     LineageRunResult,
+    _write_project_view,
     arc_response_schema,
     build_arc_prompt,
     prepare_arc_task,
@@ -51,6 +57,7 @@ from vaultlab.research.lineage import (
     render_arc_markdown,
     run_lit_arc,
 )
+from vaultlab.research.corpus import Corpus
 from vaultlab.research.paper import Paper
 from vaultlab.research.summarize import PaperSummary
 
@@ -759,3 +766,414 @@ def test_run_lit_arc_with_reader_and_narrator(tmp_path, monkeypatch):
     json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["params"]["narration"] == "claude"
+
+    # Phase 9 also fired: Wiki/Projects/<slug>/ exists with all 4 files.
+    assert result.project_slug == slugify_topic("CRISPR base editing")
+    for kind in ("start_here", "papers", "lineage", "decisions_log"):
+        assert kind in result.project_view_paths
+        p = result.project_view_paths[kind]
+        assert p.exists(), f"missing project-view file for {kind}: {p}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 9: project view writer (Wiki/Projects/<slug>/)
+# ---------------------------------------------------------------------------
+
+
+def _two_summaries() -> dict[str, PaperSummary]:
+    """Synthetic 2-paper summaries dict used to exercise project-view writes."""
+    return {
+        "10.1126/science.1225829": PaperSummary(
+            doi="10.1126/science.1225829",
+            title="Programmable cleavage",
+            authors=["Jinek M"],
+            year=2012,
+            year_bucket="history",
+            tldr="Founded programmable cleavage.",
+            key_findings=["dual-RNA guide [p3]"],
+            og_score=0.66,
+            forward_influence=2,
+            tier="A",
+        ),
+        "10.1038/nature17946": PaperSummary(
+            doi="10.1038/nature17946",
+            title="Cytidine base editor",
+            authors=["Komor AC"],
+            year=2016,
+            year_bucket="development",
+            tldr="C->T at target loci.",
+            key_findings=["37% efficiency [p4]"],
+            og_score=0.0,
+            forward_influence=0,
+            tier="C",
+        ),
+    }
+
+
+def _two_corpus() -> Corpus:
+    seeds = [
+        Paper(title="t1", authors=["Jinek M"], year=2012, doi="10.1126/science.1225829"),
+        Paper(title="t2", authors=["Komor AC"], year=2016, doi="10.1038/nature17946"),
+    ]
+    corpus = Corpus(topic="t", seeds=seeds)
+    for s in seeds:
+        corpus.papers[s.doi.lower()] = s
+    return corpus
+
+
+def test_write_project_view_writes_all_four_files(tmp_path: Path) -> None:
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "fake-lineage-2026-04-29.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# fake arc\n", encoding="utf-8")
+
+    out = _write_project_view(
+        kb_root=tmp_path,
+        project_slug="codex-cn-test",
+        topic="CODEX cellular neighborhoods",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        deck_path=tmp_path / "Output" / "codex-cn-test" / "deck.pptx",
+        run_id="2026-04-29T12-00-00",
+        date_str="2026-04-29",
+        speaker="Bobby Y.X. Ni",
+        sources_n=6,
+        picker_method="content-aware",
+        crosstalk="picker+arc",
+        timestamp="2026-04-29T12:00:00",
+    )
+
+    # All four files were written.
+    assert set(out.keys()) == {"start_here", "papers", "lineage", "decisions_log"}
+    for kind, p in out.items():
+        assert p.exists(), f"{kind} not written"
+
+    # Paths route through vaultlab.kb.paths.
+    assert out["start_here"] == project_state_path(tmp_path, "codex-cn-test")
+    assert out["papers"] == project_papers_path(tmp_path, "codex-cn-test")
+    assert out["lineage"] == project_lineage_pointer_path(tmp_path, "codex-cn-test")
+    assert out["decisions_log"] == project_decisions_path(tmp_path, "codex-cn-test")
+
+    # papers.md content sanity-check.
+    papers_md = out["papers"].read_text(encoding="utf-8")
+    assert "# Papers — codex-cn-test" in papers_md
+    assert "## Tier A — full text read by Claude Code" in papers_md
+    assert "## Tier C — citation-stat-only stubs" in papers_md
+    assert "[[10.1126_science.1225829\\|Jinek 2012]]" in papers_md
+    assert "[[10.1038_nature17946\\|Komor 2016]]" in papers_md
+    # Tier-A row should show the OG score.
+    assert "0.66" in papers_md
+    # No "Also in" project listed when this is the only project.
+    assert "| — |" in papers_md or "—" in papers_md
+
+    # lineage.md is a pointer.
+    lineage_md = out["lineage"].read_text(encoding="utf-8")
+    assert "kind: lineage-pointer" in lineage_md
+    assert "[[fake-lineage-2026-04-29]]" in lineage_md
+
+    # START_HERE.md has correct counts.
+    start_md = out["start_here"].read_text(encoding="utf-8")
+    assert "**2 papers** total" in start_md
+    assert "**1 Tier-A**" in start_md
+    assert "**1 Tier-C**" in start_md
+    assert "kind: project-start-here" in start_md
+
+    # decisions-log.md frontmatter + first entry present.
+    log_md = out["decisions_log"].read_text(encoding="utf-8")
+    assert "kind: decisions-log" in log_md
+    assert "## 2026-04-29T12:00:00 — lit-arc run" in log_md
+    assert "**Topic:** CODEX cellular neighborhoods" in log_md
+    assert "**Speaker:** Bobby Y.X. Ni" in log_md
+    assert "**Tier-A picks:** 1" in log_md
+    assert "picker_method=`content-aware`" in log_md
+    assert "**Multi-agent crosstalk:** picker+arc" in log_md
+    assert "**Run ID:** 2026-04-29T12-00-00" in log_md
+
+
+def test_write_project_view_appends_to_existing_decisions_log(tmp_path: Path) -> None:
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "fake.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    # First run.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="proj",
+        topic="proj topic",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T10:00:00",
+    )
+    # Second run with a later timestamp.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="proj",
+        topic="proj topic",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-30",
+        timestamp="2026-04-30T11:30:00",
+    )
+
+    log_md = project_decisions_path(tmp_path, "proj").read_text(encoding="utf-8")
+    # Both timestamps appear, and the header appears exactly once.
+    assert log_md.count("# Decisions log — proj") == 1
+    assert "## 2026-04-29T10:00:00 — lit-arc run" in log_md
+    assert "## 2026-04-30T11:30:00 — lit-arc run" in log_md
+    # Order: earlier entry should come first (pure append).
+    idx_first = log_md.find("2026-04-29T10:00:00")
+    idx_second = log_md.find("2026-04-30T11:30:00")
+    assert 0 < idx_first < idx_second
+
+
+def test_write_project_view_overwrites_papers_and_lineage(tmp_path: Path) -> None:
+    """papers.md and lineage.md reflect current state — they don't append."""
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "arc1.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="proj",
+        topic="topic v1",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T10:00:00",
+    )
+    # Second run with only one paper.
+    smaller = {"10.1126/science.1225829": summaries["10.1126/science.1225829"]}
+    arc2 = tmp_path / "Wiki" / "Concepts" / "arc2.md"
+    arc2.write_text("# arc2\n", encoding="utf-8")
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="proj",
+        topic="topic v2",
+        arc_path=arc2,
+        summaries=smaller,
+        corpus=corpus,
+        date_str="2026-04-30",
+        timestamp="2026-04-30T11:30:00",
+    )
+
+    papers_md = project_papers_path(tmp_path, "proj").read_text(encoding="utf-8")
+    # The dropped Tier-C paper no longer appears.
+    assert "[[10.1038_nature17946" not in papers_md
+    # The kept Tier-A paper still does.
+    assert "[[10.1126_science.1225829" in papers_md
+    # Frontmatter shows v2 topic.
+    assert "topic: topic v2" in papers_md
+    assert "total_corpus: 1" in papers_md
+
+    # lineage.md points at arc2.
+    lineage_md = project_lineage_pointer_path(tmp_path, "proj").read_text(encoding="utf-8")
+    assert "[[arc2]]" in lineage_md
+    assert "[[arc1]]" not in lineage_md
+
+
+def test_write_project_view_also_in_populated_when_siblings_share_doi(
+    tmp_path: Path,
+) -> None:
+    """Cross-project 'Also in' col populated when sibling project has same DOI."""
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_a = tmp_path / "Wiki" / "Concepts" / "arc-a.md"
+    arc_a.parent.mkdir(parents=True)
+    arc_a.write_text("# a\n", encoding="utf-8")
+    arc_b = tmp_path / "Wiki" / "Concepts" / "arc-b.md"
+    arc_b.write_text("# b\n", encoding="utf-8")
+
+    # Project A first — written in isolation.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="project-a",
+        topic="A topic",
+        arc_path=arc_a,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T10:00:00",
+    )
+    # Project B with overlap — should detect project-a as a sibling.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="project-b",
+        topic="B topic",
+        arc_path=arc_b,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T11:00:00",
+    )
+
+    papers_b = project_papers_path(tmp_path, "project-b").read_text(encoding="utf-8")
+    # Tier-A row for Jinek 2012 should now have project-a in "Also in".
+    assert "`project-a`" in papers_b
+    # Tier-C stub for Komor 2016 doesn't have an Also-in column (not a table).
+    # Still: project-a is a sibling and should appear in the membership somewhere.
+
+    # And project-a's papers.md should NOT be auto-updated by writing project-b.
+    # (Run project-a's writer again — *now* it should pick up project-b.)
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="project-a",
+        topic="A topic",
+        arc_path=arc_a,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T12:00:00",
+    )
+    papers_a = project_papers_path(tmp_path, "project-a").read_text(encoding="utf-8")
+    assert "`project-b`" in papers_a
+
+
+def test_write_project_view_excludes_self_from_also_in(tmp_path: Path) -> None:
+    """A project never lists itself in its own 'Also in' column."""
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "arc.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    # First write a papers.md — second run should not list "solo" in its own Also-in.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="solo",
+        topic="topic",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T10:00:00",
+    )
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="solo",
+        topic="topic",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T11:00:00",
+    )
+    papers_md = project_papers_path(tmp_path, "solo").read_text(encoding="utf-8")
+    assert "`solo`" not in papers_md
+
+
+# ---------------------------------------------------------------------------
+# project_slug parameter on run_lit_arc
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_arc_uses_topic_derived_slug_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When project_slug is None, the slug is slugify_topic(topic)."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-29",
+    )
+    assert result.project_slug == "codex-cellular-neighborhoods"
+    proj_dir = tmp_path / "Wiki" / "Projects" / "codex-cellular-neighborhoods"
+    for fname in ("START_HERE.md", "papers.md", "lineage.md", "decisions-log.md"):
+        assert (proj_dir / fname).exists(), f"missing {fname}"
+
+
+def test_run_lit_arc_explicit_project_slug_overrides_topic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Explicit project_slug is used verbatim — even when it differs from topic."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_arc(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        project_slug="codex-cn-test",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-29",
+    )
+    assert result.project_slug == "codex-cn-test"
+    proj_dir = tmp_path / "Wiki" / "Projects" / "codex-cn-test"
+    assert (proj_dir / "START_HERE.md").exists()
+    assert (proj_dir / "papers.md").exists()
+    # The topic-derived slug should NOT have been used.
+    other_dir = tmp_path / "Wiki" / "Projects" / "codex-cellular-neighborhoods"
+    assert not other_dir.exists()
+
+
+def test_run_lit_arc_decisions_log_appends_across_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-running run_lit_arc with the same project_slug appends to the log."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    client = _FakeClient(_make_seeds())
+    run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        project_slug="crispr-test",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-29",
+        _now="2026-04-29T10:00:00",
+    )
+    run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        project_slug="crispr-test",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-30",
+        _now="2026-04-30T11:00:00",
+    )
+    log_md = project_decisions_path(tmp_path, "crispr-test").read_text(encoding="utf-8")
+    assert log_md.count("# Decisions log — crispr-test") == 1
+    assert "## 2026-04-29T10:00:00 — lit-arc run" in log_md
+    assert "## 2026-04-30T11:00:00 — lit-arc run" in log_md

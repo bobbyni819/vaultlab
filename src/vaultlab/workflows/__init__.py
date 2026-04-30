@@ -61,6 +61,14 @@ from vaultlab.workflows._runner import (
 
 # Public builders
 from vaultlab.workflows.brainstorm import plan_brainstorm_figures
+from vaultlab.workflows.deck_plan import (
+    DeckPlanTask,
+    PlanGeneratorCallback,
+    deck_plan_response_schema,
+    generate_deck_plan,
+    prepare_deck_plan_task,
+    render_plan_from_response,
+)
 from vaultlab.workflows.deep_think import (
     plan_deep_think_round,
     plan_deep_think_with_ensemble_critic,
@@ -76,8 +84,10 @@ from vaultlab.workflows.synthesis import plan_synthesis
 
 __all__ = [
     # Data classes
+    "DeckPlanTask",
     "DeepThinkEnsembleBundle",
     "PROVENANCE_INDEX",
+    "PlanGeneratorCallback",
     "Provenance",
     "WorkflowPlan",
     "read_provenance",
@@ -86,6 +96,8 @@ __all__ = [
     "run_workflow",
     "run_workflow_with_reflection",
     # Public builders
+    "deck_plan_response_schema",
+    "generate_deck_plan",
     "plan_brainstorm_figures",
     "plan_deep_think_round",
     "plan_deep_think_with_ensemble_critic",
@@ -95,5 +107,7 @@ __all__ = [
     "plan_parallel_runs",
     "plan_round_from_critic_tests",
     "plan_synthesis",
+    "prepare_deck_plan_task",
+    "render_plan_from_response",
     "run_deep_think_with_ensemble_critic",
 ]

@@ -361,26 +361,74 @@ def build_deck_from_lineage_result(
     project_slug: str | None = None,
     figure_assignments: dict[str, Path] | None = None,
     kb_root: Path,
+    plan_callback: Any = None,
+    audience: str = "journal-club",
+    target_slide_count: int = 7,
 ) -> Path:
     """Take a ``/lit-arc`` result and synthesize a ~7-slide deck.
 
-    Reads each per-paper summary's frontmatter to recover ``year_bucket``,
-    then composes:
+    Two paths:
 
-    1. Title (lineage topic)
-    2. Section intro: Background
-    3. Figure (history bucket) — IF a figure assignment exists for a
-       history-bucket DOI; otherwise dropped and replaced with bullets.
-    4. Section intro: Development
-    5. Bullets: SOTA findings — TL;DR snippets from sota-bucket papers
-    6. Section intro: Synthesis — pulled from the arc narrative when
-       available; otherwise a stub instructing the user to fill it in.
-    7. References — Vancouver-style 2-column
+    * **v0.1 fast path** — ``plan_callback=None`` (default). Reads each
+      per-paper summary's frontmatter to recover ``year_bucket``, then
+      composes mechanically:
+
+      1. Title (lineage topic)
+      2. Section intro: Background
+      3. Figure (history bucket) — IF a figure assignment exists for a
+         history-bucket DOI; otherwise dropped and replaced with bullets.
+      4. Section intro: Development
+      5. Bullets: SOTA findings — TL;DR snippets from sota-bucket papers
+      6. Section intro: Synthesis — pulled from the arc narrative when
+         available; otherwise a stub instructing the user to fill it in.
+      7. References — Vancouver-style 2-column
+
+    * **v0.1+ rigor path** — ``plan_callback`` set to a
+      :data:`vaultlab.workflows.deck_plan.PlanGeneratorCallback`. The
+      callback receives a :class:`DeckPlanTask` (with full corpus
+      summaries, metrics, figure assignments) and returns Claude Code's
+      typed JSON plan. The resulting plan is rendered via
+      :func:`vaultlab.slides.build_from_plan` (the dict-plan renderer)
+      so we get the richer slide-type set
+      (``title / section_divider / figure / multi_figure / text /
+      references``) instead of the 5-kind composer.
 
     Output is routed through :func:`vaultlab.kb.paths.deck_path` so the
     .pptx lands at ``<kb_root>/Output/<project>/<topic>-deck.pptx``.
     """
     from vaultlab.kb.paths import deck_path, slugify_topic
+
+    project = project_slug or "lit-arc"
+    deck_name = f"{slugify_topic(lineage_result.topic)}-deck.pptx"
+    out = deck_path(Path(kb_root), project, deck_name)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    if plan_callback is not None:
+        # v0.1+ rigor path — content-aware deck plan via Claude Code.
+        # Lazy imports so the slides module stays light when the deck-
+        # plan workflow isn't being used.
+        from vaultlab.workflows.deck_plan import generate_deck_plan
+
+        summaries = _summaries_to_paper_summaries(
+            _read_summary_frontmatters(lineage_result.summary_paths)
+        )
+        corpus = _synthetic_corpus_from_summaries(
+            topic=lineage_result.topic,
+            summaries=summaries,
+        )
+        dict_plan = generate_deck_plan(
+            topic=lineage_result.topic,
+            corpus=corpus,
+            summaries=summaries,
+            figure_assignments=figure_assignments or {},
+            speaker=speaker,
+            affiliation=affiliation,
+            audience=audience,
+            target_slide_count=target_slide_count,
+            kb_root=Path(kb_root),
+            plan_callback=plan_callback,
+        )
+        return build_from_plan(dict_plan, out, write_marp=False)["pptx"]
 
     plan = _plan_from_lineage(
         lineage_result,
@@ -388,11 +436,96 @@ def build_deck_from_lineage_result(
         affiliation=affiliation,
         figure_assignments=figure_assignments or {},
     )
-    project = project_slug or "lit-arc"
-    deck_name = f"{slugify_topic(lineage_result.topic)}-deck.pptx"
-    out = deck_path(Path(kb_root), project, deck_name)
-    out.parent.mkdir(parents=True, exist_ok=True)
     return build_deck(plan, out, citations=_collect_citations_from_summaries(lineage_result))
+
+
+def _summaries_to_paper_summaries(
+    summaries_by_doi: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Convert frontmatter dicts to :class:`PaperSummary` instances.
+
+    Used by :func:`build_deck_from_lineage_result` when routing through
+    the content-aware deck-plan generator.  Imports
+    :class:`vaultlab.research.summarize.PaperSummary` lazily so the
+    slides module stays decoupled from the research module unless this
+    path is exercised.
+    """
+    from vaultlab.research.summarize import PaperSummary
+
+    out: dict[str, PaperSummary] = {}
+    for doi, fm in summaries_by_doi.items():
+        s = PaperSummary(
+            doi=fm.get("doi", "") or doi,
+            title=fm.get("title", "") or "",
+            authors=list(fm.get("authors", []) or []),
+            year=int(fm.get("year") or 0) if fm.get("year") else 0,
+            journal=fm.get("journal", "") or "",
+            citation_count=int(fm.get("citation_count") or 0)
+                if fm.get("citation_count")
+                else 0,
+            og_score=float(fm.get("og_score") or 0.0),
+            forward_influence=int(fm.get("forward_influence") or 0),
+            year_bucket=fm.get("year_bucket", "unknown") or "unknown",
+            tier=fm.get("tier", "C") or "C",
+            tldr=(fm.get("tldr") or "").strip(),
+            key_findings=list(fm.get("key_findings", []) or []),
+        )
+        out[doi] = s
+    return out
+
+
+def _synthetic_corpus_from_summaries(
+    *,
+    topic: str,
+    summaries: dict[str, Any],
+) -> Any:
+    """Build a minimal :class:`Corpus` for the deck-plan generator.
+
+    The deck-plan generator only reads ``corpus.papers``,
+    ``corpus.metrics.og_score``, ``corpus.metrics.forward_influence``,
+    ``corpus.metrics.co_citation_pairs``, and
+    ``corpus.metrics.year_buckets``.  We synthesize those from the
+    on-disk summaries when no live Corpus is available (e.g. when the
+    deck is being built from a previous-day's ``Wiki/Summaries/``).
+    """
+    from vaultlab.research.corpus import Corpus
+    from vaultlab.research.graph_metrics import CorpusMetrics
+    from vaultlab.research.paper import Paper
+
+    papers: dict[str, Any] = {}
+    og_score: dict[str, float] = {}
+    forward_influence: dict[str, int] = {}
+    year_buckets: dict[str, str] = {}
+    seeds: list[Paper] = []
+    for doi, s in summaries.items():
+        key = (doi or s.doi or "").lower()
+        if not key:
+            continue
+        paper = Paper(
+            doi=s.doi or doi,
+            title=s.title,
+            authors=list(s.authors or []),
+            year=int(s.year) if s.year else 0,
+            journal=s.journal,
+        )
+        papers[key] = paper
+        og_score[key] = float(getattr(s, "og_score", 0.0) or 0.0)
+        forward_influence[key] = int(getattr(s, "forward_influence", 0) or 0)
+        bucket = getattr(s, "year_bucket", "unknown") or "unknown"
+        year_buckets[key] = bucket
+    metrics = CorpusMetrics(
+        og_score=og_score,
+        forward_influence=forward_influence,
+        co_citation_pairs=[],
+        year_buckets=year_buckets,
+    )
+    return Corpus(
+        topic=topic,
+        seeds=seeds,
+        papers=papers,
+        references={},
+        metrics=metrics,
+    )
 
 
 # ---------------------------------------------------------------------------

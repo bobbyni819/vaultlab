@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
@@ -73,8 +74,13 @@ from vaultlab.kb.paths import (
     article_stub_path,
     concept_path,
     ensure_parent,
+    project_decisions_path,
+    project_lineage_pointer_path,
+    project_papers_path,
+    project_state_path,
     search_log_path,
     slugify_doi,
+    slugify_topic,
     summary_path,
 )
 from vaultlab.provenance import ProvenanceRecord, write_receipts
@@ -133,6 +139,11 @@ class LineageRunResult:
             (or cache hit) — these are the Tier A candidates.
         summaries_written: Count of summary markdown files actually written.
         duration_seconds: Wall-clock time of the full run.
+        project_slug: The slug used for ``Wiki/Projects/<slug>/`` (either
+            an explicit override or ``slugify_topic(topic)``).
+        project_view_paths: Mapping of project-view file kind
+            (``start_here``, ``papers``, ``lineage``, ``decisions_log``)
+            to the file path written by Phase 8.
     """
 
     topic: str
@@ -143,6 +154,8 @@ class LineageRunResult:
     pdfs_acquired: int = 0
     summaries_written: int = 0
     duration_seconds: float = 0.0
+    project_slug: str = ""
+    project_view_paths: dict[str, Path] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +270,453 @@ def _write_article_stub(kb_root: Path, paper: Paper) -> Path | None:
         lines.append("")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
+
+
+# ---------------------------------------------------------------------------
+# Project-view writer (Wiki/Projects/<slug>/{START_HERE,papers,lineage,decisions-log}.md)
+# ---------------------------------------------------------------------------
+
+
+# Regex to parse Tier rows in a sibling project's papers.md, e.g.
+#   | [[10.1126_science.1225829\|Jinek 2012]] | 2012 | 0.66 | 2 | — |
+# We match the wikilink slug only (column 1), since "Also in" needs no other data.
+_SIBLING_WIKILINK_RE = re.compile(
+    r"\[\[([A-Za-z0-9._\-+/]+)(?:\\?\|[^\]]*)?\]\]"
+)
+
+
+def _scan_sibling_project_dois(
+    kb_root: Path,
+    *,
+    exclude_slug: str,
+) -> dict[str, list[str]]:
+    """Return ``{doi-slug: [project-slug, ...]}`` from sibling projects' papers.md.
+
+    Walks ``Wiki/Projects/*/papers.md`` and extracts the wikilink slugs out
+    of every paper row. Used to populate the "Also in" column when a paper
+    is referenced by multiple projects. The current project's own slug is
+    excluded so we never list it as "also in" itself.
+    """
+    membership: dict[str, list[str]] = {}
+    projects_root = Path(kb_root) / "Wiki" / "Projects"
+    if not projects_root.exists():
+        return membership
+    for child in sorted(projects_root.iterdir()):
+        if not child.is_dir():
+            continue
+        sibling_slug = child.name
+        if sibling_slug == exclude_slug:
+            continue
+        papers_md = child / "papers.md"
+        if not papers_md.exists():
+            continue
+        try:
+            text = papers_md.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        # Track which slugs we've already attributed to this sibling so we
+        # don't duplicate them when the same DOI appears in both Tier-A and
+        # Tier-C blocks (shouldn't happen, but be defensive).
+        seen: set[str] = set()
+        for m in _SIBLING_WIKILINK_RE.finditer(text):
+            doi_slug = m.group(1)
+            # Skip non-DOI wikilinks (e.g. local "papers" / "decisions-log"
+            # navigation links). Heuristic: real DOI slugs always contain a
+            # dot AND an underscore (the slugified "/" separator).
+            if "." not in doi_slug or "_" not in doi_slug:
+                continue
+            if doi_slug in seen:
+                continue
+            seen.add(doi_slug)
+            membership.setdefault(doi_slug, []).append(sibling_slug)
+    return membership
+
+
+def _project_view_label(s: PaperSummary) -> str:
+    """Author-Year label used in Wiki/Projects/<slug>/papers.md wikilinks."""
+    if s.authors:
+        first = s.authors[0]
+        last = first.split()[0] if first else "Anon"
+    else:
+        last = "Anon"
+    year = str(s.year) if s.year else "n.d."
+    return f"{last} {year}"
+
+
+def _render_project_papers_md(
+    *,
+    project_slug: str,
+    topic: str,
+    summaries: dict[str, PaperSummary],
+    arc_path: Path,
+    deck_path: Path | None,
+    also_in: dict[str, list[str]],
+    date_str: str,
+) -> str:
+    """Render the body of ``Wiki/Projects/<slug>/papers.md``.
+
+    Tier-A papers go in a sortable table; Tier-C papers go in a
+    space-efficient comma-separated wikilink list (5 per line). The
+    ``also_in`` map is keyed by DOI-slug.
+    """
+    rows: list[tuple[PaperSummary, str]] = []
+    for doi, s in summaries.items():
+        slug = slugify_doi(doi) if doi else slugify_doi(s.doi or "unknown")
+        rows.append((s, slug))
+
+    tier_a = [(s, slug) for s, slug in rows if s.tier == "A"]
+    tier_c = [(s, slug) for s, slug in rows if s.tier != "A"]
+
+    # Tier-A: rank by og_score + forward_influence/10 (matches backfill script).
+    tier_a.sort(
+        key=lambda pair: -(pair[0].og_score + pair[0].forward_influence / 10)
+    )
+    # Tier-C: by year descending, with year=0 sinking to the bottom.
+    tier_c.sort(key=lambda pair: -(pair[0].year or 0))
+
+    deck_line = (
+        f"**Slide deck:** `Output/{project_slug}/{deck_path.name}`"
+        if deck_path is not None
+        else "**Slide deck:** _(none — lit-arc only)_"
+    )
+
+    lines: list[str] = [
+        "---",
+        f"project: {project_slug}",
+        f"topic: {topic}",
+        f"updated: {date_str}",
+        f"total_corpus: {len(rows)}",
+        f"tier_a_count: {len(tier_a)}",
+        f"tier_c_count: {len(tier_c)}",
+        "kind: project-papers",
+        "---",
+        "",
+        f"# Papers — {project_slug}",
+        "",
+        f"This project read the following papers for the lineage arc *{topic}*. ",
+        "Each `[[wikilink]]` resolves to the **global** per-paper summary at "
+        "`Wiki/Summaries/<doi-slug>.md`. Papers also surfaced by other projects ",
+        "are noted in the *Also in* column.",
+        "",
+        f"**Lineage arc:** [[{arc_path.stem}]]",
+        deck_line,
+        "",
+        "## Tier A — full text read by Claude Code",
+        "",
+        "Papers with cached PDFs read end-to-end and rendered as "
+        "`Wiki/Summaries/<doi>.md` with TL;DR, methods, key findings (with "
+        "`[p<N>]` page markers), and connections.",
+        "",
+    ]
+
+    if tier_a:
+        lines.append("| Paper | Year | OG | Forward | Also in |")
+        lines.append("|---|---|---|---|---|")
+        for s, slug in tier_a:
+            label = _project_view_label(s)
+            also = ", ".join(f"`{x}`" for x in also_in.get(slug, [])) or "—"
+            lines.append(
+                f"| [[{slug}\\|{label}]] | {s.year or '?'} "
+                f"| {s.og_score:.2f} | {s.forward_influence} | {also} |"
+            )
+    else:
+        lines.append("_(no Tier-A papers — none had a cached PDF)_")
+
+    lines.extend([
+        "",
+        "## Tier C — citation-stat-only stubs",
+        "",
+        "Papers cited via the corpus's citation graph but not read full-text. "
+        "Frontmatter has citation metrics; LLM-written content sections are "
+        "empty. Linked here so the citation network is navigable in "
+        "Obsidian's graph view.",
+        "",
+    ])
+    if tier_c:
+        chunks = [
+            f"[[{slug}\\|{_project_view_label(s)}]]"
+            for s, slug in tier_c
+        ]
+        # 5 per line for readability — same as the backfill script.
+        for i in range(0, len(chunks), 5):
+            lines.append(" · ".join(chunks[i:i + 5]))
+    else:
+        lines.append("_(no Tier-C papers in this corpus)_")
+
+    return "\n".join(lines) + "\n"
+
+
+def _render_project_lineage_pointer(
+    *,
+    project_slug: str,
+    topic: str,
+    arc_path: Path,
+    date_str: str,
+) -> str:
+    """Render ``Wiki/Projects/<slug>/lineage.md`` — short pointer page."""
+    return (
+        "---\n"
+        f"project: {project_slug}\n"
+        f"topic: {topic}\n"
+        f"updated: {date_str}\n"
+        "kind: lineage-pointer\n"
+        "---\n\n"
+        f"# Lineage — {project_slug}\n\n"
+        f"The full lineage arc for this project lives at: [[{arc_path.stem}]]\n\n"
+        f"Generated {date_str} by `vaultlab.research.lineage.run_lit_arc`.\n"
+    )
+
+
+def _render_project_start_here(
+    *,
+    project_slug: str,
+    topic: str,
+    summaries: dict[str, PaperSummary],
+    arc_path: Path,
+    deck_path: Path | None,
+    date_str: str,
+) -> str:
+    """Render ``Wiki/Projects/<slug>/START_HERE.md`` — landing page."""
+    n_total = len(summaries)
+    n_tier_a = sum(1 for s in summaries.values() if s.tier == "A")
+    n_tier_c = n_total - n_tier_a
+    deck_line = (
+        f"- **Slide deck:** `Output/{project_slug}/{deck_path.name}`"
+        if deck_path is not None
+        else "- **Slide deck:** _(none — lit-arc only)_"
+    )
+    return (
+        "---\n"
+        f"project: {project_slug}\n"
+        f"topic: {topic}\n"
+        f"updated: {date_str}\n"
+        "kind: project-start-here\n"
+        "---\n\n"
+        f"# {topic}\n\n"
+        f"Project slug: `{project_slug}`\n\n"
+        "## What this is\n\n"
+        f"VaultLab project for a literature lineage arc on **{topic}**. "
+        f"Generated/updated {date_str} via `/lit-arc` "
+        "(`vaultlab.research.lineage.run_lit_arc`).\n\n"
+        "## What's in the corpus\n\n"
+        f"- **{n_total} papers** total across the citation-graph corpus\n"
+        f"- **{n_tier_a} Tier-A** papers read full-text (TL;DRs in `Wiki/Summaries/`)\n"
+        f"- **{n_tier_c} Tier-C** papers cited for citation-graph metrics only\n\n"
+        "## Where to look\n\n"
+        f"- **The lineage narrative:** [[{arc_path.stem}|→ open arc]]\n"
+        "- **Per-paper manifest:** [[papers|→ open papers list]]\n"
+        "- **Decisions log:** [[decisions-log|→ open log]]\n"
+        f"{deck_line}\n\n"
+        "## Last updated\n\n"
+        f"{date_str}\n"
+    )
+
+
+def _render_decisions_log_entry(
+    *,
+    topic: str,
+    speaker: str,
+    seeds_n: int,
+    sources_n: int,
+    corpus_size: int,
+    tier_a_n: int,
+    pdfs_acquired: int,
+    picker_method: str,
+    crosstalk: str,
+    run_id: str | None,
+    output_slug: str,
+    deck_path: Path | None,
+    timestamp: str,
+) -> str:
+    """Render one append-only entry for ``decisions-log.md``."""
+    pct = (
+        f"{(pdfs_acquired / max(corpus_size, 1)) * 100:.0f}%"
+        if corpus_size
+        else "0%"
+    )
+    deck_line = (
+        f"- **Output deck:** {deck_path}"
+        if deck_path is not None
+        else "- **Output deck:** none — lit-arc only"
+    )
+    run_line = (
+        f"- **Run ID:** {run_id} (`Output/{output_slug}/runs/{run_id}/`)"
+        if run_id
+        else "- **Run ID:** none (no run_dir provided)"
+    )
+    return (
+        f"## {timestamp} — lit-arc run\n"
+        f"- **Topic:** {topic}\n"
+        f"- **Speaker:** {speaker}\n"
+        f"- **Search:** {seeds_n} seeds, {sources_n} sources\n"
+        f"- **Corpus size:** {corpus_size} papers (1 layer of CrossRef refs)\n"
+        f"- **Tier-A picks:** {tier_a_n} (picker_method=`{picker_method}`)\n"
+        f"- **PDFs acquired:** {pdfs_acquired} ({pct} success rate)\n"
+        f"- **Multi-agent crosstalk:** {crosstalk}\n"
+        f"{run_line}\n"
+        f"{deck_line}\n"
+    )
+
+
+def _decisions_log_header(*, project_slug: str, topic: str) -> str:
+    """Return the frontmatter + H1 used at the top of a fresh decisions-log.md."""
+    return (
+        "---\n"
+        f"project: {project_slug}\n"
+        f"topic: {topic}\n"
+        "kind: decisions-log\n"
+        "---\n\n"
+        f"# Decisions log — {project_slug}\n\n"
+    )
+
+
+def _write_project_view(
+    *,
+    kb_root: Path,
+    project_slug: str,
+    topic: str,
+    arc_path: Path,
+    summaries: dict[str, PaperSummary],
+    corpus: Corpus,
+    deck_path: Path | None = None,
+    run_id: str | None = None,
+    date_str: str | None = None,
+    speaker: str = "Bobby",
+    sources_n: int = 0,
+    picker_method: str = "citation-graph",
+    crosstalk: str = "none",
+    timestamp: str | None = None,
+) -> dict[str, Path]:
+    """Write ``Wiki/Projects/<slug>/{START_HERE,papers,lineage,decisions-log}.md``.
+
+    Idempotent: re-running for the same project APPENDS a new entry to
+    ``decisions-log.md`` while OVERWRITING ``papers.md``, ``lineage.md``,
+    and ``START_HERE.md`` (these reflect current state).
+
+    The "Also in" column in ``papers.md`` is computed live by scanning
+    sibling project directories' ``papers.md`` files — no in-memory state
+    survives between runs.
+
+    Args:
+        kb_root: Vaultlab KB root.
+        project_slug: Pre-slugified project identifier (e.g. ``codex-cn-test``).
+            Used verbatim — the path helpers re-slugify defensively but
+            already-slugified inputs are stable.
+        topic: User-supplied topic (raw, not slugified) for display.
+        arc_path: Path to the lineage arc Markdown that this project view
+            points to.
+        summaries: Mapping of doi -> :class:`PaperSummary` (the same map
+            already written under ``Wiki/Summaries/``).
+        corpus: The :class:`Corpus` produced by the run (currently used
+            only for parity with :func:`run_lit_arc`'s other helpers; the
+            paper data flows from ``summaries``).
+        deck_path: Path to the deck file in Output/, or None if no deck.
+        run_id: Optional run identifier (timestamped folder under runs/).
+        date_str: ISO-format date used in frontmatter; defaults to today.
+        speaker: Author / driver of the run, recorded in the decisions log.
+        sources_n: Number of search sources hit (NCBI/S2/etc).
+        picker_method: ``"citation-graph"`` or ``"content-aware"``.
+        crosstalk: Free-form note for the decisions log.
+        timestamp: Full timestamp for the decisions-log entry; defaults
+            to ``YYYY-MM-DDTHH:MM:SS`` for now.
+
+    Returns:
+        ``{"start_here": Path, "papers": Path, "lineage": Path,
+        "decisions_log": Path}`` — the four files written.
+    """
+    if date_str is None:
+        date_str = date.today().strftime("%Y-%m-%d")
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Cross-project "Also in" detection — scan sibling project papers.md
+    # at write time so refreshes stay current.
+    sibling_membership = _scan_sibling_project_dois(
+        kb_root, exclude_slug=project_slug
+    )
+
+    # Resolve output paths via vaultlab.kb.paths (autonomous routing rule).
+    start_here_p = ensure_parent(project_state_path(kb_root, project_slug))
+    papers_p = ensure_parent(project_papers_path(kb_root, project_slug))
+    lineage_p = ensure_parent(project_lineage_pointer_path(kb_root, project_slug))
+    decisions_p = ensure_parent(project_decisions_path(kb_root, project_slug))
+
+    # 1. papers.md — overwrite
+    papers_p.write_text(
+        _render_project_papers_md(
+            project_slug=project_slug,
+            topic=topic,
+            summaries=summaries,
+            arc_path=arc_path,
+            deck_path=deck_path,
+            also_in=sibling_membership,
+            date_str=date_str,
+        ),
+        encoding="utf-8",
+    )
+
+    # 2. lineage.md — overwrite (pointer page; cheap to regenerate)
+    lineage_p.write_text(
+        _render_project_lineage_pointer(
+            project_slug=project_slug,
+            topic=topic,
+            arc_path=arc_path,
+            date_str=date_str,
+        ),
+        encoding="utf-8",
+    )
+
+    # 3. START_HERE.md — overwrite (live counts of Tier-A / Tier-C)
+    start_here_p.write_text(
+        _render_project_start_here(
+            project_slug=project_slug,
+            topic=topic,
+            summaries=summaries,
+            arc_path=arc_path,
+            deck_path=deck_path,
+            date_str=date_str,
+        ),
+        encoding="utf-8",
+    )
+
+    # 4. decisions-log.md — APPEND new entry (or seed file with header).
+    n_tier_a = sum(1 for s in summaries.values() if s.tier == "A")
+    new_entry = _render_decisions_log_entry(
+        topic=topic,
+        speaker=speaker,
+        seeds_n=len(corpus.seeds),
+        sources_n=sources_n,
+        corpus_size=len(summaries),
+        tier_a_n=n_tier_a,
+        pdfs_acquired=sum(
+            1 for s in summaries.values() if s.tier == "A"
+        ),  # Tier-A means PDF was read
+        picker_method=picker_method,
+        crosstalk=crosstalk,
+        run_id=run_id,
+        output_slug=project_slug,
+        deck_path=deck_path,
+        timestamp=timestamp,
+    )
+    if decisions_p.exists():
+        existing = decisions_p.read_text(encoding="utf-8")
+        # Append a blank line + new entry. Header already in place.
+        if not existing.endswith("\n"):
+            existing += "\n"
+        decisions_p.write_text(existing + "\n" + new_entry, encoding="utf-8")
+    else:
+        decisions_p.write_text(
+            _decisions_log_header(project_slug=project_slug, topic=topic)
+            + new_entry,
+            encoding="utf-8",
+        )
+
+    return {
+        "start_here": start_here_p,
+        "papers": papers_p,
+        "lineage": lineage_p,
+        "decisions_log": decisions_p,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -884,7 +1344,10 @@ def run_lit_arc(
     picker_callback: PickerCallback | None = None,
     picker_coarse_n: int = 30,
     project: str | None = None,
+    project_slug: str | None = None,
     run_dir: Path | None = None,
+    deck_path: Path | None = None,
+    speaker: str = "Bobby",
     # Test injection points (default to real implementations):
     _client: Any | None = None,
     _llm_summary: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
@@ -893,6 +1356,7 @@ def run_lit_arc(
     _acquire: Any | None = None,
     _summarize_corpus_fn: Any | None = None,
     _today: str | None = None,
+    _now: str | None = None,
 ) -> LineageRunResult:
     """Run the full ``/lit-arc`` pipeline end-to-end.
 
@@ -926,9 +1390,17 @@ def run_lit_arc(
     given, the rationales are written to ``<run_dir>/picker-decision.md``
     instead. Both can be ``None`` (rationales then live only in logs).
 
+    **Phase 9: project view.** Every run also writes the project view layer
+    at ``Wiki/Projects/<project_slug>/`` (``START_HERE.md``, ``papers.md``,
+    ``lineage.md``, append to ``decisions-log.md``). When ``project_slug``
+    is ``None``, it defaults to ``slugify_topic(topic)``. Pass an explicit
+    short slug (e.g. ``project_slug="codex-cn-test"``) when the project's
+    canonical folder name should diverge from the topic.
+
     Test injection points (``_client``, ``_llm_summary``, ``_llm_arc``,
     etc.) take precedence over both modes; callers in production should
-    leave them at their defaults.
+    leave them at their defaults. ``_now`` overrides the timestamp used in
+    the decisions-log entry (test only).
     """
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
@@ -1205,6 +1677,54 @@ def run_lit_arc(
     write_receipts(arc_path, record)
     _emit(progress, "provenance_written")
 
+    # ------------------------------------------------------------------
+    # Phase 9: project view (Wiki/Projects/<slug>/)
+    # ------------------------------------------------------------------
+    # Resolve the slug: explicit override beats topic-derived default.
+    resolved_slug = (
+        project_slug.strip() if project_slug and project_slug.strip()
+        else slugify_topic(topic)
+    )
+    # Resolve a run_id suitable for the decisions-log entry: prefer the
+    # caller-supplied run_dir.name, fall back to None (entry says so).
+    run_id_for_log: str | None = None
+    if run_dir is not None:
+        try:
+            run_id_for_log = Path(run_dir).name or None
+        except Exception:
+            run_id_for_log = None
+
+    # Decide the multi-agent crosstalk descriptor for the decisions log.
+    crosstalk_parts: list[str] = []
+    if picker_callback is not None:
+        crosstalk_parts.append("picker")
+    if narrator is not None or _llm_arc is not None:
+        crosstalk_parts.append("arc")
+    crosstalk = "+".join(crosstalk_parts) if crosstalk_parts else "none"
+
+    project_view_paths = _write_project_view(
+        kb_root=kb_root,
+        project_slug=resolved_slug,
+        topic=topic,
+        arc_path=arc_path,
+        summaries=summaries,
+        corpus=corpus,
+        deck_path=deck_path,
+        run_id=run_id_for_log,
+        date_str=date_str,
+        speaker=speaker,
+        sources_n=len(seeds),  # rough proxy: distinct seed count
+        picker_method=picker_method,
+        crosstalk=crosstalk,
+        timestamp=_now,
+    )
+    _emit(
+        progress,
+        "project_view_written",
+        slug=resolved_slug,
+        files=len(project_view_paths),
+    )
+
     duration = time.time() - started
     return LineageRunResult(
         topic=topic,
@@ -1215,4 +1735,6 @@ def run_lit_arc(
         pdfs_acquired=pdfs_acquired,
         summaries_written=summaries_written,
         duration_seconds=duration,
+        project_slug=resolved_slug,
+        project_view_paths=project_view_paths,
     )

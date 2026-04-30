@@ -47,6 +47,9 @@ __all__ = [
     "pdf_path",
     "project_decisions_path",
     "project_dir",
+    "project_intake_path",
+    "project_lineage_pointer_path",
+    "project_papers_path",
     "project_state_path",
     "run_dir",
     "search_log_path",
@@ -205,6 +208,58 @@ def project_decisions_path(kb_root: Path, project: str) -> Path:
         / "Projects"
         / slugify_topic(project)
         / "decisions-log.md"
+    )
+
+
+def project_intake_path(kb_root: Path, project: str) -> Path:
+    """``Wiki/Projects/<project-slug>/intake.md`` — saved copy of the intake form.
+
+    The user's filled-in intake form lives in their project folder
+    (``<project>/project_intake.md``). After ``/onboard-project`` runs,
+    a copy is saved here so future commands can read project context
+    without going back to the project folder. Both copies stay in sync
+    when the user re-runs ``/onboard-project``.
+    """
+    return (
+        Path(kb_root)
+        / "Wiki"
+        / "Projects"
+        / slugify_topic(project)
+        / "intake.md"
+    )
+
+
+def project_papers_path(kb_root: Path, project: str) -> Path:
+    """``Wiki/Projects/<project-slug>/papers.md`` — per-project paper manifest.
+
+    Lists Tier-A papers (read full-text) and Tier-C stubs (citation-graph
+    only) with `[[wikilinks]]` to the **global** ``Wiki/Summaries/<doi>.md``
+    files. Includes an "Also in" column showing which other projects also
+    surfaced each paper. Overwritten on every run — reflects current state.
+    """
+    return (
+        Path(kb_root)
+        / "Wiki"
+        / "Projects"
+        / slugify_topic(project)
+        / "papers.md"
+    )
+
+
+def project_lineage_pointer_path(kb_root: Path, project: str) -> Path:
+    """``Wiki/Projects/<project-slug>/lineage.md`` — pointer to the lineage arc.
+
+    A short pointer page that links to the actual narrative arc at
+    ``Wiki/Concepts/<topic>-lineage-<date>.md``. Lives in the project
+    folder so Obsidian users can jump to the full arc with one click.
+    Overwritten on every run.
+    """
+    return (
+        Path(kb_root)
+        / "Wiki"
+        / "Projects"
+        / slugify_topic(project)
+        / "lineage.md"
     )
 
 
