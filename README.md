@@ -144,52 +144,10 @@ Full walkthrough: [`docs/getting-started.md`](docs/getting-started.md). ~10–15
 
 ---
 
-## How it works
-
-```mermaid
-flowchart TB
-    subgraph Team["Your lab"]
-        You[You]
-        Mate[Lab member]
-        Collab[Collaborator]
-    end
-
-    Team --> CC[Claude Code]
-    CC --> VL[VaultLab capabilities]
-
-    subgraph Memory["Centralized memory"]
-        direction LR
-        KB[(Obsidian KB)]
-        GD[Google Workspace]
-        OL[Outlook]
-        MT[Meeting transcripts]
-        FS[Local files]
-        SH[START_HERE.md per project]
-    end
-
-    VL <--> Memory
-    CC -.reads.-> Memory
-
-    style Memory fill:#fef3c7,stroke:#854d0e,stroke-width:2px
-    style Team fill:#e0f2fe,stroke:#0369a1
-```
-
-You (or anyone you've shared the KB with) talks to Claude Code. Claude Code reads VaultLab + memory. VaultLab orchestrates work, writes results back into the memory. Memory is **plain markdown** on Google Drive — share it like any folder, scale across your lab without infrastructure.
-
----
-
 <details>
-<summary><b>Specialized modules per modality</b> (CODEX, MALDI, spatial transcriptomics, scRNA-seq, imaging, flow)</summary>
+<summary><b>Specialty module</b> (in progress — accessory)</summary>
 
-VaultLab has modules tuned to specific modalities for spatial-omics-heavy research:
-
-- **CODEX multiplex IF** — segmentation (Mesmer/Cellpose/StarDist), marker normalization, cellular neighborhood detection (Schürch 2020 + lab CN methodology)
-- **MALDI imaging** — pyimzML + Cardinal-via-rpy2 wrappers, ion-image visualization, multi-modal coregistration with H&E
-- **Spatial transcriptomics** — Visium / Xenium / SpatialData via squidpy
-- **Single-cell RNA-seq** — scanpy + anndata canonical pipelines
-- **Generic imaging / flow cytometry** — wrappers for standard tools
-
-These are not required to use VaultLab; they're there if your work touches them. Generic AI tools wrap whatever's on PyPI — VaultLab's modality modules carry the methods working researchers actually use, not the generic defaults.
+I work in a spatial-omics lab, so VaultLab has the start of an optional module covering the tools I use day-to-day — CODEX multiplex IF, MALDI imaging, spatial transcriptomics, scRNA-seq, generic imaging / flow. It's not required to use VaultLab and isn't a focus of v0.1; it's an accessory for people whose work touches the same modalities. Most of it is still being built out.
 
 </details>
 
@@ -206,7 +164,7 @@ Full spec: [`docs/architecture.md`](docs/architecture.md). Invariants for contri
 </details>
 
 <details>
-<summary><b>What's unique vs PaperQA / scanpy / FutureHouse / scverse / Aider</b></summary>
+<summary><b>How VaultLab compares to PaperQA, scanpy, FutureHouse, scverse, Aider</b></summary>
 
 | Capability | VaultLab | PaperQA2 | scanpy | FutureHouse | scverse | Aider |
 |---|---|---|---|---|---|---|
@@ -243,22 +201,19 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 
 ---
 
-## Methodological lineage
+## Influences
 
-The patterns VaultLab uses are deliberately lifted from established, peer-reviewed, or widely-used open-source projects, then adapted into a Claude-Code-native harness:
+VaultLab's patterns are deliberately lifted from open-source projects already at scale, then adapted into a Claude-Code-native harness:
 
-| What VaultLab does | Pattern source |
+| What VaultLab borrowed | Source |
 |---|---|
-| Multi-agent meeting structure (adversarial vs round-table) | [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) |
-| Bounded plan→execute→verify→refine loop | [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) |
-| Literature MCP + cross-source dedup | [paperclip](https://github.com/GXL-ai/paperclip) |
-| Claude Code skill bundle organization + AGENTS.md framing | [gstack](https://github.com/garrytan/gstack) |
-| Canonical scRNA-seq / spatial pipelines | [scanpy + squidpy](https://github.com/scverse) (scverse community, peer-reviewed in *Nat. Methods*) |
-| Cell segmentation primitives | [Cellpose](https://github.com/MouseLand/cellpose) (Stringer & Pachitariu, *Nat. Methods* 2021) |
-| Cellular neighborhood detection | [Schürch et al. 2020, *Cell*](https://doi.org/10.1016/j.cell.2020.07.005) |
-| Fork-and-clone primary distribution | [nanoGPT](https://github.com/karpathy/nanoGPT) (Karpathy) |
+| Claude Code skill-bundle layout — slash commands as plain markdown, AGENTS.md invariants for contributors | [gstack](https://github.com/garrytan/gstack) (Garry Tan) |
+| Self-contained reference implementation meant to be forked and customized, not installed as an opaque library | [nanoGPT](https://github.com/karpathy/nanoGPT) (Andrej Karpathy) |
+| Multi-agent meeting structure — analyst → critic → synthesizer rounds with bounded loops | [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) |
+| Plan → execute → verify → refine inner loop with reflection-round caps | [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) |
+| Literature search MCP + cross-source dedup across NCBI / S2 / Springer / Elsevier / bioRxiv / CrossRef | [paperclip](https://github.com/GXL-ai/paperclip) |
 
-Each row represents a method or interface design choice that I read, understood, and adapted — not invented from scratch. The implementations are mine, but the patterns have track records elsewhere.
+Each row is a method or interface design I read, understood, and adapted — not invented from scratch. Implementations are mine; the patterns have track records elsewhere.
 
 Full per-component attribution: [`INSPIRATIONS.md`](INSPIRATIONS.md). For a project-level breakdown of design choices novel to VaultLab vs. synthesis vs. borrowed: [`docs/design-rationale.md`](docs/design-rationale.md).
 
