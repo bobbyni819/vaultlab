@@ -201,7 +201,7 @@ VaultLab's patterns are deliberately lifted from open-source projects already at
 | What VaultLab borrowed | Source |
 |---|---|
 | Claude Code skill-bundle layout — slash commands as plain markdown, AGENTS.md invariants for contributors | [gstack](https://github.com/garrytan/gstack) (Garry Tan) |
-| Self-contained reference implementation meant to be forked and customized, not installed as an opaque library | [nanoGPT](https://github.com/karpathy/nanoGPT) (Andrej Karpathy) |
+| Per-paper grounded summaries with `[pN]` page-marker citations and refuse-to-ship-when-evidence-is-missing | [PaperQA2](https://github.com/Future-House/paper-qa) (FutureHouse) |
 | Multi-agent meeting structure — analyst → critic → synthesizer rounds with bounded loops | [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) |
 | Plan → execute → verify → refine inner loop with reflection-round caps | [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) |
 | Literature search MCP + cross-source dedup across NCBI / S2 / Springer / Elsevier / bioRxiv / CrossRef | [paperclip](https://github.com/GXL-ai/paperclip) |
