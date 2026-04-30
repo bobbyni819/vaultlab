@@ -6,9 +6,13 @@ vaultlab is in active alpha development; some invariants may evolve, but each ch
 
 ---
 
-## KB Output Routing (mandatory)
+## Output routing conventions — where every artifact lives
 
-When any VaultLab module or agent produces output (a paper summary, a lineage arc, a meeting transcript, a slide deck), it MUST route to the KB via `vaultlab.kb.paths` helpers. **NEVER build path strings by hand.**
+Every VaultLab artifact has a documented canonical home. Agents and contributors do not invent paths, do not fall back to "wherever feels right," and do not silently overwrite work owned by other commands. The five rules below are the contract.
+
+### 1. The principle — canonical paths only
+
+Every output writes to a path returned by a helper in `src/vaultlab/kb/paths.py` (see the module docstring at `src/vaultlab/kb/paths.py:1-29`). **Never build path strings by hand.** Path-builders return `pathlib.Path` and do not `mkdir` — call `paths.ensure_parent(p)` (`src/vaultlab/kb/paths.py:370`) before writing.
 
 The three-layer rule:
 
@@ -16,9 +20,75 @@ The three-layer rule:
 - `Wiki/` — LLM-written content (per-paper summaries, cross-source concepts, project state)
 - `Output/` — generated artifacts for delivery (slides, reports, run-id directories)
 
-Use `paths.summary_path` / `paths.concept_path` / `paths.run_dir` / `paths.deck_path` etc. — see `src/vaultlab/kb/paths.py` for the full API. Path-builders return `pathlib.Path` and do not mkdir; call `paths.ensure_parent(p)` before writing.
+Full conventions reference: `G:/My Drive/Knowledge/vaultlab/Sources/Notes/kb-output-conventions-2026-04-29.md`.
 
-Full reference: `G:/My Drive/Knowledge/vaultlab/Sources/Notes/kb-output-conventions-2026-04-29.md`.
+### 2. The path matrix — artifact → canonical path → owner → frontmatter contract
+
+Cite this matrix when wiring a new command or auditing an existing one. Every row's path is built by the named helper; every owner is the slash command (or onboarding step) that writes the artifact.
+
+| Artifact | Canonical path | Helper (`vaultlab.kb.paths`) | Owner | Required frontmatter |
+|---|---|---|---|---|
+| Raw PDF | `Sources/Papers/<doi-slug>.pdf` | `pdf_path` (`paths.py:138`) | `/lit-arc`, `/lit-report` (Phase 5 acquisition) | n/a (binary) |
+| Full-text markdown | `Sources/Papers/<doi-slug>.md` | `fulltext_md_path` (`paths.py:143`) | acquisition waterfall | `doi`, `title`, `source` |
+| Article stub | `Sources/Articles/<doi-slug>.md` | `article_stub_path` (`paths.py:148`) | `/lit-arc`, `/lit-report` (Phase 3) | `doi`, `title`, `year`, `abstract` |
+| Search session log | `Sources/Notes/lit-search-<query-slug>-<date>.md` | `search_log_path` (`paths.py:153`) | `/lit-arc`, `/lit-report` (Phase 2) | `topic`, `seeds_count`, `date` |
+| Per-paper summary | `Wiki/Summaries/<doi-slug>.md` | `summary_path` (`paths.py:169`) | `/lit-arc`, `/lit-report` (Phase 6, via `summarize.write_summary_to_kb`) | `doi`, `tier`, `tldr`, `key_findings` |
+| Lineage arc | `Wiki/Concepts/<topic-slug>-lineage-<date>.md` | `concept_path(..., kind="lineage")` (`paths.py:174`) | `/lit-arc` (Phase 7) | `topic`, `date`, `n_total`, `n_tier_a` |
+| Deep-research report | `Wiki/Concepts/<topic-slug>-report-<date>.md` | `concept_path(..., kind="report")` (`paths.py:174`) | `/lit-report` (Phase 9) | `topic`, `date`, `audit_passed`, `audience` |
+| Project landing page | `Wiki/Projects/<slug>/START_HERE.md` | `project_state_path` (`paths.py:198`) | `/onboard-project` (Phase 6); refreshed by `/lit-arc` (Phase 9) via `_safe_merge_start_here` | `schema: vaultlab-start-here/v1`, `managed_by`, `slug` |
+| Project decisions log | `Wiki/Projects/<slug>/decisions-log.md` | `project_decisions_path` (`paths.py:209`) | `/onboard-project` (Phase 7); appended by every later command | `schema`, `slug` |
+| Project intake copy | `Wiki/Projects/<slug>/intake.md` | `project_intake_path` (`paths.py:220`) | `/onboard-project` (Phase 5) | mirrored from `<project>/project_intake.md` |
+| Project papers manifest | `Wiki/Projects/<slug>/papers.md` | `project_papers_path` (`paths.py:238`) | `/lit-arc` (Phase 9) | `schema`, `slug`, `last_run` |
+| Project lineage pointer | `Wiki/Projects/<slug>/lineage.md` | `project_lineage_pointer_path` (`paths.py:255`) | `/lit-arc` (Phase 9) | `schema`, `slug` |
+| Slide deck | `Output/<slug>/<deck-name>.pptx` | `deck_path` (`paths.py:282`) | `/build-deck` | n/a (binary; sidecars carry metadata) |
+| Deck plan | `Output/<slug>/deck_plan.md` | `deck_plan_path` (`paths.py:296`) | `/build-deck` (currently unused; reserved) | `topic`, `target_slide_count` |
+| Figure asset | `Output/<slug>/figures/<fig-id><suffix>` | `figure_path` (`paths.py:301`) | `/build-deck` | n/a (binary) |
+| Citation evidence | `Output/<slug>/citations/<file-slug>.evidence.json` | `evidence_path` (`paths.py:318`) | `/cite audit` | n/a (JSON) |
+| Run directory | `Output/<slug>/runs/<run-id>/` | `run_dir` (`paths.py:332`) | every orchestrator that runs a meeting | n/a (directory) |
+| Per-turn role output | `<run-dir>/turn-<n>-<role-id>.md` | `turn_path` (`paths.py:347`) | `crosstalk.write_crosstalk_artifacts` | `role`, `round`, `meeting` |
+| Meeting transcript | `<run-dir>/transcript.md` | `transcript_path` (`paths.py:360`) | `crosstalk.write_crosstalk_artifacts` | `meeting`, `mode`, `n_rounds` |
+| Project config (cwd-side) | `<project>/.vaultlab-project.json` | (in `vaultlab.onboarding.config.save_config`) | `/onboard-project` (Phase 8) | schema `vaultlab-project/v1` |
+
+If you need a path that isn't on this matrix, **add a helper to `vaultlab.kb.paths` first**, then use it. Do not hand-roll a path with the intent to "just this once."
+
+### 3. The additive rule — no destructive writes without an explicit ask
+
+Unless the user explicitly requested a destructive overwrite, agents APPEND, MERGE, or REFRESH-IN-PLACE. Defaults:
+
+- **Append** to logs and journals (`decisions-log.md`, search logs).
+- **Merge** new information into existing structure (e.g. add new papers to a corpus; do not rebuild).
+- **Refresh-in-place** sections owned by the current run; preserve sections written by other commands.
+
+The exemplar is `_safe_merge_start_here` in `src/vaultlab/research/lineage.py:679-796`. It detects when an onboarding-managed `START_HERE.md` is present (signals `managed_by: vaultlab.onboarding.project_init` or `schema: vaultlab-start-here/v1`, `lineage.py:673-676`) and instead of clobbering, appends or refreshes a single `## Lineage runs` section while preserving the onboarding-side body. New code that writes into shared files SHOULD follow this pattern: detect prior content, scope the write to the section the current command owns, and emit a provenance receipt that records `merged_with_onboarding: <bool>` (see `_safe_merge_start_here` lines 719-749 for the receipt-emit shape).
+
+### 4. The provenance rule — every terminal artifact gets sidecars
+
+Every terminal artifact (`.pptx`, lineage arc, report, `START_HERE.md`, etc.) writes BOTH:
+
+- `<output>.provenance.json` — machine-readable receipt
+- `<output>.method.md` — human-readable methods narrative
+
+Both are produced by `vaultlab.provenance.write_receipts(output_path, ProvenanceRecord(...))` at `src/vaultlab/provenance/_writer.py:30-74`. The function also appends one line per write to `<dir>/.vaultlab-provenance.jsonl` for cheap "find all outputs matching X" queries (`_writer.py:108-119`).
+
+Reference call sites:
+
+- Lineage arc: `src/vaultlab/research/lineage.py:2008-2026` (`run_lit_arc` Phase 8)
+- Deep-research report: `src/vaultlab/research/report.py:1357-1391` (`run_lit_report` Phase 10)
+- Project START_HERE refresh: `src/vaultlab/research/lineage.py:719-749` (best-effort sidecar inside `_safe_merge_start_here`)
+
+Receipts are best-effort metadata, never a hard gate — wrap the call in `try/except` and log via `logger.exception` if a write fails (see the lineage example at `lineage.py:744-749`). New orchestrators MUST add `write_receipts` calls for any terminal artifact they emit; bypassing this violates the AGENTS.md mandate (and is currently flagged as an open gap for the deck builder, per the pipeline-integration-map audit `F-6` in `G:/My Drive/Knowledge/vaultlab/Sources/Notes/pipeline-integration-map-2026-04-30.md`).
+
+### 5. The state-check rule — read the KB before any LLM call
+
+Every slash command's first action — before any LLM call, before any orchestrator invocation — is reading the relevant KB state at the canonical paths. The standard checks, in order:
+
+1. **Project config (cwd-side):** walk `cwd → cwd.parent → ...` for `<project>/.vaultlab-project.json`. If found, `slug` and `kb_root` from it WIN over topic-derived defaults. (Today this handoff is convention-only — see pipeline-integration-map finding `F-1` — and orchestrator-side resolution is the recommended fix.)
+2. **Prior project pages:** read `Wiki/Projects/<slug>/START_HERE.md` (`project_state_path`), `papers.md` (`project_papers_path`), and `decisions-log.md` (`project_decisions_path`). If present, the command treats them as authoritative state — additive merges only.
+3. **Prior corpus:** read existing `Wiki/Summaries/<doi-slug>.md` files for the project's known DOIs. Re-running a command on the same project should fetch the delta, not rebuild.
+4. **Prior arcs / reports:** check for `Wiki/Concepts/<topic-slug>-{lineage,report}-<date>.md`. Same-day reruns reuse the existing artifact unless the user asked for a fresh run.
+5. **Last-run timestamp:** read the most recent `<output>.provenance.json` sidecar in the project's `Output/<slug>/` tree to learn what was generated, with what params, and how long ago.
+
+If any of these reads fail (file missing, parse error), surface the gap as part of the command's preflight summary — don't silently fall through to a fresh-rebuild path.
 
 ---
 
