@@ -39,7 +39,7 @@ Inside Claude Code, VaultLab reads your whole research ecosystem and writes back
 |---|---|
 | **Knowledge base** (Obsidian-native markdown) | Per-paper summaries with citation graph, lineage arcs, project pages, manuscript drafts — all linked by `[[wikilinks]]`. Grows with your work. |
 | **Literature** (NCBI, Semantic Scholar, Springer, Elsevier, bioRxiv, CrossRef) | Multi-source search → citation-graph metrics (OG-score, forward-influence, year-buckets) → LLM-driven lineage binning → grounded summaries with `[pN]` page markers. |
-| **Meeting transcripts** | Record any meeting on your machine — Zoom, Teams, or any Windows audio source — and auto-transcribe (local Whisper or cloud). Ask *"what did we decide about cluster 7 last Tuesday?"* and the answer comes from the transcript. |
+| **Built-in meeting recorder** | Captures any meeting on your machine — Zoom, Teams, in-person — and transcribes locally (Whisper) or via cloud. Ask *"what did we decide about cluster 7 last Tuesday?"* and the answer comes from the transcript. |
 | **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
 | **Project state** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* |
 
@@ -200,8 +200,11 @@ VaultLab's patterns are deliberately lifted from open-source projects already at
 
 | What VaultLab borrowed | Source |
 |---|---|
+| The whole conceptual foundation — persistent, compounding wiki maintained by the LLM, three-layer split of raw sources / wiki / schema, with ingest / query / lint as the core operations | [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) (Andrej Karpathy) |
+| Vault model, wikilinks, frontmatter conventions, plugin ecosystem (Advanced URI / Dataview / Templater) the KB layer assumes | [Obsidian](https://obsidian.md) |
 | Claude Code skill-bundle layout — slash commands as plain markdown, AGENTS.md invariants for contributors | [gstack](https://github.com/garrytan/gstack) (Garry Tan) |
 | Per-paper grounded summaries with `[pN]` page-marker citations and refuse-to-ship-when-evidence-is-missing | [PaperQA2](https://github.com/Future-House/paper-qa) (FutureHouse) |
+| Hover-to-see-quote citation UX — inline evidence visible in draft mode, stripped for final output | [NotebookLM](https://notebooklm.google) (Google) |
 | Multi-agent meeting structure — analyst → critic → synthesizer rounds with bounded loops | [virtual-lab](https://github.com/zou-group/virtual-lab) (Zou group, Stanford) |
 | Plan → execute → verify → refine inner loop with reflection-round caps | [AI-Scientist](https://github.com/SakanaAI/AI-Scientist) (Sakana AI) |
 | Literature search MCP + cross-source dedup across NCBI / S2 / Springer / Elsevier / bioRxiv / CrossRef | [paperclip](https://github.com/GXL-ai/paperclip) |
