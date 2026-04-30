@@ -1205,6 +1205,7 @@ def summarize_corpus(
     overwrite: bool = False,
     progress: Callable[[str, int, int], None] | None = None,
     reader: SummaryReader | None = None,
+    tier_a_dois: set[str] | frozenset[str] | None = None,
     _llm: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
 ) -> dict[str, PaperSummary]:
     """Build summaries for every paper in ``corpus.papers`` and write them.
@@ -1264,6 +1265,12 @@ def summarize_corpus(
         paper = corpus.papers[doi]
         pdf_path = cache_path_for(doi, pdf_cache_dir)
         refs_missing = doi in corpus.references and not corpus.references.get(doi)
+        # Closes L4-CODEX-discovered bug #1: respect tier_a_dois filter so
+        # only papers selected for Tier-A reading invoke the reader. Other
+        # papers with cached PDFs fall through to the Tier-C stub path so
+        # we don't ask the reader to summarize 100+ peripheral papers.
+        if tier_a_dois is not None and doi not in tier_a_dois:
+            pdf_path = Path("/__force_tier_c__")  # nonexistent → Tier-C stub
         if not pdf_path.exists():
             # Tier C: build a stub and skip the reader.
             summary = _build_base_summary(

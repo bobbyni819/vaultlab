@@ -1,79 +1,73 @@
+
+!docs/**/*.pdf
+!examples/**/expected_outputs/*.docx
+!examples/**/expected_outputs/*.pptx
+# Anthropic / API artifacts
+# Build artifacts
+# Data (per .vaultlab-project.json data_sources, real data lives outside repo)
+# Generated outputs
+# IDEs
+# Jupyter
+# OS
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-.eggs/
-*.egg
-MANIFEST
-
-# Virtualenvs
-.venv/
-venv/
-env/
-.env
-.envrc
-
 # Testing / coverage
-.pytest_cache/
+# vaultlab-specific
+# Virtualenvs
+*$py.class
+*.cassette
+*.docx
+*.egg
+*.egg-info/
+*.fcs
+*.h5
+*.h5ad
+*.ibd
+*.imzML
+*.pdf
+*.pptx
+*.provenance.json.bak
+*.py[cod]
+*.so
+*.svs
+*.swp
+*.tif
+*.tiff
+*.zarr/
+*~
+.anthropic_cache/
+.cache/
 .coverage
 .coverage.*
-htmlcov/
-.tox/
-.nox/
-.mypy_cache/
-.ruff_cache/
-coverage.xml
-
-# IDEs
-.idea/
-.vscode/
-*.swp
-*~
-
-# OS
 .DS_Store
-Thumbs.db
-desktop.ini
-
-# Jupyter
+.eggs/
+.env
+.envrc
+.idea/
 .ipynb_checkpoints/
-
-# vaultlab-specific
-~/.config/vaultlab/
+.mypy_cache/
+.nox/
+.pytest_cache/
+.Python
+.ruff_cache/
+.tox/
 .vaultlab/
-*.provenance.json.bak
-embeddings/
-.cache/
-
-# Data (per .vaultlab-project.json data_sources, real data lives outside repo)
+.venv/
+.vscode/
+__pycache__/
+~/.config/vaultlab/
+build/
+coverage.xml
 data/
-*.h5ad
-*.h5
-*.tiff
-*.tif
-*.zarr/
-*.imzML
-*.ibd
-*.fcs
-*.svs
-
-# Generated outputs
+desktop.ini
+dist/
+embeddings/
+env/
+htmlcov/
+MANIFEST
 Output/
 runs/
-
-# Anthropic / API artifacts
-*.cassette
-.anthropic_cache/
-
-# Build artifacts
-*.pdf
-!docs/**/*.pdf
-*.pptx
-!examples/**/expected_outputs/*.pptx
-*.docx
-!examples/**/expected_outputs/*.docx
+scripts/_l4_state/
+scripts/_trial_acquisition_cache/
+scripts/_trial_figure_acquisition_cache/
+Thumbs.db
+venv/

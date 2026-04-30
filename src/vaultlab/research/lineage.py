@@ -264,24 +264,43 @@ def _pick_top_n_for_summarization(
     corpus: Corpus,
     *,
     n: int,
+    pdf_cache_dir: Path | None = None,
 ) -> list[str]:
     """Return up to ``n`` corpus DOIs to spend Tier-A token budget on.
 
-    Ranks by ``og_score + forward_influence`` (papers that BOTH show up
-    as a foundational citation across the seed set AND are themselves
-    seeds whose work is cited by other seeds get prioritised).
+    Ranks by ``has_pdf, og_score + forward_influence`` — papers WITH a
+    cached PDF are prioritized over papers without (per L4-CODEX bug #2:
+    spending Tier-A budget on papers we can't full-text-read is wasted).
+
+    Within each tier (has_pdf vs not), rank by ``og_score +
+    forward_influence`` so the most central papers come first.
     """
     metrics = corpus.metrics
+    seed_dois = [d for d in (s.doi.lower() for s in corpus.seeds if s.doi)]
     if metrics is None:
-        # No metrics; just take the seeds in input order.
-        return [d for d in (s.doi.lower() for s in corpus.seeds if s.doi)][:n]
+        # No metrics; fall back to seeds in input order.
+        return seed_dois[:n]
 
-    def _score(doi: str) -> float:
-        return float(metrics.og_score.get(doi, 0.0)) + float(
-            metrics.forward_influence.get(doi, 0)
+    # Detect which DOIs have cached PDFs (if pdf_cache_dir given).
+    if pdf_cache_dir is not None:
+        from vaultlab.research.acquisition import cache_path_for
+
+        def _has_pdf(doi: str) -> bool:
+            return cache_path_for(doi, pdf_cache_dir).exists()
+    else:
+        def _has_pdf(doi: str) -> bool:
+            return False  # treat all equally
+
+    def _score(doi: str) -> tuple[int, float]:
+        # Primary: 1 if has_pdf, 0 otherwise (so PDFs sort first).
+        # Secondary: og_score + forward_influence.
+        return (
+            1 if _has_pdf(doi) else 0,
+            float(metrics.og_score.get(doi, 0.0)) + float(
+                metrics.forward_influence.get(doi, 0)
+            ),
         )
 
-    # Score every paper in the corpus, take top-n by score.
     ranked = sorted(corpus.papers.keys(), key=_score, reverse=True)
     return ranked[:n]
 
@@ -979,21 +998,23 @@ def run_lit_arc(
     # decide how many of the top-ranked papers to keep PDFs for; we
     # delete cached PDFs for everything below the cutoff so those papers
     # become Tier-C without an LLM call.
+    # L4-CODEX bug #1+#2 fix: explicitly track tier_a_dois (which papers
+    # we WANT the reader to summarize) and pass to summarize_corpus.
+    # Picker now also biases toward papers WITH cached PDFs.
+    tier_a_dois: set[str] | None = None
     if max_papers_to_summarize and max_papers_to_summarize < corpus.n_papers:
-        keep = set(_pick_top_n_for_summarization(corpus, n=max_papers_to_summarize))
-        kept = 0
-        skipped = 0
-        for doi in list(corpus.papers.keys()):
-            if doi in keep:
-                kept += 1
-            else:
-                # Demote: pretend the PDF doesn't exist so summarize_corpus
-                # writes a Tier-C stub. We don't delete the cached PDF
-                # itself (it might be used by other commands later).
-                res = acq_results.get(doi)
-                if res is not None and getattr(res, "pdf_path", None) is not None:
-                    skipped += 1
-        _emit(progress, "summarize_budget", kept=kept, skipped=skipped)
+        keep = set(
+            _pick_top_n_for_summarization(
+                corpus, n=max_papers_to_summarize, pdf_cache_dir=pdf_cache_dir,
+            )
+        )
+        tier_a_dois = keep
+        _emit(
+            progress,
+            "summarize_budget",
+            kept=len(keep),
+            total=corpus.n_papers,
+        )
 
     summarize_fn = _summarize_corpus_fn if _summarize_corpus_fn is not None else summarize_corpus
     if reader is not None:
@@ -1007,6 +1028,7 @@ def run_lit_arc(
             parallel=1,  # reader mode is sequential
             overwrite=True,
             reader=reader,
+            tier_a_dois=tier_a_dois,
         )
     else:
         summaries = summarize_fn(
