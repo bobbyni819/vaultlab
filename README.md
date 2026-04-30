@@ -23,7 +23,7 @@ Research at scale is fragmented: a lot of meetings, most of which don't get reco
 
 VaultLab puts all of it into an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have.
 
-I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I've found more value operating inside Claude Code. Watching others ship — [gstack](https://github.com/garrytan/gstack), [nanoGPT](https://github.com/karpathy/nanoGPT), [virtual-lab](https://github.com/zou-group/virtual-lab), [AI-Scientist](https://github.com/SakanaAI/AI-Scientist), other research-specific agent systems — was the push to ship mine and join the open-source wave. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
+I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I've found more value operating inside Claude Code. The push to ship this came from watching what [Garry Tan](https://github.com/garrytan/gstack), [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), [James Zou](https://github.com/zou-group/virtual-lab), and others have built — open-source, opinionated, hackable. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
 
 ---
 
