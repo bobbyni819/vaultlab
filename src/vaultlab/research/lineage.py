@@ -229,6 +229,14 @@ class LineageRunResult:
         project_view_paths: Mapping of project-view file kind
             (``start_here``, ``papers``, ``lineage``, ``decisions_log``)
             to the file path written by Phase 8.
+        corpus: The live :class:`Corpus` produced by Phase 4 (corpus +
+            metrics). Carried so downstream consumers (e.g. the
+            adversarial deck-plan path) can read
+            ``corpus.metrics.co_citation_pairs`` / ``corpus.seeds`` /
+            ``corpus.references`` without reconstructing a synthetic
+            corpus from on-disk frontmatters (F-13 in the
+            pipeline-integration-map audit). May be ``None`` for callers
+            that only need paths.
     """
 
     topic: str
@@ -241,6 +249,7 @@ class LineageRunResult:
     duration_seconds: float = 0.0
     project_slug: str = ""
     project_view_paths: dict[str, Path] = field(default_factory=dict)
+    corpus: "Corpus | None" = None
 
 
 # ---------------------------------------------------------------------------
@@ -655,6 +664,138 @@ def _decisions_log_header(*, project_slug: str, topic: str) -> str:
     )
 
 
+# Frontmatter signal that ``START_HERE.md`` was written by the onboarding
+# orchestrator (``vaultlab.onboarding.project_init``) and should NOT be
+# clobbered by the lit-arc project-view writer. The onboarding template
+# emits ``schema: vaultlab-start-here/v1`` and
+# ``managed_by: vaultlab.onboarding.project_init`` in its frontmatter — we
+# look for either signal so the detection is robust to small format drift.
+_ONBOARDING_START_HERE_SIGNALS: tuple[str, ...] = (
+    "managed_by: vaultlab.onboarding.project_init",
+    "schema: vaultlab-start-here/v1",
+)
+
+
+def _safe_merge_start_here(
+    *,
+    start_here_path: Path,
+    lineage_body: str,
+    project_slug: str,
+    topic: str,
+    arc_path: Path,
+    date_str: str,
+    n_total: int,
+    n_tier_a: int,
+    n_tier_c: int,
+    deck_path: Path | None,
+) -> None:
+    """Write the lineage START_HERE without clobbering an onboarding START_HERE.
+
+    Detection: if ``start_here_path`` already exists and its frontmatter
+    carries one of the :data:`_ONBOARDING_START_HERE_SIGNALS` markers
+    (i.e. it was written by ``vaultlab.onboarding.project_init``), append
+    a "## Lineage runs" section to the existing body instead of
+    overwriting it. The onboarding-side content (Topic / Goals / Folder
+    inventory / etc.) stays intact so users keep one canonical landing
+    page per project (F-2 in the pipeline-integration-map audit).
+
+    When the existing file was written by lit-arc itself (no onboarding
+    signal), the original overwrite-with-current-state behaviour is
+    preserved — we want refreshes of the live Tier-A / Tier-C counts.
+    """
+    existing: str | None = None
+    if start_here_path.exists():
+        try:
+            existing = start_here_path.read_text(encoding="utf-8")
+        except OSError:
+            existing = None
+
+    is_onboarding = bool(
+        existing
+        and existing.startswith("---")
+        and any(sig in existing for sig in _ONBOARDING_START_HERE_SIGNALS)
+    )
+
+    def _emit_receipt() -> None:
+        """Best-effort sidecar receipt for the START_HERE update (F-7)."""
+        try:
+            record = ProvenanceRecord(
+                generated_by="vaultlab.research.lineage._write_project_view",
+                project=project_slug,
+                topic=topic,
+                kind="project_start_here",
+                inputs=[str(arc_path)] if arc_path else [],
+                params={
+                    "slug": project_slug,
+                    "date": date_str,
+                    "n_total": n_total,
+                    "n_tier_a": n_tier_a,
+                    "n_tier_c": n_tier_c,
+                    "merged_with_onboarding": is_onboarding,
+                },
+                tags=["lit-arc", "project-view", "start-here"],
+                notes=(
+                    "Refreshed via lit-arc Phase 9. "
+                    "Merged with onboarding START_HERE."
+                    if is_onboarding else
+                    "Refreshed via lit-arc Phase 9 (overwrite)."
+                ),
+            )
+            write_receipts(start_here_path, record)
+        except Exception:
+            logger.exception(
+                "write_receipts failed for project START_HERE %s",
+                start_here_path,
+            )
+
+    if not is_onboarding:
+        # Either no file or a previous lit-arc render — overwrite with
+        # the live state so Tier counts refresh.
+        start_here_path.write_text(lineage_body, encoding="utf-8")
+        _emit_receipt()
+        return
+
+    # Onboarding-managed file: preserve it and append (or refresh) a
+    # "## Lineage runs" section that lit-arc owns.
+    deck_line = (
+        f"- **Slide deck:** `Output/{project_slug}/{deck_path.name}`"
+        if deck_path is not None
+        else "- **Slide deck:** _(none — lit-arc only)_"
+    )
+    new_section = "\n".join([
+        "## Lineage runs",
+        "",
+        f"- **Last run:** {date_str}",
+        f"- **Topic:** {topic}",
+        f"- **Corpus:** {n_total} papers ({n_tier_a} Tier-A, {n_tier_c} Tier-C)",
+        f"- **Lineage arc:** [[{arc_path.stem}|→ open arc]]",
+        "- **Per-paper manifest:** [[papers|→ open papers list]]",
+        "- **Decisions log:** [[decisions-log|→ open log]]",
+        deck_line,
+        "",
+    ])
+
+    if "## Lineage runs" in existing:
+        # Refresh the existing section in place so we don't accumulate
+        # one block per run. Find the next H2 (or EOF) and replace.
+        start = existing.find("## Lineage runs")
+        # Find next "\n## " after start (a sibling H2). If none, replace
+        # to end of file.
+        next_h2 = existing.find("\n## ", start + 1)
+        prefix = existing[:start]
+        if next_h2 == -1:
+            merged = prefix + new_section
+        else:
+            merged = prefix + new_section + "\n" + existing[next_h2 + 1:]
+    else:
+        if not existing.endswith("\n"):
+            existing += "\n"
+        merged = existing + "\n" + new_section
+
+    start_here_path.write_text(merged, encoding="utf-8")
+    _emit_receipt()
+
+
 def _write_project_view(
     *,
     kb_root: Path,
@@ -751,9 +892,17 @@ def _write_project_view(
         encoding="utf-8",
     )
 
-    # 3. START_HERE.md — overwrite (live counts of Tier-A / Tier-C)
-    start_here_p.write_text(
-        _render_project_start_here(
+    # 3. START_HERE.md — overwrite ONLY if not onboarding-managed.
+    # Per F-2 in the pipeline-integration-map audit, when
+    # ``init_project_from_intake`` already wrote an onboarding START_HERE,
+    # we must not clobber it. ``_safe_merge_start_here`` detects that case
+    # and appends a "## Lineage runs" section instead.
+    n_total_for_view = len(summaries)
+    n_tier_a_for_view = sum(1 for s in summaries.values() if s.tier == "A")
+    n_tier_c_for_view = n_total_for_view - n_tier_a_for_view
+    _safe_merge_start_here(
+        start_here_path=start_here_p,
+        lineage_body=_render_project_start_here(
             project_slug=project_slug,
             topic=topic,
             summaries=summaries,
@@ -761,7 +910,14 @@ def _write_project_view(
             deck_path=deck_path,
             date_str=date_str,
         ),
-        encoding="utf-8",
+        project_slug=project_slug,
+        topic=topic,
+        arc_path=arc_path,
+        date_str=date_str,
+        n_total=n_total_for_view,
+        n_tier_a=n_tier_a_for_view,
+        n_tier_c=n_tier_c_for_view,
+        deck_path=deck_path,
     )
 
     # 4. decisions-log.md — APPEND new entry (or seed file with header).
@@ -2094,4 +2250,8 @@ def run_lit_arc(
         duration_seconds=duration,
         project_slug=resolved_slug,
         project_view_paths=project_view_paths,
+        # F-13: carry the live corpus so the deck builder can read
+        # ``corpus.metrics.co_citation_pairs`` etc. without rebuilding a
+        # synthetic stand-in from on-disk frontmatters.
+        corpus=corpus,
     )

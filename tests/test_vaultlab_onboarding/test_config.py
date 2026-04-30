@@ -12,6 +12,7 @@ from vaultlab.onboarding.config import (
     PROJECT_CONFIG_SCHEMA,
     VaultLabProjectConfig,
     load_config,
+    load_project_config_from_cwd,
     save_config,
 )
 
@@ -128,3 +129,61 @@ class TestUpdateTimestamp:
         assert loaded is not None
         # last_updated should have been refreshed during save
         assert loaded.last_updated != "2020-01-01"
+
+
+class TestLoadFromCwd:
+    """F-1 regression: ``load_project_config_from_cwd`` walks up the tree.
+
+    The slash command bodies for ``/lit-arc`` / ``/build-deck`` /
+    ``/lit-report`` call this helper to recover slug + kb_root after
+    ``/onboard-project`` has run, so users don't have to re-thread
+    project context through every command. We keep the helper out of
+    the orchestrators themselves (per Bobby's "explicit over magic"
+    rule); these tests pin its behaviour at the seam.
+    """
+
+    def test_load_project_config_from_cwd_finds_in_parent(
+        self, tmp_path: Path
+    ) -> None:
+        """Helper walks up from a nested subdirectory to the project root."""
+        cfg = VaultLabProjectConfig(
+            slug="codex-test",
+            topic="CODEX cellular neighborhoods",
+            kb_root="G:/My Drive/Knowledge/vaultlab",
+        )
+        save_config(cfg, tmp_path)
+
+        # Search starting from a deeply-nested subfolder must still find
+        # the config at the project root.
+        nested = tmp_path / "data" / "raw" / "2026-04"
+        nested.mkdir(parents=True)
+
+        loaded = load_project_config_from_cwd(start=nested)
+        assert loaded is not None
+        assert loaded.slug == "codex-test"
+        assert loaded.topic == "CODEX cellular neighborhoods"
+        assert loaded.kb_root == "G:/My Drive/Knowledge/vaultlab"
+
+    def test_load_project_config_from_cwd_returns_none_when_absent(
+        self, tmp_path: Path
+    ) -> None:
+        """No config anywhere up the tree → None (not a raise)."""
+        # tmp_path is an isolated dir below pytest's basetemp; pytest
+        # fixtures guarantee no .vaultlab-project.json lives in it.
+        empty = tmp_path / "scratch"
+        empty.mkdir()
+        assert load_project_config_from_cwd(start=empty) is None
+
+    def test_load_project_config_from_cwd_accepts_file_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Helper tolerates being pointed at a file (uses parent dir)."""
+        cfg = VaultLabProjectConfig(slug="x", topic="t")
+        save_config(cfg, tmp_path)
+        # Pretend the user passed a file inside the project folder.
+        sentinel = tmp_path / "scratchpad.txt"
+        sentinel.write_text("hi", encoding="utf-8")
+
+        loaded = load_project_config_from_cwd(start=sentinel)
+        assert loaded is not None
+        assert loaded.slug == "x"

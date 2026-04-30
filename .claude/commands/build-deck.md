@@ -73,8 +73,23 @@ topic = "<from args>"
 speaker = "<from args or git config>"
 kb_root = Path("G:/My Drive/Knowledge/vaultlab")  # or research KB
 
+# F-1 onboarding handoff: when /onboard-project ran earlier in this
+# project folder (or a parent), pick up slug + kb_root + topic from the
+# .vaultlab-project.json instead of re-asking. The orchestrator below
+# still takes explicit kwargs -- this helper just sources the values.
+from vaultlab.onboarding import load_project_config_from_cwd
+project_cfg = load_project_config_from_cwd()
+project_slug = "lit-arc"  # default — overridden by onboarding cfg below
+if project_cfg is not None:
+    if project_cfg.slug:
+        project_slug = project_cfg.slug
+    if project_cfg.kb_root:
+        kb_root = Path(project_cfg.kb_root)
+    if not topic and project_cfg.topic:
+        topic = project_cfg.topic
+
 # Step 3: lit-arc (reuse if already-run today)
-result = run_lit_arc(topic, kb_root=kb_root, max_seeds=10)
+result = run_lit_arc(topic, kb_root=kb_root, project_slug=project_slug, max_seeds=10)
 
 # Step 4: figure acquisition (graceful)
 figure_assignments: dict[str, Path] = {}
@@ -131,7 +146,9 @@ out = build_deck_from_lineage_result(
     result,
     speaker=speaker,
     affiliation="Hickey Lab @ Duke BME",
-    project_slug="lit-arc",
+    project_slug=project_slug,        # F-1: from .vaultlab-project.json
+                                      # (defaults to "lit-arc" if no
+                                      # onboarding cfg was found)
     figure_assignments=figure_assignments,
     kb_root=kb_root,
     plan_callback=claude_code_plan_generator,  # LLM-driven plan

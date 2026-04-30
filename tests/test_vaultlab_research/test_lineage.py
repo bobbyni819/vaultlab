@@ -1817,3 +1817,184 @@ def test_run_lit_arc_adversarial_picker_fallback_writes_decision_log(
         "expected 'adversarial picker fallback' in decision audit trail; "
         f"decisions_log={decisions_log}, fallback={fallback_file}"
     )
+
+
+# ---------------------------------------------------------------------------
+# F-13 regression: LineageRunResult carries the live Corpus
+# ---------------------------------------------------------------------------
+
+
+def test_lit_arc_does_not_clobber_onboarding_start_here(tmp_path: Path) -> None:
+    """F-2: lit-arc's project-view writer must NOT clobber an onboarding START_HERE.
+
+    When ``init_project_from_intake`` writes an onboarding-managed
+    ``Wiki/Projects/<slug>/START_HERE.md`` (frontmatter signals
+    ``managed_by: vaultlab.onboarding.project_init`` /
+    ``schema: vaultlab-start-here/v1``), a subsequent ``run_lit_arc``
+    call against the same slug would historically overwrite it with
+    the lit-arc rendering, destroying intake context. The fix:
+    ``_safe_merge_start_here`` detects the onboarding signal and
+    appends a "## Lineage runs" section instead of replacing the file.
+    """
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "fake-lineage-2026-04-30.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# fake arc\n", encoding="utf-8")
+
+    # Pre-seed an onboarding-managed START_HERE under the canonical slug.
+    onboarding_path = project_state_path(tmp_path, "codex-onboarded")
+    onboarding_path.parent.mkdir(parents=True, exist_ok=True)
+    onboarding_body = (
+        "---\n"
+        "slug: codex-onboarded\n"
+        "schema: vaultlab-start-here/v1\n"
+        "last_updated: 2026-04-29 10:00\n"
+        "managed_by: vaultlab.onboarding.project_init\n"
+        "version: 1\n"
+        "---\n\n"
+        "# START_HERE — codex-onboarded\n\n"
+        "## Topic\n\n"
+        "CODEX cellular neighborhoods\n\n"
+        "## Goals\n\n"
+        "understand_literature\n\n"
+        "## Folder inventory\n\n"
+        "- 3 .py files\n\n"
+        "## Files to read first if resuming\n\n"
+        "- `README.md`\n"
+    )
+    onboarding_path.write_text(onboarding_body, encoding="utf-8")
+
+    # Now run the lit-arc project-view writer against the same slug.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="codex-onboarded",
+        topic="CODEX cellular neighborhoods",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-30",
+        timestamp="2026-04-30T11:30:00",
+    )
+
+    merged = onboarding_path.read_text(encoding="utf-8")
+    # Onboarding content must be preserved intact.
+    assert "managed_by: vaultlab.onboarding.project_init" in merged
+    assert "## Topic" in merged
+    assert "## Goals" in merged
+    assert "## Folder inventory" in merged
+    assert "## Files to read first if resuming" in merged
+    # ... and the lit-arc section must be appended.
+    assert "## Lineage runs" in merged
+    assert "fake-lineage-2026-04-30" in merged
+
+    # Re-running lit-arc should refresh (not duplicate) the Lineage runs
+    # block — only one such header at any time.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="codex-onboarded",
+        topic="CODEX cellular neighborhoods",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-05-01",
+        timestamp="2026-05-01T09:00:00",
+    )
+    refreshed = onboarding_path.read_text(encoding="utf-8")
+    assert refreshed.count("## Lineage runs") == 1
+    assert "## Topic" in refreshed  # still preserved
+
+
+def test_lit_arc_overwrites_its_own_start_here(tmp_path: Path) -> None:
+    """When the existing START_HERE was written by lit-arc itself (no
+    onboarding signal), the previous overwrite-with-current-state
+    behaviour is preserved so Tier-A / Tier-C counts stay live."""
+    summaries = _two_summaries()
+    corpus = _two_corpus()
+    arc_p = tmp_path / "Wiki" / "Concepts" / "arc.md"
+    arc_p.parent.mkdir(parents=True)
+    arc_p.write_text("# arc\n", encoding="utf-8")
+
+    # First run lays down a lit-arc START_HERE (no onboarding signal).
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="lit-arc-only",
+        topic="Topic A",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-29",
+        timestamp="2026-04-29T10:00:00",
+    )
+
+    # Second run with a different topic should refresh the file.
+    _write_project_view(
+        kb_root=tmp_path,
+        project_slug="lit-arc-only",
+        topic="Topic B refreshed",
+        arc_path=arc_p,
+        summaries=summaries,
+        corpus=corpus,
+        date_str="2026-04-30",
+        timestamp="2026-04-30T11:00:00",
+    )
+
+    start_p = project_state_path(tmp_path, "lit-arc-only")
+    body = start_p.read_text(encoding="utf-8")
+    # Refreshed → reflects latest topic, no onboarding metadata.
+    assert "Topic B refreshed" in body
+    assert "managed_by: vaultlab.onboarding.project_init" not in body
+
+
+def test_lineage_run_result_carries_corpus(tmp_path, monkeypatch):
+    """``run_lit_arc`` must populate ``result.corpus`` with the live object.
+
+    Before the F-13 fix, ``LineageRunResult`` carried only paths and
+    counters, so the deck builder's adversarial / plan_callback paths
+    rebuilt a synthetic corpus from on-disk frontmatters and lost
+    ``co_citation_pairs`` / ``seeds`` / ``references``. This regression
+    test pins the new behaviour: the live :class:`Corpus` (with
+    populated ``metrics`` and ``references``) flows through to the
+    result so downstream consumers can read it directly.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+
+    result = run_lit_arc(
+        "CRISPR base editing",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        _today="2026-04-29",
+    )
+
+    # The result must have a non-None .corpus attribute carrying a
+    # vaultlab.research.corpus.Corpus instance.
+    from vaultlab.research.corpus import Corpus as _Corpus
+
+    assert isinstance(result.corpus, _Corpus), (
+        f"expected result.corpus to be a Corpus, got {type(result.corpus)!r}"
+    )
+    # ... and it must be the LIVE corpus (populated metrics + references),
+    # not a freshly-allocated stand-in.
+    assert result.corpus.n_papers >= 3
+    assert result.corpus.metrics is not None
+    # Seeds should round-trip onto the corpus (citation_lookup-based ref
+    # walk gave us at least the original seed DOIs).
+    seed_dois = {s.doi.lower() for s in seeds if s.doi}
+    corpus_dois = {d.lower() for d in result.corpus.papers}
+    assert seed_dois <= corpus_dois, (
+        f"corpus.papers missing seed DOIs: {seed_dois - corpus_dois}"
+    )
+    # corpus_size on the result must agree with corpus.n_papers.
+    assert result.corpus_size == result.corpus.n_papers

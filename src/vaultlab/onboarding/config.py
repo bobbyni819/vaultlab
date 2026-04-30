@@ -23,6 +23,7 @@ __all__ = [
     "PROJECT_CONFIG_SCHEMA",
     "VaultLabProjectConfig",
     "load_config",
+    "load_project_config_from_cwd",
     "save_config",
 ]
 
@@ -130,3 +131,55 @@ def load_config(
     if not isinstance(data, dict):
         raise ValueError(f"{p} did not parse to a JSON object")
     return VaultLabProjectConfig.from_dict(data)
+
+
+def load_project_config_from_cwd(
+    start: Path | str | None = None,
+    *,
+    filename: str = PROJECT_CONFIG_FILENAME,
+) -> VaultLabProjectConfig | None:
+    """Walk up from ``start`` (default cwd) looking for ``.vaultlab-project.json``.
+
+    Slash-command-side helper for the F-1 onboarding handoff: after
+    ``/onboard-project`` runs, future commands invoked from inside the
+    same project folder (or any subdirectory) can recover ``slug``,
+    ``topic``, ``kb_root`` etc. without re-asking the user.
+
+    Per Bobby's "explicit over magic" preference, the orchestrators
+    themselves (``run_lit_arc``, ``run_lit_report``, the deck builder)
+    do **not** call this helper — they continue to require explicit
+    kwargs. The slash-command markdown bodies (``lit-arc.md`` etc.)
+    invoke this helper at the top and thread ``project_slug=`` /
+    ``kb_root=`` into the orchestrator call.
+
+    Parameters
+    ----------
+    start
+        Starting directory for the upward walk. Defaults to the current
+        working directory at call time.
+    filename
+        Override for ``.vaultlab-project.json`` (testing).
+
+    Returns
+    -------
+    VaultLabProjectConfig | None
+        The config if found anywhere from ``start`` up to the filesystem
+        root; ``None`` if no config was found.
+    """
+    if start is None:
+        current = Path.cwd().resolve()
+    else:
+        current = Path(start).resolve()
+
+    # Resolve to a directory if the caller passed a file path.
+    if current.is_file():
+        current = current.parent
+
+    while True:
+        candidate = current / filename
+        if candidate.exists():
+            return load_config(current, filename=filename)
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent

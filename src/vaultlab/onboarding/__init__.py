@@ -32,6 +32,7 @@ from vaultlab.onboarding.config import (
     PROJECT_CONFIG_SCHEMA,
     VaultLabProjectConfig,
     load_config,
+    load_project_config_from_cwd,
     save_config,
 )
 from vaultlab.onboarding.intake import (
@@ -69,5 +70,6 @@ __all__ = [
     "PROJECT_CONFIG_SCHEMA",
     "VaultLabProjectConfig",
     "load_config",
+    "load_project_config_from_cwd",
     "save_config",
 ]

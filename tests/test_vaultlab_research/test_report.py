@@ -893,3 +893,182 @@ def test_render_summary_block_uses_slugify_doi():
     assert f"[[{expected_slug}|" in refs, (
         f"_references_from_summaries did not use slugify_doi: {refs!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# F-8 regression: run_lit_report honours project_slug in the output path
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_report_honors_project_slug(tmp_path, monkeypatch):
+    """Explicit ``project_slug`` drives the report path slug.
+
+    Before the F-8 fix, ``run_lit_report`` accepted ``project_slug`` then
+    immediately ``del`` 'd it, so the report always landed at the
+    topic-derived slug. This regression test pins the new behaviour:
+    when an explicit slug is passed, the output path uses it (mirroring
+    ``run_lit_arc``'s resolved-slug pattern); when None, the old
+    topic-derived path is preserved.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    def _canned(_section_id):
+        text = (
+            "Cellular-neighborhood research "
+            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]] "
+            "operationalized indexed niches. "
+        ) * 80
+        return {
+            "section_text": " ".join(text.split()[:600]),
+            "claims_with_evidence": [
+                {
+                    "claim": "Goltsev 2018 defined indexed niches.",
+                    "doi_slugs": ["10.1016_j.cell.2018.07.010"],
+                },
+            ],
+        }
+
+    def _make_runner():
+        def _crosstalk(meeting, roles):
+            outputs = []
+            agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
+            is_audit = (
+                "Audit the report document" in agenda_text
+                or meeting.topic.startswith("rigor audit")
+            )
+            for r in roles:
+                if r.id == "synthesizer" and not is_audit:
+                    section_id = "background"
+                    for sec in SECTION_ORDER:
+                        if sec.replace("_", " ") in agenda_text:
+                            section_id = sec
+                            break
+                    outputs.append({"output": json.dumps(_canned(section_id))})
+                elif r.id == "rigor_auditor":
+                    outputs.append({"output": json.dumps(
+                        {"passed": True, "issues": []}
+                    )})
+                else:
+                    outputs.append({"output": f"[{r.id}]"})
+            return outputs
+        return _crosstalk
+
+    client = _FakeClient(_make_seeds())
+
+    # Run with an EXPLICIT project_slug — different from the topic slug.
+    result = run_lit_report(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        project_slug="codex-cn-test",
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        depth="thorough",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_stub_reader,
+        crosstalk_runner=_make_runner(),
+        crosstalk_n_rounds=1,
+        _today="2026-04-30",
+    )
+
+    # The report file must land at the SLUG-derived path, not the
+    # topic-derived path.
+    expected = concept_path(tmp_path, "codex-cn-test", "report", "2026-04-30")
+    topic_only = concept_path(
+        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
+    )
+    assert result.report_path == expected, (
+        f"expected slug-derived path {expected}, got {result.report_path}"
+    )
+    assert result.report_path.exists()
+    # The topic-only path should NOT have been written when an explicit
+    # slug was supplied (different stem).
+    assert expected != topic_only, (
+        "test bug: slug and topic produced same path; pick a slug != topic"
+    )
+    assert not topic_only.exists(), (
+        f"unexpected write at topic-derived path {topic_only}"
+    )
+
+    # Provenance receipt should still land next to the new path.
+    json_p = result.report_path.with_name(
+        result.report_path.name + ".provenance.json"
+    )
+    assert json_p.exists()
+
+
+def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
+    tmp_path, monkeypatch
+):
+    """When ``project_slug`` is None, fall back to ``slugify_topic(topic)``."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config",
+        lambda *a, **k: {},
+    )
+
+    def _canned(_section_id):
+        text = (
+            "Background prose "
+            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]]. "
+        ) * 80
+        return {
+            "section_text": " ".join(text.split()[:600]),
+            "claims_with_evidence": [
+                {
+                    "claim": "x",
+                    "doi_slugs": ["10.1016_j.cell.2018.07.010"],
+                },
+            ],
+        }
+
+    def _crosstalk(meeting, roles):
+        outputs = []
+        agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
+        is_audit = (
+            "Audit the report document" in agenda_text
+            or meeting.topic.startswith("rigor audit")
+        )
+        for r in roles:
+            if r.id == "synthesizer" and not is_audit:
+                section_id = "background"
+                for sec in SECTION_ORDER:
+                    if sec.replace("_", " ") in agenda_text:
+                        section_id = sec
+                        break
+                outputs.append({"output": json.dumps(_canned(section_id))})
+            elif r.id == "rigor_auditor":
+                outputs.append({"output": json.dumps(
+                    {"passed": True, "issues": []}
+                )})
+            else:
+                outputs.append({"output": f"[{r.id}]"})
+        return outputs
+
+    client = _FakeClient(_make_seeds())
+    result = run_lit_report(
+        "CODEX cellular neighborhoods",
+        kb_root=tmp_path,
+        # NO project_slug — should fall back to the topic-derived slug.
+        max_seeds=5,
+        max_papers_to_summarize=5,
+        depth="thorough",
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        reader=_stub_reader,
+        crosstalk_runner=_crosstalk,
+        crosstalk_n_rounds=1,
+        _today="2026-04-30",
+    )
+
+    expected = concept_path(
+        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
+    )
+    assert result.report_path == expected
+    assert result.report_path.exists()

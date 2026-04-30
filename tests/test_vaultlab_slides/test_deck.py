@@ -1354,3 +1354,93 @@ class TestBuildDeckAdversarial:
                 final_audit=True,
                 audit_strict=True,
             )
+
+
+class TestDeckProvenanceReceipts:
+    """F-6 / F-7 regression: build_deck_from_lineage_result drops provenance.
+
+    Per AGENTS.md Invariant 3, every output writes
+    ``<output>.provenance.json`` and ``<output>.method.md`` next to the
+    artifact. Before the pipeline-integration-map fix the deck shipped
+    bare; this regression test guards against the silent re-introduction
+    of that gap.
+    """
+
+    def test_build_deck_writes_provenance_pair(self, tmp_path, pptx) -> None:
+        """Deck composer must drop ``.provenance.json`` + ``.method.md`` next to ``.pptx``."""
+        import json as _json
+
+        from vaultlab.kb.paths import slugify_doi
+        from vaultlab.research.lineage import LineageRunResult
+        from vaultlab.slides import build_deck_from_lineage_result
+
+        kb_root = tmp_path / "kb"
+        # One summary per bucket — minimal but enough for the mechanical
+        # composer (the v0.1 fast path with no plan_callback / crosstalk).
+        summary_paths: dict[str, Path] = {}
+        for doi, year, bucket, title in [
+            ("10.1/h", 1995, "history", "Founding"),
+            ("10.1/d", 2010, "development", "Mid-arc"),
+            ("10.1/s", 2024, "sota", "Frontier"),
+        ]:
+            slug = slugify_doi(doi)
+            p = kb_root / "Wiki" / "Summaries" / f"{slug}.md"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(
+                f"---\ndoi: {doi}\ntitle: {title}\nauthors: [Smith J]\n"
+                f"year: {year}\njournal: J\nyear_bucket: {bucket}\ntier: A\n---\n"
+                f"\n## TL;DR\n{title} TL;DR.\n"
+                f"\n## Key findings (with [page] provenance)\n"
+                f"- Finding [p1]\n",
+                encoding="utf-8",
+            )
+            summary_paths[doi] = p
+
+        arc_path = kb_root / "Wiki" / "Concepts" / "x-lineage-2026-04-30.md"
+        arc_path.parent.mkdir(parents=True, exist_ok=True)
+        arc_path.write_text(
+            "---\ntopic: x\n---\n\n# Lineage: x\n\nNarrative.\n",
+            encoding="utf-8",
+        )
+
+        result = LineageRunResult(
+            topic="provenance test topic",
+            arc_path=arc_path,
+            summary_paths=summary_paths,
+            corpus_size=3,
+            pdfs_acquired=3,
+            summaries_written=3,
+        )
+
+        out = build_deck_from_lineage_result(
+            result,
+            speaker="Bobby Ni",
+            kb_root=kb_root,
+            project_slug="prov-test",
+        )
+        assert out.exists()
+        # Sidecars must land directly next to the .pptx.
+        json_p = out.with_name(out.name + ".provenance.json")
+        method_p = out.with_name(out.name + ".method.md")
+        assert json_p.exists(), f"missing {json_p}"
+        assert method_p.exists(), f"missing {method_p}"
+
+        rec = _json.loads(json_p.read_text(encoding="utf-8"))
+        assert rec["generated_by"] == (
+            "vaultlab.slides.deck.build_deck_from_lineage_result"
+        )
+        assert rec["topic"] == "provenance test topic"
+        assert rec["kind"] == "slide_deck"
+        assert rec["project"] == "prov-test"
+        assert rec["params"]["speaker"] == "Bobby Ni"
+        assert rec["params"]["plan_mode"] == "fast"
+        # The arc is recorded as a related output for the audit log.
+        assert any(
+            "x-lineage-2026-04-30.md" in r for r in rec.get("related_outputs", [])
+        )
+
+        # method.md is human-readable narrative — should at least name
+        # the generator and show some context.
+        method_text = method_p.read_text(encoding="utf-8")
+        assert "Method" in method_text
+        assert "build_deck_from_lineage_result" in method_text

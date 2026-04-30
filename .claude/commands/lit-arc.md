@@ -45,6 +45,21 @@ from vaultlab.research import (
 topic = "<topic from $ARGUMENTS>"
 kb_locations = _loc.load_locations()
 kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
+
+# F-1 onboarding handoff: when /onboard-project ran earlier in this
+# project folder (or a parent), pick up slug + kb_root + topic from the
+# .vaultlab-project.json instead of re-asking. Explicit-over-magic: the
+# orchestrator below still takes explicit kwargs — this helper just
+# sources the values from disk.
+from vaultlab.onboarding import load_project_config_from_cwd
+project_cfg = load_project_config_from_cwd()
+project_slug: str | None = None
+if project_cfg is not None:
+    project_slug = project_cfg.slug or None
+    if project_cfg.kb_root:
+        kb_root = Path(project_cfg.kb_root)
+    if not topic and project_cfg.topic:
+        topic = project_cfg.topic
 ```
 
 If `kb_root` is not set, ask the user which KB they want this written to
@@ -248,6 +263,9 @@ single-shot picker_callback / narrator. Backwards compat preserved.
 result = run_lit_arc(
     topic,
     kb_root=kb_root,
+    project_slug=project_slug,       # F-1: from .vaultlab-project.json
+                                     # (None if no onboarding config —
+                                     # falls back to slugify_topic(topic))
     depth="balanced",                # see "Depth modes" below
     max_seeds=15,
     

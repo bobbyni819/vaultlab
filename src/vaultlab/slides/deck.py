@@ -353,6 +353,59 @@ def _format_citation_label(
     return f"[{n}] {last} {year}".strip()
 
 
+def _write_deck_provenance(
+    deck_pptx_path: Path,
+    *,
+    lineage_result: LineageRunResult,
+    project: str,
+    speaker: str,
+    affiliation: str,
+    audience: str,
+    target_slide_count: int,
+    plan_mode_used: str,
+    audit_status: str,
+    figure_assignments: dict[str, Path] | None,
+) -> None:
+    """Write the deck's ``.provenance.json`` + ``.method.md`` sidecars.
+
+    Implements F-6 from the pipeline-integration-map audit: per AGENTS.md
+    Invariant 3 every output writes provenance, but
+    :func:`build_deck_from_lineage_result` historically shipped a
+    ``.pptx`` with no receipt. This helper closes that gap. Best-effort:
+    receipt-write failures are logged and never raised so deck shipping
+    isn't gated on optional metadata.
+    """
+    try:
+        from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+        record = ProvenanceRecord(
+            generated_by="vaultlab.slides.deck.build_deck_from_lineage_result",
+            project=project,
+            topic=lineage_result.topic,
+            kind="slide_deck",
+            inputs=[str(p) for p in lineage_result.summary_paths.values()],
+            related_outputs=[str(lineage_result.arc_path)] if lineage_result.arc_path else [],
+            params={
+                "speaker": speaker,
+                "affiliation": affiliation,
+                "audience": audience,
+                "target_slide_count": target_slide_count,
+                "plan_mode": plan_mode_used,
+                "audit_status": audit_status or "n/a",
+                "n_figure_assignments": len(figure_assignments or {}),
+                "n_summaries": len(lineage_result.summary_paths),
+            },
+            tags=["deck", "lit-arc"],
+            notes=(
+                "Composed via build_deck_from_lineage_result. "
+                f"Arc source: {lineage_result.arc_path}"
+            ),
+        )
+        write_receipts(deck_pptx_path, record)
+    except Exception:
+        logger.exception("write_receipts failed for deck %s", deck_pptx_path)
+
+
 def build_deck_from_lineage_result(
     lineage_result: LineageRunResult,
     *,
@@ -401,6 +454,12 @@ def build_deck_from_lineage_result(
 
     Output is routed through :func:`vaultlab.kb.paths.deck_path` so the
     .pptx lands at ``<kb_root>/Output/<project>/<topic>-deck.pptx``.
+
+    Per AGENTS.md Invariant 3 (every output writes provenance), this
+    function also drops ``<deck>.pptx.provenance.json`` and
+    ``<deck>.pptx.method.md`` next to the ``.pptx`` via
+    :func:`vaultlab.provenance.write_receipts` (F-6 in the
+    pipeline-integration-map audit).
     """
     from vaultlab.kb.paths import deck_path, slugify_topic
 
@@ -408,6 +467,10 @@ def build_deck_from_lineage_result(
     deck_name = f"{slugify_topic(lineage_result.topic)}-deck.pptx"
     out = deck_path(Path(kb_root), project, deck_name)
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    # Track which path was taken so the provenance receipt can record it.
+    plan_mode_used = "fast"
+    audit_status: str = ""
 
     # Adversarial plan path — multi-agent crosstalk over plan generation.
     if plan_mode == "adversarial" and crosstalk_runner is not None:
@@ -440,7 +503,10 @@ def build_deck_from_lineage_result(
             render_plan_from_response,
         )
 
-        corpus = _synthetic_corpus_from_summaries(
+        # F-13: prefer the live corpus carried on the lineage result so we
+        # keep ``co_citation_pairs`` / ``seeds`` / ``references`` instead of
+        # the empty stand-ins ``_synthetic_corpus_from_summaries`` produces.
+        corpus = lineage_result.corpus or _synthetic_corpus_from_summaries(
             topic=lineage_result.topic,
             summaries=summaries,
         )
@@ -456,6 +522,8 @@ def build_deck_from_lineage_result(
             kb_root=Path(kb_root),
         )
         dict_plan = render_plan_from_response(task, ct.final_output or {})
+
+        plan_mode_used = "adversarial"
 
         # Final-gate rigor audit before .pptx ships.
         if final_audit:
@@ -475,6 +543,11 @@ def build_deck_from_lineage_result(
                     f"rigor_audit found {len(blockers)} blocker issue(s) "
                     "and audit_strict=True; refusing to ship deck."
                 )
+            audit_status = (
+                "failed" if blockers
+                else ("passed_with_warnings" if not audit.get("passed", True)
+                      else "passed")
+            )
             if not audit.get("passed", True):
                 # Prepend a warning slide noting the audit issues.
                 dict_plan.setdefault("slides", []).insert(
@@ -490,7 +563,20 @@ def build_deck_from_lineage_result(
                     },
                 )
 
-        return build_from_plan(dict_plan, out, write_marp=False)["pptx"]
+        out_pptx = build_from_plan(dict_plan, out, write_marp=False)["pptx"]
+        _write_deck_provenance(
+            out_pptx,
+            lineage_result=lineage_result,
+            project=project,
+            speaker=speaker,
+            affiliation=affiliation,
+            audience=audience,
+            target_slide_count=target_slide_count,
+            plan_mode_used=plan_mode_used,
+            audit_status=audit_status,
+            figure_assignments=figure_assignments,
+        )
+        return out_pptx
 
     if plan_callback is not None:
         # v0.1+ rigor path — content-aware deck plan via Claude Code.
@@ -501,7 +587,8 @@ def build_deck_from_lineage_result(
         summaries = _summaries_to_paper_summaries(
             _read_summary_frontmatters(lineage_result.summary_paths)
         )
-        corpus = _synthetic_corpus_from_summaries(
+        # F-13: prefer the live corpus from the lineage result.
+        corpus = lineage_result.corpus or _synthetic_corpus_from_summaries(
             topic=lineage_result.topic,
             summaries=summaries,
         )
@@ -517,6 +604,8 @@ def build_deck_from_lineage_result(
             kb_root=Path(kb_root),
             plan_callback=plan_callback,
         )
+
+        plan_mode_used = "plan_callback"
 
         # Optional rigor audit on the single-shot path too.
         if final_audit and crosstalk_runner is not None:
@@ -538,6 +627,11 @@ def build_deck_from_lineage_result(
                     f"rigor_audit found {len(blockers)} blocker issue(s) "
                     "and audit_strict=True; refusing to ship deck."
                 )
+            audit_status = (
+                "failed" if blockers
+                else ("passed_with_warnings" if not audit.get("passed", True)
+                      else "passed")
+            )
             if not audit.get("passed", True):
                 dict_plan.setdefault("slides", []).insert(
                     1,
@@ -552,7 +646,20 @@ def build_deck_from_lineage_result(
                     },
                 )
 
-        return build_from_plan(dict_plan, out, write_marp=False)["pptx"]
+        out_pptx = build_from_plan(dict_plan, out, write_marp=False)["pptx"]
+        _write_deck_provenance(
+            out_pptx,
+            lineage_result=lineage_result,
+            project=project,
+            speaker=speaker,
+            affiliation=affiliation,
+            audience=audience,
+            target_slide_count=target_slide_count,
+            plan_mode_used=plan_mode_used,
+            audit_status=audit_status,
+            figure_assignments=figure_assignments,
+        )
+        return out_pptx
 
     plan = _plan_from_lineage(
         lineage_result,
@@ -560,7 +667,22 @@ def build_deck_from_lineage_result(
         affiliation=affiliation,
         figure_assignments=figure_assignments or {},
     )
-    return build_deck(plan, out, citations=_collect_citations_from_summaries(lineage_result))
+    out_pptx = build_deck(
+        plan, out, citations=_collect_citations_from_summaries(lineage_result)
+    )
+    _write_deck_provenance(
+        out_pptx,
+        lineage_result=lineage_result,
+        project=project,
+        speaker=speaker,
+        affiliation=affiliation,
+        audience=audience,
+        target_slide_count=target_slide_count,
+        plan_mode_used=plan_mode_used,  # "fast" — initial default
+        audit_status=audit_status,
+        figure_assignments=figure_assignments,
+    )
+    return out_pptx
 
 
 def _render_plan_for_audit(dict_plan: dict[str, Any]) -> str:

@@ -386,10 +386,42 @@ def _write_start_here(
     intake: IntakeForm,
     inventory: FolderInventory,
 ) -> Path:
-    """Render the auto-resume START_HERE.md page."""
+    """Render the auto-resume START_HERE.md page.
+
+    Per AGENTS.md Invariant 3 (every output writes provenance), this
+    function also drops ``<start_here>.provenance.json`` +
+    ``<start_here>.method.md`` next to the START_HERE so the audit log
+    sees the onboarding step (F-7 in the pipeline-integration-map
+    audit). Best-effort: receipt-write failures don't block onboarding.
+    """
     target = ensure_parent(project_state_path(kb_root, slug))
     body = _render_start_here_body(slug, intake, inventory)
     target.write_text(body, encoding="utf-8")
+
+    try:
+        from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+        record = ProvenanceRecord(
+            generated_by="vaultlab.onboarding.project_init.init_project_from_intake",
+            project=slug,
+            topic=intake.topic,
+            kind="project_onboarding_start_here",
+            inputs=[],
+            params={
+                "slug": slug,
+                "n_inventory_files": inventory.total_files,
+                "n_goals": len(intake.goals),
+                "n_audiences": len(intake.audiences),
+            },
+            tags=["onboarding", "project-init", "start-here"],
+            notes="Auto-resume landing page emitted by /onboard-project.",
+        )
+        write_receipts(target, record)
+    except Exception:
+        # Receipt writes are best-effort — never block onboarding on a
+        # provenance side-effect failure.
+        pass
+
     return target
 
 

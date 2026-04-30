@@ -1206,9 +1206,25 @@ def run_lit_report(
     # ------------------------------------------------------------------
     # Phase 7: per-section ADVERSARIAL meetings (cohesion-threaded)
     # ------------------------------------------------------------------
-    # The report goes to Wiki/Concepts/<topic>-report-<date>.md and the
+    # The report goes to Wiki/Concepts/<slug>-report-<date>.md and the
     # per-section drafts go to a sibling directory of the same stem.
-    report_path = ensure_parent(concept_path(kb_root, topic, "report", date_str))
+    #
+    # F-8 fix (pipeline-integration-map audit): when the caller passes an
+    # explicit ``project_slug``, drive the path slug from it so the report
+    # lands at ``Wiki/Concepts/<project_slug>-report-<date>.md`` instead
+    # of the topic-derived slug. Mirrors the resolved-slug pattern from
+    # ``run_lit_arc`` (Phase 9). When ``project_slug`` is ``None``, we
+    # fall back to ``slugify_topic(topic)`` — i.e. the previous behaviour.
+    resolved_slug = (
+        project_slug.strip() if project_slug and project_slug.strip()
+        else slugify_topic(topic)
+    )
+    # ``concept_path`` slugifies its topic argument, so feeding the
+    # already-resolved slug is idempotent and produces the same path
+    # regardless of whether the user passed a raw topic or a slug.
+    report_path = ensure_parent(
+        concept_path(kb_root, resolved_slug, "report", date_str)
+    )
     report_drafts_dir = report_path.with_suffix("")  # strip .md
     report_drafts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1391,13 +1407,10 @@ def run_lit_report(
     write_receipts(report_path, record)
     _emit(progress, "provenance_written")
 
-    # Resolve project_slug (informational — we don't write a project view
-    # for /lit-report; that's /lit-arc territory).
-    resolved_slug = (
-        project_slug.strip() if project_slug and project_slug.strip()
-        else slugify_topic(topic)
-    )
-    del resolved_slug  # accepted for symmetry; not used in result today
+    # ``resolved_slug`` is already computed above (Phase 7) and used to
+    # route ``report_path``. We don't write a project view for
+    # ``/lit-report`` — that's ``/lit-arc`` territory — but the slug is
+    # honoured in the output-path construction per F-8.
 
     duration = time.time() - started
     return ReportRunResult(
