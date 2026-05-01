@@ -8,6 +8,8 @@ arguments: [path-to-project-folder]
 
 # /onboard-project [path]
 
+> First-time user? Read [`docs/getting-started.md`](../../docs/getting-started.md) first — it walks you from `pip install` through KB init, API keys, and your first `/lit-arc` run. Come back here once your KB is initialized.
+
 Onboards a new project into vaultlab so future commands (`/lit-arc`,
 `/build-deck`, `/cite audit`, etc.) know the context. The fast path: the
 user fills out `project_intake.md` (5 minutes), then runs this command.
