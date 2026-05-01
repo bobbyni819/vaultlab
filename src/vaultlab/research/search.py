@@ -95,6 +95,7 @@ def unified_search(
     crossref_client=None,
     biorxiv_client=None,
     return_trace: bool = False,
+    recency_weight: float | None = None,
 ) -> list[Paper] | tuple[list[Paper], SearchTrace]:
     """Search across multiple APIs and deduplicate results.
 
@@ -115,11 +116,17 @@ def unified_search(
             callers can emit a ``.search-trace.json`` sidecar with
             per-source hit counts, errors, and wall-time. Defaults to
             ``False`` for backward compatibility.
+        recency_weight: Float in ``[0, 1]`` blending citations-per-year
+            and absolute citation count for the post-dedup ranking. ``None``
+            uses :data:`vaultlab.research.scoring.DEFAULT_RECENCY_WEIGHT`
+            (0.6). Pass ``0.0`` to recover the legacy citation-count-only
+            order.
 
     Returns:
         List of deduplicated :class:`Paper` (default) or
         ``(papers, trace)`` when ``return_trace=True``. Papers are sorted
-        by citation count (desc), then year (desc).
+        by recency-blended score (citations/year + absolute citations,
+        log-squashed), with year as tiebreaker.
     """
     if sources is None:
         sources = ["pubmed", "springer", "semantic", "crossref", "biorxiv"]
@@ -189,8 +196,23 @@ def unified_search(
     # Deduplicate by DOI
     deduped = _deduplicate(all_papers)
 
-    # Sort by citation count (desc), then year (desc)
-    deduped.sort(key=lambda p: (p.citation_count, p.year), reverse=True)
+    # Sort by recency-balanced blended score (citations/year + log-citation-count).
+    # See vaultlab.research.scoring.blended_paper_score for the formula.
+    # Pass ``recency_weight=0.0`` to recover the legacy "citation_count desc" order.
+    from vaultlab.research.scoring import (
+        DEFAULT_RECENCY_WEIGHT,
+        blended_paper_score,
+    )
+
+    rw = (
+        DEFAULT_RECENCY_WEIGHT
+        if recency_weight is None
+        else float(recency_weight)
+    )
+    deduped.sort(
+        key=lambda p: (blended_paper_score(p, recency_weight=rw), p.year),
+        reverse=True,
+    )
 
     # Populate by_source_after_dedup. For each surviving paper we use
     # ``paper.source_api`` (set by the source clients). Papers merged
