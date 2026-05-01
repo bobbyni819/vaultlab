@@ -487,13 +487,28 @@ def verify_paragraph_claims(
     section_id: str,
     cited_summaries: dict[str, str],
     verifier_callback: ClaimVerifier | None = None,
+    max_retries: int = 1,
 ) -> ClaimVerificationResult:
-    """High-level helper: prepare → call verifier → render.
+    """High-level helper: prepare → call verifier → render, with retry.
 
     When no callback is given, returns a result with every claim marked
     ``unverifiable`` (the safe-default, equivalent to "we couldn't run
-    the verifier"). Callers can use this to surface "verification
-    skipped" warnings without crashing.
+    the verifier").
+
+    When a callback is given, calls it via
+    :func:`vaultlab.research.retry.retry_with_feedback` so that an
+    exception or empty/malformed response on the first attempt gets a
+    bounded retry with the error context appended to the task prompt.
+    The verifier sees what went wrong and can self-correct.
+
+    Args:
+        paragraph: The drafted arc-section paragraph to verify.
+        section_id: Which arc section this paragraph belongs to.
+        cited_summaries: Mapping doi -> summary text snippet.
+        verifier_callback: Optional :data:`ClaimVerifier`.
+        max_retries: How many retry-with-feedback attempts to allow on
+            failure (default 1, matching AI-Scientist's pattern). Set
+            to 0 to disable retries entirely.
     """
     task = prepare_claim_verification_task(
         paragraph=paragraph,
@@ -502,15 +517,27 @@ def verify_paragraph_claims(
     )
     if verifier_callback is None:
         return render_verifications_from_response(None, task)
-    try:
-        response = verifier_callback(task)
-    except Exception as exc:
-        logger.warning(
-            "verifier_callback raised: %s; returning unverifiable verdicts",
-            exc,
-        )
+
+    from vaultlab.research.retry import retry_with_feedback
+
+    retry_result = retry_with_feedback(
+        verifier_callback,
+        task,
+        max_retries=max_retries,
+    )
+    if not retry_result.succeeded:
+        # All attempts failed — log the final failure mode and fall back
+        # to unverifiable for every claim.
+        if retry_result.attempts:
+            last = retry_result.attempts[-1]
+            logger.warning(
+                "verifier_callback exhausted retries (%d attempts, last "
+                "failure_mode=%s); returning unverifiable verdicts",
+                len(retry_result.attempts),
+                last.failure_mode,
+            )
         return render_verifications_from_response(None, task)
-    return render_verifications_from_response(response, task)
+    return render_verifications_from_response(retry_result.response, task)
 
 
 __all__ = [
