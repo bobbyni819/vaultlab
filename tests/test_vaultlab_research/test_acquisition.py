@@ -125,6 +125,30 @@ class TestDoiSlug:
         ]:
             assert doi_slug(d) == slugify_doi(d)
 
+    def test_doi_slug_strips_pdf_extension(self):
+        """Regression for evening-5 / Round 2 audit Finding 3 (2026-04-30).
+
+        ``doi_slug`` delegates to :func:`vaultlab.kb.paths.slugify_doi`,
+        so the extension-stripping logic must apply through both
+        callsites.  Live audit example: PDF cache filename
+        ``10.7554_elife-31657.pdf`` was leaking into a wikilink slug.
+        """
+        # The canonical post-fix dot-format slug, regardless of trailing extension.
+        assert doi_slug("10.7554/elife.31657.pdf") == "10.7554_elife.31657"
+        assert doi_slug("10.7554/elife.31657.PDF") == "10.7554_elife.31657"
+        # No-op when the DOI has no extension to strip.
+        assert doi_slug("10.7554/elife.31657") == "10.7554_elife.31657"
+
+    def test_legacy_doi_slug_strips_pdf_extension(self):
+        """Same defensive strip for the back-compat dash-format slug."""
+        from vaultlab.research.acquisition import _legacy_doi_slug
+
+        # Dash format: 10-1126_science-1225829, never with trailing -pdf or .pdf.
+        assert _legacy_doi_slug("10.1126/science.1225829.pdf") == "10-1126_science-1225829"
+        assert _legacy_doi_slug("10.1126/science.1225829.PDF") == "10-1126_science-1225829"
+        # No-op when no extension.
+        assert _legacy_doi_slug("10.1126/science.1225829") == "10-1126_science-1225829"
+
     def test_cache_path_uses_slug(self, tmp_path: Path):
         p = cache_path_for("10.1/a", tmp_path)
         assert p == tmp_path / "10.1_a.pdf"

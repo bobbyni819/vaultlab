@@ -82,6 +82,31 @@ class TestSlugifyDoi:
         twice = paths.slugify_doi(once)
         assert once == twice == "10.1234_foo_bar"
 
+    def test_slugify_doi_strips_pdf_extension_if_present(self) -> None:
+        """Regression for evening-5 / Round 2 audit Finding 3 (2026-04-30).
+
+        If a caller passes ``Path(p).name`` instead of ``Path(p).stem``
+        (or the LLM hallucinates a slug from the cache filename) we must
+        strip the trailing ``.pdf`` so wikilinks like
+        ``[[10.7554_elife.31657.pdf|Lin 2018]]`` never get emitted —
+        they don't resolve in Obsidian (the file is at
+        ``Wiki/Summaries/10.7554_elife.31657.md``).
+        """
+        # Canonical case from the live audit.
+        assert paths.slugify_doi("10.7554/elife.31657.pdf") == "10.7554_elife.31657"
+        # Case-insensitive on the suffix.
+        assert paths.slugify_doi("10.7554/elife.31657.PDF") == "10.7554_elife.31657"
+        # Other artifact extensions we'd realistically see on disk.
+        assert paths.slugify_doi("10.1/foo.md") == "10.1_foo"
+        assert paths.slugify_doi("10.1/foo.json") == "10.1_foo"
+        assert paths.slugify_doi("10.1/foo.xml") == "10.1_foo"
+        # No-op when the DOI has no recognised trailing extension.
+        assert paths.slugify_doi("10.1234/abc.xyz") == "10.1234_abc.xyz"
+        # Idempotent: feeding the slug back in changes nothing.
+        once = paths.slugify_doi("10.7554/elife.31657.pdf")
+        twice = paths.slugify_doi(once)
+        assert once == twice == "10.7554_elife.31657"
+
 
 class TestSlugifyTopic:
     def test_basic_lowercase_kebab(self) -> None:

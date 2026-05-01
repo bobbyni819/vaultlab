@@ -382,6 +382,71 @@ def test_render_arc_with_narrative_paragraphs_present():
     )
 
 
+def test_no_pdf_extension_in_arc_wikilinks():
+    """Regression for evening-5 / Round 2 audit Finding 3 (2026-04-30).
+
+    The arc-body and arc-prompt wikilink renderers must NEVER emit a
+    slug with a ``.pdf`` extension. Live audit example:
+    ``[[10.7554_elife-31657.pdf|Lin 2018]]`` showed up in a real arc
+    and broke Obsidian wikilink resolution.
+
+    We construct a paper whose DOI value (defensively) carries a stray
+    ``.pdf`` and verify both the prompt-time and render-time wikilinks
+    drop the extension before slugifying.
+    """
+    # DOI carrying a stray .pdf — should be tolerated and stripped.
+    summaries = {
+        "10.7554/elife.31657.pdf": PaperSummary(
+            doi="10.7554/elife.31657.pdf",
+            title="t-CyCIF",
+            authors=["Lin J"],
+            year=2018,
+            year_bucket="history",
+            tldr="Cyclic IF on standard hardware.",
+            key_findings=["60-plex achievable [p1]"],
+            og_score=0.50,
+            forward_influence=3,
+            tier="A",
+        ),
+    }
+    # Build an arc-prompt and a rendered arc body, then verify zero `.pdf`
+    # leaks across the two wikilink-emitting code paths.
+    prompt = build_arc_prompt(
+        topic="CODEX multiplexed imaging",
+        summaries=summaries,
+        top_og=[("10.7554/elife.31657.pdf", 0.50)],
+        top_co_citation=[],
+    )
+    assert ".pdf|" not in prompt
+    assert ".pdf]]" not in prompt
+    assert "[[10.7554_elife.31657|Lin 2018]]" in prompt
+
+    from vaultlab.research.corpus import Corpus
+    from vaultlab.research.graph_metrics import compute_metrics
+    from vaultlab.research.paper import Paper
+
+    seed = Paper(
+        doi="10.7554/elife.31657.pdf",
+        title="t-CyCIF",
+        authors=["Lin J"],
+        year=2018,
+    )
+    corpus = Corpus(topic="CODEX multiplexed imaging", seeds=[seed])
+    corpus.papers["10.7554/elife.31657.pdf"] = seed
+    corpus.references = {"10.7554/elife.31657.pdf": []}
+    compute_metrics(corpus)
+    md = render_arc_markdown(
+        topic="CODEX multiplexed imaging",
+        date_str="2026-04-30",
+        summaries=summaries,
+        corpus=corpus,
+        method_relpath="codex-lineage-2026-04-30.md.method.md",
+        narrative=None,
+    )
+    assert ".pdf|" not in md
+    assert ".pdf]]" not in md
+
+
 def test_render_arc_without_narrative_emits_skipped_note():
     summaries = _three_summaries()
     corpus = _three_corpus()

@@ -230,12 +230,20 @@ def slugify_doi(doi: str) -> str:
     lowercased so summary paths and PDF cache paths agree on slug form
     even if a mixed-case DOI sneaks in from a search engine.
 
+    Strips trailing file extensions (``.pdf``, ``.md``, ``.json``, ``.xml``,
+    ``.html``, ``.htm``, ``.txt``) because callers occasionally pass
+    ``Path(p).name`` instead of ``Path(p).stem`` and we don't want
+    ``[[10.7554_elife.31657.pdf|...]]`` wikilinks leaking into LLM output.
+    See evening-5 / Round 2 audit log Finding 3 (2026-04-30).
+
     Examples
     --------
     >>> slugify_doi("10.1126/science.1225829")
     '10.1126_science.1225829'
     >>> slugify_doi("10.1038/s41586-023-05915-x")
     '10.1038_s41586-023-05915-x'
+    >>> slugify_doi("10.7554/elife.31657.pdf")
+    '10.7554_elife.31657'
     >>> slugify_doi("10.1126/Science.xyz") == slugify_doi("10.1126/science.xyz")
     True
     """
@@ -246,6 +254,17 @@ def slugify_doi(doi: str) -> str:
     for prefix in ("https://doi.org/", "http://doi.org/", "doi:"):
         if s.lower().startswith(prefix):
             s = s[len(prefix):]
+            break
+    # Strip a trailing file extension (case-insensitive) if one slipped in
+    # from `Path.name`-style callers. Only strip extensions we'd realistically
+    # encounter for paper artifacts; anything else is kept verbatim so we
+    # don't accidentally chop part of a DOI that happens to look like an
+    # extension. Listed explicitly for auditability.
+    _STRIPPABLE_SUFFIXES = (".pdf", ".md", ".json", ".xml", ".html", ".htm", ".txt")
+    s_lower = s.lower()
+    for suffix in _STRIPPABLE_SUFFIXES:
+        if s_lower.endswith(suffix):
+            s = s[: -len(suffix)]
             break
     # Replace filesystem-illegal characters with underscore.
     s = re.sub(r'[\\/:*?"<>|]+', "_", s)

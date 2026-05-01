@@ -156,8 +156,15 @@ def _legacy_doi_slug(doi: str) -> str:
     + extracted figures on disk under
     ``Sources/Papers/<dash-slug>/...`` are still discoverable through
     :func:`cache_path_for`'s fallback path.
+
+    Strips a trailing ``.pdf`` (case-insensitive) before slugifying so a
+    caller that passed ``Path(p).name`` instead of ``Path(p).stem`` still
+    gets a clean slug. See Round-2 audit log Finding 3 (2026-04-30).
     """
-    return doi.strip().lower().replace("/", "_").replace(".", "-")
+    s = doi.strip().lower()
+    if s.endswith(".pdf"):
+        s = s[: -len(".pdf")]
+    return s.replace("/", "_").replace(".", "-")
 
 
 def cache_path_for(doi: str, cache_dir: Path) -> Path:
