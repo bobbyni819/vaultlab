@@ -82,7 +82,11 @@ class SpringerClient:
 
         Args:
             query: Search query string.
-            max_results: Maximum number of results (max 50 per request).
+            max_results: Maximum number of results. Springer's free-tier
+                Meta + Open Access APIs cap page-length at 25; values
+                >= 30 return HTTP 403 "premium feature." Free-tier callers
+                that pass ``max_results=50`` (the unified_search default
+                as of 2026-05-01) are silently clamped to 25 here.
 
         Returns:
             List of Paper objects.
@@ -98,10 +102,13 @@ class SpringerClient:
             logger.warning("No Springer API key configured, skipping search.")
             return []
 
+        # Free-tier cap: Springer rejects p>=30 with 403 "premium feature".
+        # Clamp to 25 to stay safely under the threshold.
+        page_length = min(max_results, 25)
         params = {
             "q": query,
             "api_key": key,
-            "p": min(max_results, 50),
+            "p": page_length,
             "s": 1,
         }
 
