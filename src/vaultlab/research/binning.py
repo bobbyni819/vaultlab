@@ -73,6 +73,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from vaultlab.research.corpus import Corpus
+    from vaultlab.research.arc_structure import ArcStructure
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,13 @@ class MissingBinningCallback(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-_VALID_BUCKETS: frozenset[str] = frozenset({"history", "development", "sota"})
+_LEGACY_VALID_BUCKETS: frozenset[str] = frozenset({"history", "development", "sota"})
+"""Legacy 3-bucket set, retained for back-compat in ``_coverage`` defaults.
+
+Per-task valid buckets are now derived from the ``ArcStructure`` passed
+to :func:`prepare_binning_task`. This constant is only used as a
+fallback when no task is in scope.
+"""
 
 
 @dataclass(frozen=True)
@@ -159,6 +166,11 @@ class BinningTask:
     system: str
     prompt: str
     response_schema: dict[str, Any] = field(default_factory=dict)
+    valid_section_ids: tuple[str, ...] = ("history", "development", "sota")
+    """The set of valid section IDs for this binning run, derived from the
+    :class:`~vaultlab.research.arc_structure.ArcStructure` passed to
+    :func:`prepare_binning_task`. Default tuple matches the legacy 3-bucket
+    SHORT structure for back-compat."""
 
 
 @dataclass
@@ -208,13 +220,25 @@ _BINNING_SYSTEM_PROMPT = (
 )
 
 
-def binning_response_schema() -> dict[str, Any]:
+def binning_response_schema(
+    valid_section_ids: list[str] | tuple[str, ...] | None = None,
+) -> dict[str, Any]:
     """Return the JSON schema for the binning response.
 
     The LLM returns a list of ``{doi, bucket, rationale}`` items, one per
     candidate (papers it cannot classify can be omitted — the orchestrator
     falls back to the deterministic bucket for missing DOIs).
+
+    Args:
+        valid_section_ids: Allowed values for the ``bucket`` field.
+            ``None`` (default) uses the legacy 3-bucket set
+            ``("history", "development", "sota")`` for back-compat.
+            Pass an :class:`~vaultlab.research.arc_structure.ArcStructure`'s
+            ``section_ids`` for variable-length arcs.
     """
+    if valid_section_ids is None:
+        valid_section_ids = sorted(_LEGACY_VALID_BUCKETS)
+    valid_list = sorted(set(valid_section_ids))
     return {
         "type": "object",
         "required": ["assignments"],
@@ -231,9 +255,10 @@ def binning_response_schema() -> dict[str, Any]:
                         },
                         "bucket": {
                             "type": "string",
-                            "enum": sorted(_VALID_BUCKETS),
+                            "enum": valid_list,
                             "description": (
-                                "One of 'history', 'development', 'sota'."
+                                "Section ID — one of: "
+                                + ", ".join(repr(b) for b in valid_list)
                             ),
                         },
                         "rationale": {
@@ -268,42 +293,56 @@ def build_binning_prompt(
     *,
     topic: str,
     candidates: list[BinningCandidate],
+    arc_structure: "ArcStructure | None" = None,
 ) -> str:
     """Build the user-message prompt for the binning LLM.
 
-    The prompt embeds the topic, the per-bucket criteria, and the
-    candidate list with abstracts + deterministic bucket hints. The LLM
-    is asked to decide *per topic* — the same paper can be SOTA in one
-    lineage and HISTORY in another.
+    The prompt embeds the topic, the per-section criteria from the arc
+    structure, and the candidate list with abstracts + deterministic
+    bucket hints. The LLM is asked to decide *per topic* — the same paper
+    can be SOTA in one lineage and a foundational paper in another.
+
+    Args:
+        topic: User-supplied topic.
+        candidates: Papers to classify.
+        arc_structure: Section taxonomy. ``None`` (default) uses the
+            legacy SHORT structure (history/development/sota).
     """
+    # Lazy import to avoid circulars at module load.
+    if arc_structure is None:
+        from vaultlab.research.arc_structure import SHORT as _SHORT
+        arc_structure = _SHORT
+
+    section_ids_str = " / ".join(s.id.upper() for s in arc_structure.sections)
     lines: list[str] = [
         f"TOPIC: {topic}",
         "",
         f"Classify each of the {len(candidates)} candidates below into "
-        "HISTORY / DEVELOPMENT / SOTA for THIS topic's lineage.",
+        f"one of these sections of the lineage arc: {section_ids_str}.",
         "",
-        "BUCKET DEFINITIONS:",
-        "- history: foundational method, precursor concept, "
-        "paradigm-defining work — regardless of publication year. "
-        "If the corpus contains the seminal method on which everything "
-        "else rests, that paper goes here.",
-        "- development: intermediate refinement, scaling, methodological "
-        "adaptation, mid-arc work between foundation and current frontier.",
-        "- sota: current frontier — most recent meaningful advance, even "
-        "if not the most-recent paper by date. Incremental applications "
-        "of older methods are DEVELOPMENT, not SOTA.",
+        f"ARC STRUCTURE: {arc_structure.name} "
+        f"({len(arc_structure.sections)} sections; total target "
+        f"paragraphs={arc_structure.total_target_paragraphs}).",
         "",
-        "DETERMINISTIC HINT:",
-        "- Each candidate carries a `deterministic_bucket` field showing "
-        "what year-quartile bucketing produced. Use it as a HINT, not a "
-        "rule — override it when the abstract clearly says otherwise.",
-        "- Aim for non-empty bins where the corpus reasonably supports "
-        "it. If the deterministic system left HISTORY empty but a "
-        "foundational paper is present, move that paper to HISTORY.",
-        "",
-        f"CANDIDATES ({len(candidates)} total):",
-        "",
+        "SECTION DEFINITIONS:",
     ]
+    for section in arc_structure.sections:
+        lines.append(f"- **{section.id}** ({section.title}): {section.criterion}")
+    lines.extend(
+        [
+            "",
+            "DETERMINISTIC HINT:",
+            "- Each candidate carries a `deterministic_bucket` field showing "
+            "what year-quartile bucketing produced. Use it as a HINT, not a "
+            "rule — override it when the abstract clearly says otherwise.",
+            "- Aim for non-empty bins where the corpus reasonably supports "
+            "it. If the deterministic system left a section empty but a "
+            "fitting paper is present, move that paper there.",
+            "",
+            f"CANDIDATES ({len(candidates)} total):",
+            "",
+        ]
+    )
     for i, c in enumerate(candidates, 1):
         header = f"[{i}] {c.title or '(untitled)'}"
         year_str = str(c.year) if c.year else "n.d."
@@ -317,6 +356,15 @@ def build_binning_prompt(
         lines.append(f"    Abstract: {_truncate_abstract(c.abstract)}")
         lines.append("")
 
+    valid_section_ids_str = ", ".join(
+        repr(s.id) for s in arc_structure.sections
+    )
+    example_id_a = arc_structure.sections[0].id
+    example_id_b = (
+        arc_structure.sections[1].id
+        if len(arc_structure.sections) > 1
+        else example_id_a
+    )
     lines.extend(
         [
             "OUTPUT FORMAT:",
@@ -325,11 +373,11 @@ def build_binning_prompt(
             "{",
             '  "assignments": [',
             (
-                '    {"doi": "<doi>", "bucket": "history", '
+                f'    {{"doi": "<doi>", "bucket": "{example_id_a}", '
                 '"rationale": "<1-2 sentences grounded in the abstract>"},'
             ),
             (
-                '    {"doi": "<doi>", "bucket": "development", '
+                f'    {{"doi": "<doi>", "bucket": "{example_id_b}", '
                 '"rationale": "..."},'
             ),
             "    ...",
@@ -337,7 +385,7 @@ def build_binning_prompt(
             "}",
             "",
             "Use the candidate DOIs EXACTLY as listed above. Do NOT "
-            "invent DOIs. Use ONLY 'history', 'development', or 'sota' "
+            f"invent DOIs. Use ONLY one of: {valid_section_ids_str} "
             "as bucket values.",
         ]
     )
@@ -417,6 +465,7 @@ def prepare_binning_task(
     topic: str,
     *,
     max_candidates: int = 200,
+    arc_structure: "ArcStructure | None" = None,
 ) -> BinningTask:
     """Prepare a binning task. Does NOT call any LLM.
 
@@ -433,24 +482,48 @@ def prepare_binning_task(
         max_candidates: Token-budget cap. Corpora larger than this get
             ranked by ``og_score + forward_influence`` and the tail keeps
             its deterministic bucket. Default 200.
+        arc_structure: Section taxonomy for the binning. ``None`` (default)
+            uses the legacy SHORT structure (history / development / sota)
+            for back-compat. Pass a longer structure (e.g. STANDARD or
+            REVIEW_PAPER) to bin papers into more sections.
 
     Returns:
         A :class:`BinningTask` ready for the LLM step.
     """
+    if arc_structure is None:
+        from vaultlab.research.arc_structure import SHORT
+        arc_structure = SHORT
     candidates = _build_candidates(corpus, max_candidates=max_candidates)
-    prompt = build_binning_prompt(topic=topic, candidates=candidates)
+    prompt = build_binning_prompt(
+        topic=topic, candidates=candidates, arc_structure=arc_structure
+    )
+    section_ids = tuple(s.id for s in arc_structure.sections)
     return BinningTask(
         topic=topic,
         candidates=candidates,
         system=_BINNING_SYSTEM_PROMPT,
         prompt=prompt,
-        response_schema=binning_response_schema(),
+        response_schema=binning_response_schema(section_ids),
+        valid_section_ids=section_ids,
     )
 
 
-def _coverage(buckets: dict[str, str]) -> dict[str, int]:
-    """Count occurrences of each bucket across the merged result."""
-    out: dict[str, int] = {"history": 0, "development": 0, "sota": 0, "unknown": 0}
+def _coverage(
+    buckets: dict[str, str],
+    valid_section_ids: tuple[str, ...] | None = None,
+) -> dict[str, int]:
+    """Count occurrences of each bucket across the merged result.
+
+    Args:
+        buckets: ``doi -> bucket`` mapping.
+        valid_section_ids: Sections to pre-seed in the output (so even
+            empty sections show as ``0``). Defaults to the legacy
+            history/development/sota set when None.
+    """
+    if valid_section_ids is None:
+        valid_section_ids = tuple(sorted(_LEGACY_VALID_BUCKETS))
+    out: dict[str, int] = {sid: 0 for sid in valid_section_ids}
+    out["unknown"] = 0
     for b in buckets.values():
         if b in out:
             out[b] += 1
@@ -513,7 +586,15 @@ def render_binning_from_response(
         if not isinstance(raw_bucket, str):
             continue
         bucket = raw_bucket.strip().lower()
-        if bucket not in _VALID_BUCKETS:
+        # Validate against the task's per-run section IDs (variable-length
+        # arc support). Falls back to the legacy 3-bucket set when the
+        # task was built before the field existed.
+        valid_section_set = (
+            set(task.valid_section_ids)
+            if task.valid_section_ids
+            else _LEGACY_VALID_BUCKETS
+        )
+        if bucket not in valid_section_set:
             logger.debug("binning dropped invalid bucket %r for %s", raw_bucket, doi)
             continue
         bucket_by_doi[doi] = bucket
@@ -529,7 +610,7 @@ def render_binning_from_response(
         if doi not in bucket_by_doi:
             bucket_by_doi[doi] = candidate.deterministic_bucket
 
-    coverage = _coverage(bucket_by_doi)
+    coverage = _coverage(bucket_by_doi, valid_section_ids=task.valid_section_ids)
     return BinningResult(
         bucket_by_doi=bucket_by_doi,
         rationale_by_doi=rationale_by_doi,
@@ -611,6 +692,7 @@ def assign_buckets_with_llm(
     max_candidates: int = 200,
     fallback_to_deterministic: bool = True,
     model: str = "claude-sonnet-4-6",
+    arc_structure: "ArcStructure | None" = None,
 ) -> BinningResult:
     """Assign every corpus paper to a lineage bucket via LLM-driven binning.
 
@@ -676,7 +758,10 @@ def assign_buckets_with_llm(
         )
 
     task = prepare_binning_task(
-        corpus, topic, max_candidates=max_candidates
+        corpus,
+        topic,
+        max_candidates=max_candidates,
+        arc_structure=arc_structure,
     )
     if not task.candidates:
         # No candidates -> nothing to ask the LLM. Fall back gracefully.

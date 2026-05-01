@@ -1842,6 +1842,7 @@ def run_lit_arc(
     query_expansion_n: int = 5,
     forward_expansion: bool = True,
     forward_expansion_max_per_seed: int = 50,
+    arc_structure: "str | Any" = None,
     crosstalk_runner: Any | None = None,
     crosstalk_n_rounds: int = 3,
     project: str | None = None,
@@ -2131,6 +2132,11 @@ def run_lit_arc(
     # FOR THIS TOPIC — fixing the empty-history-bin failure mode that
     # year quartiles produced on recent corpora (Bobby's L4 CODEX
     # 2026-04-30 complaint). Without a callback, year quartiles stand.
+    # Resolve the arc structure (variable-length arc support — defaults
+    # to SHORT for back-compat).
+    from vaultlab.research.arc_structure import resolve_structure
+    resolved_arc_structure = resolve_structure(arc_structure)
+
     if binner_callback is not None and corpus.metrics is not None:
         _emit(progress, "phase", "binning", n_papers=corpus.n_papers)
         binning_result = assign_buckets_with_llm(
@@ -2139,17 +2145,22 @@ def run_lit_arc(
             binner_callback=binner_callback,
             max_candidates=binner_max_candidates,
             fallback_to_deterministic=True,
+            arc_structure=resolved_arc_structure,
         )
         # OVERRIDE corpus.metrics.year_buckets in place so all downstream
         # consumers (summarize_corpus, prepare_arc_task, slides, etc.)
         # see the LLM's conceptual buckets.
         corpus.metrics.year_buckets.update(binning_result.bucket_by_doi)
+        # Emit per-section counts (works for any arc structure, not just
+        # the legacy 3-bucket history/development/sota set).
         _emit(
             progress,
             "binning",
-            history=binning_result.coverage_summary.get("history", 0),
-            development=binning_result.coverage_summary.get("development", 0),
-            sota=binning_result.coverage_summary.get("sota", 0),
+            structure=resolved_arc_structure.name,
+            **{
+                sid: binning_result.coverage_summary.get(sid, 0)
+                for sid in resolved_arc_structure.section_ids
+            },
         )
 
     # ------------------------------------------------------------------
