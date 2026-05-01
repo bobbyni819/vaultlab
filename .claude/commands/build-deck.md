@@ -5,7 +5,7 @@ backed_by: vaultlab.research.lineage.run_lit_arc + vaultlab.figures.acquisition.
 purpose: Compose a journal-club .pptx from a topic by chaining /lit-arc, figure acquisition, and the multi-slide composer.
 ---
 
-# /build-deck <topic> [--speaker NAME] [--length N] [--theme hickey_lab|default]
+# /build-deck <topic> [--speaker NAME] [--length N] [--theme hickey_lab|default] [--scope short|standard|review-paper] [--instructions "..."]
 
 End-to-end deck builder. Given a research topic, this runs the literature
 arc, attempts to acquire figures from the PMC OA tar packages of the seed
@@ -22,6 +22,14 @@ papers, then composes a 7-slide deck via
 - `--theme hickey_lab|default` (default: `hickey_lab`) — picks which
   template to initialize from. `hickey_lab` requires the bundled template;
   `default` is a vanilla 16:9.
+- `--scope short|standard|review-paper` (default: `short`) — arc structure
+  passed through to the underlying `/lit-arc` call. `short` (3 sections)
+  is the natural fit for a 7-slide deck; `standard` (6 sections) gives a
+  longer deck; `review-paper` (10 sections) is supported but produces a
+  long deck — typically you'd use this with `--length` bumped accordingly.
+- `--instructions "<free-form scope guidance>"` — natural-language hint
+  layered on top of `--scope` and forwarded to the narrator's audience
+  field.
 
 ## What it does
 
@@ -73,8 +81,38 @@ from vaultlab.kb.paths import concept_path, slugify_topic, summary_path
 # (Layer A, 2026-04-30). Bobby's existing bobby_kb config keeps working
 # invisibly; new users hit the first-run prompt exactly once.
 from vaultlab.context import resolve_kb_root, KbRootNotConfigured
-topic = "<from args>"
-speaker = "<from args or git config>"
+import shlex
+
+# Parse $ARGUMENTS — supports the existing flags plus --scope / --instructions
+# (variable-length arc support from #97/#98).
+raw_args = shlex.split("$ARGUMENTS") if "$ARGUMENTS" else []
+arc_scope_arg: str = ""           # passed through to run_lit_arc
+arc_instructions_arg: str = ""    # passed through to run_lit_arc
+speaker_flag: str = ""
+length_flag: str = ""
+theme_flag: str = ""
+positional: list[str] = []
+i = 0
+while i < len(raw_args):
+    tok = raw_args[i]
+    if tok == "--scope" and i + 1 < len(raw_args):
+        arc_scope_arg = raw_args[i + 1]; i += 2
+    elif tok == "--instructions" and i + 1 < len(raw_args):
+        arc_instructions_arg = raw_args[i + 1]; i += 2
+    elif tok == "--speaker" and i + 1 < len(raw_args):
+        speaker_flag = raw_args[i + 1]; i += 2
+    elif tok == "--length" and i + 1 < len(raw_args):
+        length_flag = raw_args[i + 1]; i += 2
+    elif tok == "--theme" and i + 1 < len(raw_args):
+        theme_flag = raw_args[i + 1]; i += 2
+    else:
+        positional.append(tok); i += 1
+topic = " ".join(positional).strip()
+import subprocess
+speaker = speaker_flag or subprocess.run(
+    ["git", "config", "user.name"],
+    capture_output=True, text=True, check=False,
+).stdout.strip() or "Researcher"
 try:
     kb_root = resolve_kb_root()
 except KbRootNotConfigured as exc:
@@ -101,8 +139,30 @@ if project_cfg is not None:
     if not topic and project_cfg.topic:
         topic = project_cfg.topic
 
-# Step 3: lit-arc (reuse if already-run today)
-result = run_lit_arc(topic, kb_root=kb_root, project_slug=project_slug, max_seeds=10)
+# Step 3: lit-arc (reuse if already-run today). Pass through --scope and
+# --instructions if the user supplied them (variable-length arc support
+# from #97/#98). For deck-building, ``short`` is usually right — a deck
+# of 7-9 slides aligns with a 3-section arc. But ``--scope review-paper``
+# is supported for users wanting a deeper deck.
+from vaultlab.research.arc_structure import resolve_structure, ArcStructure
+arc_structure = resolve_structure(arc_scope_arg if arc_scope_arg else "short")
+if arc_instructions_arg:
+    arc_structure = ArcStructure(
+        name=arc_structure.name + "-customised",
+        sections=list(arc_structure.sections),
+        audience=(
+            arc_structure.audience
+            + " | Additional user instructions: "
+            + arc_instructions_arg
+        ),
+    )
+result = run_lit_arc(
+    topic,
+    kb_root=kb_root,
+    project_slug=project_slug,
+    max_seeds=10,
+    arc_structure=arc_structure,
+)
 
 # Step 4: figure acquisition (graceful)
 figure_assignments: dict[str, Path] = {}

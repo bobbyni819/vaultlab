@@ -1,14 +1,33 @@
 ---
 name: lit-arc
-purpose: Generate a literature lineage arc (history -> development -> SOTA) for a topic, using Claude Code itself as the LLM (no API key needed).
-arguments: <topic>
+purpose: Generate a literature lineage arc for a topic, using Claude Code itself as the LLM (no API key needed). Variable-length: 3 paragraphs (default), 6 paragraphs (standard), or 10+ paragraphs (review-paper scope).
+arguments: <topic> [--scope short|standard|review-paper] [--instructions "free-form arc-shape guidance"]
 ---
 
 # /lit-arc
 
-Compose a research literature **lineage arc** for `<topic>`: a 3-section narrative
-(history / development / state-of-the-art) backed by a citation-graph corpus,
-per-paper Claude-read summaries, and structured citation statistics.
+Compose a research literature **lineage arc** for `<topic>` — a structured narrative
+backed by a citation-graph corpus, per-paper Claude-read summaries, and structured
+citation statistics. The output length and section taxonomy are controlled by the
+``--scope`` flag (default: 3-paragraph history/development/sota; can scale up to
+full 10-section review-paper structure).
+
+## Scope flags
+
+* ``--scope short`` (default) — 3 sections: History / Development / State of the art.
+  Right for a journal-club deck or quick scoping run.
+* ``--scope standard`` — 6 sections: Foundations / Seminal methods / Refinements /
+  Applications / SOTA / Open questions. Right for a richer technical brief.
+* ``--scope review-paper`` — 10 sections covering full review-paper scope:
+  Introduction / Theoretical foundations / Early methods / Seminal methods /
+  Methodological refinements / Instrumentation / Large-scale applications /
+  Specialised domains / SOTA / Limitations & future directions.
+* ``--instructions "<free-form scope guidance>"`` — natural-language arc-shape
+  hint, layered ON TOP of the structure. Use this for things like
+  ``--instructions "frame this as a grant aims background section, ~3 paragraphs,
+  audience is an NIH study section"`` or ``--instructions "frame as a thesis
+  introduction chapter, build toward the gap that motivates my dissertation"``.
+  The instruction is appended to the arc structure's audience hint.
 
 ## What this command produces
 
@@ -42,7 +61,29 @@ from vaultlab.research import (
     ArcTask, PickerTask, SummarizationTask, run_lit_arc,
 )
 
-topic = "<topic from $ARGUMENTS>"
+import shlex
+
+# Parse $ARGUMENTS into topic + flags. Flags supported:
+#   --scope <short|standard|review-paper>
+#   --instructions "<free-form scope guidance>"
+#   --mode <fast|adversarial>   (legacy crosstalk toggle)
+raw_args = shlex.split("$ARGUMENTS") if "$ARGUMENTS" else []
+arc_scope_arg: str = "short"
+arc_instructions_arg: str = ""
+positional: list[str] = []
+i = 0
+while i < len(raw_args):
+    tok = raw_args[i]
+    if tok == "--scope" and i + 1 < len(raw_args):
+        arc_scope_arg = raw_args[i + 1]
+        i += 2
+    elif tok == "--instructions" and i + 1 < len(raw_args):
+        arc_instructions_arg = raw_args[i + 1]
+        i += 2
+    else:
+        positional.append(tok)
+        i += 1
+topic = " ".join(positional).strip()
 # Multi-tenant KB-root resolution (Layer A, 2026-04-30): resolver walks
 # env-var -> vaultlab config -> bobby_kb compat -> first-run prompt.
 # Bobby's existing bobby_kb config keeps working invisibly. New users
@@ -272,6 +313,25 @@ single-shot picker_callback / narrator. Backwards compat preserved.
 ### Step 5 — Run the orchestrator
 
 ```python
+# Resolve the arc structure from --scope. Free-form --instructions get
+# appended to the structure's audience hint (so the narrator picks up the
+# scope guidance without us inventing a new prompt path).
+from vaultlab.research.arc_structure import (
+    resolve_structure,
+    ArcStructure,
+)
+arc_structure = resolve_structure(arc_scope_arg)
+if arc_instructions_arg:
+    arc_structure = ArcStructure(
+        name=arc_structure.name + "-customised",
+        sections=list(arc_structure.sections),
+        audience=(
+            arc_structure.audience
+            + " | Additional user instructions: "
+            + arc_instructions_arg
+        ),
+    )
+
 result = run_lit_arc(
     topic,
     kb_root=kb_root,
@@ -280,6 +340,7 @@ result = run_lit_arc(
                                      # falls back to slugify_topic(topic))
     depth="balanced",                # see "Depth modes" below
     max_seeds=15,
+    arc_structure=arc_structure,     # variable-length arc support (#97/#98)
     
     # Single-shot LLM callbacks (always required)
     picker_callback=claude_code_picker,
