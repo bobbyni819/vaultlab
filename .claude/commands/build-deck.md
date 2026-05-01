@@ -27,10 +27,11 @@ papers, then composes a 7-slide deck via
 
 1. **Parse the topic + speaker name** from arguments. If `--speaker` is
    absent, fall back to `git config user.name`, then "Researcher".
-2. **Look up KB root** via `~/.config/bobby_kb/config.json` (key
-   `default_kb_root` or `root`). Default: `G:/My Drive/Knowledge`. If
-   the user has a `vaultlab` KB configured, use it; otherwise use the
-   default research KB.
+2. **Look up KB root** via `vaultlab.context.resolve_kb_root()`. The
+   resolver walks env-var -> vaultlab config -> bobby_kb compat ->
+   first-run prompt. Bobby's existing bobby_kb config keeps working
+   invisibly; new users land on the first-run prompt exactly once and
+   the choice is persisted to `~/.config/vaultlab/locations.toml`.
 3. **Run lit-arc** by calling
    `vaultlab.research.lineage.run_lit_arc(topic, kb_root=...)`. This
    produces a `LineageRunResult` with paths to the per-paper summaries
@@ -68,10 +69,17 @@ from vaultlab.slides import build_deck_from_lineage_result
 from vaultlab.workflows import DeckPlanTask
 from vaultlab.kb.paths import concept_path, slugify_topic, summary_path
 
-# Step 1-2: parse args, resolve kb_root
+# Step 1-2: parse args, resolve kb_root via the multi-tenant resolver
+# (Layer A, 2026-04-30). Bobby's existing bobby_kb config keeps working
+# invisibly; new users hit the first-run prompt exactly once.
+from vaultlab.context import resolve_kb_root, KbRootNotConfigured
 topic = "<from args>"
 speaker = "<from args or git config>"
-kb_root = Path("G:/My Drive/Knowledge/vaultlab")  # or research KB
+try:
+    kb_root = resolve_kb_root()
+except KbRootNotConfigured as exc:
+    print(f"No KB configured. Run `vaultlab init` (default: {exc.suggested_default}).")
+    raise SystemExit(1)
 
 # F-1 onboarding handoff: when /onboard-project ran earlier in this
 # project folder (or a parent), pick up slug + kb_root + topic from the

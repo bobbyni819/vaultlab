@@ -956,7 +956,7 @@ def _emit(progress: _ProgressFn | None, *args: Any, **kwargs: Any) -> None:
 def run_lit_report(
     topic: str,
     *,
-    kb_root: Path,
+    kb_root: Path | None = None,
     project_slug: str | None = None,
     speaker: str = "",
     affiliation: str = "",
@@ -1077,6 +1077,12 @@ def run_lit_report(
 
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
+    # Multi-tenant KB-root resolution (Layer A, 2026-04-30): see the matching
+    # block in run_lit_arc — same chain, same rationale.
+    if kb_root is None:
+        from vaultlab.context.locations import resolve_kb_root
+
+        kb_root = resolve_kb_root()
     kb_root = Path(kb_root)
 
     if pdf_cache_dir is None:

@@ -378,7 +378,7 @@ def build_deck_from_lineage_result(
     affiliation: str = "Hickey Lab @ Duke BME",
     project_slug: str | None = None,
     figure_assignments: dict[str, Path] | None = None,
-    kb_root: Path,
+    kb_root: Path | None = None,
     plan_callback: Any = None,
     audience: str = "journal-club",
     target_slide_count: int = 7,
@@ -448,6 +448,15 @@ def build_deck_from_lineage_result(
                 project_slug,
                 Path.cwd(),
             )
+
+    # Multi-tenant KB-root resolution (Layer A, 2026-04-30): kb_root is now
+    # optional. Falls through env-var → vaultlab config → bobby_kb compat →
+    # first-run prompt. See run_lit_arc / run_lit_report for the matching
+    # blocks; resolve_kb_root() is the single canonical resolver.
+    if kb_root is None:
+        from vaultlab.context.locations import resolve_kb_root
+
+        kb_root = resolve_kb_root()
 
     project = project_slug or "lit-arc"
     deck_name = f"{slugify_topic(lineage_result.topic)}-deck.pptx"

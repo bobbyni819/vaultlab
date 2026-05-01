@@ -248,8 +248,8 @@ class ProjectInit:
 
 def init_project_from_intake(
     intake_path: str | Path,
-    kb_root: str | Path,
-    project_path: str | Path,
+    kb_root: str | Path | None = None,
+    project_path: str | Path | None = None,
     *,
     slug: str | None = None,
 ) -> ProjectInit:
@@ -287,8 +287,23 @@ def init_project_from_intake(
     - ``<project>/.vaultlab-project.json``
     """
     intake_p = Path(intake_path)
-    kb_root_p = Path(kb_root)
-    project_p = Path(project_path).resolve()
+    # Multi-tenant KB-root resolution (Layer A, 2026-04-30): when kb_root is
+    # not threaded explicitly, walk env-var → vaultlab config → bobby_kb
+    # compat → first-run prompt. Mirrors the matching block in run_lit_arc /
+    # run_lit_report / build_deck_from_lineage_result.
+    if kb_root is None:
+        from vaultlab.context.locations import resolve_kb_root
+
+        kb_root_p = resolve_kb_root()
+    else:
+        kb_root_p = Path(kb_root)
+    if project_path is None:
+        # Onboarding from cwd is the documented "no path argument" flow
+        # (mirrors `/onboard-project` with no args). Resolve here so the
+        # rest of the function can assume a real path.
+        project_p = Path.cwd().resolve()
+    else:
+        project_p = Path(project_path).resolve()
 
     # 1. Read the intake (raises if missing required fields)
     intake = parse_intake_md(intake_p)

@@ -28,13 +28,19 @@ This command is the lightweight sibling of `/onboard-project`:
 
 ```python
 from pathlib import Path
-from vaultlab.context import locations as _loc
+from vaultlab.context import resolve_kb_root, KbRootNotConfigured
 
-kb_locations = _loc.load_locations()
-kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
+# Multi-tenant KB-root resolution (Layer A, 2026-04-30): walks env-var ->
+# vaultlab config -> bobby_kb compat -> first-run prompt.
+try:
+    kb_root = resolve_kb_root()
+except KbRootNotConfigured as exc:
+    print(f"No KB configured. Run `vaultlab init` (default: {exc.suggested_default}).")
+    raise SystemExit(1)
 ```
 
-If `kb_root` is not set, ask the user which KB. Otherwise proceed.
+If `resolve_kb_root` raises, point the user at `vaultlab init` and stop.
+Otherwise proceed.
 
 ### Step 2 — Build a minimal IntakeForm
 

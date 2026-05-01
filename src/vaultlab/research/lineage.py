@@ -1820,7 +1820,7 @@ def _emit(progress: _ProgressFn | None, *args: Any, **kwargs: Any) -> None:
 def run_lit_arc(
     topic: str,
     *,
-    kb_root: Path,
+    kb_root: Path | None = None,
     depth: DepthLevel = "balanced",
     max_seeds: int = 15,
     max_papers_to_summarize: int | None = None,
@@ -1968,6 +1968,13 @@ def run_lit_arc(
 
     started = time.time()
     date_str = _today or date.today().strftime("%Y-%m-%d")
+    # Multi-tenant KB-root resolution (Layer A, 2026-04-30):
+    # callers no longer have to pre-resolve kb_root. When omitted, walk the
+    # env-var → vaultlab config → bobby_kb compat → first-run prompt chain.
+    if kb_root is None:
+        from vaultlab.context.locations import resolve_kb_root
+
+        kb_root = resolve_kb_root()
     kb_root = Path(kb_root)
 
     # Resolve PDF cache dir default.

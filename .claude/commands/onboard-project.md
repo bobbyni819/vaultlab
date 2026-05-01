@@ -91,11 +91,19 @@ and stop.
 ### Step 3 — Run the orchestrator
 
 ```python
-from vaultlab.context import locations as _loc
+from vaultlab.context import resolve_kb_root, KbRootNotConfigured
 from vaultlab.onboarding import init_project_from_intake
 
-kb_locations = _loc.load_locations()
-kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
+# Multi-tenant KB-root resolution (Layer A, 2026-04-30): resolver walks
+# env-var -> vaultlab config -> bobby_kb compat -> first-run prompt.
+# Bobby's existing bobby_kb config keeps working invisibly. New users
+# (including this very command, on a fresh laptop) land on the first-run
+# prompt exactly once and the choice is persisted to locations.toml.
+try:
+    kb_root = resolve_kb_root()
+except KbRootNotConfigured as exc:
+    print(f"No KB configured. Run `vaultlab init` (default: {exc.suggested_default}).")
+    raise SystemExit(1)
 
 result = init_project_from_intake(
     intake_path=intake_path,
@@ -104,8 +112,10 @@ result = init_project_from_intake(
 )
 ```
 
-If `kb_root` is not set, ask the user which KB to write into (most users
-have only one — vaultlab — but some have multiple: research / dcp / tools).
+If `resolve_kb_root` raises (non-interactive shell with no config),
+stop and point the user at `vaultlab init`. Users with multiple KBs
+(research / dcp / tools) can pick one for the session by setting
+`$VAULTLAB_KB_ROOT`.
 
 ### Step 4 — Ask the follow-up questions
 

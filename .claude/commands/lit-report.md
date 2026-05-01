@@ -70,14 +70,21 @@ responses matching the task''s schema.
 
 ```python
 from pathlib import Path
-from vaultlab.context import locations as _loc
+from vaultlab.context import resolve_kb_root, KbRootNotConfigured
 from vaultlab.research import (
     ReportTask, SummarizationTask, run_lit_report,
 )
 
 topic = "<topic from $ARGUMENTS>"
-kb_locations = _loc.load_locations()
-kb_root = Path(_loc.get_path("kb.root", locations=kb_locations))
+# Multi-tenant KB-root resolution (Layer A, 2026-04-30): resolver walks
+# env-var -> vaultlab config -> bobby_kb compat -> first-run prompt.
+# Bobby's existing bobby_kb config keeps working invisibly. New users
+# land on the first-run prompt exactly once.
+try:
+    kb_root = resolve_kb_root()
+except KbRootNotConfigured as exc:
+    print(f"No KB configured. Run `vaultlab init` (default: {exc.suggested_default}).")
+    raise SystemExit(1)
 
 # F-1 onboarding handoff: when /onboard-project ran earlier in this
 # project folder (or a parent), pick up slug + kb_root + topic from the
@@ -98,8 +105,10 @@ if project_cfg is not None:
         topic = project_cfg.topic
 ```
 
-If `kb_root` is not set, ask the user which KB they want this written
-to (they may have multiple -- `research`, `tools`, `dcp`, etc.).
+If `resolve_kb_root` raises, the user is on a non-interactive runner with
+no config -- point them at `vaultlab init` and stop. Users with multiple
+KBs (`research`, `tools`, `dcp`, etc.) can pick one for the session by
+setting `$VAULTLAB_KB_ROOT`.
 
 ### Step 2 -- Define the per-paper PDF reader (YOU read each PDF)
 
