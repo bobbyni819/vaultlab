@@ -1832,7 +1832,7 @@ def run_lit_arc(
     picker_callback: PickerCallback | None = None,
     binner_callback: BinningCallback | None = None,
     binner_max_candidates: int = 200,
-    picker_coarse_n: int = 30,
+    picker_coarse_n: int | None = None,
     picker_mode: str = "fast",
     arc_mode: str = "fast",
     crosstalk_runner: Any | None = None,
@@ -1878,7 +1878,9 @@ def run_lit_arc(
     candidate abstracts before deciding (see
     :mod:`vaultlab.research.picker`). When ``picker_callback`` is
     ``None``, the previous citation-graph behaviour is preserved. The
-    coarse-pool size (default 30) is controlled by ``picker_coarse_n``.
+    coarse-pool size is controlled by ``picker_coarse_n``: the default
+    ``None`` means no cap — the picker reads every corpus paper's abstract.
+    Pass an int to restore the legacy capped-pool behaviour.
 
     The ``project`` and ``run_dir`` arguments steer the picker's
     audit-trail output: when ``project`` is given AND

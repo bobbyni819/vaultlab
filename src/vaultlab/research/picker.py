@@ -18,10 +18,10 @@ Fix
 ---
 Two-stage selection:
 
-1. **Coarse filter (mechanical)** — the citation graph still picks the
-   top ``coarse_n`` candidates (typically 30) by
-   ``og_score + forward_influence``. This keeps the pool focused on
-   plausibly central work without being hostage to PDF caching.
+1. **Candidate pool** — by default (``coarse_n=None``), every paper in
+   the corpus is a candidate; the picker sees ALL abstracts. Pass an
+   integer to restore the legacy "top-N by ``og_score + forward_influence``"
+   capped pool behaviour.
 2. **Fine filter (content-aware)** — each candidate's abstract is fed to
    Claude Code (or any callable matching :data:`PickerCallback`), which
    returns a ranked list of ``target_n`` (typically 8-10) DOIs along with
@@ -119,7 +119,8 @@ class PickerTask:
 
     Attributes:
         topic: The user-supplied topic (raw, not slugified).
-        candidates: Top-``coarse_n`` papers by citation graph.
+        candidates: All corpus papers (default) or top-``coarse_n`` by
+            citation-graph score (legacy capped behaviour).
         target_n: How many DOIs the picker should return (8-10 typical).
         prompt: The full user-message prompt the picker should respond to.
         system_prompt: The system-message guard rails.
@@ -329,18 +330,21 @@ def load_abstract_from_kb(kb_root: Path, doi: str) -> str:
 def _build_candidates(
     corpus: Corpus,
     *,
-    coarse_n: int,
+    coarse_n: int | None,
     kb_root: Path,
     pdf_cache_dir: Path | None,
 ) -> list[CandidatePaper]:
-    """Pick the top ``coarse_n`` candidates from the citation graph.
+    """Build the candidate pool for the content-aware picker.
+
+    When ``coarse_n`` is ``None`` (the default), **every paper in the corpus**
+    is included as a candidate — the picker reads all abstracts. When a
+    positive int is given, the corpus is sorted by
+    ``(is_seed, has_pdf, og_score + forward_influence)`` and the top-``coarse_n``
+    are returned (legacy capped behaviour).
 
     Bug 2 fix (evening 3, 2026-04-30): Seed DOIs are ALWAYS preserved in the
     candidate pool, even when their og_score is 0 because they're not yet
-    cited within the corpus. The sort key is now
-    ``(is_seed, has_pdf, og_score + forward_influence)`` so seeds rank above
-    non-seeds; only after seeds are placed do og_score-driven non-seeds
-    fill the remaining ``coarse_n`` slots.
+    cited within the corpus.
 
     Hydrates each row's abstract from (in priority order):
 
@@ -380,11 +384,15 @@ def _build_candidates(
         )
         # Defensive: ensure any seed DOIs not present in corpus.papers are
         # ALSO included (they get appended to the end so they won't outrank
-        # corpus papers, but they'll still be considered if coarse_n is wide).
+        # corpus papers, but they'll still be considered).
         for sd in seed_dois:
             if sd not in corpus.papers:
                 ranked_dois.append(sd)
-    ranked_dois = ranked_dois[:coarse_n]
+    # ``coarse_n=None`` means "no cap — read every corpus paper's abstract."
+    # Otherwise apply the legacy slice. Python's [:None] returns the whole
+    # list, so the slice is a no-op when coarse_n is None.
+    if coarse_n is not None:
+        ranked_dois = ranked_dois[:coarse_n]
 
     out: list[CandidatePaper] = []
     for doi in ranked_dois:
@@ -423,14 +431,16 @@ def prepare_picker_task(
     *,
     corpus: Corpus,
     target_n: int = 10,
-    coarse_n: int = 30,
+    coarse_n: int | None = None,
     kb_root: Path,
     pdf_cache_dir: Path | None = None,
 ) -> PickerTask:
     """Prepare a content-aware paper-picker task. Does NOT call any LLM.
 
-    1. Citation graph filters to top ``coarse_n`` candidates by
-       ``og_score + forward_influence``.
+    1. Selects candidates from the corpus. **Default (``coarse_n=None``):**
+       every paper in the corpus is a candidate — the picker reads ALL
+       abstracts. Pass an integer to restore the legacy capped-pool behaviour
+       (top-N by ``og_score + forward_influence``).
     2. For each candidate, reads the abstract from
        ``Sources/Articles/<doi>.md`` (or the in-memory
        :attr:`Paper.abstract`); falls back to ``"[no abstract]"``.
@@ -444,8 +454,8 @@ def prepare_picker_task(
         topic: User-supplied topic, raw.
         corpus: Built :class:`Corpus` (``compute_metrics`` already run).
         target_n: How many DOIs the picker should return (default 10).
-        coarse_n: Citation-graph cutoff for the candidate pool
-            (default 30).
+        coarse_n: Maximum candidate-pool size. ``None`` (default) means
+            no cap — every corpus paper is a candidate.
         kb_root: Vaultlab KB root.
         pdf_cache_dir: Optional ``Sources/Papers/`` directory used to
             mark candidates with cached PDFs. Informational only.
@@ -731,7 +741,7 @@ def pick_top_n_content_aware(
     corpus: Corpus,
     *,
     target_n: int = 10,
-    coarse_n: int = 30,
+    coarse_n: int | None = None,
     kb_root: Path,
     pdf_cache_dir: Path | None = None,
     picker_callback: PickerCallback | None = None,
@@ -744,8 +754,9 @@ def pick_top_n_content_aware(
 
     Two execution modes:
 
-    * **Callback given** — citation graph filters to ``coarse_n``,
-      :func:`prepare_picker_task` builds the prompt, ``picker_callback``
+    * **Callback given** — :func:`prepare_picker_task` builds the prompt
+      with every corpus paper's abstract (``coarse_n=None``, default) or
+      a top-``coarse_n`` slice (legacy mode), ``picker_callback``
       reads abstracts and returns ranked picks, and
       :func:`render_picks_from_response` produces the final DOI list.
       Optionally writes the rationale to ``decisions-log.md``.
@@ -759,8 +770,8 @@ def pick_top_n_content_aware(
         topic: User-supplied topic.
         corpus: Built :class:`Corpus`.
         target_n: How many DOIs to return (default 10).
-        coarse_n: Citation-graph cutoff for the candidate pool
-            (default 30).
+        coarse_n: Maximum candidate-pool size. ``None`` (default) means
+            no cap — every corpus paper is a candidate.
         kb_root: Vaultlab KB root.
         pdf_cache_dir: Optional ``Sources/Papers/`` for PDF-presence hints.
         picker_callback: Optional :data:`PickerCallback` that consumes a

@@ -1195,7 +1195,7 @@ def run_lit_report(
                 topic,
                 corpus,
                 target_n=resolved_max_papers,
-                coarse_n=30,
+                coarse_n=None,  # read every corpus abstract
                 kb_root=kb_root,
                 pdf_cache_dir=pdf_cache_dir,
                 picker_callback=picker_callback,

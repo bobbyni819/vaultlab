@@ -226,6 +226,21 @@ def test_prepare_picker_task_respects_coarse_n_cutoff(tmp_path):
     assert len(task.candidates) == 2
 
 
+def test_prepare_picker_task_default_reads_all_corpus_papers(tmp_path):
+    """Default ``coarse_n=None`` puts every corpus paper in the candidate pool."""
+    corpus = _make_corpus_with_metrics()
+    n_corpus = len(corpus.papers)
+    task = prepare_picker_task("t", corpus=corpus, target_n=2, kb_root=tmp_path)
+    # No cap — every corpus paper is a candidate (plus seeds-not-in-corpus,
+    # but our fixture has all seeds in corpus.papers, so the count matches).
+    assert len(task.candidates) == n_corpus
+    # And explicit None gets the same answer.
+    task_none = prepare_picker_task(
+        "t", corpus=corpus, target_n=2, coarse_n=None, kb_root=tmp_path
+    )
+    assert len(task_none.candidates) == n_corpus
+
+
 def test_load_abstract_from_kb_returns_empty_when_missing(tmp_path):
     assert load_abstract_from_kb(tmp_path, "10.999/missing") == ""
 
