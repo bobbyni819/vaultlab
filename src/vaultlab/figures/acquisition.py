@@ -171,22 +171,70 @@ def _manifest_path(paper_dir: Path) -> Path:
 
 
 def _save_manifest(result: FigureAcquisitionResult, paper_dir: Path) -> None:
-    """Persist a manifest of the result so we can short-circuit on re-runs."""
+    """Persist a manifest of the result so we can short-circuit on re-runs.
+
+    Manifest shape (Gap 3 — observability, evening-5 2026-04-30)::
+
+        {
+          "doi": "10.x/y",
+          "source": "pmc-tar" | "elsevier-api" | ...,
+          "fetched_at": "2026-04-30T23:01:14Z",
+          "figures": [
+            {
+              "figure_id": "fig1",
+              "label": "Figure 1",
+              "path": "<paper_dir>/fig1.png",   # NEW: per-spec key
+              "file_path": "<paper_dir>/fig1.png",  # legacy alias kept for back-compat
+              "size_bytes": 12345,
+              "caption": "...",
+              "panels": ["A", "B"],
+              "page": null
+            },
+            ...
+          ],
+          "errors": ["..."]
+        }
+
+    The ``path`` and ``file_path`` keys carry the same value — ``path``
+    is the new canonical field per the gap-3 spec; ``file_path`` is kept
+    so older readers (and :func:`_load_manifest` itself) keep working
+    without a migration.
+    """
+    from datetime import datetime, timezone
+
     paper_dir.mkdir(parents=True, exist_ok=True)
+    fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    figures_payload = []
+    for f in result.figures:
+        try:
+            size_bytes = f.file_path.stat().st_size if f.file_path.exists() else 0
+        except OSError:
+            size_bytes = 0
+        figures_payload.append(
+            {
+                "figure_id": f.figure_id,
+                "label": f.label,
+                # Canonical "path" key per the gap-3 sidecar spec.
+                "path": str(f.file_path),
+                # Legacy alias retained so older readers don't break.
+                "file_path": str(f.file_path),
+                "size_bytes": int(size_bytes),
+                "caption": f.caption,
+                "panels": list(f.panels),
+                # Page number isn't surfaced by the API waterfall today
+                # (PMC NXML / Elsevier XML don't expose it without a
+                # PDF cross-walk). Reserved for forward-compat.
+                "page": None,
+            }
+        )
     payload = {
         "doi": result.doi,
         "source": result.source,
+        "fetched_at": fetched_at,
+        "errors": [result.error] if result.error else [],
+        # Keep "error" too so existing readers keep working.
         "error": result.error,
-        "figures": [
-            {
-                "figure_id": f.figure_id,
-                "file_path": str(f.file_path),
-                "caption": f.caption,
-                "label": f.label,
-                "panels": list(f.panels),
-            }
-            for f in result.figures
-        ],
+        "figures": figures_payload,
     }
     with open(_manifest_path(paper_dir), "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)
@@ -203,7 +251,9 @@ def _load_manifest(paper_dir: Path) -> FigureAcquisitionResult | None:
         return None
     figures = []
     for f in data.get("figures", []):
-        path = Path(f.get("file_path", ""))
+        # Prefer the canonical "path" key (Gap 3 spec, evening-5); fall
+        # back to legacy "file_path" so older manifests still load.
+        path = Path(f.get("path", "") or f.get("file_path", ""))
         if not path.exists():
             return None  # cache stale — re-acquire
         figures.append(

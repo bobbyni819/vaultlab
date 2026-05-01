@@ -37,12 +37,14 @@ from pathlib import Path
 
 __all__ = [
     "article_stub_path",
+    "author_year_label",
     "concept_path",
     "deck_path",
     "deck_plan_path",
     "ensure_parent",
     "evidence_path",
     "figure_path",
+    "format_author_lastname",
     "fulltext_md_path",
     "pdf_path",
     "project_decisions_path",
@@ -59,6 +61,159 @@ __all__ = [
     "transcript_path",
     "turn_path",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Author-name normalization (for wikilink + citation labels)
+# ---------------------------------------------------------------------------
+
+
+# Unicode hyphen variants we normalize to ASCII so a wikilink label
+# matches what Obsidian's autocompleter produces. Listed explicitly for
+# auditability; this is the full set produced by NCBI / OpenAlex /
+# CrossRef in the corpora we've seen.
+_UNICODE_HYPHENS = {
+    "‐",  # HYPHEN
+    "‑",  # NON-BREAKING HYPHEN
+    "‒",  # FIGURE DASH
+    "–",  # EN DASH
+    "—",  # EM DASH
+    "−",  # MINUS SIGN
+    "﹣",  # SMALL HYPHEN-MINUS
+    "－",  # FULLWIDTH HYPHEN-MINUS
+}
+
+
+def _normalize_hyphens(name: str) -> str:
+    """Replace exotic unicode hyphens with ASCII ``-``.
+
+    OpenAlex returns names like ``Kennedy‐Darling`` (U+2010) which look
+    fine in a markdown viewer but break wikilink autocompletion / pages
+    that compare against ASCII forms. Normalizing here keeps every
+    downstream renderer agreed on a single hyphen byte.
+    """
+    if not name:
+        return name
+    out = name
+    for ch in _UNICODE_HYPHENS:
+        if ch in out:
+            out = out.replace(ch, "-")
+    return out
+
+
+def format_author_lastname(author: str) -> str:
+    """Extract the surname from an author string in any of the known formats.
+
+    Handles every author-name format VaultLab has seen in the wild:
+
+    * ``"Last F"``                 -> ``"Last"``  (NCBI / S2 short form)
+    * ``"Last FM"``                -> ``"Last"``
+    * ``"Last, First"``            -> ``"Last"``  (Vancouver / CSL JSON)
+    * ``"Last, F."``               -> ``"Last"``
+    * ``"F. Last"``                -> ``"Last"``  (OpenAlex / CrossRef)
+    * ``"J. Kennedy-Darling"``     -> ``"Kennedy-Darling"``
+    * ``"First Middle Last"``      -> ``"Last"``  (Western full name)
+    * ``"Sarah Black"``            -> ``"Black"``
+    * single token (corp author)   -> as-is
+    * empty / falsy                -> ``""`` (caller picks fallback)
+
+    Unicode hyphens are normalized to ASCII ``-`` so
+    ``"Kennedy‐Darling X"`` ends up as ``"Kennedy-Darling"``.
+
+    Pre-evening-5 (2026-04-30) most call sites used a naive
+    ``authors[0].split()[0]`` which ALWAYS picked the first whitespace
+    token. That broke for OpenAlex's "F. Last" format (``J. Kennedy-Darling``
+    rendered as ``J. 2020`` instead of ``Kennedy-Darling 2020``).
+    """
+    if not author:
+        return ""
+    s = _normalize_hyphens(author).strip()
+    if not s:
+        return ""
+
+    # Comma-separated → "Last, First" — surname is unambiguous.
+    if "," in s:
+        last = s.split(",", 1)[0].strip()
+        return last or s
+
+    tokens = s.split()
+    if len(tokens) == 1:
+        # Single token: corp author or already a bare last name.
+        return tokens[0]
+
+    # Multi-token. We resolve the format in priority order:
+    #
+    #   1. NCBI short form ``Last F`` / ``Last FM`` — the LAST token is
+    #      a 1-2-letter initials block. This is the dominant form in
+    #      our corpora (PubMed, Semantic Scholar) so we check it first.
+    #   2. OpenAlex / CrossRef ``F. Last`` / ``J. Kennedy-Darling`` —
+    #      the FIRST token ends with '.' or is a single letter.
+    #   3. Western full name ``First Last`` / ``First Middle Last`` —
+    #      surname is the last token.
+    #
+    # Pre-evening-5 the original heuristic checked the last token first
+    # but ALSO returned tokens[0] for short-but-real surnames like
+    # ``Li C`` → which still works because "C" is the last token here.
+    # However it FAILED for OpenAlex's ``F. Last`` because the last
+    # token wasn't initial-shaped, so the function fell back to
+    # last_tok and produced ``"Last"`` correctly — but for ``J.
+    # Kennedy-Darling`` the last token is ``"Kennedy-Darling"``
+    # (correct), so the bug only bit when the FIRST author had a
+    # multi-token surname. The new logic explicitly handles the
+    # initial-first form before falling through.
+
+    suffixes = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv"}
+
+    # Strip trailing generational suffixes BEFORE format detection so
+    # ``"J. Smith Jr."`` doesn't look like NCBI's ``"Last Jr"`` form.
+    while len(tokens) > 1 and tokens[-1].lower().rstrip(".") in suffixes:
+        tokens = tokens[:-1]
+
+    if len(tokens) == 1:
+        return tokens[0]
+
+    # 1. NCBI short form: last token is initials (1-2 chars all alpha,
+    #    or 1-3 chars with periods).
+    last_tok = tokens[-1]
+    last_clean = last_tok.replace(".", "")
+    last_looks_initial = (
+        (1 <= len(last_clean) <= 2 and last_clean.isalpha())
+        or (last_tok.endswith(".") and len(last_clean) <= 3)
+    )
+    if last_looks_initial:
+        return tokens[0]
+
+    # 2. OpenAlex / CrossRef "F. Last" — first token is initials.
+    first_tok = tokens[0]
+    first_clean = first_tok.replace(".", "")
+    first_looks_initial = (
+        first_tok.endswith(".")
+        or (1 <= len(first_clean) <= 2 and first_clean.isalpha())
+    )
+    if first_looks_initial:
+        return tokens[-1]
+
+    # 3. Western "First Last" — surname is the last token.
+    return tokens[-1]
+
+
+def author_year_label(authors: list[str], year: int | None) -> str:
+    """Render an Obsidian wikilink label like ``"Kennedy-Darling 2020"``.
+
+    Uses :func:`format_author_lastname` for surname extraction (so every
+    callsite handles OpenAlex / NCBI / CSL formats consistently) and
+    falls back to ``"Anon"`` + ``"n.d."`` only when the inputs are
+    actually empty.
+    """
+    last = ""
+    for a in authors or []:
+        last = format_author_lastname(a)
+        if last:
+            break
+    if not last:
+        last = "Anon"
+    year_str = str(year) if year else "n.d."
+    return f"{last} {year_str}"
 
 
 # ---------------------------------------------------------------------------

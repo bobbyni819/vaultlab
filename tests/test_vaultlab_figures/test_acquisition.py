@@ -657,3 +657,133 @@ class TestAcquireFiguresSpringer:
         assert fig.panels == ["A"]
         assert fig.file_path.exists()
         assert fig.file_path.suffix == ".png"
+
+
+# ---------------------------------------------------------------------------
+# Gap 3 — figure-cache manifest sample (evening-5 2026-04-30)
+#
+# The .figures.json sidecar must carry the canonical "path" field, real
+# size_bytes, the source tier, fetched_at timestamp, and an errors list.
+# These tests pin the shape so the system-state §14 sample stays accurate.
+# ---------------------------------------------------------------------------
+
+
+class TestFigureManifestShape:
+    def test_manifest_has_canonical_fields(self, tmp_path: Path) -> None:
+        """A successful PMC OA acquisition writes a manifest with the
+        new gap-3 shape: doi/source/fetched_at/figures[{path, size_bytes,
+        caption, panels, page}]/errors.
+        """
+        tar_bytes = _make_tar_gz(figures={"fig1.png": _PNG_BYTES})
+        session = _FakeSession(
+            [
+                (
+                    ("pmc", "idconv"),
+                    _FakeResponse(
+                        status_code=200,
+                        _json={"records": [{"pmcid": "PMC1"}]},
+                    ),
+                ),
+                (
+                    ("pmc", "oa.fcgi"),
+                    _FakeResponse(
+                        status_code=200,
+                        content=_make_oa_xml("https://oa.test/p.tar.gz"),
+                    ),
+                ),
+                (
+                    ("pmc", "oa.test"),
+                    _FakeResponse(status_code=200, content=tar_bytes),
+                ),
+            ]
+        )
+        acquire_figures(
+            "10.5/manifest",
+            cache_dir=tmp_path,
+            apis={},
+            _session=session,  # type: ignore[arg-type]
+        )
+        paper_dir = figure_cache_dir("10.5/manifest", tmp_path)
+        data = json.loads((paper_dir / ".figures.json").read_text(encoding="utf-8"))
+
+        # Top-level shape
+        assert data["doi"] == "10.5/manifest"
+        assert data["source"] == "pmc-tar"
+        assert "fetched_at" in data
+        assert data["fetched_at"].endswith("Z")
+        assert data["errors"] == []  # success → empty list
+
+        # Per-figure shape: every required gap-3 key is present.
+        assert len(data["figures"]) == 1
+        fig0 = data["figures"][0]
+        for key in ("path", "size_bytes", "caption", "panels", "page"):
+            assert key in fig0, f"manifest figure missing {key!r}"
+        # path is the canonical field
+        assert fig0["path"].endswith("fig1.png")
+        # size_bytes is the actual file size, not a placeholder
+        assert fig0["size_bytes"] == len(_PNG_BYTES)
+        # page is reserved (None today)
+        assert fig0["page"] is None
+        # Panels parsed from caption
+        assert "A" in fig0["panels"]
+
+    def test_manifest_errors_populated_on_unavailable(self, tmp_path: Path) -> None:
+        """Unavailable papers still get a manifest, and the ``errors``
+        list carries the failure reason (gap-3 spec)."""
+        session = _FakeSession(
+            [
+                (
+                    ("pmc", "idconv"),
+                    _FakeResponse(status_code=200, _json={"records": [{}]}),
+                ),
+            ]
+        )
+        acquire_figures(
+            "10.9/missing",
+            cache_dir=tmp_path,
+            apis={},
+            _session=session,  # type: ignore[arg-type]
+        )
+        paper_dir = figure_cache_dir("10.9/missing", tmp_path)
+        data = json.loads((paper_dir / ".figures.json").read_text(encoding="utf-8"))
+        assert data["source"] == "unavailable"
+        assert data["figures"] == []
+        # errors is a list (gap-3) and carries the unavailable reason
+        assert isinstance(data["errors"], list)
+        assert any("no API source" in e for e in data["errors"])
+
+    def test_legacy_manifest_still_loads(self, tmp_path: Path) -> None:
+        """Older manifests written before evening-5 used ``file_path``
+        (no ``path``); the loader must still resolve them so existing
+        caches don't go stale."""
+        paper_dir = figure_cache_dir("10.1/legacy", tmp_path)
+        paper_dir.mkdir(parents=True)
+        cached = paper_dir / "fig1.png"
+        cached.write_bytes(_PNG_BYTES)
+        legacy_manifest = {
+            "doi": "10.1/legacy",
+            "source": "pmc-tar",
+            "error": None,
+            "figures": [
+                {
+                    "figure_id": "fig1",
+                    "file_path": str(cached),  # legacy key only
+                    "caption": "legacy",
+                    "label": "Figure 1",
+                    "panels": ["A"],
+                }
+            ],
+        }
+        (paper_dir / ".figures.json").write_text(
+            json.dumps(legacy_manifest), encoding="utf-8"
+        )
+        session = _FakeSession([])
+        result = acquire_figures(
+            "10.1/legacy",
+            cache_dir=tmp_path,
+            apis={},
+            _session=session,  # type: ignore[arg-type]
+        )
+        assert result.source == "cache"
+        assert len(result.figures) == 1
+        assert result.figures[0].file_path == cached

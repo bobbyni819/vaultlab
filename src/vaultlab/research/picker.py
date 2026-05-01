@@ -582,18 +582,13 @@ def _format_decision_block(
         lines.append("_(picker returned no picks)_")
         lines.append("")
         return "\n".join(lines)
+    from vaultlab.kb.paths import author_year_label
+
     for i, doi in enumerate(picks, 1):
         cand = candidates_by_doi.get(doi)
         slug = slugify_doi(doi)
         if cand is not None:
-            author = ""
-            if cand.authors:
-                first = cand.authors[0]
-                author = first.split()[0] if first else "Anon"
-            else:
-                author = "Anon"
-            year = str(cand.year) if cand.year else "n.d."
-            label = f"{author} {year}"
+            label = author_year_label(cand.authors, cand.year)
             stats = (
                 f"(og={cand.og_score:.2f}, fwd={cand.forward_influence})"
             )

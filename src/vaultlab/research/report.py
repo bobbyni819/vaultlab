@@ -385,7 +385,11 @@ def _bucketed_summaries_md(summaries: dict[str, PaperSummary]) -> str:
         # The previous .replace("/", "_") only handled `/` and broke on
         # rarer DOI characters like `:` `*` `?` `<` `>` `|`.
         slug = slugify_doi(s.doi) if s.doi else ""
-        first_author = s.authors[0].split()[0] if s.authors else "Anon"
+        from vaultlab.kb.paths import format_author_lastname
+
+        first_author = (
+            format_author_lastname(s.authors[0]) if s.authors else ""
+        ) or "Anon"
         label = f"{first_author} {s.year}" if s.year else first_author
         tldr = (s.tldr or "_(Tier-C stub — no TL;DR)_").strip()[:280]
         findings_preview = "; ".join((s.key_findings or [])[:2]) or "_(no findings)_"
@@ -672,8 +676,10 @@ def _references_from_summaries(
         slug = slugify_doi(slug_source) if slug_source else ""
         if cited_slugs and slug not in cited_slugs:
             continue
-        first_author = s.authors[0] if s.authors else "Anon"
-        last_name = first_author.split()[0] if first_author else "Anon"
+        from vaultlab.kb.paths import format_author_lastname
+
+        first_author = s.authors[0] if s.authors else ""
+        last_name = format_author_lastname(first_author) or "Anon"
         year = s.year or 0
         title = s.title or "(untitled)"
         journal = s.journal or ""

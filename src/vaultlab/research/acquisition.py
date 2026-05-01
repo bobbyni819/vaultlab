@@ -41,7 +41,7 @@ import logging
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -101,6 +101,16 @@ class AcquisitionResult:
             ``"cc-by-nc"``, ``"subscription"``, ``"unknown"``) or ``None``
             when the result is a failure.
         error: Free-text reason populated when ``source == "failed"``.
+        tried: Ordered list of tier names that were attempted (e.g.
+            ``["unpaywall", "pmc", "biorxiv"]``). Empty for cache hits.
+        tier_errors: Per-tier error string (only populated for tiers we
+            actually called and that returned non-success). Keys are tier
+            names; values are short strings like ``"404"``,
+            ``"non-pdf content"``, or ``"key missing"``. Used by the
+            decisions-log writer to surface "which sources we tried and
+            why each one failed" without spelunking through logs.
+        wall_time_ms: Wall-clock time of the entire :func:`acquire_pdf`
+            call (rate-limit sleeps included). 0 for cache hits.
     """
 
     doi: str
@@ -108,6 +118,9 @@ class AcquisitionResult:
     source: str
     license: str | None
     error: str | None = None
+    tried: tuple[str, ...] = ()
+    tier_errors: dict[str, str] = field(default_factory=dict)
+    wall_time_ms: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -614,8 +627,13 @@ def acquire_pdf(
     apis = apis if apis is not None else _load_default_apis()
     session = _session or _PoliteSession(timeout=timeout)
 
+    started = time.time()
     tried: list[str] = []
+    tier_errors: dict[str, str] = {}
     last_error: str | None = None
+
+    def _wall_ms() -> int:
+        return int((time.time() - started) * 1000)
 
     # ------------------------------------------------------------------
     # Tier 1: Unpaywall
@@ -625,6 +643,7 @@ def acquire_pdf(
         upw = _try_unpaywall(doi, session)
     except Exception as exc:  # pragma: no cover — defensive
         last_error = f"unpaywall lookup error: {exc}"
+        tier_errors["unpaywall"] = f"lookup error: {exc}"
         upw = None
     if upw is not None:
         pdf_url, license_str = upw
@@ -636,7 +655,13 @@ def acquire_pdf(
                 pdf_path=target,
                 source="unpaywall",
                 license=license_str,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
             )
+        tier_errors["unpaywall"] = "non-pdf content or download failed"
+    else:
+        tier_errors.setdefault("unpaywall", "no OA location with url_for_pdf")
 
     # ------------------------------------------------------------------
     # Tier 2: PMC (via EuropePMC render endpoint, with NCBI fallback)
@@ -646,6 +671,7 @@ def acquire_pdf(
         pmc = _try_pmc(doi, session)
     except Exception as exc:  # pragma: no cover — defensive
         last_error = f"pmc lookup error: {exc}"
+        tier_errors["pmc"] = f"lookup error: {exc}"
         pmc = None
     if pmc is not None:
         pdf_url, license_str = pmc
@@ -666,7 +692,13 @@ def acquire_pdf(
                 pdf_path=target,
                 source="pmc",
                 license=license_str,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
             )
+        tier_errors["pmc"] = "PMCID resolved but render endpoint had no PDF"
+    else:
+        tier_errors.setdefault("pmc", "no PMCID for DOI")
 
     # ------------------------------------------------------------------
     # Tier 3: bioRxiv / medRxiv
@@ -676,6 +708,7 @@ def acquire_pdf(
         bio = _try_biorxiv(doi, session)
     except Exception as exc:  # pragma: no cover — defensive
         last_error = f"biorxiv lookup error: {exc}"
+        tier_errors["biorxiv"] = f"lookup error: {exc}"
         bio = None
     if bio is not None:
         pdf_url, license_str = bio
@@ -692,7 +725,13 @@ def acquire_pdf(
                 pdf_path=target,
                 source="biorxiv",
                 license=license_str,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
             )
+        tier_errors["biorxiv"] = "preprint URL did not return a PDF"
+    else:
+        tier_errors.setdefault("biorxiv", "DOI not in 10.1101 prefix")
 
     if skip_paywalled:
         return AcquisitionResult(
@@ -701,6 +740,9 @@ def acquire_pdf(
             source="failed",
             license=None,
             error=last_error or f"no OA source had pdf (tried {', '.join(tried)})",
+            tried=tuple(tried),
+            tier_errors=dict(tier_errors),
+            wall_time_ms=_wall_ms(),
         )
 
     # ------------------------------------------------------------------
@@ -712,6 +754,7 @@ def acquire_pdf(
         spr = _try_springer(doi, session, springer_key)
     except Exception as exc:  # pragma: no cover — defensive
         last_error = f"springer lookup error: {exc}"
+        tier_errors["springer"] = f"lookup error: {exc}"
         spr = None
     if spr is not None:
         pdf_url, license_str = spr
@@ -723,7 +766,11 @@ def acquire_pdf(
                 pdf_path=target,
                 source="springer",
                 license=license_str,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
             )
+        tier_errors["springer"] = "OA only at meta tier or 403"
 
     # ------------------------------------------------------------------
     # Tier 5: Elsevier
@@ -743,7 +790,13 @@ def acquire_pdf(
                 pdf_path=target,
                 source="elsevier",
                 license=license_str,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
             )
+        tier_errors["elsevier"] = "API returned non-pdf or 403"
+    else:
+        tier_errors.setdefault("elsevier", "key missing")
 
     return AcquisitionResult(
         doi=doi,
@@ -751,6 +804,9 @@ def acquire_pdf(
         source="failed",
         license=None,
         error=last_error or f"no source had pdf (tried {', '.join(tried)})",
+        tried=tuple(tried),
+        tier_errors=dict(tier_errors),
+        wall_time_ms=_wall_ms(),
     )
 
 

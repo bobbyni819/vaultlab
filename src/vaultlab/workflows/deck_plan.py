@@ -189,20 +189,15 @@ _DECK_PLAN_SYSTEM_PROMPT = (
 def _author_year_label_from_dict(s: dict[str, Any]) -> str:
     """Vancouver-style ``Last Year`` from a summary dict.
 
-    Mirrors :func:`vaultlab.research.lineage._author_year_label` but
-    operates on the dict shape we feed into the prompt.
+    Delegates to :func:`vaultlab.kb.paths.author_year_label` — handles
+    NCBI's ``"Smith J"`` short form, OpenAlex's ``"J. Kennedy-Darling"``
+    initial-first form, Vancouver ``"Last, First"``, and full
+    ``"First Last"`` western order in one place.
     """
+    from vaultlab.kb.paths import author_year_label
+
     authors = s.get("authors") or []
-    last = ""
-    if authors:
-        first = authors[0]
-        # NCBI-style "Smith J" -> last name is the first whitespace token.
-        last = (first.split()[0] if first else "") or ""
-    if not last:
-        last = "Anon"
-    year = s.get("year")
-    year_str = str(year) if year else "n.d."
-    return f"{last} {year_str}"
+    return author_year_label(authors, s.get("year"))
 
 
 def _summary_to_prompt_dict(s: PaperSummary) -> dict[str, Any]:

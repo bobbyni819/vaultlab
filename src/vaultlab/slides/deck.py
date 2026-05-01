@@ -272,55 +272,19 @@ def build_deck(
 def _format_author_lastname(author: str) -> str:
     """Extract a Vancouver-style last-name surface form from a free-form author string.
 
-    Handles the heterogeneous ``Paper.authors`` formats we see in the
-    corpus, which arrive from NCBI / S2 / CrossRef / manual ingest in any
-    of the following shapes:
+    Thin shim over :func:`vaultlab.kb.paths.format_author_lastname` —
+    that helper is the single source of truth for surname extraction
+    across NCBI ``"Last F"`` / OpenAlex ``"J. Kennedy-Darling"`` /
+    Vancouver ``"Last, First"`` / western ``"First Last"`` formats and
+    normalizes unicode hyphens to ASCII at the same time.
 
-    - ``"Last F"`` -> ``"Last"``  (NCBI style)
-    - ``"Last FM"`` -> ``"Last"``
-    - ``"Last, F."`` -> ``"Last"``  (comma-separated last,first with period)
-    - ``"Last, First"`` -> ``"Last"``
-    - ``"F Last"`` -> ``"Last"``  (first-then-last, no comma — heuristic)
-    - ``"F. Last"`` -> ``"Last"``
-    - ``"First Middle Last"`` -> ``"Last"``  (multi-token, no comma)
-    - single token -> use as-is (already a last name OR a corp author)
-    - empty -> ``""`` (caller's responsibility to fall back to ``"Anon"``)
-
-    Pre-2026-04-30 the deck-renderer did naive ``authors[0].split()[-1]``
-    which produced ``"Yicheng"`` for ``"Tao Yicheng"`` (a first name) and
-    silently produced ``"Anon"`` for inputs the slug couldn't parse.
+    Pre-2026-04-30 evening-5 this had its own copy of the logic which
+    DIDN'T handle OpenAlex's "F. Last" format — produced ``"J. 2020"``
+    instead of ``"Kennedy-Darling 2020"``.
     """
-    if not author:
-        return ""
-    s = author.strip()
-    if not s:
-        return ""
+    from vaultlab.kb.paths import format_author_lastname
 
-    # Comma-separated -> Vancouver "Last, First" — the part before the
-    # comma is unambiguously the surname.
-    if "," in s:
-        last = s.split(",", 1)[0].strip()
-        return last or s
-
-    tokens = s.split()
-    if len(tokens) == 1:
-        # Single token: could be a corp author or just a last name. Use
-        # as-is.
-        return tokens[0]
-
-    # Two-or-more token whitespace-separated form. Decide whether tokens
-    # are "Last F" (last first, NCBI style — most common in our corpora)
-    # or "F Last" (first-then-last, less common). Heuristic: if the
-    # *last* token is short (1-3 chars, looks like initials), it's
-    # NCBI-style ``Last F`` -> first token is the surname. Otherwise
-    # the last token is the surname.
-    last_tok = tokens[-1]
-    if len(last_tok) <= 3 and last_tok.replace(".", "").isalpha():
-        # Looks like initials -> first token is the surname.
-        return tokens[0]
-
-    # Otherwise the last token is the surname (Western order).
-    return last_tok
+    return format_author_lastname(author)
 
 
 def _format_citation_label(

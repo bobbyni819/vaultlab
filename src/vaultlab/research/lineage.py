@@ -327,6 +327,141 @@ class LineageRunResult:
 # ---------------------------------------------------------------------------
 
 
+def _search_trace_path(kb_root: Path, topic: str, date_str: str) -> Path:
+    """Sidecar JSON path for ``_write_search_log``.
+
+    Mirrors the markdown log filename — ``lit-search-<topic>-<date>.md``
+    becomes ``lit-search-<topic>-<date>.search-trace.json``. This keeps
+    the trace co-located with the human-readable record so a decisions-log
+    reader can find both with one ``ls``.
+    """
+    md = search_log_path(Path(kb_root), topic, date_str)
+    return md.with_suffix("").with_name(md.stem + ".search-trace.json")
+
+
+def _write_search_trace(
+    *,
+    kb_root: Path,
+    topic: str,
+    date_str: str,
+    trace: Any,
+) -> Path | None:
+    """Persist a :class:`SearchTrace` next to the markdown search log.
+
+    Returns the path that was written, or ``None`` when the trace object
+    can't be serialized (e.g. an injected fake search client returned a
+    plain list and the orchestrator built no trace). Failure is silent —
+    the trace is observability, not load-bearing data.
+    """
+    if trace is None:
+        return None
+    try:
+        payload = trace.to_dict()
+    except Exception:  # pragma: no cover — defensive
+        logger.exception("search trace failed to serialize")
+        return None
+    path = ensure_parent(_search_trace_path(Path(kb_root), topic, date_str))
+    try:
+        path.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:  # pragma: no cover — disk failure shouldn't kill run
+        logger.exception("failed to write search trace at %s", path)
+        return None
+    return path
+
+
+def _write_pdf_acquisition_trace(
+    *,
+    acq_results: dict[str, Any],
+    run_dir: Path | None,
+    kb_root: Path,
+    topic: str,
+    date_str: str,
+) -> Path | None:
+    """Persist a per-DOI PDF acquisition trace (Gap 2 — observability).
+
+    Shape::
+
+        {
+          "run_id": "...",
+          "per_doi": {
+            "10.x/y": {
+              "tried": ["unpaywall", "pmc", ...],
+              "succeeded": "pmc" | null,
+              "errors": {"unpaywall": "404", ...},
+              "result_path": "<kb>/Sources/Papers/...",
+              "wall_time_ms": 1234
+            }
+          },
+          "summary": {"total_dois": N, "succeeded": M,
+                      "fail_reasons": {...}}
+        }
+
+    Writes to ``<run_dir>/pdf-acquisition-trace.json`` when ``run_dir``
+    is provided (so it lands inside the run-archived directory).
+    Otherwise falls back to
+    ``<kb>/Sources/Notes/pdf-acquisition-trace-<topic>-<date>.json`` so
+    callers without a run_dir still get the sidecar.
+    """
+    if not acq_results:
+        return None
+
+    per_doi: dict[str, Any] = {}
+    fail_reasons: dict[str, int] = {}
+    succeeded = 0
+    for doi, res in acq_results.items():
+        path = getattr(res, "pdf_path", None)
+        source = getattr(res, "source", "")
+        is_success = path is not None and source not in ("failed", "")
+        if is_success:
+            succeeded += 1
+        else:
+            reason = getattr(res, "error", None) or "unknown"
+            fail_reasons[reason] = fail_reasons.get(reason, 0) + 1
+        per_doi[doi] = {
+            "tried": list(getattr(res, "tried", ()) or ()),
+            "succeeded": source if is_success else None,
+            "errors": dict(getattr(res, "tier_errors", {}) or {}),
+            "result_path": str(path) if path is not None else None,
+            "wall_time_ms": int(getattr(res, "wall_time_ms", 0) or 0),
+            "license": getattr(res, "license", None),
+        }
+
+    payload = {
+        "run_id": (run_dir.name if run_dir is not None else f"{slugify_topic(topic)}-{date_str}"),
+        "topic": topic,
+        "date": date_str,
+        "per_doi": per_doi,
+        "summary": {
+            "total_dois": len(per_doi),
+            "succeeded": succeeded,
+            "failed": len(per_doi) - succeeded,
+            "fail_reasons": fail_reasons,
+        },
+    }
+
+    if run_dir is not None:
+        target = ensure_parent(Path(run_dir) / "pdf-acquisition-trace.json")
+    else:
+        target = ensure_parent(
+            Path(kb_root)
+            / "Sources"
+            / "Notes"
+            / f"pdf-acquisition-trace-{slugify_topic(topic)}-{date_str}.json"
+        )
+    try:
+        target.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:  # pragma: no cover — defensive
+        logger.exception("failed to write pdf acquisition trace at %s", target)
+        return None
+    return target
+
+
 def _write_search_log(
     *,
     kb_root: Path,
@@ -497,14 +632,15 @@ def _scan_sibling_project_dois(
 
 
 def _project_view_label(s: PaperSummary) -> str:
-    """Author-Year label used in Wiki/Projects/<slug>/papers.md wikilinks."""
-    if s.authors:
-        first = s.authors[0]
-        last = first.split()[0] if first else "Anon"
-    else:
-        last = "Anon"
-    year = str(s.year) if s.year else "n.d."
-    return f"{last} {year}"
+    """Author-Year label used in Wiki/Projects/<slug>/papers.md wikilinks.
+
+    Delegates surname extraction to :func:`vaultlab.kb.paths.author_year_label`
+    so OpenAlex's ``F. Last`` format (e.g. ``J. Kennedy-Darling``) renders
+    as ``Kennedy-Darling 2020`` instead of ``J. 2020``.
+    """
+    from vaultlab.kb.paths import author_year_label
+
+    return author_year_label(s.authors, s.year)
 
 
 def _render_project_papers_md(
@@ -1115,15 +1251,19 @@ def _bucket_summaries(
 
 
 def _author_year_label(s: PaperSummary) -> str:
-    """Human-readable wikilink label: "Komor 2016 (CBE)" style."""
-    if s.authors:
-        first = s.authors[0]
-        # Strip initials, take last name first-token
-        last = first.split()[0] if first else "Anon"
-    else:
-        last = "Anon"
-    year = str(s.year) if s.year else "n.d."
-    return f"{last} {year}"
+    """Human-readable wikilink label: "Komor 2016 (CBE)" style.
+
+    Delegates to :func:`vaultlab.kb.paths.author_year_label`. That helper
+    handles every author-name format we've seen in the wild (NCBI's
+    "Goltsev Y" / OpenAlex's "J. Kennedy-Darling" / CrossRef's
+    "First Last" / Vancouver "Last, First"), so the same surname falls
+    out of all of them. Pre-evening-5 (2026-04-30) this used a naive
+    ``authors[0].split()[0]`` which produced ``J. 2020`` for OpenAlex
+    backfills.
+    """
+    from vaultlab.kb.paths import author_year_label
+
+    return author_year_label(s.authors, s.year)
 
 
 def build_arc_prompt(
@@ -1846,7 +1986,22 @@ def run_lit_arc(
         client = ResearchClient()
     else:
         client = _client
-    raw_seeds = client.search(topic, max_results=max_seeds)
+    # Prefer ``search_with_trace`` so we can emit a per-source trace
+    # sidecar; fall back to the plain ``search`` path for fakes/legacy
+    # injection points that don't expose the trace API.
+    search_trace = None
+    if hasattr(client, "search_with_trace"):
+        try:
+            raw_seeds, search_trace = client.search_with_trace(
+                topic, max_results=max_seeds
+            )
+        except Exception:  # pragma: no cover — defensive
+            logger.exception(
+                "search_with_trace failed; falling back to plain client.search"
+            )
+            raw_seeds = client.search(topic, max_results=max_seeds)
+    else:
+        raw_seeds = client.search(topic, max_results=max_seeds)
     # Drop seeds without DOIs — we can't put them in the citation graph.
     seeds = [s for s in raw_seeds if s.doi][:max_seeds]
     _emit(progress, "seeds", n=len(seeds))
@@ -1858,6 +2013,18 @@ def run_lit_arc(
         kb_root=kb_root, topic=topic, seeds=seeds, date_str=date_str
     )
     _emit(progress, "search_log", path=str(log_path))
+    # Side-by-side per-source trace (Gap 1 — observability). Failure here
+    # is logged-and-ignored: the markdown log + decisions log already
+    # carry enough to land the run, the trace is purely diagnostic.
+    if search_trace is not None:
+        trace_path = _write_search_trace(
+            kb_root=kb_root,
+            topic=topic,
+            date_str=date_str,
+            trace=search_trace,
+        )
+        if trace_path is not None:
+            _emit(progress, "search_trace", path=str(trace_path))
 
     # ------------------------------------------------------------------
     # Phase 3: article stubs (one per seed with DOI)
@@ -1950,6 +2117,18 @@ def run_lit_arc(
         1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None
     )
     _emit(progress, "pdfs_acquired", n=pdfs_acquired)
+    # Per-DOI trace sidecar (Gap 2). Lives next to the run if available
+    # so the decisions log can answer "which sources did we try for
+    # 10.x/y, which one won, and why did the others fail".
+    trace_path_pdf = _write_pdf_acquisition_trace(
+        acq_results=acq_results,
+        run_dir=run_dir,
+        kb_root=kb_root,
+        topic=topic,
+        date_str=date_str,
+    )
+    if trace_path_pdf is not None:
+        _emit(progress, "pdf_acquisition_trace", path=str(trace_path_pdf))
 
     # ------------------------------------------------------------------
     # Phase 5b: figure acquisition (opt-in)

@@ -306,6 +306,36 @@ class ResearchClient:
             biorxiv_client=self._biorxiv,
         )
 
+    def search_with_trace(
+        self,
+        query: str,
+        max_results: int = 20,
+        sources: list[str] | None = None,
+    ):
+        """Like :meth:`search` but also returns a per-source trace.
+
+        Returns:
+            ``(papers, trace)`` where ``trace`` is a
+            :class:`vaultlab.research.search.SearchTrace` with per-source
+            hits / errors / wall-time. The orchestrator uses this to emit
+            a ``Sources/Notes/<topic>.search-trace.json`` sidecar so the
+            decisions log can show real per-API hit counts (not just the
+            seed-set size).
+        """
+        from vaultlab.research.search import unified_search
+
+        return unified_search(
+            query,
+            max_results=max_results,
+            sources=sources,
+            ncbi_client=self._ncbi,
+            springer_client=self._springer,
+            semantic_client=self._semantic,
+            crossref_client=self._crossref,
+            biorxiv_client=self._biorxiv,
+            return_trace=True,
+        )
+
     def get_paper(self, doi_or_pmid: str) -> Paper | None:
         """Get full metadata from the best available source.
 
