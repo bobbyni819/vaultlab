@@ -43,11 +43,14 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 
 from vaultlab.research.corpus import Corpus
+
+if TYPE_CHECKING:
+    from vaultlab.research.paper import Paper
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +114,16 @@ class AcquisitionResult:
             why each one failed" without spelunking through logs.
         wall_time_ms: Wall-clock time of the entire :func:`acquire_pdf`
             call (rate-limit sleeps included). 0 for cache hits.
+        publisher_url: Best-guess publisher URL (e.g.
+            ``https://doi.org/<doi>``) for manual-fetch instructions
+            when the API waterfall fails but the user has institutional
+            browser access (Duke library proxy, etc.). Always ``None``
+            on success.
+        cache_target_path: Where the user should drop a manually-downloaded
+            PDF so the next ``acquire_pdf`` call picks it up from cache
+            (the canonical ``<cache_dir>/<doi-slug>.pdf``). Populated on
+            failure so the orchestrator can render copy-paste manual
+            fetch instructions.
     """
 
     doi: str
@@ -121,6 +134,8 @@ class AcquisitionResult:
     tried: tuple[str, ...] = ()
     tier_errors: dict[str, str] = field(default_factory=dict)
     wall_time_ms: int = 0
+    publisher_url: str | None = None
+    cache_target_path: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -750,6 +765,8 @@ def acquire_pdf(
             tried=tuple(tried),
             tier_errors=dict(tier_errors),
             wall_time_ms=_wall_ms(),
+            publisher_url=f"https://doi.org/{doi}",
+            cache_target_path=target,
         )
 
     # ------------------------------------------------------------------
@@ -814,7 +831,108 @@ def acquire_pdf(
         tried=tuple(tried),
         tier_errors=dict(tier_errors),
         wall_time_ms=_wall_ms(),
+        publisher_url=f"https://doi.org/{doi}",
+        cache_target_path=target,
     )
+
+
+# ---------------------------------------------------------------------------
+# Public API: manual-fetch fallback for paywalled papers
+# ---------------------------------------------------------------------------
+
+
+def render_manual_fetch_instructions(
+    results: dict[str, AcquisitionResult],
+    *,
+    corpus_papers: dict[str, "Paper"] | None = None,
+    title: str = "Papers needing manual download",
+) -> str:
+    """Render a markdown block telling the user which papers to fetch manually.
+
+    Use after a corpus-wide ``acquire_pdfs_for_corpus`` call to surface
+    papers the API waterfall couldn't reach but that the user has
+    institutional browser access to (Springer-Nature paywalled, Wiley
+    non-OA, etc.). For each failed DOI, emit:
+
+    * The DOI as a clickable link to the publisher (``https://doi.org/<doi>``)
+    * The canonical cache path where the user should drop the PDF
+    * A one-line note on which API tiers were tried and why each failed
+
+    On the user's *next* ``/lit-arc`` run, ``acquire_pdf`` will detect
+    the file at ``cache_target_path`` and short-circuit the waterfall —
+    no code change needed for the second-run pickup, the existing cache
+    check handles it.
+
+    Args:
+        results: Mapping of DOI to :class:`AcquisitionResult` from
+            ``acquire_pdfs_for_corpus``.
+        corpus_papers: Optional ``corpus.papers`` dict, used to pull
+            paper titles and journal names into the instructions.
+        title: Heading for the markdown block.
+
+    Returns:
+        Markdown string. Empty when no papers need manual fetch.
+    """
+    failed = [
+        (doi, r)
+        for doi, r in results.items()
+        if r.source == "failed" and r.cache_target_path is not None
+    ]
+    if not failed:
+        return ""
+
+    lines: list[str] = [
+        f"# {title}",
+        "",
+        f"vaultlab couldn't get **{len(failed)} PDF(s)** via the API "
+        f"waterfall. If you have institutional browser access (e.g. "
+        f"Duke library proxy), download them from the publisher and "
+        f"drop them at the indicated paths — vaultlab will pick them "
+        f"up on the next `/lit-arc` run.",
+        "",
+        "## Per-paper instructions",
+        "",
+    ]
+    for doi, r in failed:
+        meta = corpus_papers.get(doi) if corpus_papers else None
+        if meta is not None:
+            title_s = (getattr(meta, "title", "") or "").strip() or doi
+            journal_s = (getattr(meta, "journal", "") or "").strip()
+        else:
+            title_s = doi
+            journal_s = ""
+        tried = ", ".join(r.tried) if r.tried else "(none)"
+        lines.append(f"### {title_s}")
+        lines.append("")
+        if journal_s:
+            lines.append(f"- **Journal:** {journal_s}")
+        lines.append(f"- **Publisher URL:** <{r.publisher_url}>")
+        lines.append(f"- **Drop the PDF at:** `{r.cache_target_path}`")
+        lines.append(f"- **Tried sources:** {tried}")
+        if r.tier_errors:
+            err_summary = "; ".join(
+                f"{k}={v[:60]}" for k, v in r.tier_errors.items()
+            )
+            lines.append(f"- **Why each failed:** {err_summary}")
+        lines.append("")
+
+    lines.append("## How to fetch")
+    lines.append("")
+    lines.append(
+        "1. Click the publisher URL above. If you're on Duke VPN or "
+        "logged in via the Duke library proxy, the PDF download button "
+        "should be available."
+    )
+    lines.append(
+        "2. Save the PDF to the indicated path (the directory exists; "
+        "you just need to write the file)."
+    )
+    lines.append(
+        "3. Re-run `/lit-arc` for this topic. vaultlab will detect the "
+        "file in cache and pick it up automatically — no code changes "
+        "needed."
+    )
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
