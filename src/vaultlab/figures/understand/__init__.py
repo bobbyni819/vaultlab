@@ -75,6 +75,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from vaultlab.figures.understand._tasks import (
+    DescribeFigureTask,
+    MatchElementsTask,
+    VerifyAnnotationTask,
+    describe_response_schema,
+    match_response_schema,
+    prepare_describe_task,
+    prepare_match_task,
+    prepare_verify_task,
+    render_describe_from_response,
+    render_match_from_response,
+    render_verify_from_response,
+    verify_response_schema,
+)
 from vaultlab.figures.understand.color_motif import (
     ColorMotif,
     Region,
@@ -91,15 +105,27 @@ from vaultlab.kb.paths import slugify_doi
 
 __all__ = [
     "ColorMotif",
+    "DescribeFigureTask",
     "ElementAnnotation",
     "FigureUnderstandLog",
+    "MatchElementsTask",
     "Region",
     "VerificationIteration",
+    "VerifyAnnotationTask",
+    "describe_response_schema",
     "extract_regions",
+    "match_response_schema",
     "merge_regions",
+    "prepare_describe_task",
+    "prepare_match_task",
+    "prepare_verify_task",
     "render_debug_overlay",
+    "render_describe_from_response",
+    "render_match_from_response",
+    "render_verify_from_response",
     "save_understand_log",
     "understand_figure",
+    "verify_response_schema",
 ]
 
 
