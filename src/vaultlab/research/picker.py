@@ -327,6 +327,17 @@ def load_abstract_from_kb(kb_root: Path, doi: str) -> str:
     return match.group("body").strip()
 
 
+_AUTO_CAP_THRESHOLD: int = 500
+"""When ``coarse_n=None`` and the corpus has more than this many papers,
+automatically cap the candidate pool to :data:`_AUTO_CAP_DEFAULT` to
+avoid blowing the picker's LLM context. Set the threshold high enough
+that small/medium corpora (~250 papers from backward-only expansion)
+still get the "read everything" treatment."""
+
+_AUTO_CAP_DEFAULT: int = 200
+"""When the auto-cap kicks in, this is the number of candidates kept."""
+
+
 def _build_candidates(
     corpus: Corpus,
     *,
@@ -336,11 +347,15 @@ def _build_candidates(
 ) -> list[CandidatePaper]:
     """Build the candidate pool for the content-aware picker.
 
-    When ``coarse_n`` is ``None`` (the default), **every paper in the corpus**
-    is included as a candidate — the picker reads all abstracts. When a
-    positive int is given, the corpus is sorted by
-    ``(is_seed, has_pdf, og_score + forward_influence)`` and the top-``coarse_n``
-    are returned (legacy capped behaviour).
+    When ``coarse_n`` is ``None`` (the default), every paper in the corpus
+    is included as a candidate — UNLESS the corpus is large (>500 papers,
+    typical when forward citation expansion is on). In that case an
+    automatic cap of 200 kicks in to keep the picker's prompt under
+    ~100k tokens. Pass an explicit ``coarse_n`` to override.
+
+    When a positive int is given, the corpus is sorted by
+    ``(is_seed, has_pdf, og_score + forward_influence)`` and the top-N
+    are returned.
 
     Bug 2 fix (evening 3, 2026-04-30): Seed DOIs are ALWAYS preserved in the
     candidate pool, even when their og_score is 0 because they're not yet
@@ -388,11 +403,21 @@ def _build_candidates(
         for sd in seed_dois:
             if sd not in corpus.papers:
                 ranked_dois.append(sd)
-    # ``coarse_n=None`` means "no cap — read every corpus paper's abstract."
-    # Otherwise apply the legacy slice. Python's [:None] returns the whole
-    # list, so the slice is a no-op when coarse_n is None.
-    if coarse_n is not None:
-        ranked_dois = ranked_dois[:coarse_n]
+    # ``coarse_n=None`` means "no cap UNLESS the corpus is huge." The
+    # auto-cap protects against context-window blow-out when forward
+    # citation expansion produces a 2000+ paper corpus.
+    effective_cap = coarse_n
+    if effective_cap is None and len(ranked_dois) > _AUTO_CAP_THRESHOLD:
+        effective_cap = _AUTO_CAP_DEFAULT
+        logger.info(
+            "picker auto-cap: corpus has %d papers > %d threshold; "
+            "capping candidate pool to top %d",
+            len(ranked_dois),
+            _AUTO_CAP_THRESHOLD,
+            _AUTO_CAP_DEFAULT,
+        )
+    if effective_cap is not None:
+        ranked_dois = ranked_dois[:effective_cap]
 
     out: list[CandidatePaper] = []
     for doi in ranked_dois:

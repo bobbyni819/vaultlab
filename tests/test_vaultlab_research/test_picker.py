@@ -241,6 +241,60 @@ def test_prepare_picker_task_default_reads_all_corpus_papers(tmp_path):
     assert len(task_none.candidates) == n_corpus
 
 
+def test_prepare_picker_task_auto_caps_huge_corpus(tmp_path):
+    """When ``coarse_n=None`` and corpus has > 500 papers, auto-cap to 200."""
+    from vaultlab.research.corpus import Corpus
+    from vaultlab.research.graph_metrics import compute_metrics
+
+    # Synthesize 600 corpus papers
+    seeds = _make_seeds()  # 3 seeds
+    big_corpus = Corpus(topic="huge", seeds=seeds, papers={})
+    for i in range(600):
+        p = Paper(
+            title=f"paper-{i}",
+            year=2020,
+            doi=f"10.0001/p{i}",
+            citation_count=i,
+        )
+        big_corpus.papers[p.doi] = p
+    # Include the seeds too
+    for s in seeds:
+        big_corpus.papers[s.doi] = s
+    compute_metrics(big_corpus)
+
+    task = prepare_picker_task(
+        "t", corpus=big_corpus, target_n=10, kb_root=tmp_path
+    )
+    # Auto-cap engages: candidate count should be 200, not 600+
+    assert len(task.candidates) == 200
+
+
+def test_prepare_picker_task_explicit_coarse_n_overrides_auto_cap(tmp_path):
+    """Passing an explicit ``coarse_n`` bypasses the auto-cap heuristic."""
+    from vaultlab.research.corpus import Corpus
+    from vaultlab.research.graph_metrics import compute_metrics
+
+    seeds = _make_seeds()
+    big_corpus = Corpus(topic="huge", seeds=seeds, papers={})
+    for i in range(600):
+        p = Paper(
+            title=f"paper-{i}",
+            year=2020,
+            doi=f"10.0001/p{i}",
+            citation_count=i,
+        )
+        big_corpus.papers[p.doi] = p
+    for s in seeds:
+        big_corpus.papers[s.doi] = s
+    compute_metrics(big_corpus)
+
+    # Explicit cap of 50 — bypasses auto-cap, gives exactly 50
+    task = prepare_picker_task(
+        "t", corpus=big_corpus, target_n=10, coarse_n=50, kb_root=tmp_path
+    )
+    assert len(task.candidates) == 50
+
+
 def test_load_abstract_from_kb_returns_empty_when_missing(tmp_path):
     assert load_abstract_from_kb(tmp_path, "10.999/missing") == ""
 
