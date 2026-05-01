@@ -1843,6 +1843,8 @@ def run_lit_arc(
     forward_expansion: bool = True,
     forward_expansion_max_per_seed: int = 50,
     arc_structure: "str | Any" = None,
+    verifier_callback: "Any | None" = None,
+    verifier_unverifiable_threshold: int = 1,
     crosstalk_runner: Any | None = None,
     crosstalk_n_rounds: int = 3,
     project: str | None = None,
@@ -2628,6 +2630,75 @@ def run_lit_arc(
             except Exception as exc:
                 skipped_reason = f"anthropic call raised: {exc}"
                 narrative = None
+
+    # ------------------------------------------------------------------
+    # Phase 7b: claim verification (#99 mitigation, #105 wiring)
+    # ------------------------------------------------------------------
+    # When a verifier_callback is supplied, re-read each draft section
+    # against the cited papers' summaries and produce per-claim verdicts.
+    # Surfaces overclaims that the narrator (or the adversarial meeting)
+    # may have propagated past the [pN] anchors. The output flows into
+    # the provenance receipt and (when threshold-tripped) appends a
+    # warning block to the arc body.
+    verification_summary: dict[str, Any] = {}
+    if verifier_callback is not None and narrative:
+        from vaultlab.research.claim_verification import (
+            verify_paragraph_claims,
+        )
+
+        # Build the cited-summaries map once: doi → "TL;DR + key findings".
+        cited_summaries: dict[str, str] = {}
+        for doi, summary_obj in summaries.items():
+            tldr = (getattr(summary_obj, "tldr", "") or "").strip()
+            findings = list(getattr(summary_obj, "key_findings", []) or [])
+            blob_parts: list[str] = []
+            if tldr:
+                blob_parts.append(f"TL;DR: {tldr}")
+            if findings:
+                blob_parts.append(
+                    "Key findings:\n"
+                    + "\n".join(f"- {f}" for f in findings)
+                )
+            cited_summaries[doi.lower()] = "\n\n".join(blob_parts)
+
+        per_section_results: dict[str, Any] = {}
+        unverifiable_total = 0
+        for section_id, paragraph_text in narrative.items():
+            if not paragraph_text:
+                continue
+            try:
+                result = verify_paragraph_claims(
+                    paragraph=paragraph_text,
+                    section_id=section_id,
+                    cited_summaries=cited_summaries,
+                    verifier_callback=verifier_callback,
+                )
+            except Exception as exc:  # pragma: no cover — defensive
+                logger.warning(
+                    "claim verification raised for section %s: %s",
+                    section_id,
+                    exc,
+                )
+                continue
+            per_section_results[section_id] = result
+            unverifiable_total += result.verdict_counts.get("unverifiable", 0)
+
+        verification_summary = {
+            "by_section": {
+                sid: dict(r.verdict_counts)
+                for sid, r in per_section_results.items()
+            },
+            "unverifiable_total": int(unverifiable_total),
+            "any_revisions_suggested": any(
+                r.any_revisions_suggested for r in per_section_results.values()
+            ),
+        }
+        _emit(
+            progress,
+            "claim_verification",
+            sections=len(per_section_results),
+            unverifiable=unverifiable_total,
+        )
 
     # Render the arc text first (without method_relpath) so we can detect
     # whether this is an idempotent rerun (same text, same date) vs a
