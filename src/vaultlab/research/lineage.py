@@ -105,7 +105,10 @@ from vaultlab.research.binning import (
     BinningTask,
     assign_buckets_with_llm,
 )
-from vaultlab.research.corpus import build_corpus_from_seeds
+from vaultlab.research.corpus import (
+    build_corpus_from_seeds,
+    expand_corpus_forward,
+)
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.picker import (
     PickerCallback,
@@ -1837,6 +1840,8 @@ def run_lit_arc(
     arc_mode: str = "fast",
     query_expander_callback: Any | None = None,
     query_expansion_n: int = 5,
+    forward_expansion: bool = True,
+    forward_expansion_max_per_seed: int = 50,
     crosstalk_runner: Any | None = None,
     crosstalk_n_rounds: int = 3,
     project: str | None = None,
@@ -2075,6 +2080,40 @@ def run_lit_arc(
         topic=topic,
         fetch_refs=_fetch_refs,
     )
+
+    # Forward citation expansion — adds papers that cite the seeds.
+    # Closes the SOTA blind spot where backward-only expansion never
+    # surfaces work newer than the seeds. Requires a Semantic Scholar
+    # client on the research client; silently skipped if absent.
+    if forward_expansion:
+        s2 = getattr(client, "_semantic", None)
+        if s2 is not None and hasattr(s2, "get_citations"):
+
+            def _fetch_forward(doi: str, limit: int):
+                return s2.get_citations(doi, limit=limit)
+
+            try:
+                expand_corpus_forward(
+                    corpus,
+                    fetch_citations=_fetch_forward,
+                    seed_only=True,
+                    max_per_paper=forward_expansion_max_per_seed,
+                )
+                _emit(
+                    progress,
+                    "forward_expansion",
+                    n_seeds=len(corpus.cited_by),
+                    n_papers=corpus.n_papers,
+                )
+            except Exception:  # pragma: no cover — defensive
+                logger.exception(
+                    "Forward citation expansion failed; continuing with backward-only graph"
+                )
+        else:
+            logger.info(
+                "Forward expansion skipped: no Semantic Scholar client on the research client"
+            )
+
     compute_metrics(corpus)
     _emit(
         progress,

@@ -46,12 +46,19 @@ class Corpus:
         topic: The topic / search query that produced this corpus.
         seeds: The papers returned by the keyword search. These are the
             "OG" papers in the corpus's frame of reference — every other
-            paper either is one of these or is referenced by one.
+            paper either is one of these or is referenced by one (backward
+            edge) or cites one (forward edge).
         papers: Every paper in the graph, keyed by lower-cased DOI.
-        references: ``doi -> list of cited DOIs`` adjacency. A paper present
-            here with an empty list means CrossRef knew of it but had no
-            reference array (PDF-reading fallback target). A paper absent
-            means we never tried to look up its refs.
+        references: ``doi -> list of cited DOIs`` adjacency (BACKWARD edges).
+            A paper present here with an empty list means CrossRef knew of
+            it but had no reference array (PDF-reading fallback target).
+            A paper absent means we never tried to look up its refs.
+        cited_by: ``doi -> list of citing DOIs`` adjacency (FORWARD edges).
+            Populated by :func:`expand_corpus_forward` via Semantic
+            Scholar's ``/paper/{doi}/citations`` endpoint. Lets the
+            citation graph trace descendants from the seeds, fixing the
+            backward-only blind spot where recent SOTA work never enters
+            the corpus.
         metrics: Computed citation metrics. Populated by
             :func:`vaultlab.research.graph_metrics.compute_metrics`.
     """
@@ -60,6 +67,7 @@ class Corpus:
     seeds: list[Paper]
     papers: dict[str, Paper] = field(default_factory=dict)
     references: dict[str, list[str]] = field(default_factory=dict)
+    cited_by: dict[str, list[str]] = field(default_factory=dict)
     metrics: "CorpusMetrics | None" = None
 
     # ------------------------------------------------------------------
@@ -207,6 +215,89 @@ def build_corpus_from_seeds(
         len(seeds),
         corpus.n_papers,
         corpus.n_edges,
+    )
+    return corpus
+
+
+# Type alias: a callable that fetches forward citations for a DOI.
+# Returns a list of Paper objects (each one citing the input DOI).
+ForwardCitationFetcher = Callable[[str, int], list[Paper]]
+
+
+def expand_corpus_forward(
+    corpus: Corpus,
+    *,
+    fetch_citations: ForwardCitationFetcher,
+    seed_only: bool = True,
+    max_per_paper: int = 50,
+) -> Corpus:
+    """Add FORWARD citations to the corpus — papers that cite our seeds.
+
+    For each seed (or each paper, if ``seed_only=False``), fetches up to
+    ``max_per_paper`` citing papers via Semantic Scholar's
+    ``/paper/{doi}/citations`` endpoint. Newly-discovered DOIs are added
+    to ``corpus.papers``; the forward edges are recorded in
+    ``corpus.cited_by``.
+
+    This closes the SOTA blind spot: the standard citation-graph
+    expansion (``expand_corpus``) walks BACKWARD via CrossRef references,
+    so a paper from 2024 building on a 2018 seed will never enter the
+    corpus that way (older seeds can't cite newer work). Forward
+    expansion goes the other direction — given the 2018 seed, ask "who
+    has cited this since?" — and pulls in 2024-2025 SOTA work directly.
+
+    Args:
+        corpus: The :class:`Corpus` to expand in-place. Returned for
+            chaining.
+        fetch_citations: Callable ``(doi, limit) -> list[Paper]`` that
+            returns papers citing the input DOI. Typically
+            ``ResearchClient._semantic.get_citations``.
+        seed_only: When ``True`` (default), only seeds get forward
+            expansion. When ``False``, every paper currently in
+            ``corpus.papers`` gets expanded — much larger fan-out.
+        max_per_paper: Cap on citing papers per source paper. S2 caps
+            at 1000; we default to 50 to avoid runaway corpus growth.
+
+    Returns:
+        The same :class:`Corpus`, with ``papers`` and ``cited_by``
+        populated for the expanded set.
+    """
+    targets: list[str]
+    if seed_only:
+        targets = [_normalize_doi(s.doi) for s in corpus.seeds if s.doi]
+    else:
+        targets = list(corpus.papers.keys())
+
+    new_dois: int = 0
+    new_edges: int = 0
+    for doi in targets:
+        if not doi or doi in corpus.cited_by:
+            continue
+        try:
+            citing = fetch_citations(doi, max_per_paper) or []
+        except Exception as exc:
+            logger.warning("Forward citation fetch failed for %s: %s", doi, exc)
+            corpus.cited_by[doi] = []
+            continue
+
+        citing_dois: list[str] = []
+        for paper in citing:
+            cd = _normalize_doi(paper.doi)
+            if not cd:
+                continue
+            citing_dois.append(cd)
+            if cd not in corpus.papers:
+                _add_paper(corpus, paper)
+                new_dois += 1
+            new_edges += 1
+        corpus.cited_by[doi] = citing_dois
+
+    logger.info(
+        "Forward expansion ('%s'): +%d papers, +%d cited_by edges (over %d source DOIs)",
+        corpus.topic,
+        new_dois,
+        new_edges,
+        len(targets),
     )
     return corpus
 
