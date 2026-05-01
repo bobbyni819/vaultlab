@@ -847,10 +847,11 @@ def _render_decisions_log_entry(
         if run_id
         else "- **Run ID:** none (no run_dir provided)"
     )
+    speaker_label = speaker.strip() if speaker else "(unspecified)"
     return (
         f"## {timestamp} — lit-arc run\n"
         f"- **Topic:** {topic}\n"
-        f"- **Speaker:** {speaker}\n"
+        f"- **Speaker:** {speaker_label}\n"
         f"- **Search:** {seeds_n} seeds, {sources_n} sources\n"
         f"- **Corpus size:** {corpus_size} papers (1 layer of CrossRef refs)\n"
         f"- **Tier-A picks:** {tier_a_n} (picker_method=`{picker_method}`)\n"
@@ -1016,7 +1017,7 @@ def _write_project_view(
     deck_path: Path | None = None,
     run_id: str | None = None,
     date_str: str | None = None,
-    speaker: str = "Bobby",
+    speaker: str = "",
     sources_n: int = 0,
     picker_method: str = "citation-graph",
     crosstalk: str = "none",
@@ -1851,7 +1852,7 @@ def run_lit_arc(
     project_slug: str | None = None,
     run_dir: Path | None = None,
     deck_path: Path | None = None,
-    speaker: str = "Bobby",
+    speaker: str = "",
     acquire_figures: bool = False,
     figure_cache_dir: Path | None = None,
     # Test injection points (default to real implementations):
