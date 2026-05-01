@@ -23,6 +23,62 @@ _BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 _TOOL = "bobby_research"
 _EMAIL = "bobby@bobby-tools.local"
 
+# PubMed E-utilities AND every word in a query — long natural-language
+# queries with stopwords ("and", "across", "of", etc.) and unicode
+# punctuation (em-dashes, en-dashes) become over-restrictive and return
+# 0 hits. Empirical threshold: 7 keyword-words still works; adding 1-2
+# stopwords kills the result count to 0. Strip these before sending.
+_PUBMED_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "of",
+        "in",
+        "on",
+        "at",
+        "for",
+        "to",
+        "with",
+        "by",
+        "across",
+        "through",
+        "from",
+        "into",
+        "via",
+    }
+)
+
+
+def _normalize_query_for_pubmed(query: str) -> str:
+    """Strip em-dashes / en-dashes / common stopwords from a query.
+
+    PubMed's E-utilities don't tolerate long natural-language queries
+    well — they AND every word together, so "CODEX imaging — methods
+    and applications across tissue types" requires every word
+    (including "and", "across") to appear in the title/abstract.
+    Result: 0 hits.
+
+    This helper produces a keyword-only version that PubMed handles
+    cleanly. Punctuation removed; stopwords dropped; whitespace
+    collapsed.
+    """
+    if not query:
+        return ""
+    text = query
+    # Replace unicode dashes + common punctuation with space
+    for ch in ("—", "–", "−", "—", "–", ",", ";", ":"):
+        text = text.replace(ch, " ")
+    # Lowercase + split for stopword filtering
+    words = [w for w in text.split() if w]
+    keep = [w for w in words if w.lower() not in _PUBMED_STOPWORDS]
+    if not keep:
+        # All stopwords? Fall back to the original query — don't return empty.
+        return query.strip()
+    return " ".join(keep)
+
 
 class NCBIClient:
     """Client for NCBI PubMed E-utilities."""
@@ -82,11 +138,21 @@ class NCBIClient:
         Returns:
             List of Paper objects with metadata from efetch.
         """
-        # Step 1: esearch to get PMIDs
+        # Step 1: esearch to get PMIDs.
+        # Normalize query: PubMed AND's every word, so long natural-language
+        # queries with stopwords return 0 hits. _normalize_query_for_pubmed
+        # strips em-dashes + common English stopwords.
+        normalized = _normalize_query_for_pubmed(query)
+        if normalized != query:
+            logger.debug(
+                "NCBI: normalized query %r -> %r (PubMed-friendly)",
+                query,
+                normalized,
+            )
         params = {
             **self._base_params(),
             "db": "pubmed",
-            "term": query,
+            "term": normalized,
             "retmax": max_results,
             "retmode": "json",
             "sort": "relevance",
