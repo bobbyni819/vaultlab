@@ -59,6 +59,13 @@ class VaultLabProjectConfig:
     deadlines: list[str] = field(default_factory=list)
     free_form: str = ""
 
+    # Linked-codebase mode (#109): an optional path to a code repo
+    # associated with this project. When set, vaultlab can read scripts
+    # and data files from the repo, run them via Bash/subprocess, and
+    # feed their outputs into crosstalk meetings as data-driven inputs.
+    # The path is absolute (or expandable via Path.expanduser).
+    linked_repo: str = ""
+
     # Provenance
     schema: str = PROJECT_CONFIG_SCHEMA
     created: str = field(default_factory=_today)
