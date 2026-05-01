@@ -2,23 +2,27 @@
 
 vaultlab is **alpha-stage open-source software**. This document tracks known limitations honestly. Updated continuously.
 
-## Status: v0.0.x — pre-release scaffold
+## Status: v0.0.x — alpha software, working orchestrators
 
-The repo currently contains the architectural scaffold and design documentation. **Most subpackages contain only `__init__.py` placeholders.** Real implementations are being migrated in from `bobby-tools` over the next ~2 weeks toward v0.1.0 release (target: 2026-05-27).
+The repo contains working orchestrators wired through Claude Code as the LLM runtime. Most of the framework is functional; the rough edges are at the orchestrator boundaries (rerun behavior, alternate input paths) rather than at the core. Test count: 1093 (as of 2026-04-30). Target for v0.1.0 release: 2026-05-27.
 
-What works in v0.0.x:
-- The repo structure matches the master plan
-- LICENSE, README, AGENTS.md, CLAUDE.md, CONTRIBUTING.md are real
-- pyproject.toml correctly defines dependencies
-- `pip install -e .` succeeds (but most CLI commands are placeholders)
+**What works in v0.0.x** (per-orchestrator readiness rated empirically):
 
-What does NOT work in v0.0.x:
-- Almost all CLI commands print "not yet implemented"
-- The `vaultlab demo` command is a stub
-- No actual figure generation, citation verification, or manuscript drafting
-- Tests are not yet written
+- `/onboard-project <folder>` — GREEN
+- `/start-project "<topic>"` — GREEN
+- `/lit-arc <topic>` — YELLOW (works clean for typical paths; reruns overwrite summaries in place)
+- `/build-deck <source>` — YELLOW (lineage path validated; paper-PDF and wet-lab-data paths under-exercised)
+- `/understand-figure` — YELLOW for Claude-Code mode (works), SDK mode requires real `ANTHROPIC_API_KEY` (Claude Code OAuth tokens are rejected by the Messages API — Anthropic-side limitation)
+- `/lit-report <topic>` — RED for full corpora; smoke-tested only on a small synthetic corpus (architectural async-callback redesign needed)
 
-**Wait for v0.1.0 (target 2026-05-27) for any actual functionality.**
+**Known rough edges before v0.1.0:**
+
+- `/lit-arc` rerun is NOT additive at the summary level — `Wiki/Summaries/<doi>.md` overwrites in place. Decisions log is correctly additive. State-aware reruns (`since: <date>`) is on the v0.1.x track.
+- Run artifact location is inconsistent — `run_dir` only auto-populates on the crosstalk path; straight `run_lit_arc` falls back to `Sources/Notes/`.
+- If your topic is heavily Elsevier-paywalled, expect ~30% of recent papers to fail acquisition without an Elsevier API key. `/lit-arc` doesn't yet warn early on low acquisition rates.
+- SDK-mode users need a real Anthropic API key, not a Claude Code OAuth token.
+
+For the empirical readiness check that informs this section, see the per-orchestrator GREEN/YELLOW/RED breakdown in the project KB (`Sources/Notes/readiness-for-external-use-2026-04-30.md` if you have access to the development KB).
 
 ---
 
