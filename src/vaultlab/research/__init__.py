@@ -309,10 +309,20 @@ class ResearchClient:
     def search_with_trace(
         self,
         query: str,
-        max_results: int = 20,
+        max_results: int = 50,
         sources: list[str] | None = None,
+        queries: list[str] | None = None,
     ):
         """Like :meth:`search` but also returns a per-source trace.
+
+        Args:
+            query: Single query (used when ``queries`` is None).
+            max_results: Per-source cap on raw hits.
+            sources: Optional list of source names.
+            queries: Optional list of query variants to fan out across.
+                When given, each variant runs against every source and
+                results are deduped across the whole batch. See
+                :func:`vaultlab.research.query_expansion.expand_query`.
 
         Returns:
             ``(papers, trace)`` where ``trace`` is a
@@ -334,6 +344,7 @@ class ResearchClient:
             crossref_client=self._crossref,
             biorxiv_client=self._biorxiv,
             return_trace=True,
+            queries=queries,
         )
 
     def get_paper(self, doi_or_pmid: str) -> Paper | None:

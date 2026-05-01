@@ -96,6 +96,7 @@ def unified_search(
     biorxiv_client=None,
     return_trace: bool = False,
     recency_weight: float | None = None,
+    queries: list[str] | None = None,
 ) -> list[Paper] | tuple[list[Paper], SearchTrace]:
     """Search across multiple APIs and deduplicate results.
 
@@ -121,6 +122,13 @@ def unified_search(
             uses :data:`vaultlab.research.scoring.DEFAULT_RECENCY_WEIGHT`
             (0.6). Pass ``0.0`` to recover the legacy citation-count-only
             order.
+        queries: Optional list of query variants to fan out across. When
+            given, each variant is run against every source and the
+            combined results are deduplicated. The original ``query``
+            argument is ignored. Use
+            :func:`vaultlab.research.query_expansion.expand_query` to
+            produce variants. ``None`` (default) preserves single-query
+            behaviour.
 
     Returns:
         List of deduplicated :class:`Paper` (default) or
@@ -131,67 +139,84 @@ def unified_search(
     if sources is None:
         sources = ["pubmed", "springer", "semantic", "crossref", "biorxiv"]
 
+    # ------------------------------------------------------------------
+    # Resolve query list. ``queries`` (multi-query expansion) wins over
+    # the single ``query`` arg when given. The trace's ``topic`` is the
+    # FIRST query so the sidecar still labels the run with something
+    # readable.
+    # ------------------------------------------------------------------
+    query_list: list[str] = (
+        list(queries) if queries else [query]
+    )
+    if not query_list:
+        query_list = [query]
+    primary_query = query_list[0]
+
     all_papers: list[Paper] = []
     trace = SearchTrace(
-        topic=query,
+        topic=primary_query,
         queried_at=_iso_utc_now(),
         per_source={
-            _SOURCE_TO_TRACE_KEY[s]: SourceTrace(queries=[query])
+            _SOURCE_TO_TRACE_KEY[s]: SourceTrace(queries=list(query_list))
             for s in sources
             if s in _SOURCE_TO_TRACE_KEY
         },
     )
-    # Track which source returned each paper (pre-dedup) so we can
-    # populate ``by_source_after_dedup`` once dedup has run. We tag
-    # papers by their ``source_api`` field which Paper objects already
-    # carry.
+    # Track which source returned each paper (pre-dedup).
     pre_dedup_source_by_paper: list[str] = []
 
-    # Collect results from each source
-    if "pubmed" in sources and ncbi_client is not None:
-        papers = _run_source(
-            "ncbi",
-            trace,
-            lambda: ncbi_client.search(query, max_results=max_results),
-        )
-        all_papers.extend(papers)
-        pre_dedup_source_by_paper.extend(["ncbi"] * len(papers))
+    # Fan out: for each variant, hit every configured source. Across
+    # variants we accumulate hits; dedup-by-DOI runs once at the end.
+    for q in query_list:
+        if "pubmed" in sources and ncbi_client is not None:
+            papers = _run_source(
+                "ncbi",
+                trace,
+                lambda c=ncbi_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["ncbi"] * len(papers))
 
-    if "springer" in sources and springer_client is not None:
-        papers = _run_source(
-            "springer",
-            trace,
-            lambda: springer_client.search(query, max_results=max_results),
-        )
-        all_papers.extend(papers)
-        pre_dedup_source_by_paper.extend(["springer"] * len(papers))
+        if "springer" in sources and springer_client is not None:
+            papers = _run_source(
+                "springer",
+                trace,
+                lambda c=springer_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["springer"] * len(papers))
 
-    if "semantic" in sources and semantic_client is not None:
-        papers = _run_source(
-            "semantic_scholar",
-            trace,
-            lambda: semantic_client.search(query, max_results=max_results),
-        )
-        all_papers.extend(papers)
-        pre_dedup_source_by_paper.extend(["semantic_scholar"] * len(papers))
+        if "semantic" in sources and semantic_client is not None:
+            papers = _run_source(
+                "semantic_scholar",
+                trace,
+                lambda c=semantic_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["semantic_scholar"] * len(papers))
 
-    if "crossref" in sources and crossref_client is not None:
-        papers = _run_source(
-            "crossref",
-            trace,
-            lambda: crossref_client.search(query, max_results=max_results),
-        )
-        all_papers.extend(papers)
-        pre_dedup_source_by_paper.extend(["crossref"] * len(papers))
+        if "crossref" in sources and crossref_client is not None:
+            papers = _run_source(
+                "crossref",
+                trace,
+                lambda c=crossref_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["crossref"] * len(papers))
 
-    if "biorxiv" in sources and biorxiv_client is not None:
-        papers = _run_source(
-            "biorxiv",
-            trace,
-            lambda: biorxiv_client.search(query, max_results=max_results),
-        )
-        all_papers.extend(papers)
-        pre_dedup_source_by_paper.extend(["biorxiv"] * len(papers))
+        if "biorxiv" in sources and biorxiv_client is not None:
+            papers = _run_source(
+                "biorxiv",
+                trace,
+                lambda c=biorxiv_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["biorxiv"] * len(papers))
 
     # Deduplicate by DOI
     deduped = _deduplicate(all_papers)
@@ -241,22 +266,42 @@ def _run_source(
     canonical_key: str,
     trace: SearchTrace,
     fn: Any,
+    *,
+    accumulate: bool = False,
 ) -> list[Paper]:
-    """Invoke a per-source search ``fn`` and record stats into ``trace``."""
+    """Invoke a per-source search ``fn`` and record stats into ``trace``.
+
+    Args:
+        canonical_key: Trace-key for this source ("ncbi", "crossref", ...).
+        trace: The :class:`SearchTrace` to record stats into.
+        fn: The zero-arg callable that performs the search.
+        accumulate: When ``True``, hits and wall-time are summed across
+            calls (used for multi-query fan-out so the trace records the
+            total hits across all variants, not just the last one). When
+            ``False`` (default), behaves as before — overwrites any prior
+            stats. Errors always append, regardless.
+    """
     started = time.time()
     try:
         papers = fn() or []
         elapsed_ms = int((time.time() - started) * 1000)
         slot = trace.per_source.setdefault(canonical_key, SourceTrace())
-        slot.hits = len(papers)
-        slot.wall_time_ms = elapsed_ms
+        if accumulate:
+            slot.hits += len(papers)
+            slot.wall_time_ms += elapsed_ms
+        else:
+            slot.hits = len(papers)
+            slot.wall_time_ms = elapsed_ms
         logger.info("%s returned %d results", canonical_key, len(papers))
         return papers
     except Exception as e:  # noqa: BLE001 — we want to record any failure
         elapsed_ms = int((time.time() - started) * 1000)
         slot = trace.per_source.setdefault(canonical_key, SourceTrace())
         slot.errors.append(repr(e))
-        slot.wall_time_ms = elapsed_ms
+        if accumulate:
+            slot.wall_time_ms += elapsed_ms
+        else:
+            slot.wall_time_ms = elapsed_ms
         logger.warning("%s search failed: %s", canonical_key, e)
         return []
 

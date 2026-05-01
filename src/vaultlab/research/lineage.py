@@ -1835,6 +1835,8 @@ def run_lit_arc(
     picker_coarse_n: int | None = None,
     picker_mode: str = "fast",
     arc_mode: str = "fast",
+    query_expander_callback: Any | None = None,
+    query_expansion_n: int = 5,
     crosstalk_runner: Any | None = None,
     crosstalk_n_rounds: int = 3,
     project: str | None = None,
@@ -1986,7 +1988,7 @@ def run_lit_arc(
     pdf_cache_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # Phase 1: search
+    # Phase 1: search (with multi-query expansion)
     # ------------------------------------------------------------------
     _emit(progress, "phase", "search", topic=topic, max_seeds=max_seeds)
     if _client is None:
@@ -1995,12 +1997,31 @@ def run_lit_arc(
         client = ResearchClient()
     else:
         client = _client
+
+    # Multi-query expansion: produce N query variants (LLM-driven if a
+    # callback is given, else deterministic suffix expansion). The first
+    # variant is always the literal topic.
+    from vaultlab.research.query_expansion import expand_query
+
+    query_variants = expand_query(
+        topic,
+        target_n=max(1, int(query_expansion_n)),
+        callback=query_expander_callback,
+    )
+    _emit(progress, "query_expansion", n_variants=len(query_variants))
+
     # Prefer ``search_with_trace`` so we can emit a per-source trace
     # sidecar; fall back to the plain ``search`` path for fakes/legacy
     # injection points that don't expose the trace API.
     search_trace = None
     if hasattr(client, "search_with_trace"):
         try:
+            raw_seeds, search_trace = client.search_with_trace(
+                topic, max_results=max_seeds, queries=query_variants
+            )
+        except TypeError:
+            # Older clients without ``queries=`` support — fall back to
+            # the literal topic.
             raw_seeds, search_trace = client.search_with_trace(
                 topic, max_results=max_seeds
             )
