@@ -701,6 +701,11 @@ class SummarizationTask:
     tier: str = "A"
     acquisition_source: str = ""
     acquisition_license: str = ""
+    text_path: Path | None = None
+    """Optional path to a clean machine-extracted full-text file
+    (typically Elsevier ``originalText`` written to ``<slug>.elsevier.txt``).
+    When set, the reader can use this instead of parsing the PDF — faster
+    and cleaner page-level provenance."""
 
 
 # Type alias for the Claude-Code-side reader callback.
@@ -826,9 +831,31 @@ def prepare_summary_task(
         "influential_citations": base.influential_citations,
     }
     output_path = summary_path(Path(kb_root), base.doi)
+    # Auto-detect a sibling text file (e.g. the Elsevier originalText
+    # pre-fetch). The convention is "<pdf_stem>.elsevier.txt" sitting
+    # next to the PDF. When present, the prompt nudges the reader to
+    # prefer it for cleaner page-level provenance.
+    text_path: Path | None = None
+    pdf_path_obj = Path(pdf_path)
+    elsevier_text = pdf_path_obj.with_suffix(".elsevier.txt")
+    if elsevier_text.exists() and elsevier_text.stat().st_size > 0:
+        text_path = elsevier_text
+        # Append a hint to the prompt so the reader knows to use it.
+        prompt = (
+            prompt
+            + "\n\n---\n\n"
+            + "**A clean machine-extracted plain-text version of this "
+            "article is available at:**\n\n"
+            + f"    `{elsevier_text}`\n\n"
+            + "Prefer reading this file instead of the PDF when both are "
+            "present — it has cleaner text extraction with no page-break "
+            "artifacts. The PDF remains available for figures and layout-"
+            "sensitive checks."
+        )
+
     return SummarizationTask(
         doi=base.doi,
-        pdf_path=Path(pdf_path),
+        pdf_path=pdf_path_obj,
         paper_metadata={
             "title": base.title,
             "authors": list(base.authors),
@@ -847,6 +874,7 @@ def prepare_summary_task(
         tier="A",
         acquisition_source=acquisition_source,
         acquisition_license=acquisition_license,
+        text_path=text_path,
     )
 
 

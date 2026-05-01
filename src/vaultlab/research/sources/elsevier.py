@@ -61,6 +61,31 @@ class ElsevierClient:
     def is_configured(self) -> bool:
         return bool(self.api_key)
 
+    def fetch_full_text_json(self, doi: str) -> str:
+        """Return the article's full plain-text body via the Article Retrieval API.
+
+        Elsevier's metadata response for Article Retrieval includes a
+        ``full-text-retrieval-response.originalText`` field with a clean
+        machine-extracted plain-text version of the article body — much
+        cleaner than parsing the PDF (no page-break artifacts, no
+        figure-caption interleaving). For Elsevier-published Tier-A
+        papers, this is the preferred source for the LLM reader.
+
+        Requires institutional licensing (e.g. Duke VPN). Returns empty
+        string if unauthorized or the DOI isn't in ScienceDirect.
+        """
+        meta = self.fetch_metadata(doi)
+        if not meta:
+            return ""
+        ftr = meta.get("full-text-retrieval-response") or {}
+        text = ftr.get("originalText")
+        if isinstance(text, str):
+            return text
+        # Sometimes Elsevier returns a dict with "$" key.
+        if isinstance(text, dict):
+            return str(text.get("$") or "")
+        return ""
+
     def fetch_metadata(self, doi: str) -> dict[str, Any] | None:
         """Fetch article metadata as JSON.  Returns None if not licensed."""
         if not self.api_key:
