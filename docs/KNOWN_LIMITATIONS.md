@@ -53,6 +53,16 @@ For the empirical readiness check that informs this section, see the per-orchest
 - vaultlab is local-first. No hosted compute; no cloud sync. If your data is >100GB, expect proportional disk usage in `<kb>/Output/`.
 - Obsidian integration uses the Advanced URI plugin. If you uninstall it, `vaultlab kb open` falls back to your default text editor.
 
+### Figure annotation (motif labeling)
+
+The figure-understanding pipeline ships its describe + localize + match steps as v0.1 (these are stable and produce useful per-figure understanding text). The **Step 4 verify-and-render-annotated-PNG** sub-step is **partial** for v0.1:
+
+- Verification iteration sometimes oscillates between ACCEPT and REJECT on borderline figures. The describe/localize/match outputs are still useful even when verify oscillates — they're emitted regardless.
+- The rendered annotated PNG isn't always usable for slide insertion (annotations occasionally land outside intended panels). v0.1 ships the annotation render as best-effort; for slide-grade output, prefer the original unannotated figure with vaultlab's text-only caption.
+- Stabilizing verify-iteration on borderline figures is a v0.2 candidate.
+
+This is a **deliberate v0.1 scope cut** — the underlying machinery (describe + localize + match) is real and tested; the polish on the final annotation overlay isn't release-blocking.
+
 ### Compliance
 
 - vaultlab is **NOT HIPAA-compliant.** See [`docs/data-privacy.md`](data-privacy.md) and [`docs/compliance.md`](compliance.md).
