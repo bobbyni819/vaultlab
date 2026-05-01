@@ -220,6 +220,7 @@ class ResearchClient:
         self._semantic = None
         self._crossref = None
         self._biorxiv = None
+        self._sciencedirect = None
 
         # CrossRef and bioRxiv are free (no API key needed)
         try:
@@ -263,6 +264,13 @@ class ResearchClient:
             self._semantic = SemanticScholarClient(api_key=semantic_key)
             logger.debug("Semantic Scholar client initialized")
 
+        elsevier_key = get_key("elsevier_key", config_path)
+        if elsevier_key:
+            from vaultlab.research.sources.elsevier import ElsevierClient
+
+            self._sciencedirect = ElsevierClient(api_key=elsevier_key)
+            logger.debug("Scopus (Elsevier) client initialized")
+
         available = []
         if self._ncbi:
             available.append("pubmed")
@@ -274,6 +282,8 @@ class ResearchClient:
             available.append("crossref")
         if self._biorxiv:
             available.append("biorxiv")
+        if self._sciencedirect:
+            available.append("scopus")
         logger.info("ResearchClient ready with sources: %s", ", ".join(available))
 
     def search(
@@ -304,6 +314,7 @@ class ResearchClient:
             semantic_client=self._semantic,
             crossref_client=self._crossref,
             biorxiv_client=self._biorxiv,
+            sciencedirect_client=self._sciencedirect,
         )
 
     def search_with_trace(
@@ -343,6 +354,7 @@ class ResearchClient:
             semantic_client=self._semantic,
             crossref_client=self._crossref,
             biorxiv_client=self._biorxiv,
+            sciencedirect_client=self._sciencedirect,
             return_trace=True,
             queries=queries,
         )

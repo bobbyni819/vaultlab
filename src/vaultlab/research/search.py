@@ -25,9 +25,9 @@ _SOURCE_TO_TRACE_KEY: dict[str, str] = {
     "semantic_scholar": "semantic_scholar",
     "crossref": "crossref",
     "biorxiv": "biorxiv",
-    # Elsevier isn't currently a search source but we reserve a slot so
-    # downstream readers can iterate a stable canonical list.
-    "elsevier": "elsevier",
+    "scopus": "scopus",
+    "sciencedirect": "scopus",  # ScienceDirect search unsupported — uses Scopus
+    "elsevier": "scopus",  # legacy alias for the Elsevier-cluster source
 }
 
 
@@ -94,6 +94,7 @@ def unified_search(
     semantic_client=None,
     crossref_client=None,
     biorxiv_client=None,
+    sciencedirect_client=None,
     return_trace: bool = False,
     recency_weight: float | None = None,
     queries: list[str] | None = None,
@@ -137,7 +138,14 @@ def unified_search(
         log-squashed), with year as tiebreaker.
     """
     if sources is None:
-        sources = ["pubmed", "springer", "semantic", "crossref", "biorxiv"]
+        sources = [
+            "pubmed",
+            "springer",
+            "semantic",
+            "crossref",
+            "biorxiv",
+            "scopus",
+        ]
 
     # ------------------------------------------------------------------
     # Resolve query list. ``queries`` (multi-query expansion) wins over
@@ -217,6 +225,25 @@ def unified_search(
             )
             all_papers.extend(papers)
             pre_dedup_source_by_paper.extend(["biorxiv"] * len(papers))
+
+        if (
+            (
+                "scopus" in sources
+                or "sciencedirect" in sources
+                or "elsevier" in sources
+            )
+            and sciencedirect_client is not None
+        ):
+            papers = _run_source(
+                "scopus",
+                trace,
+                lambda c=sciencedirect_client, qq=q: c.search(
+                    qq, max_results=max_results
+                ),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["scopus"] * len(papers))
 
     # Deduplicate by DOI
     deduped = _deduplicate(all_papers)
