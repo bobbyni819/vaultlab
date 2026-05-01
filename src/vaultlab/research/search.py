@@ -87,7 +87,7 @@ class SearchTrace:
 
 def unified_search(
     query: str,
-    max_results: int = 20,
+    max_results: int = 50,
     sources: list[str] | None = None,
     ncbi_client=None,
     springer_client=None,

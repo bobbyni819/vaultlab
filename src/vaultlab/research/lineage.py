@@ -1822,7 +1822,7 @@ def run_lit_arc(
     *,
     kb_root: Path | None = None,
     depth: DepthLevel = "balanced",
-    max_seeds: int = 15,
+    max_seeds: int = 30,
     max_papers_to_summarize: int | None = None,
     pdf_cache_dir: Path | None = None,
     apis: dict[str, str] | None = None,
