@@ -137,6 +137,93 @@ class AcquisitionResult:
     publisher_url: str | None = None
     cache_target_path: Path | None = None
 
+    # ---- Classified outcome (derived) ------------------------------------
+    # Per design-doc Q4 (2026-05-02 paperclip integration), callers want a
+    # richer outcome taxonomy than the raw ``source`` field for paywall-
+    # transparency UX. Rather than mutate the constructor (11 call sites,
+    # would break compat), we expose a derived property that classifies
+    # the existing fields into the design-doc state machine.
+
+    @property
+    def outcome(self) -> str:
+        """Classified outcome of this acquisition attempt.
+
+        Returns one of these documented states:
+
+        * ``cache_hit`` — already on disk; waterfall short-circuited.
+        * ``paperclip_full_text`` — paperclip's pre-extracted sections +
+          figures available (no PDF needed; consumer reads
+          ``/papers/<id>/sections/`` directly).
+        * ``oa_pdf`` — Open Access PDF acquired (Unpaywall / PMC /
+          bioRxiv / medRxiv / Springer-OA).
+        * ``gated_pdf_via_key`` — subscriber PDF acquired (Elsevier
+          with key, or Springer paid API).
+        * ``gated_metadata_only`` — abstract-only; PDF gated and we
+          weren't able to fetch full text (Springer fallback when only
+          metadata API is reachable).
+        * ``failed_paywalled`` — known paywalled, every key path
+          returned 401/403/subscription error; user needs manual fetch.
+        * ``failed_not_indexed`` — DOI didn't resolve in any source.
+        * ``failed`` — unspecified failure (legacy fallback).
+
+        Use ``needs_manual_fetch`` for the paywall-transparency
+        ``vaultlab fetch-list paywalled`` CLI report.
+        """
+        s = (self.source or "").lower()
+        if s == "cache":
+            return "cache_hit"
+        if s == "paperclip":
+            # Paperclip "success" means full text + figures pre-extracted.
+            # Always treated as full-text outcome, regardless of pdf_path.
+            return "paperclip_full_text"
+        if s in ("unpaywall", "pmc", "biorxiv", "medrxiv"):
+            return "oa_pdf"
+        if s == "springer":
+            # Springer succeeded with a PDF means OA pull worked.
+            return "oa_pdf" if self.pdf_path else "gated_metadata_only"
+        if s == "elsevier":
+            return "gated_pdf_via_key"
+        if s == "failed":
+            # Distinguish paywalled (tried gated tiers with auth errors)
+            # from not-indexed (no source had it). Heuristic: any 401/403
+            # or "subscription"/"forbidden" string in tier_errors signals
+            # paywalled.
+            for err in self.tier_errors.values():
+                e = str(err).lower()
+                if "401" in e or "403" in e or "subscription" in e or "forbidden" in e:
+                    return "failed_paywalled"
+            # If we tried Elsevier or Springer (gated tiers) but no PDF,
+            # likely paywalled too even without explicit auth-error signal.
+            if "elsevier" in self.tier_errors or "springer" in self.tier_errors:
+                return "failed_paywalled"
+            return "failed_not_indexed"
+        return "failed"
+
+    @property
+    def needs_manual_fetch(self) -> bool:
+        """True if the user should manually obtain this paper.
+
+        Used by the planned ``vaultlab fetch-list paywalled`` CLI to
+        emit the user-facing manual-fetch shopping list.
+        """
+        return self.outcome == "failed_paywalled"
+
+    @property
+    def is_full_text(self) -> bool:
+        """True if a full-text source (PDF or paperclip sections) is
+        available locally for downstream Tier-A reading."""
+        return self.outcome in (
+            "cache_hit",
+            "paperclip_full_text",
+            "oa_pdf",
+            "gated_pdf_via_key",
+        )
+
+    @property
+    def is_metadata_only(self) -> bool:
+        """True when only abstract / metadata is available (Tier-B fallback)."""
+        return self.outcome == "gated_metadata_only"
+
 
 # ---------------------------------------------------------------------------
 # Cache helpers
