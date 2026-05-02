@@ -212,6 +212,141 @@ class PaperclipClient:
             return None
         return papers[0]
 
+    def get_paper_text(self, paper_id: str) -> str:
+        """Read the full-text content of a paper from paperclip's
+        virtual filesystem.
+
+        Returns the concatenated body text from
+        ``/papers/<paper_id>/content.lines`` with the leading line-number
+        prefixes stripped (paperclip prepends ``L<n>:`` to each line).
+
+        Args:
+            paper_id: Paperclip paper ID (e.g. ``arx_2107.07953`` or
+                ``PMC9684921``).
+
+        Returns:
+            The paper's body text as a single string. Empty string on
+            any error (graceful degrade).
+        """
+        if not self.available or not paper_id:
+            return ""
+        cmd = [self._binary, "cat", f"/papers/{paper_id}/content.lines"]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self._timeout,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return ""
+        if result.returncode != 0:
+            return ""
+
+        # Each line is prefixed with "L<n>: " — strip that for a clean read.
+        cleaned: list[str] = []
+        for line in result.stdout.splitlines():
+            # Match "L<digits>: <text>" prefix
+            m = re.match(r"^L\d+:\s?(.*)$", line)
+            cleaned.append(m.group(1) if m else line)
+        return "\n".join(cleaned)
+
+    def list_sections(self, paper_id: str) -> list[str]:
+        """List the section names available for a paper.
+
+        Args:
+            paper_id: Paperclip paper ID.
+
+        Returns:
+            Section names without the ``.lines`` suffix
+            (e.g. ``["Title", "Abstract", "Introduction", ...]``).
+            Empty list on any error.
+        """
+        if not self.available or not paper_id:
+            return []
+        cmd = [self._binary, "ls", f"/papers/{paper_id}/sections/"]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=min(self._timeout, 30),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return []
+        if result.returncode != 0:
+            return []
+        # Output format: "Title.lines  Authors.lines  Abstract.lines  ..."
+        # whitespace-separated. We split on whitespace and strip the
+        # ``.lines`` suffix.
+        sections: list[str] = []
+        for token in result.stdout.split():
+            if token.endswith(".lines"):
+                sections.append(token[: -len(".lines")])
+        return sections
+
+    def get_section(self, paper_id: str, section_name: str) -> str:
+        """Read a single named section of a paper.
+
+        Args:
+            paper_id: Paperclip paper ID.
+            section_name: Section name as returned by
+                :meth:`list_sections` (no ``.lines`` suffix).
+
+        Returns:
+            Section text as a single string. Empty string on any error.
+        """
+        if not self.available or not paper_id or not section_name:
+            return ""
+        path = f"/papers/{paper_id}/sections/{section_name}.lines"
+        cmd = [self._binary, "cat", path]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=min(self._timeout, 30),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return ""
+        if result.returncode != 0:
+            return ""
+        cleaned: list[str] = []
+        for line in result.stdout.splitlines():
+            m = re.match(r"^L\d+:\s?(.*)$", line)
+            cleaned.append(m.group(1) if m else line)
+        return "\n".join(cleaned)
+
+    def list_figures(self, paper_id: str) -> list[str]:
+        """List figure filenames available for a paper.
+
+        Returns figure filenames (e.g. ``["figure_1.jpg",
+        "figure_1_b.jpg", ...]``). Empty list on any error.
+        """
+        if not self.available or not paper_id:
+            return []
+        cmd = [self._binary, "ls", f"/papers/{paper_id}/figures/"]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=min(self._timeout, 30),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return []
+        if result.returncode != 0:
+            return []
+        return [tok for tok in result.stdout.split() if tok.endswith((".jpg", ".png"))]
+
     def search(
         self,
         query: str,
