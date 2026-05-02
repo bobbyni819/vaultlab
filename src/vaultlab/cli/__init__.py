@@ -61,14 +61,155 @@ def _cmd_init(argv: list[str]) -> int:
     return 0
 
 
+def _cmd_list_policy_skipped(argv: list[str]) -> int:
+    """Print the project's policy-skipped papers for human review.
+
+    Usage: ``vaultlab list-policy-skipped <project_dir>``
+
+    Surfaces the records appended by
+    :func:`vaultlab.research.policy_skip.mark_skipped` so the user can
+    triage papers the LLM refused to summarize. Exit 0 when zero
+    skipped (clean), 0 when some skipped (still success — these are
+    expected outcomes), 1 on usage error.
+    """
+    from vaultlab.research.policy_skip import list_skipped
+
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(
+            "Usage: vaultlab list-policy-skipped <project_dir>\n"
+            "\n"
+            "Reads <project_dir>/policy_skipped.json and prints the\n"
+            "skip records sorted newest-first. Exit 0 on success.",
+            file=sys.stderr,
+        )
+        return 1
+    project = Path(argv[0]).expanduser()
+    skipped = list_skipped(project)
+    if not skipped:
+        print(f"vaultlab: no policy-skipped papers in {project}")
+        return 0
+    print(f"vaultlab: {len(skipped)} policy-skipped paper(s) in {project}\n")
+    for i, entry in enumerate(skipped, 1):
+        print(f"  {i}. {entry.get('doi')}")
+        print(f"     reason:    {entry.get('reason')}")
+        if entry.get("batch"):
+            print(f"     batch:     {entry.get('batch')}")
+        print(f"     skipped:   {entry.get('skipped_at')}")
+        if entry.get("notes"):
+            print(f"     notes:     {entry.get('notes')}")
+    return 0
+
+
+def _cmd_fetch_list(argv: list[str]) -> int:
+    """Print the manual-fetch shopping list of paywalled DOIs.
+
+    Usage: ``vaultlab fetch-list paywalled <acquisition-log.json>``
+
+    Reads the acquisition-results JSON written by
+    ``acquire_pdfs_for_corpus`` (or any caller that serialises a
+    ``{doi: AcquisitionResult.to_dict()}`` map) and prints the
+    failed_paywalled entries grouped by publisher cluster, with
+    publisher URL hints so the user knows which institutional access
+    path applies.
+    """
+    from vaultlab.research.policy_skip import fetch_list_paywalled
+
+    if not argv or argv[0] in {"-h", "--help"} or argv[0] != "paywalled":
+        print(
+            "Usage: vaultlab fetch-list paywalled <acquisition-log.json>\n"
+            "\n"
+            "Currently only the 'paywalled' subcommand is supported.",
+            file=sys.stderr,
+        )
+        return 1
+    if len(argv) < 2:
+        print("vaultlab: fetch-list paywalled needs a log path", file=sys.stderr)
+        return 1
+    log_path = Path(argv[1]).expanduser()
+    if not log_path.exists():
+        print(f"vaultlab: file not found: {log_path}", file=sys.stderr)
+        return 1
+    entries = fetch_list_paywalled(log_path)
+    if not entries:
+        print(f"vaultlab: no paywalled entries in {log_path.name}")
+        return 0
+    print(f"vaultlab: {len(entries)} paywalled paper(s) need manual fetch\n")
+    print("# Manual-fetch shopping list")
+    print(f"\nGenerated from {log_path.name}.")
+    print("Sorted by publisher cluster (Nature → Cell → Science → Wiley → "
+          "Springer → other Elsevier → other).\n")
+    for i, entry in enumerate(entries, 1):
+        print(f"## {i}. {entry.get('title') or '(no title)'}")
+        print(f"- DOI: `{entry.get('doi')}`")
+        if entry.get("journal"):
+            print(f"- Journal: {entry['journal']} ({entry.get('year', '?')})")
+        print(f"- Try: {entry.get('publisher_url')}")
+        if entry.get("cache_target_path"):
+            print(f"- Drop the PDF here: `{entry['cache_target_path']}`")
+        print(f"- Why: {entry.get('why_paywalled')}")
+        print()
+    return 0
+
+
+def _cmd_paperclip_grep(argv: list[str]) -> int:
+    """Passthrough to ``paperclip grep``.
+
+    Usage: ``vaultlab paperclip-grep <pattern> [<path>] [opts]``
+    """
+    import subprocess
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(
+            "Usage: vaultlab paperclip-grep <pattern> [<path>] [opts]\n"
+            "\n"
+            "Thin passthrough to `paperclip grep`. Useful for full-corpus\n"
+            "regex queries (sub-second across 8M papers).",
+            file=sys.stderr,
+        )
+        return 1
+    cmd = ["paperclip", "grep"] + argv
+    try:
+        return subprocess.call(cmd)
+    except FileNotFoundError:
+        print(
+            "vaultlab: paperclip CLI not on PATH. Install via:\n"
+            "  pip install https://paperclip.gxl.ai/paperclip.whl",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def _cmd_paperclip_sql(argv: list[str]) -> int:
+    """Passthrough to ``paperclip sql``.
+
+    Usage: ``vaultlab paperclip-sql "<query>"``
+    """
+    import subprocess
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(
+            "Usage: vaultlab paperclip-sql \"<query>\"\n"
+            "\n"
+            "Thin passthrough to `paperclip sql`. The corpus exposes a\n"
+            "`documents` table with title/doi/authors/journal/etc.\n"
+            "200-row limit per query.",
+            file=sys.stderr,
+        )
+        return 1
+    cmd = ["paperclip", "sql"] + argv
+    try:
+        return subprocess.call(cmd)
+    except FileNotFoundError:
+        print(
+            "vaultlab: paperclip CLI not on PATH. Install via:\n"
+            "  pip install https://paperclip.gxl.ai/paperclip.whl",
+            file=sys.stderr,
+        )
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point registered in pyproject.toml as ``vaultlab``.
 
-    Minimal dispatcher until the full click-based CLI lands. Recognises:
-
-    - ``vaultlab init [<path>]`` — first-run / relocate KB
-    - ``vaultlab --help`` — usage banner
-    - everything else — print usage and exit 1
+    Minimal dispatcher until the full click-based CLI lands.
     """
     if argv is None:
         argv = sys.argv[1:]
@@ -80,6 +221,14 @@ def main(argv: list[str] | None = None) -> int:
     cmd, rest = argv[0], argv[1:]
     if cmd == "init":
         return _cmd_init(rest)
+    if cmd == "list-policy-skipped":
+        return _cmd_list_policy_skipped(rest)
+    if cmd == "fetch-list":
+        return _cmd_fetch_list(rest)
+    if cmd == "paperclip-grep":
+        return _cmd_paperclip_grep(rest)
+    if cmd == "paperclip-sql":
+        return _cmd_paperclip_sql(rest)
 
     print(f"vaultlab: unknown command {cmd!r}", file=sys.stderr)
     _print_usage(stream=sys.stderr)
@@ -93,10 +242,15 @@ def _print_usage(stream: object = None) -> None:
         "vaultlab v0.0.1 — alpha scaffold\n"
         "\n"
         "Usage:\n"
-        "  vaultlab init [<kb-root-path>]   Configure KB root (interactive if no path given)\n"
+        "  vaultlab init [<kb-root-path>]            Configure KB root\n"
+        "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
+        "  vaultlab fetch-list paywalled <log>       Manual-fetch shopping list\n"
+        "  vaultlab paperclip-grep <pat> [path]      Regex over paperclip corpus\n"
+        "  vaultlab paperclip-sql \"<query>\"          SQL over paperclip corpus\n"
         "\n"
-        "Other commands (search, run, project, etc.) are exposed as Claude Code slash\n"
-        "commands inside .claude/commands/. See README.md for the full inventory."
+        "Other commands (search, run, project, etc.) are exposed as Claude Code\n"
+        "slash commands inside .claude/commands/. See README.md for the full\n"
+        "inventory."
     )
     print(msg, file=stream)  # type: ignore[arg-type]
 
