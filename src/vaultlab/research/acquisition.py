@@ -185,17 +185,22 @@ class AcquisitionResult:
             return "gated_pdf_via_key"
         if s == "failed":
             # Distinguish paywalled (tried gated tiers with auth errors)
-            # from not-indexed (no source had it). Heuristic: any 401/403
-            # or "subscription"/"forbidden" string in tier_errors signals
-            # paywalled.
+            # from not-indexed (no source had it). Heuristic in order:
+            # 1. Any 401/403/subscription/forbidden string in tier_errors
+            #    signals paywalled regardless of source.
             for err in self.tier_errors.values():
                 e = str(err).lower()
                 if "401" in e or "403" in e or "subscription" in e or "forbidden" in e:
                     return "failed_paywalled"
-            # If we tried Elsevier or Springer (gated tiers) but no PDF,
-            # likely paywalled too even without explicit auth-error signal.
-            if "elsevier" in self.tier_errors or "springer" in self.tier_errors:
-                return "failed_paywalled"
+            # 2. If we tried Elsevier or Springer (gated tiers) and got
+            #    a non-key-missing error (e.g., "non-pdf content",
+            #    actually-tried-the-API failures), treat as paywalled.
+            #    "key missing" is an unconfigured-source signal, not a
+            #    paywall signal — fall through.
+            for tier in ("elsevier", "springer"):
+                err = str(self.tier_errors.get(tier, "")).lower()
+                if err and "key missing" not in err and "no api key" not in err:
+                    return "failed_paywalled"
             return "failed_not_indexed"
         return "failed"
 
@@ -681,6 +686,7 @@ def acquire_pdf(
     apis: dict[str, str] | None = None,
     skip_paywalled: bool = False,
     timeout: int = _DEFAULT_TIMEOUT,
+    paperclip_client=None,
     _session: _PoliteSession | None = None,
 ) -> AcquisitionResult:
     """Acquire a PDF for ``doi`` via the waterfall, return :class:`AcquisitionResult`.
@@ -696,6 +702,16 @@ def acquire_pdf(
         skip_paywalled: If ``True``, skip Springer/Elsevier tiers (only
             OA sources are tried).
         timeout: Per-request HTTP timeout in seconds.
+        paperclip_client: Optional :class:`PaperclipClient` for the
+            Tier-0 paperclip-corpus check. When given, we ask paperclip
+            whether it has the paper before any HTTP download. On hit,
+            return ``source="paperclip"`` immediately (the consumer
+            reads sections from the paperclip virtual filesystem instead
+            of a local PDF). On miss, the tier is recorded as
+            ``not_in_paperclip_corpus`` in ``tier_errors`` and the
+            existing waterfall (Unpaywall / PMC / bioRxiv / Springer /
+            Elsevier) runs unchanged. ``None`` (default) skips the
+            tier silently — Q5 graceful degrade.
         _session: Internal — let the batch helper share a single
             :class:`_PoliteSession` across calls.
 
@@ -743,6 +759,38 @@ def acquire_pdf(
 
     def _wall_ms() -> int:
         return int((time.time() - started) * 1000)
+
+    # ------------------------------------------------------------------
+    # Tier 0: Paperclip (8M-paper biomedical full-text corpus)
+    #
+    # Per the 2026-05-02 paperclip integration design (Q3+Q4): if
+    # paperclip has the paper, return source="paperclip" immediately —
+    # the downstream reader uses the pre-extracted sections + figures
+    # from the paperclip virtual filesystem (/papers/<id>/) and skips
+    # the PDF-download + pdftoppm step entirely. On miss, record
+    # not_in_paperclip_corpus in tier_errors and continue (it's a
+    # miss-with-explanation, not a failure). On any error (auth
+    # missing, binary missing, timeout) — Q5 graceful degrade — skip
+    # silently and continue.
+    # ------------------------------------------------------------------
+    if paperclip_client is not None:
+        tried.append("paperclip")
+        try:
+            pc_paper = paperclip_client.lookup_doi(doi)
+        except Exception as exc:  # noqa: BLE001 — Q5 graceful degrade
+            tier_errors["paperclip"] = f"lookup error: {exc}"
+            pc_paper = None
+        if pc_paper is not None:
+            return AcquisitionResult(
+                doi=doi,
+                pdf_path=None,  # paperclip serves text sections, not a PDF
+                source="paperclip",
+                license=None,
+                tried=tuple(tried),
+                tier_errors=dict(tier_errors),
+                wall_time_ms=_wall_ms(),
+            )
+        tier_errors.setdefault("paperclip", "not_in_paperclip_corpus")
 
     # ------------------------------------------------------------------
     # Tier 1: Unpaywall

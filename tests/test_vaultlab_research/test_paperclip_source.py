@@ -236,6 +236,52 @@ def test_client_search_passes_source_filter():
         assert called_args[s_indices[1] + 1] == "biorxiv"
 
 
+def test_lookup_doi_returns_paper_on_hit():
+    """lookup_doi parses paperclip's lookup output (same format as search)."""
+    output = """\
+  1. Hickey et al. spatial mapping primer
+     John W. Hickey, Elizabeth K. Neumann, Garry P. Nolan
+     arx_2107.07953 · arXiv · 2021-07-16
+     "This paper reviews multiplexed antibody-based imaging."
+"""
+    with patch("vaultlab.research.sources.paperclip.shutil.which",
+               return_value="/usr/bin/paperclip"), \
+         patch("vaultlab.research.sources.paperclip.os.path.exists",
+               return_value=True), \
+         patch("vaultlab.research.sources.paperclip.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout=output, stderr="")
+        client = PaperclipClient()
+        paper = client.lookup_doi("10.48550/arXiv.2107.07953")
+        assert paper is not None
+        assert paper.year == 2021
+        # CLI was called with `lookup doi <doi>`
+        called_args = mock_run.call_args[0][0]
+        assert "lookup" in called_args
+        assert "doi" in called_args
+
+
+def test_lookup_doi_returns_none_on_miss():
+    """When paperclip exits non-zero, lookup_doi returns None silently."""
+    with patch("vaultlab.research.sources.paperclip.shutil.which",
+               return_value="/usr/bin/paperclip"), \
+         patch("vaultlab.research.sources.paperclip.os.path.exists",
+               return_value=True), \
+         patch("vaultlab.research.sources.paperclip.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="not found")
+        client = PaperclipClient()
+        assert client.lookup_doi("10.1/missing") is None
+
+
+def test_lookup_doi_returns_none_on_empty_input():
+    with patch("vaultlab.research.sources.paperclip.shutil.which",
+               return_value="/usr/bin/paperclip"), \
+         patch("vaultlab.research.sources.paperclip.os.path.exists",
+               return_value=True):
+        client = PaperclipClient()
+        assert client.lookup_doi("") is None
+        assert client.lookup_doi(None) is None
+
+
 def test_client_search_passes_since_flag():
     """since= kwarg becomes --since flag."""
     with patch("vaultlab.research.sources.paperclip.shutil.which",

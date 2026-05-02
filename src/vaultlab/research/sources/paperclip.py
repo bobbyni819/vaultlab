@@ -163,6 +163,55 @@ class PaperclipClient:
         # skip silently on PaperclipUnavailable.
         return True
 
+    def lookup_doi(self, doi: str) -> Paper | None:
+        """Check whether paperclip has a paper for this DOI.
+
+        Used by ``vaultlab.research.acquisition.acquire_pdf`` as the
+        first tier of the waterfall — if paperclip has the paper, we
+        skip PDF download entirely and read full-text sections directly
+        from the virtual filesystem.
+
+        Args:
+            doi: DOI to look up (case-insensitive).
+
+        Returns:
+            :class:`Paper` if found, else ``None``. Returns ``None``
+            silently on auth / binary / timeout errors (graceful
+            degrade per Q5) — callers should NOT treat ``None`` as
+            "definitely not in corpus", just "couldn't find via this
+            client right now". To distinguish, check
+            :meth:`is_authenticated` separately.
+        """
+        if not self.available:
+            return None
+        if not doi:
+            return None
+
+        cmd = [self._binary, "lookup", "doi", doi.strip().lower()]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=min(self._timeout, 30),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        if result.returncode != 0:
+            # Not found in corpus is a non-zero exit; auth errors also
+            # come through here. Treat both as "not available via this
+            # path right now" and let the caller fall through.
+            return None
+
+        # The lookup output is the same one-paper-block format as
+        # search, so the search-output parser handles it.
+        papers = _parse_search_output(result.stdout)
+        if not papers:
+            return None
+        return papers[0]
+
     def search(
         self,
         query: str,
