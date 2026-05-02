@@ -28,6 +28,7 @@ _SOURCE_TO_TRACE_KEY: dict[str, str] = {
     "scopus": "scopus",
     "sciencedirect": "scopus",  # ScienceDirect search unsupported — uses Scopus
     "elsevier": "scopus",  # legacy alias for the Elsevier-cluster source
+    "paperclip": "paperclip",  # 8M-paper biomedical full-text corpus (2026-05-02)
 }
 
 
@@ -95,6 +96,7 @@ def unified_search(
     crossref_client=None,
     biorxiv_client=None,
     sciencedirect_client=None,
+    paperclip_client=None,
     return_trace: bool = False,
     recency_weight: float | None = None,
     queries: list[str] | None = None,
@@ -145,6 +147,7 @@ def unified_search(
             "crossref",
             "biorxiv",
             "scopus",
+            "paperclip",
         ]
 
     # ------------------------------------------------------------------
@@ -244,6 +247,25 @@ def unified_search(
             )
             all_papers.extend(papers)
             pre_dedup_source_by_paper.extend(["scopus"] * len(papers))
+
+        if "paperclip" in sources and paperclip_client is not None:
+            # Per design-doc Q1 (2026-05-02), paperclip is the 7th parallel
+            # source — surfaces papers (especially arXiv preprints + recent
+            # 2024-2025 SOTA) that the live PubMed/S2/CrossRef/biorxiv/
+            # Springer/Elsevier stack misses.
+            #
+            # Per Q5, PaperclipUnavailable raised inside .search (missing
+            # auth, missing binary, etc.) is caught by _run_source and
+            # recorded as a per-source error in the trace. The pipeline
+            # continues with the other 6 sources. No exception leaks out.
+            papers = _run_source(
+                "paperclip",
+                trace,
+                lambda c=paperclip_client, qq=q: c.search(qq, max_results=max_results),
+                accumulate=True,
+            )
+            all_papers.extend(papers)
+            pre_dedup_source_by_paper.extend(["paperclip"] * len(papers))
 
     # Deduplicate by DOI
     deduped = _deduplicate(all_papers)
