@@ -57,10 +57,16 @@ _PAPERCLIP_BINARY_NAME = "paperclip"
 _RESULT_HEADER_RE = re.compile(r"^\s*(\d+)\.\s+(.+?)\s*$")
 # Paperclip paper IDs include arXiv-style dots (``arx_2501.06039``),
 # bioRxiv-style underscores (``bio_3ac44def6d63``), and PMC-style digits
-# (``PMC9684921``). The character class allows alphanumerics, ``_`` and
-# ``.`` so all three families parse.
+# (``PMC9684921``).
+#
+# The separator between (id, source, date) fields is U+00B7 MIDDLE DOT in
+# the MCP output, but on Windows the CLI emits cp1252-encoded bytes which
+# our UTF-8 subprocess capture turns into U+FFFD. To handle both, the
+# regex matches "any non-whitespace single-character separator" via
+# ``[^\s\w]``. Also tolerates ``\xb7`` raw byte through the latin-1
+# fallback the subprocess uses.
 _ID_LINE_RE = re.compile(
-    r"^\s*([A-Za-z0-9_.]+)\s*·\s*([^·]+?)\s*·\s*(\d{4}(?:-\d{2}-\d{2})?)\s*$"
+    r"^\s*([A-Za-z0-9_.]+)\s+[^\s\w]\s+([^\d]+?)\s+[^\s\w]\s+(\d{4}(?:-\d{2}-\d{2})?)\s*$"
 )
 _DOI_LINE_RE = re.compile(
     r"^\s*https?://(?:dx\.)?doi\.org/(.+?)\s*$", re.IGNORECASE,
@@ -91,6 +97,63 @@ class PaperclipClient:
         """
         self._binary = binary or shutil.which(_PAPERCLIP_BINARY_NAME)
         self._timeout = timeout
+
+    def _run_paperclip(
+        self, cmd: list[str], *, timeout: int | None = None,
+    ) -> subprocess.CompletedProcess:
+        """Invoke the paperclip CLI with Windows-friendly env + decoding.
+
+        Two Windows-specific quirks are handled here:
+
+        1. **Git Bash / MSYS path mangling.** When this code runs from
+           Git Bash on Windows, paths like ``/papers/<id>/`` get
+           auto-converted to
+           ``/papers/C:/Program Files/Git/papers/<id>/`` by MSYS. We
+           set ``MSYS_NO_PATHCONV=1`` in the subprocess env to disable
+           this. Harmless on Linux / macOS where the var has no effect.
+
+        2. **CLI emits cp1252 bytes on Windows.** The MCP HTTP transport
+           returns UTF-8, but the CLI's stdout is the Windows console
+           default (cp1252) — for example U+00B7 MIDDLE DOT (the field
+           separator) lands as a single ``\\xb7`` byte instead of the
+           UTF-8 two-byte ``\\xc2\\xb7``. We capture as bytes, then try
+           UTF-8 first, falling back to cp1252 / latin-1 on
+           UnicodeDecodeError so all bytes are recoverable.
+        """
+        import os as _os
+        env = _os.environ.copy()
+        env.setdefault("MSYS_NO_PATHCONV", "1")
+        # Force paperclip's own Python stdout to UTF-8. Default on
+        # Windows is cp1252, which can't encode Greek letters, math
+        # symbols, or accented author names — paperclip 0.3.0 crashes
+        # mid-output with UnicodeEncodeError when the content has any
+        # non-cp1252 character. PYTHONIOENCODING fixes the inner
+        # process's stdout encoding.
+        env["PYTHONIOENCODING"] = "utf-8"
+        # Run with raw bytes so we can decode-attempt cleanly.
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=False,
+            timeout=timeout if timeout is not None else self._timeout,
+            env=env,
+        )
+        # Decode stdout / stderr with multi-encoding fallback.
+        for enc in ("utf-8", "cp1252", "latin-1"):
+            try:
+                stdout = proc.stdout.decode(enc)
+                stderr = proc.stderr.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            # latin-1 never raises; this branch is theoretically
+            # unreachable, but keep a defensive fallback.
+            stdout = proc.stdout.decode("latin-1", errors="replace")
+            stderr = proc.stderr.decode("latin-1", errors="replace")
+        return subprocess.CompletedProcess(
+            proc.args, proc.returncode, stdout, stderr,
+        )
 
     @property
     def available(self) -> bool:
@@ -189,14 +252,7 @@ class PaperclipClient:
 
         cmd = [self._binary, "lookup", "doi", doi.strip().lower()]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=min(self._timeout, 30),
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=min(self._timeout, 30))
         except (subprocess.TimeoutExpired, OSError):
             return None
         if result.returncode != 0:
@@ -232,14 +288,7 @@ class PaperclipClient:
             return ""
         cmd = [self._binary, "cat", f"/papers/{paper_id}/content.lines"]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self._timeout,
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=self._timeout)
         except (subprocess.TimeoutExpired, OSError):
             return ""
         if result.returncode != 0:
@@ -268,14 +317,7 @@ class PaperclipClient:
             return []
         cmd = [self._binary, "ls", f"/papers/{paper_id}/sections/"]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=min(self._timeout, 30),
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=min(self._timeout, 30))
         except (subprocess.TimeoutExpired, OSError):
             return []
         if result.returncode != 0:
@@ -305,14 +347,7 @@ class PaperclipClient:
         path = f"/papers/{paper_id}/sections/{section_name}.lines"
         cmd = [self._binary, "cat", path]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=min(self._timeout, 30),
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=min(self._timeout, 30))
         except (subprocess.TimeoutExpired, OSError):
             return ""
         if result.returncode != 0:
@@ -333,14 +368,7 @@ class PaperclipClient:
             return []
         cmd = [self._binary, "ls", f"/papers/{paper_id}/figures/"]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=min(self._timeout, 30),
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=min(self._timeout, 30))
         except (subprocess.TimeoutExpired, OSError):
             return []
         if result.returncode != 0:
@@ -392,14 +420,7 @@ class PaperclipClient:
         cmd.append(query)
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self._timeout,
-                encoding="utf-8",
-                errors="replace",
-            )
+            result = self._run_paperclip(cmd, timeout=self._timeout)
         except subprocess.TimeoutExpired:
             logger.warning("paperclip search timed out: %s", query)
             return []
