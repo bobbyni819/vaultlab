@@ -59,13 +59,17 @@ def test_audit_zero_images_is_fail(tmp_path):
 
 
 def test_audit_some_images_is_ok(tmp_path):
+    """All figure-intended slides have images → ok severity."""
     deck = tmp_path / "x.pptx"
     deck.write_bytes(b"fake")
     slides = [
         {"title": "Title", "n_images": 0, "text_chars": 100},
         {"title": "Methods overview", "n_images": 1, "text_chars": 100},
         {"title": "Results panel", "n_images": 2, "text_chars": 100},
-        {"title": "Discussion", "n_images": 0, "text_chars": 200},
+        # Use a non-figure-intended title for the last slide (References
+        # is canonically a text-only slide so it shouldn't count as a
+        # figure-gap).
+        {"title": "References", "n_images": 0, "text_chars": 200},
     ]
     with _patch_presentation(slides):
         r = audit_deck(deck)

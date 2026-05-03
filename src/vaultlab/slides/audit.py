@@ -192,6 +192,23 @@ def audit_deck(
         if title_lc.startswith(("history", "development", "state of",
                                 "background", "methods", "results")):
             is_figure_intended = True
+        # Review-paper-scope layouts use numbered section titles
+        # ("1. Theoretical foundations", "2. Early methods", etc.) — match
+        # those too. Also catch common review-paper section keywords.
+        if re.match(r"^\s*\d+[.\-]?\s+\S", title) or re.match(
+            r"^\s*\d+\s*[-]\s*\d+[.\-]?\s+\S", title
+        ):
+            # Numbered section header
+            is_figure_intended = True
+        review_paper_kws = (
+            "introduction", "foundation", "framework", "early method",
+            "seminal", "refinement", "instrumentation",
+            "application", "specialised", "specialized",
+            "state of the art", "sota", "limitation", "future direction",
+            "thesis", "discussion", "synthesis",
+        )
+        if any(k in title_lc for k in review_paper_kws):
+            is_figure_intended = True
 
         figure_gap = is_figure_intended and n_images == 0
 
@@ -237,25 +254,61 @@ def audit_deck(
 
 
 def _extract_dois_from_arc(text: str) -> list[str]:
-    """Pull DOI strings out of arc markdown.
+    """Pull fetchable paper identifiers out of arc markdown.
 
-    Recognises both the wikilink style ``[[10.1038_s41586-...]]`` and
-    raw ``10.1038/...`` substrings. Returns a deduplicated list in
-    arc-order.
+    Recognises:
+    1. Inline DOI: ``10.1038/s41586-...``
+    2. Wikilink with slash: ``[[10.1038/s41586-...]]``
+    3. Wikilink with underscore-slash: ``[[10.1038_s41586-...]]``
+       — sluggified DOIs that use ``_`` instead of ``/`` between the
+       registrant and the suffix.
+    4. Wikilink with author-year suffix: ``[[10.1038_s41586-x|Author Year]]``
+       — strip the ``|...`` part.
+    5. Paperclip native IDs: ``[[PMC<digits>]]``, ``[[PMC<digits>|Author Year]]``,
+       ``[[arx_...]]``, ``[[bio_...]]``, ``[[med_...]]`` — these are
+       directly fetchable via paperclip lookup without DOI resolution.
+
+    Returns a deduplicated list in arc-order. PMC/arx/bio/med IDs are
+    returned as-is (fetcher must distinguish via prefix).
     """
     seen: set[str] = set()
     out: list[str] = []
-    # Pattern matches: 10.\d{3,9}/<chars>
+
+    # Pattern 1+2: standard 10.<digits>/<rest>
     doi_re = re.compile(r"10\.\d{3,9}/[\w.\-/_:;()]+", re.I)
     for m in doi_re.finditer(text):
         doi = m.group(0).rstrip(".,;:)")
-        # Some wikilinks use _ instead of / in the slug; revert
-        if "_" in doi and "/" not in doi:
-            # Convert "10.1038_s41586-..." → "10.1038/s41586-..."
-            doi = doi.replace("_", "/", 1)
         if doi.lower() not in seen:
             seen.add(doi.lower())
             out.append(doi)
+
+    # Pattern 3+4: wikilink-slug with underscore between registrant and
+    # suffix, possibly followed by ``|<author-year>``.
+    # Format: [[10.1038_s41586-...|Author Year]] → 10.1038/s41586-...
+    wiki_doi_re = re.compile(
+        r"\[\[\s*(10\.\d{3,9}_[^\]|]+?)\s*(?:\|[^\]]+)?\s*\]\]", re.I,
+    )
+    for m in wiki_doi_re.finditer(text):
+        slug = m.group(1)
+        doi = slug.replace("_", "/", 1).rstrip(".,;:)")
+        if doi.lower() not in seen:
+            seen.add(doi.lower())
+            out.append(doi)
+
+    # Pattern 5: paperclip native IDs in wikilinks
+    pcl_re = re.compile(
+        r"\[\[\s*((?:PMC\d+|arx_[\w.]+|bio_\w+|med_\w+))\s*"
+        r"(?:\|[^\]]+)?\s*\]\]", re.I,
+    )
+    for m in pcl_re.finditer(text):
+        pid = m.group(1)
+        # Normalize: paperclip IDs are case-insensitive but PMC is uppercase
+        if pid.upper().startswith("PMC"):
+            pid = pid.upper()
+        if pid not in seen:
+            seen.add(pid)
+            out.append(pid)
+
     return out
 
 
