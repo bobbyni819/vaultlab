@@ -196,22 +196,29 @@ def plan() -> dict:
                 transition="With both engines and CODEX in place, the integration becomes possible. The keystone paper proves it.",
             ),
 
-            # 9 — KEYSTONE: Hickey/Agmon 2024 Cell Systems (use fig2 — the deconstruct-reconstruct schematic)
-            _fig_slide(
-                slug="10.1016_j.cels.2024.03.004",
-                title="CODEX × Vivarium × multiscale ABM — proven for tumour-immune in 2024",
-                image_path=_f("10.1016_j.cels.2024.03.004", "fig2"),
-                caption="Deconstruct (CODEX) → reconstruct (Vivarium ABM); IFNγ-induced PD-L1+ phenotype switch.",
-                bullets=[
-                    "B16-F10 melanoma, 42-antibody CODEX",
-                    "Vivarium ABM with PD-L1 + MHC-I + IFNγ",
-                    "R²=0.97-0.99 simulation vs in vivo",
-                    "T-cell SPATIAL POSITION beats T-cell phenotype",
-                ],
-                hook="Has anyone wired CODEX × Vivarium × ABM end-to-end?",
-                key_claim="Hickey, Agmon et al. 2024 in Cell Systems demonstrate the full deconstruct-reconstruct loop for tumour-immune interactions — the precedent Bobby's lung-infection thesis extends.",
-                transition="Cancer is solved. Chapter 3 — what's the lung-side of the matrix?",
-            ),
+            # 9 — KEYSTONE: Hickey/Agmon 2024 Cell Systems
+            # Crop to panel A (the system-of-multiscale-interactions schematic)
+            # so just the conceptual diagram dominates the slide; the CODEX
+            # and reconstruction panels (B, C) get separate slides.
+            {
+                **_fig_slide(
+                    slug="10.1016_j.cels.2024.03.004",
+                    title="CODEX × Vivarium × multiscale ABM — proven for tumour-immune in 2024",
+                    image_path=_f("10.1016_j.cels.2024.03.004", "fig2"),
+                    caption="System of multiscale interactions: cancer ↔ tissue ↔ intercellular ↔ molecular.",
+                    bullets=[
+                        "B16-F10 melanoma, 42-antibody CODEX",
+                        "Vivarium ABM with PD-L1 + MHC-I + IFNγ",
+                        "R²=0.97-0.99 simulation vs in vivo",
+                        "T-cell SPATIAL POSITION beats T-cell phenotype",
+                    ],
+                    hook="Has anyone wired CODEX × Vivarium × ABM end-to-end?",
+                    key_claim="Hickey, Agmon et al. 2024 in Cell Systems demonstrate the full deconstruct-reconstruct loop for tumour-immune interactions — the precedent Bobby's lung-infection thesis extends.",
+                    transition="Cancer is solved. Chapter 3 — what's the lung-side of the matrix?",
+                ),
+                "panel": "A",  # crop to top schematic only
+                "caption_position": "right",  # side caption — figure dominates
+            },
 
             # 10 — CHAPTER 3 divider
             {"type": "section_divider", "title": "3. State of the art (2023–2025)"},
@@ -306,7 +313,7 @@ def plan() -> dict:
 
 
 def main() -> int:
-    out_path = OUT_DIR / "review-2026-05-03-rebuilt.pptx"
+    out_path = OUT_DIR / "review-2026-05-04-rebuilt-v2.pptx"
     print(f"Building {out_path.name} ...")
     plan_dict = plan()
 

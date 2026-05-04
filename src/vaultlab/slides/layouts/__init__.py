@@ -24,6 +24,7 @@ from vaultlab.slides.layouts.figure import (
     add_figure_above_bullets_slide,
     add_figure_only_slide,
     add_figure_slide,
+    add_figure_with_side_caption_slide,
     add_quote_slide,
     add_two_figure_compare_slide,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "add_figure_above_bullets_slide",
     "add_figure_only_slide",
     "add_figure_slide",
+    "add_figure_with_side_caption_slide",
     "add_multi_figure_slide",
     "add_quote_slide",
     "add_references_slide",

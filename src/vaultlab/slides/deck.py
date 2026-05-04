@@ -2315,13 +2315,55 @@ def _collect_citations_from_summaries(
 #   quality** work expects: an LLM-driven plan generator emits this dict
 #   shape, ``build_from_plan`` renders it deterministically.
 
+def _normalize_panel_crop(slide_spec: dict[str, Any]) -> dict[str, Any]:
+    """If a figure slide spec has a ``panel`` field, crop the source figure.
+
+    The slide spec can carry ``"panel": "F"`` to indicate "crop this
+    figure to panel F before placing." Runs the XY-cut panel detector,
+    crops, and rewrites ``image_path`` to the cropped file. The cropped
+    file is cached next to the original so re-runs are idempotent.
+
+    No-ops when:
+    - The slide isn't a figure type.
+    - No ``panel`` field is set.
+    - The image_path doesn't exist.
+    - The named panel can't be found in the figure.
+    """
+    if slide_spec.get("type") not in ("figure",):
+        return slide_spec
+    panel = slide_spec.get("panel")
+    if not panel:
+        return slide_spec
+    image_path = slide_spec.get("image_path")
+    if not image_path:
+        return slide_spec
+
+    try:
+        from vaultlab.figures.crop_panel import crop_to_panel
+        cropped = crop_to_panel(image_path, str(panel))
+    except Exception:  # noqa: BLE001
+        return slide_spec
+    if cropped is None:
+        return slide_spec
+
+    new_spec = dict(slide_spec)
+    new_spec["image_path"] = str(cropped)
+    new_spec["_original_image_path"] = image_path  # keep for debugging
+    return new_spec
+
+
 def _auto_pick_figure_layout(
     image_path: str,
     bullets: Any,
+    caption_position: str | None = None,
 ) -> str:
     """Pick a figure-slide layout automatically from image aspect + bullet count.
 
     Rules:
+    - caption_position == "right" → ``figure_with_side_caption`` (caption +
+      bullets + citation in right gutter; figure uses full slide height).
+      Use this for wide figures with detailed sub-panels where you want
+      the figure to dominate.
     - aspect > 1.8 (very wide, like a multi-panel horizontal diagram) →
       ``figure_above_bullets`` so the figure gets full slide width.
     - aspect < 0.55 (very tall, like a stacked-bar vertical chart) →
@@ -2332,6 +2374,8 @@ def _auto_pick_figure_layout(
     Falls back to ``default`` when the image can't be read or PIL is missing.
     """
     has_bullets = bool(bullets)
+    if caption_position == "right":
+        return "figure_with_side_caption"
     if not image_path:
         return "default"
     try:
@@ -2433,6 +2477,7 @@ def build_from_plan(
         add_figure_above_bullets_slide,
         add_figure_only_slide,
         add_figure_slide,
+        add_figure_with_side_caption_slide,
         add_multi_figure_slide,
         add_quote_slide,
         add_references_slide,
@@ -2455,6 +2500,7 @@ def build_from_plan(
 
     for slide_spec in slides_plan:
         slide_spec = _normalize_bullet_annotations(slide_spec)
+        slide_spec = _normalize_panel_crop(slide_spec)
 
         stype = slide_spec.get("type", "text")
         notes = slide_spec.get("speaker_notes")
@@ -2476,6 +2522,7 @@ def build_from_plan(
                 layout = _auto_pick_figure_layout(
                     slide_spec.get("image_path", ""),
                     slide_spec.get("bullets"),
+                    caption_position=slide_spec.get("caption_position"),
                 )
             if layout == "figure_only":
                 slide = add_figure_only_slide(
@@ -2487,6 +2534,15 @@ def build_from_plan(
                 )
             elif layout == "figure_above_bullets":
                 slide = add_figure_above_bullets_slide(
+                    pres,
+                    image_path=slide_spec.get("image_path", ""),
+                    title=slide_spec.get("title", ""),
+                    caption=slide_spec.get("caption", ""),
+                    bullets=slide_spec.get("bullets"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+            elif layout == "figure_with_side_caption":
+                slide = add_figure_with_side_caption_slide(
                     pres,
                     image_path=slide_spec.get("image_path", ""),
                     title=slide_spec.get("title", ""),

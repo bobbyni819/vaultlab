@@ -353,6 +353,109 @@ def add_two_figure_compare_slide(
     return slide
 
 
+def add_figure_with_side_caption_slide(
+    pres: Any,
+    image_path: str | Path,
+    title: str = "",
+    caption: str = "",
+    citation_source: str = "",
+    bullets: Iterable[str] | None = None,
+) -> Any:
+    """Wide figure on left, caption + citation + optional bullets on right.
+
+    Use when a figure is wide-aspect (>1.4) and there's room to recover
+    by putting the caption + citation in the right-side gutter instead
+    of below. Lets the figure use the full slide HEIGHT (under the title)
+    rather than being squeezed by the bottom caption row.
+
+    Layout:
+      - Title at top (28pt, full width) — height 1.2 in
+      - Figure on left, full available height, ~70% of width
+      - Right-side text column: caption (12pt italic) + bullets (20pt)
+        + citation_source (9pt) at the bottom of the column
+    """
+    slide = pres.slides.add_slide(ensure_blank_layout(pres))
+    sw_in = pres.slide_width / 914400
+    sh_in = pres.slide_height / 914400
+    sizes_d = sizes()
+
+    if title:
+        tx = slide.shapes.add_textbox(
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+        )
+        tx.text_frame.text = title
+        apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
+
+    # Figure occupies left 70%, full height under title to slide bottom
+    fig_top_in = 1.6
+    fig_height_in = sh_in - fig_top_in - 0.3
+    fig_width_in = sw_in * 0.62
+    fig_left = Inches(0.4)
+
+    img_path = Path(image_path)
+    add_picture_fit(
+        slide, str(img_path), fig_left, Inches(fig_top_in),
+        Inches(fig_width_in), Inches(fig_height_in),
+    )
+
+    # Right-side column: caption / bullets / citation stacked
+    col_left_in = 0.4 + fig_width_in + 0.3
+    col_width_in = sw_in - col_left_in - 0.4
+
+    bullets_list = list(bullets) if bullets else []
+    has_bullets = len(bullets_list) > 0
+
+    cap_top_in = fig_top_in
+    cap_height_in = 1.2 if caption else 0.0
+    if caption:
+        cx = slide.shapes.add_textbox(
+            Inches(col_left_in), Inches(cap_top_in),
+            Inches(col_width_in), Inches(cap_height_in),
+        )
+        cx.text_frame.text = caption
+        cx.text_frame.word_wrap = True
+        apply_font(cx.text_frame, size=12, pres=pres)
+        for para in cx.text_frame.paragraphs:
+            for run in para.runs:
+                run.font.italic = True
+
+    if has_bullets:
+        bul_top_in = cap_top_in + cap_height_in + 0.2
+        bul_height_in = sh_in - bul_top_in - 0.7  # leave room for citation
+        bx = slide.shapes.add_textbox(
+            Inches(col_left_in), Inches(bul_top_in),
+            Inches(col_width_in), Inches(bul_height_in),
+        )
+        tf = bx.text_frame
+        tf.word_wrap = True
+        from pptx.util import Pt as _Pt
+        for i, b in enumerate(bullets_list):
+            text = f"•  {b}"
+            if i == 0:
+                tf.text = text
+                p = tf.paragraphs[0]
+            else:
+                p = tf.add_paragraph()
+                p.text = text
+            try:
+                p.space_before = _Pt(8)
+                p.space_after = _Pt(4)
+            except Exception:
+                pass
+        apply_font(tf, size=20, pres=pres)
+
+    if citation_source:
+        cit = slide.shapes.add_textbox(
+            Inches(col_left_in), Inches(sh_in - 0.6),
+            Inches(col_width_in), Inches(0.4),
+        )
+        cit.text_frame.text = citation_source
+        cit.text_frame.word_wrap = True
+        apply_font(cit.text_frame, size=9, pres=pres)
+
+    return slide
+
+
 def add_quote_slide(
     pres: Any,
     quote: str,
@@ -401,6 +504,7 @@ __all__ = [
     "add_figure_above_bullets_slide",
     "add_figure_only_slide",
     "add_figure_slide",
+    "add_figure_with_side_caption_slide",
     "add_quote_slide",
     "add_two_figure_compare_slide",
 ]
