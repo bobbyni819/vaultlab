@@ -509,9 +509,18 @@ def add_figure_top_caption_br_slide(
     bullets_list = list(bullets) if bullets else []
     has_bullets = len(bullets_list) > 0
 
-    # Figure occupies full slide width × upper 70% of available height
+    # Figure occupies full slide width × upper portion of available height.
+    # Bottom strip height adapts to bullet count so 4 bullets at 18pt fit
+    # without overflow (each bullet ≤55 chars wraps to 1 line; bigger
+    # bullets get 2 lines and the strip needs ~0.4in per extra bullet line).
     fig_top_in = 1.6
-    bottom_strip_height_in = 1.5  # for caption/citation/bullets row
+    n_bullets = len(bullets_list)
+    if n_bullets >= 4:
+        bottom_strip_height_in = 2.4
+    elif n_bullets >= 2:
+        bottom_strip_height_in = 2.0
+    else:
+        bottom_strip_height_in = 1.5
     fig_height_in = sh_in - fig_top_in - bottom_strip_height_in - 0.2
     fig_width_in = sw_in - 0.6
     fig_left = Inches(0.3)

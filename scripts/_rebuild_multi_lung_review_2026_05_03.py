@@ -217,7 +217,10 @@ def plan() -> dict:
                     transition="Cancer is solved. Chapter 3 — what's the lung-side of the matrix?",
                 ),
                 "panel": "A",  # crop to top schematic only
-                "caption_position": "right",  # side caption — figure dominates
+                # No caption_position override — let the dispatcher detect
+                # the cropped panel's wide-flat aspect (~2.3) and route to
+                # figure_top_caption_br automatically (figure on top full
+                # width, caption + citation in bottom-right corner).
             },
 
             # 10 — CHAPTER 3 divider
@@ -313,7 +316,7 @@ def plan() -> dict:
 
 
 def main() -> int:
-    out_path = OUT_DIR / "review-2026-05-04-rebuilt-v3.pptx"
+    out_path = OUT_DIR / "review-2026-05-04-rebuilt-v4.pptx"
     print(f"Building {out_path.name} ...")
     plan_dict = plan()
 

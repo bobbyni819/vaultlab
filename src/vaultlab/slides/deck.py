@@ -2414,18 +2414,19 @@ def _auto_pick_figure_layout(
 
     aspect = density.aspect
 
-    # Wide-flat with bullets → figure-top-caption-BR (figure stretches to
-    # full width)
+    # Wide-flat (1.4-3.0) with bullets → figure-top-caption-BR (figure
+    # stretches to full slide width on top; caption + citation tuck in
+    # bottom-right; bullets in bottom-left).
     if 1.4 <= aspect <= 3.0 and has_bullets:
         return "figure_top_caption_br"
 
-    # Sparse-content wide-flat without bullets → also benefits from full
-    # width (otherwise small content gets shrunk in figure_only)
+    # Sparse-content wide-flat without bullets → also benefits from
+    # figure_top_caption_br (small content stretches to full width).
     if density.small_content_warning and not has_bullets:
         return "figure_top_caption_br"
 
     # Extreme aspect (very wide >3.0 or tall <0.55) with bullets →
-    # figure_above_bullets
+    # figure_above_bullets so figure gets full upper-half.
     if (aspect > 3.0 or aspect < 0.55) and has_bullets:
         return "figure_above_bullets"
 
@@ -2433,8 +2434,14 @@ def _auto_pick_figure_layout(
     if not has_bullets:
         return "figure_only"
 
-    # Default 0.55-1.4 aspect with bullets → figure-left + bullets-right
-    return "default"
+    # Square/near-square (0.55-1.4) with bullets → figure_with_side_caption
+    # (figure left 62% × full height; caption + bullets + citation in 30%
+    # right gutter). Gives the figure ~16% more area than the old "default"
+    # layout, AND moves caption + citation off the bottom (Bobby's
+    # 2026-05-04 explicit ask: "move small captions and citation to the
+    # right hand side where there's a lot of empty space and really
+    # stretch out the actual main figure").
+    return "figure_with_side_caption"
 
 
 # Slide types the dict-plan builder understands.
