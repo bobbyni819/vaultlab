@@ -20,6 +20,10 @@ plan-driven decks where layout choice depends on slide intent.
 
 from __future__ import annotations
 
+from vaultlab.slides.layouts.analogy import (
+    add_analogy_slide,
+    add_analogy_stacked_slide,
+)
 from vaultlab.slides.layouts.figure import (
     add_figure_above_bullets_slide,
     add_figure_only_slide,
@@ -39,6 +43,8 @@ from vaultlab.slides.layouts.title import add_title_slide
 __all__ = [
     "LAYOUTS",
     "LayoutSpec",
+    "add_analogy_slide",
+    "add_analogy_stacked_slide",
     "add_figure_above_bullets_slide",
     "add_figure_only_slide",
     "add_figure_slide",

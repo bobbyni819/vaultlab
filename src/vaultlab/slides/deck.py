@@ -2332,8 +2332,12 @@ def _normalize_panel_crop(slide_spec: dict[str, Any]) -> dict[str, Any]:
     - No ``panel`` field is set.
     - The image_path doesn't exist.
     - The named panel can't be found in the figure.
+    - ``is_custom_figure`` is True (Bobby's own granular plot — don't
+      try to crop panels out of a single-plot figure).
     """
     if slide_spec.get("type") not in ("figure",):
+        return slide_spec
+    if slide_spec.get("is_custom_figure"):
         return slide_spec
     panel = slide_spec.get("panel")
     if not panel:
@@ -2384,7 +2388,9 @@ def _normalize_trim_margin(slide_spec: dict[str, Any]) -> dict[str, Any]:
     """
     if slide_spec.get("type") not in ("figure",):
         return slide_spec
-    if slide_spec.get("no_trim"):
+    if slide_spec.get("no_trim") or slide_spec.get("is_custom_figure"):
+        # Custom figures are usually already tightly cropped by the user;
+        # don't auto-trim margins (would risk clipping intentional whitespace).
         return slide_spec
     image_path = slide_spec.get("image_path")
     if not image_path:
@@ -2553,6 +2559,8 @@ def build_from_plan(
     from vaultlab.slides.animations import bullet_reveal, panel_buildup
     from vaultlab.slides.annotate import add_annotations
     from vaultlab.slides.layouts import (
+        add_analogy_slide,
+        add_analogy_stacked_slide,
         add_figure_above_bullets_slide,
         add_figure_only_slide,
         add_figure_slide,
@@ -2685,6 +2693,33 @@ def build_from_plan(
                 references=slide_spec.get("references", []),
                 title=slide_spec.get("title", "References"),
             )
+        elif stype == "analogy":
+            variant = slide_spec.get("variant", "side_by_side")
+            if variant == "stacked":
+                slide = add_analogy_stacked_slide(
+                    pres,
+                    title=slide_spec.get("title", ""),
+                    familiar_label=slide_spec.get("familiar_label", ""),
+                    familiar_body=slide_spec.get("familiar_body", ""),
+                    familiar_image=slide_spec.get("familiar_image"),
+                    scientific_label=slide_spec.get("scientific_label", ""),
+                    scientific_body=slide_spec.get("scientific_body", ""),
+                    scientific_image=slide_spec.get("scientific_image"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+            else:
+                slide = add_analogy_slide(
+                    pres,
+                    title=slide_spec.get("title", ""),
+                    familiar_label=slide_spec.get("familiar_label", ""),
+                    familiar_body=slide_spec.get("familiar_body", ""),
+                    familiar_image=slide_spec.get("familiar_image"),
+                    scientific_label=slide_spec.get("scientific_label", ""),
+                    scientific_body=slide_spec.get("scientific_body", ""),
+                    scientific_image=slide_spec.get("scientific_image"),
+                    arrow_text=slide_spec.get("arrow_text", "is like"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
         else:
             # Unknown type — skip silently; never break a deck render
             continue
@@ -2729,6 +2764,22 @@ def build_from_plan(
         from vaultlab.slides.argument_graph import write_argument_graph
         result["argument_graph"] = write_argument_graph(plan, out_pptx)
     except Exception:  # noqa: BLE001 — sidecar failure must never break the deck
+        pass
+
+    # Story-arc audit + practice-script + flashcards — Bobby's 2026-05-04
+    # rehearsal layer. All sidecars are best-effort — never break the deck.
+    try:
+        from vaultlab.slides.story_arc import write_story_arc_report
+        result["story_arc"] = write_story_arc_report(plan, out_pptx)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from vaultlab.slides.practice_script import (
+            write_practice_script, write_flashcards,
+        )
+        result["practice_script"] = write_practice_script(plan, out_pptx)
+        result["flashcards"] = write_flashcards(plan, out_pptx)
+    except Exception:  # noqa: BLE001
         pass
 
     if kb_log is not None:
