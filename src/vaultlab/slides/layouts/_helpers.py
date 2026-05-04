@@ -142,6 +142,54 @@ def sizes() -> dict[str, int]:
     return dict(_SIZES)
 
 
+# Char-width factor for Roboto Bold at heading sizes. Matches the audit's
+# heading-tier factor in slides.audit._count_text_overflow_shapes so the
+# title-box-height estimator and the overflow-detector agree on whether
+# a given title wraps.
+_HEADING_CHAR_FACTOR = 0.45  # at ≥22pt; matches audit
+_HEADING_LINE_HEIGHT_FACTOR = 1.30  # line-height as fraction of font_size
+
+
+def estimate_title_lines(
+    title: str,
+    box_width_in: float,
+    *,
+    font_size_pt: int = 28,
+) -> int:
+    """Estimate how many lines the title will wrap to in its box.
+
+    PowerPoint wraps at word boundaries, so we count chars-per-line
+    conservatively then divide. Falls back to 1 for very short titles.
+    """
+    if not title:
+        return 1
+    char_w_in = font_size_pt * _HEADING_CHAR_FACTOR / 72
+    chars_per_line = max(1, int(box_width_in / char_w_in))
+    n_lines = (len(title) + chars_per_line - 1) // chars_per_line
+    return max(1, n_lines)
+
+
+def estimate_title_box_height(
+    title: str,
+    box_width_in: float,
+    *,
+    font_size_pt: int = 28,
+    min_height_in: float = 0.7,
+) -> float:
+    """Estimate the minimum title-box height (in inches) to fit ``title``.
+
+    Pairs with the layout's figure_top calculation: a short 1-line title
+    gives the figure ~0.45 in more vertical space than a 2-line title.
+    Bobby's 2026-05-04 ask: "for slide 8 the title was shorter and then
+    the figure is a flat rectangle and you should be able to stretch
+    that figure up to encroach in the unused empty space."
+    """
+    n_lines = estimate_title_lines(title, box_width_in, font_size_pt=font_size_pt)
+    line_height_in = (font_size_pt * _HEADING_LINE_HEIGHT_FACTOR) / 72.0
+    needed = n_lines * line_height_in + 0.10  # small buffer
+    return max(min_height_in, needed)
+
+
 __all__ = [
     "Emu",
     "Inches",
@@ -149,5 +197,7 @@ __all__ = [
     "add_picture_fit",
     "apply_font",
     "ensure_blank_layout",
+    "estimate_title_box_height",
+    "estimate_title_lines",
     "sizes",
 ]

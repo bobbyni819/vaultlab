@@ -446,7 +446,12 @@ def _count_text_overflow_shapes(slide: Any) -> int:
             if font_size_pt != 18:
                 break
 
-        avg_char_w_in = (font_size_pt * 0.55) / 72
+        # Char-width factor depends on weight + size. Heading-sized text
+        # (≥22pt, typically Roboto Bold) renders tighter than body text;
+        # use 0.45 vs 0.55 generic. Matches the heading-specific factor
+        # in estimate_title_box_height so audit + estimator agree.
+        char_factor = 0.45 if font_size_pt >= 22 else 0.55
+        avg_char_w_in = (font_size_pt * char_factor) / 72
         chars_per_line = max(1, int(width_in / avg_char_w_in))
         line_height_in = (font_size_pt * 1.4) / 72
 

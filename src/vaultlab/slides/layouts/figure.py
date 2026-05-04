@@ -24,6 +24,7 @@ from vaultlab.slides.layouts._helpers import (
     add_picture_fit,
     apply_font,
     ensure_blank_layout,
+    estimate_title_box_height,
     sizes,
 )
 
@@ -52,7 +53,7 @@ def add_figure_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
 
@@ -63,7 +64,8 @@ def add_figure_slide(
     bullets_list = list(bullets) if bullets else []
     has_bullets = len(bullets_list) > 0
 
-    fig_top_in = 1.1
+    title_h_in = estimate_title_box_height(title, sw_in - 1.0) if title else 0.0
+    fig_top_in = (0.3 + title_h_in + 0.10) if title else 0.5
     cap_height_in = 0.6 if caption else 0.0  # 12pt × ~2 lines + buffer
     cit_height_in = 0.4 if citation_source else 0.0
     cap_gap = 0.05 if caption else 0.0
@@ -153,7 +155,7 @@ def add_figure_only_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
 
@@ -163,7 +165,8 @@ def add_figure_only_slide(
     cap_height_in = 0.6 if caption else 0.0  # 12pt × ~2 lines + buffer
     cit_height_in = 0.4 if citation_source else 0.0
     cap_gap = 0.1 if caption else 0.0
-    fig_top_in = 1.2
+    title_h_in = estimate_title_box_height(title, sw_in - 1.0) if title else 0.0
+    fig_top_in = (0.3 + title_h_in + 0.10) if title else 0.5
     fig_height_in = sh_in - fig_top_in - cap_gap - cap_height_in - cit_height_in - 0.1
 
     fig_width_in = sw_in - 1.0
@@ -220,7 +223,7 @@ def add_figure_above_bullets_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
 
@@ -231,7 +234,8 @@ def add_figure_above_bullets_slide(
     has_bullets = len(bullets_list) > 0
     cit_height_in = 0.4 if citation_source else 0.0
 
-    fig_top_in = 1.1
+    title_h_in = estimate_title_box_height(title, sw_in - 1.0) if title else 0.0
+    fig_top_in = (0.3 + title_h_in + 0.10) if title else 0.5
     fig_height_in = sh_in * 0.50
     fig_width_in = sw_in - 1.0
     fig_left = Inches(0.5)
@@ -307,7 +311,7 @@ def add_two_figure_compare_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
 
@@ -389,18 +393,20 @@ def add_figure_with_side_caption_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
 
         tx.text_frame.word_wrap = True
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
-    # Figure occupies left 62%, near-full height under title.
-    # Tightened 2026-05-04: fig_top 1.6→1.4, bot_margin 0.3→0.15 to
-    # squeeze every inch of vertical space for the figure (since square
-    # figures here are height-bound).
-    fig_top_in = 1.4
+    # Figure occupies left 62%, near-full height under title. Title box
+    # is sized to actual title length (1-line = 0.7in, 2-line = ~1.15in,
+    # 3-line = ~1.6in) so a short title gives the figure 0.4-0.9 in
+    # extra vertical space. Bobby's 2026-05-04: "for slide 8 the title
+    # was shorter — you should be able to stretch the figure up."
+    title_h_in = estimate_title_box_height(title, sw_in - 1.0) if title else 0.0
+    fig_top_in = (0.3 + title_h_in + 0.10) if title else 0.5
     fig_height_in = sh_in - fig_top_in - 0.15
     fig_width_in = sw_in * 0.62
     fig_left = Inches(0.4)
@@ -508,7 +514,7 @@ def add_figure_top_caption_br_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(estimate_title_box_height(title, sw_in - 1.0))
         )
         tx.text_frame.text = title
         tx.text_frame.word_wrap = True
@@ -521,7 +527,8 @@ def add_figure_top_caption_br_slide(
     # Bottom strip height adapts to bullet count. Tightened 2026-05-04
     # to give the figure more vertical space (Bobby: "shift them down a
     # bit still and make that rectangle a bit larger").
-    fig_top_in = 1.4  # was 1.6
+    title_h_in = estimate_title_box_height(title, sw_in - 1.0) if title else 0.0
+    fig_top_in = (0.3 + title_h_in + 0.10) if title else 0.5
     n_bullets = len(bullets_list)
     if n_bullets >= 4:
         bottom_strip_height_in = 2.0  # was 2.4
