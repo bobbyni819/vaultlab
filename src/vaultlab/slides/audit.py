@@ -225,6 +225,9 @@ def audit_deck(
                 if txt.strip():
                     text_shape_chars.append(len(txt.strip()))
         n_text_chars = len(all_text.strip())
+        # Section dividers are intentionally short — don't count as thin.
+        # (We compute is_section_divider AFTER text_shape_chars below; this
+        # initial is_thin gets overridden once is_section_divider is known.)
         is_thin = n_text_chars < _THIN_SLIDE_TEXT_THRESHOLD and n_images == 0
 
         # Detect section_divider: title-only slide with no body content.
@@ -237,6 +240,9 @@ def audit_deck(
             and len([c for c in text_shape_chars if c > 5]) == 1
             and text_shape_chars[0] < 120
         )
+        # Section dividers are intentional, not "thin"
+        if is_section_divider:
+            is_thin = False
 
         title_lc = title.lower()
         is_figure_intended = any(
@@ -265,17 +271,29 @@ def audit_deck(
             is_figure_intended and n_images == 0 and not is_section_divider
         )
 
+        # References slides have many refs by design — not a quality issue
+        is_references = title_lc.startswith("references") or title_lc.startswith("selected references")
+
         # Shape-overlap detection: count pairs of shapes whose bboxes
         # overlap by >50% of the smaller shape's area.
         n_overlap = _count_overlapping_shape_pairs(slide)
 
-        # Text-overflow + off-slide checks
-        n_overflow = _count_text_overflow_shapes(slide)
+        # Text-overflow + off-slide checks. Section dividers wrap large
+        # 48pt titles by design and look fine; references list many entries
+        # by design — exempt both from these warnings.
+        if is_section_divider or is_references:
+            n_overflow = 0
+        else:
+            n_overflow = _count_text_overflow_shapes(slide)
         n_offslide = _count_offslide_shapes(slide, prs.slide_width, prs.slide_height)
 
-        # Title length + bullet density
+        # Title length + bullet density. References slide intentionally has
+        # many bullets — don't flag.
         title_long = len(title) > 100
-        over_bul = _has_over_bulleted_textbox(slide, threshold=7)
+        if is_references or is_section_divider:
+            over_bul = False
+        else:
+            over_bul = _has_over_bulleted_textbox(slide, threshold=7)
 
         per_slide.append(SlideAudit(
             index=i,
