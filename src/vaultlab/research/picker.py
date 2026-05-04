@@ -871,6 +871,17 @@ def pick_top_n_content_aware(
             corpus, n=target_n, pdf_cache_dir=pdf_cache_dir
         )
 
+    # Drop preprint picks whose published-version DOI is also picked.
+    # Pairs were discovered in ``build_corpus_from_seeds`` from CrossRef
+    # ``relation`` metadata. No-op when ``corpus.preprint_pairs`` is empty.
+    pairs = getattr(corpus, "preprint_pairs", None) or []
+    if pairs and picks:
+        from vaultlab.research.version_preference import filter_duplicates_from_picks
+
+        pick_dicts = [{"doi": d, "rank": i} for i, d in enumerate(picks, start=1)]
+        filtered = filter_duplicates_from_picks(picks=pick_dicts, pairs=pairs)
+        picks = [entry["doi"] for entry in filtered]
+
     rationales = _rationales_by_doi(response)
 
     if log_decision:

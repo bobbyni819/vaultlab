@@ -259,9 +259,19 @@ After all per-paper summaries are written, `run_lit_arc` builds a single
    AND already on disk under `Wiki/Summaries/<doi>.md`. Use whichever is more
    convenient — the in-memory dict has fields like `tldr`, `key_findings`,
    `og_score`, `year_bucket`.
-2. Inspect `task.prompt` (it already feeds you the bucketed summaries +
+2. **CRITICAL — cumulative-corpus recall (added 2026-05-01)**: Before composing
+   the arc, ALSO call `vaultlab.research.corpus_recall.gather_relevant_summaries(
+   topic, kb_root)` and merge those Tier-A summaries with `task.summaries`. The
+   per-run picker only sees this run's candidates; the `Wiki/Summaries/` folder
+   accumulates Tier-A papers from all prior runs. Without the merge, you'll
+   miss foundational papers that are already on disk (e.g., the 2026-05-01
+   CODEX run missed Goltsev 2018 *Cell* — the namesake paper — because it
+   was Tier-A from a prior run but not in this run's top-30 picks). Always
+   default to MORE context — the cumulative `Wiki/Summaries/` folder is
+   an asset, not noise.
+3. Inspect `task.prompt` (it already feeds you the bucketed summaries +
    top-OG papers + top co-citation pairs and the exact wikilink targets to use).
-3. Return JSON matching `task.response_schema`:
+4. Return JSON matching `task.response_schema`:
 
 ```
 {

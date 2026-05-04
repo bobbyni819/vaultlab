@@ -1,0 +1,3637 @@
+{
+  "topic": "CODEX multiplexed imaging \u2014 methods and applications across tissue types",
+  "seeds": [
+    {
+      "doi": "10.3389/fimmu.2021.687673",
+      "title": "Highly Multiplexed Phenotyping of Immunoregulatory Proteins in the Tumor Microenvironment by CODEX Tissue Imaging",
+      "authors": [
+        "D. Phillips",
+        "C. Sch\u00fcrch",
+        "M. Khodadoust",
+        "Youn H. Kim",
+        "G. Nolan",
+        "Sizun Jiang"
+      ],
+      "year": 2021,
+      "journal": "Frontiers in Immunology",
+      "abstract": "Immunotherapies are revolutionizing cancer treatment by boosting the natural ability of the immune system. In addition to antibodies against traditional checkpoint molecules or their ligands (i.e., CTLA-4, PD-1, and PD-L1), therapies targeting molecules such as ICOS, IDO-1, LAG-3, OX40, TIM-3, and VISTA are currently in clinical trials. To better inform clinical care and the design of therapeutic combination strategies, the co-expression of immunoregulatory proteins on individual immune cells within the tumor microenvironment must be robustly characterized. Highly multiplexed tissue imaging platforms, such as CO-Detection by indEXing (CODEX), are primed to meet this need by enabling >50 markers to be simultaneously analyzed in single-cells on formalin-fixed paraffin-embedded (FFPE) tissue sections. Assembly and validation of antibody panels is particularly challenging, with respect to the specificity of antigen detection and robustness of signal over background. Herein, we report the design, development, optimization, and application of a 56-marker CODEX antibody panel to eight cutaneous T cell lymphoma (CTCL) patient samples. This panel is comprised of structural, tumor, and immune cell markers, including eight immunoregulatory proteins that are approved or currently undergoing clinical trials as immunotherapy targets. Here we provide a resource to enable extensive high-dimensional, spatially resolved characterization of the tissue microenvironment across tumor types and imaging modalities. This framework provides researchers with a readily applicable blueprint to study tumor immunology, tissue architecture, and enable mechanistic insights into immunotherapeutic targets."
+    },
+    {
+      "doi": "10.1002/eji.202048891",
+      "title": "Highly multiplexed tissue imaging using repeated oligonucleotide exchange reaction",
+      "authors": [
+        "J. Kennedy\u2010Darling",
+        "S. Bhate",
+        "J. Hickey",
+        "Sarah Black",
+        "G. Barlow",
+        "Gustavo Vazquez",
+        "V. Venkataraaman",
+        "N. Samusik",
+        "Y. Goltsev",
+        "C. Sch\u00fcrch",
+        "G. Nolan"
+      ],
+      "year": 2020,
+      "journal": "European Journal of Immunology",
+      "abstract": "Multiparameter tissue imaging enables analysis of cell\u2010cell interactions in situ, the cellular basis for tissue structure, and novel cell types that are spatially restricted, giving clues to biological mechanisms behind tissue homeostasis and disease. Here, we streamlined and simplified the multiplexed imaging method CO\u2010Detection by indEXing (CODEX) by validating 58 unique oligonucleotide barcodes that can be conjugated to antibodies. We showed that barcoded antibodies retained their specificity for staining cognate targets in human tissue. Antibodies were visualized one at a time by adding a fluorescently labeled oligonucleotide complementary to oligonucleotide barcode, imaging, stripping, and repeating this cycle. With this we developed a panel of 46 antibodies that was used to stain five human lymphoid tissues: three tonsils, a spleen, and a LN. To analyze the data produced, an image processing and analysis pipeline was developed that enabled single\u2010cell analysis on the data, including unsupervised clustering, that revealed 31 cell types across all tissues. We compared cell\u2010type compositions within and directly surrounding follicles from the different lymphoid organs and evaluated cell\u2010cell density correlations. This sequential oligonucleotide exchange technique enables a facile imaging of tissues that leverages pre\u2010existing imaging infrastructure to decrease the barriers to broad use of multiplexed imaging."
+    },
+    {
+      "doi": "10.1126/science.adq2084",
+      "title": "Deep-tissue transcriptomics and subcellular imaging at high spatial resolution",
+      "authors": [
+        "Valentina Gandin",
+        "Jun Kim",
+        "Liang-Zhong Yang",
+        "Yumin Lian",
+        "Takashi Kawase",
+        "Amy Hu",
+        "Konrad Rokicki",
+        "Greg M. Fleishman",
+        "P. Tillberg",
+        "Alejandro Aguilera Castrejon",
+        "C. Stringer",
+        "Stephan Preibisch",
+        "Zhe J. Liu"
+      ],
+      "year": 2025,
+      "journal": "Science",
+      "abstract": "Limited color channels in fluorescence microscopy have long constrained spatial analysis in biological specimens. Here, we introduce cycleHCR, a method that integrates multicycle DNA barcoding with Hybridization Chain Reaction (HCR) to overcome this limitation. cycleHCR enables highly multiplexed imaging of RNA and proteins using a unified barcode system. Whole-embryo transcriptomics imaging achieved precise three-dimensional gene expression and cell fate mapping across a specimen depth of ~310 \u03bcm. When combined with expansion microscopy, cycleHCR revealed an intricate network of 10 subcellular structures in mouse embryonic fibroblasts. In mouse hippocampal slices, multiplex RNA and protein imaging uncovered complex gene expression gradients and cell-type-specific nuclear structural variations. cycleHCR provides a quantitative framework for elucidating spatial regulation in deep tissue contexts for research and potentially diagnostic applications."
+    },
+    {
+      "doi": "10.1038/s41577-023-00936-z",
+      "title": "CODEX multiplexed tissue imaging",
+      "authors": [
+        "Goltsev Y",
+        "Nolan G"
+      ],
+      "year": 2023,
+      "journal": "Nature Reviews Immunology",
+      "abstract": ""
+    },
+    {
+      "doi": "10.1038/s41592-022-01428-z",
+      "title": "Catching up with multiplexed tissue imaging",
+      "authors": [],
+      "year": 2022,
+      "journal": "Nature Methods",
+      "abstract": ""
+    },
+    {
+      "doi": "10.1080/29979676.2024.2437947",
+      "title": "Benchmarking Spatial Co-Localization Methods for Single-Cell Multiplex Imaging Data with Applications to High-Grade Serous Ovarian and Triple Negative Breast Cancer.",
+      "authors": [
+        "Alex C. Soupir",
+        "Ishaan Gadiyar",
+        "Bryan R. Helm",
+        "C. Harris",
+        "S. Vandekar",
+        "Lauren C. Peres",
+        "Robert J. Coffey",
+        "Julia Wrobel",
+        "Siyuan Ma",
+        "Brooke L. Fridley"
+      ],
+      "year": 2025,
+      "journal": "Statistics and data science in imaging",
+      "abstract": "Single-cell multiplex imaging (scMI) measures cell locations and phenotypes within a tissue and can be used to understand the tumor microenvironment. In scMI studies, it is often of interest to quantify spatial co-localization of immune cells and its association with clinical outcomes; however, it remains unknown which of the many available spatial indices have adequate power to detect spatial within-sample co-localization and its association with patient outcomes, such as survival. In this study, the performance of six frequentist metrics of spatial co-localization used in scMI studies were evaluated. Simulated data was used to assess the power and type I error of these spatial metrics to detect signficant co-localization. Furthermore, these spatial co-localization methods were applied to two scMI studies - a high-grade serous ovarian cancer (HGSOC) study and triple negative breast cancer (TNBC) study - to detect within-sample co-localization between cell types and their sensitivity to detect differences in survival across samples. In the simulation study, Ripley's K had the greatest power to identify co-localization followed closely by pair correlation g; all other statistics showed little power across all simulation scenarios. In the application of the methods to cancer studies, the results consistently point to pair correlation g and Ripley's K as indices with the most power for detecting significant co-localization in scMI data. Furthermore, pair correlation g, Ripley's K, and the scLMM index were most effective for estimating between-sample associations between level of co-localization and survival."
+    },
+    {
+      "doi": "10.1101/2025.06.23.661064",
+      "title": "Morphology-Aware Profiling of Highly Multiplexed Tissue Images using Variational Autoencoders",
+      "authors": [
+        "Gregory J. Baker",
+        "Edward Novikov",
+        "S. Coy",
+        "Yu-An Chen",
+        "C. Hug",
+        "Zergham Ahmed",
+        "S. A. C. Ord\u00f3\u00f1ez",
+        "Siyu Huang",
+        "Clarence Yapp",
+        "Gaurav N. Joshi",
+        "Fumiki Yanagawa",
+        "Artem Sokolov",
+        "H. Pfister",
+        "S. Santagata",
+        "P. Sorger"
+      ],
+      "year": 2025,
+      "journal": "bioRxiv",
+      "abstract": "Spatial proteomics (highly multiplexed tissue imaging) provides unprecedented insight into the types, states, and spatial organization of cells within preserved tissue environments. To enable single-cell analysis, high-plex images are typically segmented using algorithms that assign marker signals to individual cells. However, conventional segmentation is often imprecise and susceptible to signal spillover between adjacent cells, interfering with accurate cell type identification. Segmentation-based methods also fail to capture the morphological detail that histopathologists rely on for disease diagnosis and staging. Here, we present a method that combines unsupervised, pixel-level machine learning using autoencoders with traditional segmentation to generate single-cell data that captures information on protein abundance, morphology, and local neighborhood in a manner analogous to human experts while overcoming signal spillover. We demonstrate the generality of this approach by applying it to CyCIF, Lunaphore COMET, and CODEX data, and show that it can learn histological features across multiple spatial scales."
+    },
+    {
+      "doi": "10.17504/protocols.io.36wgqj3y3vk5/v1",
+      "title": "CODEX \u00ae Multiplexed Imaging \u2013 tissue staining in TMA and whole tissue FFPE sections v1",
+      "authors": [
+        "Martinez Casals A"
+      ],
+      "year": 2023,
+      "journal": "",
+      "abstract": "CODEX technology allows for highly multiplexed analysis of + 40 proteins on the same section relying on DNA-conjugated antibodies being commercialized by Akoya Biosciences (former name CODEX\u00ae, current name PhenoCycler\u2122). This detailed protocol describes an adapted protocol, from CODEX User Manual Rev C , for tissue staining in Tissue MicroArrays (TMA) and whole tissue Formalin Fixed Paraffin Embedded (FFPE) sections to run into the CODEX system which is used in Emma Lundberg research group at Science for Life Laboratory;  KTH - Royal Institute of Technology."
+    }
+  ],
+  "picker_candidates": [
+    {
+      "doi": "10.1002/eji.202048891",
+      "title": "Highly multiplexed tissue imaging using repeated oligonucleotide exchange reaction",
+      "authors": [
+        "J. Kennedy\u2010Darling",
+        "S. Bhate",
+        "J. Hickey",
+        "Sarah Black",
+        "G. Barlow",
+        "Gustavo Vazquez",
+        "V. Venkataraaman",
+        "N. Samusik",
+        "Y. Goltsev",
+        "C. Sch\u00fcrch",
+        "G. Nolan"
+      ],
+      "year": 2020,
+      "journal": "European Journal of Immunology",
+      "abstract": "Multiparameter tissue imaging enables analysis of cell\u2010cell interactions in situ, the cellular basis for tissue structure, and novel cell types that are spatially restricted, giving clues to biological mechanisms behind tissue homeostasis and disease. Here, we streamlined and simplified the multiplexed imaging method CO\u2010Detection by indEXing (CODEX) by validating 58 unique oligonucleotide barcodes that can be conjugated to antibodies. We showed that barcoded antibodies retained their specificity for staining cognate targets in human tissue. Antibodies were visualized one at a time by adding a fluorescently labeled oligonucleotide complementary to oligonucleotide barcode, imaging, stripping, and repeating this cycle. With this we developed a panel of 46 antibodies that was used to stain five human lymphoid tissues: three tonsils, a spleen, and a LN. To analyze the data produced, an image processing and analysis pipeline was developed that enabled single\u2010cell analysis on the data, including unsupervised clustering, that revealed 31 cell types across all tissues. We compared cell\u2010type compositions within and directly surrounding follicles from the different lymphoid organs and evaluated cell\u2010cell density correlations. This sequential oligonucleotide exchange technique enables a facile imaging of tissues that leverages pre\u2010existing imaging infrastructure to decrease the barriers to broad use of multiplexed imaging.",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 2,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.cell.2018.07.010",
+      "title": "Deep Profiling of Mouse Splenic Architecture With CODEX Multiplexed Imaging",
+      "authors": [
+        "Goltsev"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.6666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/nmeth.2869",
+      "title": "Highly Multiplexed Imaging of Tumor Tissues With Subcellular Resolution by Mass Cytometry",
+      "authors": [
+        "Giesen"
+      ],
+      "year": 2014,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/nm.3488",
+      "title": "Multiplexed Ion Beam Imaging of Human Breast Tumors",
+      "authors": [
+        "Angelo"
+      ],
+      "year": 2014,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1016/j.cell.2018.08.039",
+      "title": "A Structured Tumor-Immune Microenvironment in Triple Negative Breast Cancer Revealed by Multiplexed Ion Beam Imaging",
+      "authors": [
+        "Keren"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.7554/elife.31657",
+      "title": "Highly Multiplexed Immunofluorescence Imaging of Human Tissues and Tumors Using t-CyCIF and Conventional Optical Microscopes",
+      "authors": [
+        "Lin"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.cell.2020.07.005",
+      "title": "Coordinated Cellular Neighborhoods Orchestrate Antitumoral Immunity at the Colorectal Cancer Invasive Front",
+      "authors": [
+        "Schurch"
+      ],
+      "year": 2020,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/s41596-021-00556-8",
+      "title": "CODEX Multiplexed Tissue Imaging With DNA-Conjugated Antibodies",
+      "authors": [
+        "Black"
+      ],
+      "year": 2021,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/nmeth.3863",
+      "title": "Automated Mapping of Phenotype Space With Single-Cell Data",
+      "authors": [
+        "Samusik"
+      ],
+      "year": 2016,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/nbt1250",
+      "title": "Analyzing Proteome Topology and Function by Automated Multidimensional Fluorescence Microscopy",
+      "authors": [
+        "Schubert"
+      ],
+      "year": 2006,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1021/acs.nanolett.7b02716",
+      "title": "Rapid Sequential in Situ Multiplexing With DNA Exchange Imaging in Neuronal Cells and Tissues",
+      "authors": [
+        "Wang"
+      ],
+      "year": 2017,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1073/pnas.1300136110",
+      "title": "Highly Multiplexed Single-Cell Analysis of Formalin-Fixed, Paraffin-Embedded Cancer Tissue",
+      "authors": [
+        "Gerdes"
+      ],
+      "year": 2013,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41587-019-0207-y",
+      "title": "",
+      "authors": [],
+      "year": 0,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41583-019-0250-1",
+      "title": "",
+      "authors": [],
+      "year": 0,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/s41592-018-0219-4",
+      "title": "",
+      "authors": [],
+      "year": 0,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/s41592-020-01018-x",
+      "title": "",
+      "authors": [],
+      "year": 0,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.21105/joss.00205",
+      "title": "",
+      "authors": [],
+      "year": 0,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1126/science.adq2084",
+      "title": "Deep-tissue transcriptomics and subcellular imaging at high spatial resolution",
+      "authors": [
+        "Valentina Gandin",
+        "Jun Kim",
+        "Liang-Zhong Yang",
+        "Yumin Lian",
+        "Takashi Kawase",
+        "Amy Hu",
+        "Konrad Rokicki",
+        "Greg M. Fleishman",
+        "P. Tillberg",
+        "Alejandro Aguilera Castrejon",
+        "C. Stringer",
+        "Stephan Preibisch",
+        "Zhe J. Liu"
+      ],
+      "year": 2025,
+      "journal": "Science",
+      "abstract": "Limited color channels in fluorescence microscopy have long constrained spatial analysis in biological specimens. Here, we introduce cycleHCR, a method that integrates multicycle DNA barcoding with Hybridization Chain Reaction (HCR) to overcome this limitation. cycleHCR enables highly multiplexed imaging of RNA and proteins using a unified barcode system. Whole-embryo transcriptomics imaging achieved precise three-dimensional gene expression and cell fate mapping across a specimen depth of ~310 \u03bcm. When combined with expansion microscopy, cycleHCR revealed an intricate network of 10 subcellular structures in mouse embryonic fibroblasts. In mouse hippocampal slices, multiplex RNA and protein imaging uncovered complex gene expression gradients and cell-type-specific nuclear structural variations. cycleHCR provides a quantitative framework for elucidating spatial regulation in deep tissue contexts for research and potentially diagnostic applications.",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s12276-018-0191-1",
+      "title": "Immune Checkpoint Inhibitors: Recent Progress and Potential Biomarkers",
+      "authors": [
+        "Darvin"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1126/science.aaa8172",
+      "title": "The Future of Immune Checkpoint Therapy",
+      "authors": [
+        "Sharma"
+      ],
+      "year": 2015,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/d41573-019-00167-9",
+      "title": "Immuno-Oncology Drug Development Goes Global",
+      "authors": [
+        "Xin Yu"
+      ],
+      "year": 2019,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1186/s13045-018-0582-8",
+      "title": "Next Generation of Immune Checkpoint Therapy in Cancer: New Developments and Challenges",
+      "authors": [
+        "Marin-Acevedo"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s13045-018-0644-y",
+      "title": "Targeting the IDO1 Pathway in Cancer: From Bench to Bedside",
+      "authors": [
+        "Liu"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s12943-019-1091-2",
+      "title": "Novel Immune Checkpoint Targets: Moving Beyond PD-1 and CTLA-4",
+      "authors": [
+        "Qin"
+      ],
+      "year": 2019,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1136/jitc-2019-000475",
+      "title": "Master Protocols in Immuno-Oncology: do Novel Drugs Deserve Novel Designs",
+      "authors": [
+        "Mazzarella"
+      ],
+      "year": 2020,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.ejca.2015.08.021",
+      "title": "Rationale for anti-OX40 Cancer Immunotherapy",
+      "authors": [
+        "Aspeslagh"
+      ],
+      "year": 2016,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": false
+    },
+    {
+      "doi": "10.1038/d41586-017-08702-7",
+      "title": "The Benefits of Immunotherapy Combinations",
+      "authors": [
+        "Schmidt"
+      ],
+      "year": 2017,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fonc.2016.00233",
+      "title": "Combination Approaches With Immune-Checkpoint Blockade in Cancer Therapy",
+      "authors": [
+        "Swart"
+      ],
+      "year": 2016,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fimmu.2019.00990",
+      "title": "Combination of Immunotherapy With Targeted Therapy: Theory and Practice in Metastatic Melanoma",
+      "authors": [
+        "Yu"
+      ],
+      "year": 2019,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.immuni.2018.03.007",
+      "title": "Combination Cancer Therapy With Immune Checkpoint Blockade: Mechanisms and Strategies",
+      "authors": [
+        "Patel"
+      ],
+      "year": 2018,
+      "journal": "",
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "has_pdf": false
+    }
+  ],
+  "binning_candidates": [
+    {
+      "doi": "10.1002/eji.202048891",
+      "title": "Highly multiplexed tissue imaging using repeated oligonucleotide exchange reaction",
+      "year": 2020,
+      "abstract": "Multiparameter tissue imaging enables analysis of cell\u2010cell interactions in situ, the cellular basis for tissue structure, and novel cell types that are spatially restricted, giving clues to biological mechanisms behind tissue homeostasis and disease. Here, we streamlined and simplified the multiplexed imaging method CO\u2010Detection by indEXing (CODEX) by validating 58 unique oligonucleotide barcodes that can be conjugated to antibodies. We showed that barcoded antibodies retained their specificity for staining cognate targets in human tissue. Antibodies were visualized one at a time by adding a ",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 2,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.cell.2018.07.010",
+      "title": "Deep Profiling of Mouse Splenic Architecture With CODEX Multiplexed Imaging",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.6666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/nmeth.2869",
+      "title": "Highly Multiplexed Imaging of Tumor Tissues With Subcellular Resolution by Mass Cytometry",
+      "year": 2014,
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/nm.3488",
+      "title": "Multiplexed Ion Beam Imaging of Human Breast Tumors",
+      "year": 2014,
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1016/j.cell.2018.08.039",
+      "title": "A Structured Tumor-Immune Microenvironment in Triple Negative Breast Cancer Revealed by Multiplexed Ion Beam Imaging",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.7554/elife.31657",
+      "title": "Highly Multiplexed Immunofluorescence Imaging of Human Tissues and Tumors Using t-CyCIF and Conventional Optical Microscopes",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.5,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.cell.2020.07.005",
+      "title": "Coordinated Cellular Neighborhoods Orchestrate Antitumoral Immunity at the Colorectal Cancer Invasive Front",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41596-021-00556-8",
+      "title": "CODEX Multiplexed Tissue Imaging With DNA-Conjugated Antibodies",
+      "year": 2021,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1038/nmeth.3863",
+      "title": "Automated Mapping of Phenotype Space With Single-Cell Data",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/nbt1250",
+      "title": "Analyzing Proteome Topology and Function by Automated Multidimensional Fluorescence Microscopy",
+      "year": 2006,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1021/acs.nanolett.7b02716",
+      "title": "Rapid Sequential in Situ Multiplexing With DNA Exchange Imaging in Neuronal Cells and Tissues",
+      "year": 2017,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1073/pnas.1300136110",
+      "title": "Highly Multiplexed Single-Cell Analysis of Formalin-Fixed, Paraffin-Embedded Cancer Tissue",
+      "year": 2013,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/s41587-019-0207-y",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41583-019-0250-1",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-018-0219-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-020-01018-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.21105/joss.00205",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.3333333333333333,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.adq2084",
+      "title": "Deep-tissue transcriptomics and subcellular imaging at high spatial resolution",
+      "year": 2025,
+      "abstract": "Limited color channels in fluorescence microscopy have long constrained spatial analysis in biological specimens. Here, we introduce cycleHCR, a method that integrates multicycle DNA barcoding with Hybridization Chain Reaction (HCR) to overcome this limitation. cycleHCR enables highly multiplexed imaging of RNA and proteins using a unified barcode system. Whole-embryo transcriptomics imaging achieved precise three-dimensional gene expression and cell fate mapping across a specimen depth of ~310 \u03bcm. When combined with expansion microscopy, cycleHCR revealed an intricate network of 10 subcellula",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1038/s12276-018-0191-1",
+      "title": "Immune Checkpoint Inhibitors: Recent Progress and Potential Biomarkers",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1126/science.aaa8172",
+      "title": "The Future of Immune Checkpoint Therapy",
+      "year": 2015,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/d41573-019-00167-9",
+      "title": "Immuno-Oncology Drug Development Goes Global",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1186/s13045-018-0582-8",
+      "title": "Next Generation of Immune Checkpoint Therapy in Cancer: New Developments and Challenges",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1186/s13045-018-0644-y",
+      "title": "Targeting the IDO1 Pathway in Cancer: From Bench to Bedside",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1186/s12943-019-1091-2",
+      "title": "Novel Immune Checkpoint Targets: Moving Beyond PD-1 and CTLA-4",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1136/jitc-2019-000475",
+      "title": "Master Protocols in Immuno-Oncology: do Novel Drugs Deserve Novel Designs",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.ejca.2015.08.021",
+      "title": "Rationale for anti-OX40 Cancer Immunotherapy",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/d41586-017-08702-7",
+      "title": "The Benefits of Immunotherapy Combinations",
+      "year": 2017,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.3389/fonc.2016.00233",
+      "title": "Combination Approaches With Immune-Checkpoint Blockade in Cancer Therapy",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.3389/fimmu.2019.00990",
+      "title": "Combination of Immunotherapy With Targeted Therapy: Theory and Practice in Metastatic Melanoma",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.immuni.2018.03.007",
+      "title": "Combination Cancer Therapy With Immune Checkpoint Blockade: Mechanisms and Strategies",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1001/jamanetworkopen.2019.20833",
+      "title": "Assessment of Clinical Activity of PD-1 Checkpoint Inhibitor Combination Therapies Reported in Clinical Trials",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41568-019-0116-x",
+      "title": "The Evolving Landscape of Biomarkers for Checkpoint Inhibitor Immunotherapy",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1001/jamaoncol.2019.1549",
+      "title": "Comparison of Biomarker Modalities for Predicting Response to PD-1/PD-L1 Checkpoint Blockade: A Systematic Review and Meta-Analysis",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1101/2020.12.06.20244913",
+      "title": "Immune Cell Topography Predicts Response to PD-1 Blockade in Cutaneous T Cell Lymphoma",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41586-019-1876-x",
+      "title": "The Single-Cell Pathology Landscape of Breast Cancer",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.3389/fimmu.2019.02534",
+      "title": "A 40-Marker Panel for High Dimensional Characterization of Cancer Immune Microenvironments by Imaging Mass Cytometry",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1126/sciadv.aax5851",
+      "title": "MIBI-TOF: A Multiplexed Imaging Platform Relates Cellular Phenotypes and Tissue Structure",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.cell.2020.08.043",
+      "title": "Multimodal Analysis of Composition and Spatial Architecture in Human Squamous Cell Carcinoma",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/nbt1210-1248",
+      "title": "Towards a Knowledge-Based Human Protein Atlas",
+      "year": 2010,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/nmeth.3995",
+      "title": "A Proposal for Validation of Antibodies",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1111/imr.12519",
+      "title": "LAG3 (CD223) as a Cancer Immunotherapy Target",
+      "year": 2017,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1002/cncr.31272",
+      "title": "Checkpoint Inhibitors in Triple-Negative Breast Cancer (TNBC): Where to Go From Here",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.3389/fonc.2018.00315",
+      "title": "Immuno-Oncology: Emerging Targets and Combination Therapies",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41422-020-0337-2",
+      "title": "The Future of Cancer Immunotherapy: Microenvironment-Targeting Combinations",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1038/s41598-020-66902-0",
+      "title": "Analysis of Immune Checkpoint Drug Targets and Tumor Proteotypes in Non-Small Cell Lung Cancer",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1038/nature14011",
+      "title": "Predictive Correlates of Response to the Anti-PD-L1 Antibody MPDL3280A in Cancer Patients",
+      "year": 2014,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1002/ijc.32785",
+      "title": "Assessment of the Expression of the Immune Checkpoint Molecules PD-1, CTLA4, TIM-3 and LAG-3 Across Different Cancers in Relation to Treatment Response, Tumor-Infiltrating Immune Cells and Survival",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.4049/jimmunol.1701262",
+      "title": "Eight-Color Multiplex Immunohistochemistry for Simultaneous Detection of Multiple Immune Checkpoint Molecules Within the Tumor Microenvironment",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.3389/fonc.2019.01066",
+      "title": "A Comprehensive Analysis of Key Immune Checkpoint Receptors on Tumor-Infiltrating T Cells From Multiple Types of Cancer",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1369/jhc.2010.957191",
+      "title": "Antigen Retrieval Immunohistochemistry: Review and Future Prospects in Research and Diagnosis Over Two Decades",
+      "year": 2011,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1373/clinchem.2009.127514",
+      "title": "Antibody-Based Protein Multiplex Platforms: Technical and Operational Challenges",
+      "year": 2010,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1021/acs.jpcb.7b10728",
+      "title": "Cluster Size and Quinary Structure Determine the Rheological Effects of Antibody Self-Association At High Concentrations",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1126/science.aaf2834",
+      "title": "Cancer Immunology. The \u201cCancer Immunogram\u201d",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1038/nature13954",
+      "title": "PD-1 Blockade Induces Responses by Inhibiting Adaptive Immune Resistance",
+      "year": 2014,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1186/s40425-017-0243-4",
+      "title": "Identifying Baseline Immune-Related Biomarkers to Predict Clinical Outcome of Immunotherapy",
+      "year": 2017,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1016/j.cell.2017.04.016",
+      "title": "An Immune Atlas of Clear Cell Renal Cell Carcinoma",
+      "year": 2017,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41467-020-20260-7",
+      "title": "An Immune Checkpoint Score System for Prognostic Evaluation and Adjuvant Chemotherapy Selection in Gastric Cancer",
+      "year": 2020,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1172/jci.insight.88955",
+      "title": "Interlesional Diversity of T Cell Receptors in Melanoma With Immune Checkpoints Enriched in Tissue-Resident Memory T Cells",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1111/pcmr.12340",
+      "title": "PD-L1 Expression in Melanoma Shows Marked Heterogeneity Within and Between Patients: Implications for Anti-PD-1/PD-L1 Clinical Trials",
+      "year": 2015,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "history"
+    },
+    {
+      "doi": "10.1158/1078-0432.ccr-15-2246",
+      "title": "Heterogeneity of Programmed Cell Death Ligand 1 Expression in Multifocal Lung Cancer",
+      "year": 2016,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1172/jci127726",
+      "title": "The Local Immune Landscape Determines Tumor PD-L1 Heterogeneity and Sensitivity to Therapy",
+      "year": 2019,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41591-018-0057-z",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.it.2014.09.006",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41568-019-0144-6",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/d41586-019-03943-0",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1922-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1914-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1906-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/ncomms15095",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1158/0008-5472.can-13-1342",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cmet.2018.11.014",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1021/acs.analchem.9b03612",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nature22051",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.humpath.2012.05.009",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.aar7042",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1039/c6sc05420j",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/adma.201908410",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1117/1.jbo.25.5.056004",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nature13300",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.1241680",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.virol.2015.06.022",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nri1669",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/bip.1980.360190708",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1021/bi702363u",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/nar/gkq577",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1073/pnas.1708981114",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.molcel.2015.02.033",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cell.2015.06.067",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.aaa6090",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1049-y",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.1250212",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.aat5691",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2024.08.27.609868",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2024.08.05.606553",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.abq4964",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1242/dev.199847",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1021/nn405717p",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1242/dev.165753",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.adn9947",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cell.2021.11.024",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/nar/gnh099",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1128/aem.70.12.7126-7139.2004",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1128/aem.03039-05",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nbt.3820",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-019-0501-0",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-022-01669-y",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-022-01663-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-0933-9",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.devcel.2023.12.018",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1242/dev.126.20.4499",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41556-020-00611-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/s0092-8674(00)81921-2",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/gad.268979.115",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/1097-0177(2000)9999:9999<::aid-dvdy1070>3.0.co;2-o",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/dvdy.21204",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/dvdy.21437",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1186/1471-213x-7-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/dvdy.21444",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.ydbio.2012.08.010",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/nar/gkt1155",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1469-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-019-1825-8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cell.2021.04.004",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41588-022-01018-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1242/dev.02454",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41556-018-0144-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.mod.2020.103617",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/dvg.20281",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/dvdy.21862",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.3389/fendo.2018.00570",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1242/dev.150920",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1098/rstb.2021.0255",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1186/s12861-021-00239-3",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nrg2564",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-024-07069-w",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41588-024-01852-1",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.7554/elife.81861",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1021/acs.bioconjchem.5b00275",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.1260088",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.7554/elife.14997",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nature05453",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41477-023-01439-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nbt.4286",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/nar/gkae592",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nmeth.3219",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41586-021-03416-3",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1073/pnas.1612826113",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1021/bi00034a013",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1073/pnas.95.4.1460",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/nar/4.5.1539",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/nbt.3625",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1126/science.aau5324",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.7554/elife.73775",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1109/34.121791",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1109/tsmc.1979.4310076",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.7717/peerj.453",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/s0167-8655(98)00057-9",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-019-0686-2",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cels.2021.09.012",
+      "title": "",
+      "year": 2022,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "sota"
+    },
+    {
+      "doi": "10.1201/b19708",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.18637/jss.v012.i06",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/bioinformatics/btac268",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1186/s13058-021-01475-y",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/bioinformatics/btab757",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.2307/1941598",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1093/bioadv/vbad146",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/9780470725160",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1158/1078-0432.ccr-20-1762",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1007/s11336-022-09899-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1053/j.gastro.2021.08.055",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1214/19-aoas1254",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.patter.2023.100879",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1080/29979676.2024.2405348",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/bimj.4710230602",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41598-021-83858-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41374-020-0417-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1111/j.2517-6161.1977.tb01615.x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1111/ecog.00566",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2024.03.08.584117",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1158/1541-7786.mcr-21-0411",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1002/bimj.4710290811",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41467-023-42625-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1011490",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1009486",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.3390/cancers13123031",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1009900",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1007/978-1-0716-2986-4_8",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1080/2162402x.2020.1724763",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-024-02565-3",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-022-01415-4",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.3389/fimmu.2021.652631",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1016/j.cels.2018.02.010",
+      "title": "Compensation of Signal Spillover in Suspension and Imaging Mass Cytometry",
+      "year": 2018,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "development"
+    },
+    {
+      "doi": "10.1038/s41592-024-02328-0",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41592-025-02824-x",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2025.04.28.651001",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.3322/caac.21388",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41374-020-00514-0",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2022.11.09.515776",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1038/s41467-023-40066-7",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    },
+    {
+      "doi": "10.1101/2023.11.15.567196",
+      "title": "",
+      "year": 0,
+      "abstract": "[no abstract]",
+      "og_score": 0.16666666666666666,
+      "forward_influence": 0,
+      "deterministic_bucket": "unknown"
+    }
+  ],
+  "co_citation_pairs": [
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.7554/elife.31657",
+      3
+    ],
+    [
+      "10.1016/j.cell.2018.08.039",
+      "10.1038/nm.3488",
+      3
+    ],
+    [
+      "10.1016/j.cell.2018.08.039",
+      "10.1038/nmeth.2869",
+      3
+    ],
+    [
+      "10.1038/nm.3488",
+      "10.1038/nmeth.2869",
+      3
+    ],
+    [
+      "10.1002/eji.202048891",
+      "10.1016/j.cell.2018.07.010",
+      2
+    ],
+    [
+      "10.1002/eji.202048891",
+      "10.1038/s41596-021-00556-8",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1016/j.cell.2018.08.039",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1016/j.cell.2020.07.005",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1021/acs.nanolett.7b02716",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1038/nbt1250",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1038/nm.3488",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1038/nmeth.2869",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1038/nmeth.3863",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1038/s41596-021-00556-8",
+      2
+    ],
+    [
+      "10.1016/j.cell.2018.07.010",
+      "10.1073/pnas.1300136110",
+      2
+    ]
+  ],
+  "year_buckets_deterministic": {
+    "10.1038/nbt1250": "history",
+    "10.1038/nbt1210-1248": "history",
+    "10.1373/clinchem.2009.127514": "history",
+    "10.1369/jhc.2010.957191": "history",
+    "10.1073/pnas.1300136110": "history",
+    "10.1038/nmeth.2869": "history",
+    "10.1038/nm.3488": "history",
+    "10.1038/nature14011": "history",
+    "10.1038/nature13954": "history",
+    "10.1126/science.aaa8172": "history",
+    "10.1111/pcmr.12340": "history",
+    "10.1016/j.ejca.2015.08.021": "history",
+    "10.3389/fonc.2016.00233": "history",
+    "10.1038/nmeth.3863": "history",
+    "10.1038/nmeth.3995": "history",
+    "10.1126/science.aaf2834": "history",
+    "10.1172/jci.insight.88955": "history",
+    "10.1158/1078-0432.ccr-15-2246": "development",
+    "10.1038/d41586-017-08702-7": "development",
+    "10.1111/imr.12519": "development",
+    "10.1186/s40425-017-0243-4": "development",
+    "10.1016/j.cell.2017.04.016": "development",
+    "10.1021/acs.nanolett.7b02716": "development",
+    "10.1038/s12276-018-0191-1": "development",
+    "10.1186/s13045-018-0582-8": "development",
+    "10.1186/s13045-018-0644-y": "development",
+    "10.1016/j.immuni.2018.03.007": "development",
+    "10.1016/j.cell.2018.07.010": "development",
+    "10.1016/j.cell.2018.08.039": "development",
+    "10.7554/elife.31657": "development",
+    "10.1002/cncr.31272": "development",
+    "10.3389/fonc.2018.00315": "development",
+    "10.4049/jimmunol.1701262": "development",
+    "10.1021/acs.jpcb.7b10728": "development",
+    "10.1016/j.cels.2018.02.010": "development",
+    "10.1038/d41573-019-00167-9": "development",
+    "10.1186/s12943-019-1091-2": "development",
+    "10.3389/fimmu.2019.00990": "development",
+    "10.1038/s41568-019-0116-x": "development",
+    "10.1001/jamaoncol.2019.1549": "development",
+    "10.3389/fimmu.2019.02534": "development",
+    "10.1126/sciadv.aax5851": "development",
+    "10.3389/fonc.2019.01066": "development",
+    "10.1172/jci127726": "development",
+    "10.1002/eji.202048891": "development",
+    "10.1136/jitc-2019-000475": "development",
+    "10.1001/jamanetworkopen.2019.20833": "development",
+    "10.1016/j.cell.2020.07.005": "development",
+    "10.1101/2020.12.06.20244913": "development",
+    "10.1038/s41586-019-1876-x": "development",
+    "10.1016/j.cell.2020.08.043": "development",
+    "10.1038/s41422-020-0337-2": "sota",
+    "10.1038/s41598-020-66902-0": "sota",
+    "10.1002/ijc.32785": "sota",
+    "10.1038/s41467-020-20260-7": "sota",
+    "10.3389/fimmu.2021.687673": "sota",
+    "10.1038/s41596-021-00556-8": "sota",
+    "10.1038/s41592-022-01428-z": "sota",
+    "10.1016/j.cels.2021.09.012": "sota",
+    "10.1038/s42003-022-04076-3": "sota",
+    "10.1038/s41577-023-00936-z": "sota",
+    "10.17504/protocols.io.36wgqj3y3vk5/v1": "sota",
+    "10.1038/s43018-023-00576-1": "sota",
+    "10.1016/j.ins.2022.11.139": "sota",
+    "10.1016/j.cels.2023.07.002": "sota",
+    "10.1126/science.adq2084": "sota",
+    "10.1080/29979676.2024.2437947": "sota",
+    "10.1101/2025.06.23.661064": "sota",
+    "10.1038/s41551-025-01348-1": "sota",
+    "10.1038/s41591-018-0057-z": "unknown",
+    "10.1016/j.it.2014.09.006": "unknown",
+    "10.1038/s41568-019-0144-6": "unknown",
+    "10.1038/d41586-019-03943-0": "unknown",
+    "10.1038/s41586-019-1922-8": "unknown",
+    "10.1038/s41586-019-1914-8": "unknown",
+    "10.1038/s41586-019-1906-8": "unknown",
+    "10.1038/ncomms15095": "unknown",
+    "10.1158/0008-5472.can-13-1342": "unknown",
+    "10.1016/j.cmet.2018.11.014": "unknown",
+    "10.1021/acs.analchem.9b03612": "unknown",
+    "10.1038/nature22051": "unknown",
+    "10.1016/j.humpath.2012.05.009": "unknown",
+    "10.1126/science.aar7042": "unknown",
+    "10.1039/c6sc05420j": "unknown",
+    "10.1038/s41587-019-0207-y": "unknown",
+    "10.1002/adma.201908410": "unknown",
+    "10.1117/1.jbo.25.5.056004": "unknown",
+    "10.1038/nature13300": "unknown",
+    "10.1126/science.1241680": "unknown",
+    "10.1016/j.virol.2015.06.022": "unknown",
+    "10.1038/nri1669": "unknown",
+    "10.1002/bip.1980.360190708": "unknown",
+    "10.1021/bi702363u": "unknown",
+    "10.1093/nar/gkq577": "unknown",
+    "10.1073/pnas.1708981114": "unknown",
+    "10.1038/s41583-019-0250-1": "unknown",
+    "10.1038/s41592-018-0219-4": "unknown",
+    "10.1016/j.molcel.2015.02.033": "unknown",
+    "10.1016/j.cell.2015.06.067": "unknown",
+    "10.1126/science.aaa6090": "unknown",
+    "10.1038/s41586-019-1049-y": "unknown",
+    "10.1126/science.1250212": "unknown",
+    "10.1126/science.aat5691": "unknown",
+    "10.1101/2024.08.27.609868": "unknown",
+    "10.1101/2024.08.05.606553": "unknown",
+    "10.1126/science.abq4964": "unknown",
+    "10.1242/dev.199847": "unknown",
+    "10.1021/nn405717p": "unknown",
+    "10.1242/dev.165753": "unknown",
+    "10.1126/science.adn9947": "unknown",
+    "10.1016/j.cell.2021.11.024": "unknown",
+    "10.1093/nar/gnh099": "unknown",
+    "10.1128/aem.70.12.7126-7139.2004": "unknown",
+    "10.1128/aem.03039-05": "unknown",
+    "10.1038/nbt.3820": "unknown",
+    "10.1038/s41592-019-0501-0": "unknown",
+    "10.1038/s41592-022-01669-y": "unknown",
+    "10.1038/s41592-022-01663-4": "unknown",
+    "10.1038/s41586-019-0933-9": "unknown",
+    "10.1016/j.devcel.2023.12.018": "unknown",
+    "10.1242/dev.126.20.4499": "unknown",
+    "10.1038/s41556-020-00611-8": "unknown",
+    "10.1016/s0092-8674(00)81921-2": "unknown",
+    "10.1101/gad.268979.115": "unknown",
+    "10.1002/1097-0177(2000)9999:9999<::aid-dvdy1070>3.0.co;2-o": "unknown",
+    "10.1002/dvdy.21204": "unknown",
+    "10.1002/dvdy.21437": "unknown",
+    "10.1186/1471-213x-7-8": "unknown",
+    "10.1002/dvdy.21444": "unknown",
+    "10.1016/j.ydbio.2012.08.010": "unknown",
+    "10.1093/nar/gkt1155": "unknown",
+    "10.1038/s41586-019-1469-8": "unknown",
+    "10.1038/s41586-019-1825-8": "unknown",
+    "10.1016/j.cell.2021.04.004": "unknown",
+    "10.1038/s41588-022-01018-x": "unknown",
+    "10.1242/dev.02454": "unknown",
+    "10.1038/s41556-018-0144-x": "unknown",
+    "10.1016/j.mod.2020.103617": "unknown",
+    "10.1002/dvg.20281": "unknown",
+    "10.1002/dvdy.21862": "unknown",
+    "10.3389/fendo.2018.00570": "unknown",
+    "10.1242/dev.150920": "unknown",
+    "10.1098/rstb.2021.0255": "unknown",
+    "10.1186/s12861-021-00239-3": "unknown",
+    "10.1038/nrg2564": "unknown",
+    "10.1038/s41586-024-07069-w": "unknown",
+    "10.1038/s41588-024-01852-1": "unknown",
+    "10.7554/elife.81861": "unknown",
+    "10.1021/acs.bioconjchem.5b00275": "unknown",
+    "10.1126/science.1260088": "unknown",
+    "10.7554/elife.14997": "unknown",
+    "10.1038/nature05453": "unknown",
+    "10.1038/s41477-023-01439-4": "unknown",
+    "10.1038/nbt.4286": "unknown",
+    "10.1093/nar/gkae592": "unknown",
+    "10.1038/nmeth.3219": "unknown",
+    "10.1038/s41586-021-03416-3": "unknown",
+    "10.1073/pnas.1612826113": "unknown",
+    "10.1021/bi00034a013": "unknown",
+    "10.1073/pnas.95.4.1460": "unknown",
+    "10.1093/nar/4.5.1539": "unknown",
+    "10.1038/nbt.3625": "unknown",
+    "10.1126/science.aau5324": "unknown",
+    "10.7554/elife.73775": "unknown",
+    "10.1109/34.121791": "unknown",
+    "10.1038/s41592-020-01018-x": "unknown",
+    "10.1109/tsmc.1979.4310076": "unknown",
+    "10.7717/peerj.453": "unknown",
+    "10.1016/s0167-8655(98)00057-9": "unknown",
+    "10.21105/joss.00205": "unknown",
+    "10.1038/s41592-019-0686-2": "unknown",
+    "10.1201/b19708": "unknown",
+    "10.18637/jss.v012.i06": "unknown",
+    "10.1093/bioinformatics/btac268": "unknown",
+    "10.1186/s13058-021-01475-y": "unknown",
+    "10.1093/bioinformatics/btab757": "unknown",
+    "10.2307/1941598": "unknown",
+    "10.1093/bioadv/vbad146": "unknown",
+    "10.1002/9780470725160": "unknown",
+    "10.1158/1078-0432.ccr-20-1762": "unknown",
+    "10.1007/s11336-022-09899-x": "unknown",
+    "10.1053/j.gastro.2021.08.055": "unknown",
+    "10.1214/19-aoas1254": "unknown",
+    "10.1016/j.patter.2023.100879": "unknown",
+    "10.1080/29979676.2024.2405348": "unknown",
+    "10.1002/bimj.4710230602": "unknown",
+    "10.1038/s41598-021-83858-x": "unknown",
+    "10.1038/s41374-020-0417-4": "unknown",
+    "10.1111/j.2517-6161.1977.tb01615.x": "unknown",
+    "10.1111/ecog.00566": "unknown",
+    "10.1101/2024.03.08.584117": "unknown",
+    "10.1158/1541-7786.mcr-21-0411": "unknown",
+    "10.1002/bimj.4710290811": "unknown",
+    "10.1038/s41467-023-42625-4": "unknown",
+    "10.1371/journal.pcbi.1011490": "unknown",
+    "10.1371/journal.pcbi.1009486": "unknown",
+    "10.3390/cancers13123031": "unknown",
+    "10.1371/journal.pcbi.1009900": "unknown",
+    "10.1007/978-1-0716-2986-4_8": "unknown",
+    "10.1080/2162402x.2020.1724763": "unknown",
+    "10.1038/s41592-024-02565-3": "unknown",
+    "10.1038/s41592-022-01415-4": "unknown",
+    "10.3389/fimmu.2021.652631": "unknown",
+    "10.1038/s41592-024-02328-0": "unknown",
+    "10.1038/s41592-025-02824-x": "unknown",
+    "10.1101/2025.04.28.651001": "unknown",
+    "10.3322/caac.21388": "unknown",
+    "10.1038/s41374-020-00514-0": "unknown",
+    "10.1101/2022.11.09.515776": "unknown",
+    "10.1038/s41467-023-40066-7": "unknown",
+    "10.1101/2023.11.15.567196": "unknown",
+    "10.1038/s41590-025-02163-1": "unknown",
+    "10.1101/2023.11.06.565771": "unknown",
+    "10.1038/s41592-023-01894-z": "unknown",
+    "10.1101/2024.11.02.621624": "unknown",
+    "10.1038/s41467-023-40068-5": "unknown",
+    "10.1561/2200000056": "unknown",
+    "10.48550/arxiv.1910.13140": "unknown",
+    "10.1016/j.xpro.2024.103079": "unknown",
+    "10.1038/s41592-025-02643-0": "unknown",
+    "10.1016/j.cell.2020.03.053": "unknown",
+    "10.1038/s41592-021-01308-y": "unknown",
+    "10.1016/j.cell.2022.12.028": "unknown",
+    "10.1038/s41598-019-41695-z": "unknown",
+    "10.1007/bf02289447": "unknown",
+    "10.48550/arxiv.1902.04893": "unknown",
+    "10.1084/jem.20180019": "unknown",
+    "10.1200/jco.2008.18.7229": "unknown",
+    "10.1101/2023.11.10.566670": "unknown",
+    "10.1093/bioinformatics/btac544": "unknown",
+    "10.1109/cvpr.2015.7298965": "unknown",
+    "10.1038/s41587-021-01094-0": "unknown",
+    "10.1038/s41592-022-01498-z": "unknown",
+    "10.1088/1742-5468/2008/10/p10008": "unknown",
+    "10.1007/bf00337288": "unknown",
+    "10.1007/s10479-011-0841-3": "unknown"
+  },
+  "top_og_papers": [
+    {
+      "doi": "10.1016/j.cell.2018.07.010",
+      "score": 0.6666666666666666,
+      "title": "Deep Profiling of Mouse Splenic Architecture With CODEX Multiplexed Imaging",
+      "year": 2018
+    },
+    {
+      "doi": "10.7554/elife.31657",
+      "score": 0.5,
+      "title": "Highly Multiplexed Immunofluorescence Imaging of Human Tissues and Tumors Using t-CyCIF and Conventional Optical Microscopes",
+      "year": 2018
+    },
+    {
+      "doi": "10.1038/nm.3488",
+      "score": 0.5,
+      "title": "Multiplexed Ion Beam Imaging of Human Breast Tumors",
+      "year": 2014
+    },
+    {
+      "doi": "10.1016/j.cell.2018.08.039",
+      "score": 0.5,
+      "title": "A Structured Tumor-Immune Microenvironment in Triple Negative Breast Cancer Revealed by Multiplexed Ion Beam Imaging",
+      "year": 2018
+    },
+    {
+      "doi": "10.1038/nmeth.2869",
+      "score": 0.5,
+      "title": "Highly Multiplexed Imaging of Tumor Tissues With Subcellular Resolution by Mass Cytometry",
+      "year": 2014
+    },
+    {
+      "doi": "10.1038/s41596-021-00556-8",
+      "score": 0.3333333333333333,
+      "title": "CODEX Multiplexed Tissue Imaging With DNA-Conjugated Antibodies",
+      "year": 2021
+    },
+    {
+      "doi": "10.1016/j.cell.2020.07.005",
+      "score": 0.3333333333333333,
+      "title": "Coordinated Cellular Neighborhoods Orchestrate Antitumoral Immunity at the Colorectal Cancer Invasive Front",
+      "year": 2020
+    },
+    {
+      "doi": "10.1073/pnas.1300136110",
+      "score": 0.3333333333333333,
+      "title": "Highly Multiplexed Single-Cell Analysis of Formalin-Fixed, Paraffin-Embedded Cancer Tissue",
+      "year": 2013
+    },
+    {
+      "doi": "10.1002/eji.202048891",
+      "score": 0.3333333333333333,
+      "title": "Highly multiplexed tissue imaging using repeated oligonucleotide exchange reaction",
+      "year": 2020
+    },
+    {
+      "doi": "10.1021/acs.nanolett.7b02716",
+      "score": 0.3333333333333333,
+      "title": "Rapid Sequential in Situ Multiplexing With DNA Exchange Imaging in Neuronal Cells and Tissues",
+      "year": 2017
+    },
+    {
+      "doi": "10.1038/nbt1250",
+      "score": 0.3333333333333333,
+      "title": "Analyzing Proteome Topology and Function by Automated Multidimensional Fluorescence Microscopy",
+      "year": 2006
+    },
+    {
+      "doi": "10.1038/nmeth.3863",
+      "score": 0.3333333333333333,
+      "title": "Automated Mapping of Phenotype Space With Single-Cell Data",
+      "year": 2016
+    },
+    {
+      "doi": "10.1038/s41587-019-0207-y",
+      "score": 0.3333333333333333,
+      "title": "",
+      "year": 0
+    },
+    {
+      "doi": "10.1038/s41592-018-0219-4",
+      "score": 0.3333333333333333,
+      "title": "",
+      "year": 0
+    },
+    {
+      "doi": "10.1038/s41583-019-0250-1",
+      "score": 0.3333333333333333,
+      "title": "",
+      "year": 0
+    }
+  ],
+  "all_papers_with_pdfs": [
+    {
+      "doi": "10.3389/fimmu.2021.687673",
+      "title": "Highly Multiplexed Phenotyping of Immunoregulatory Proteins in the Tumor Microenvironment by CODEX Tissue Imaging",
+      "year": 2021,
+      "og_score": 0.0,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1002/eji.202048891",
+      "title": "Highly multiplexed tissue imaging using repeated oligonucleotide exchange reaction",
+      "year": 2020,
+      "og_score": 0.3333333333333333,
+      "fwd": 2,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1126/science.adq2084",
+      "title": "Deep-tissue transcriptomics and subcellular imaging at high spatial resolution",
+      "year": 2025,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-022-01428-z",
+      "title": "Catching up with multiplexed tissue imaging",
+      "year": 2022,
+      "og_score": 0.0,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1080/29979676.2024.2437947",
+      "title": "Benchmarking Spatial Co-Localization Methods for Single-Cell Multiplex Imaging Data with Applications to High-Grade Serous Ovarian and Triple Negative Breast Cancer.",
+      "year": 2025,
+      "og_score": 0.0,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2025.06.23.661064",
+      "title": "Morphology-Aware Profiling of Highly Multiplexed Tissue Images using Variational Autoencoders",
+      "year": 2025,
+      "og_score": 0.0,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.17504/protocols.io.36wgqj3y3vk5/v1",
+      "title": "CODEX \u00ae Multiplexed Imaging \u2013 tissue staining in TMA and whole tissue FFPE sections v1",
+      "year": 2023,
+      "og_score": 0.0,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s12276-018-0191-1",
+      "title": "Immune Checkpoint Inhibitors: Recent Progress and Potential Biomarkers",
+      "year": 2018,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s13045-018-0582-8",
+      "title": "Next Generation of Immune Checkpoint Therapy in Cancer: New Developments and Challenges",
+      "year": 2018,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s13045-018-0644-y",
+      "title": "Targeting the IDO1 Pathway in Cancer: From Bench to Bedside",
+      "year": 2018,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s12943-019-1091-2",
+      "title": "Novel Immune Checkpoint Targets: Moving Beyond PD-1 and CTLA-4",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1136/jitc-2019-000475",
+      "title": "Master Protocols in Immuno-Oncology: do Novel Drugs Deserve Novel Designs",
+      "year": 2020,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/d41586-017-08702-7",
+      "title": "The Benefits of Immunotherapy Combinations",
+      "year": 2017,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fonc.2016.00233",
+      "title": "Combination Approaches With Immune-Checkpoint Blockade in Cancer Therapy",
+      "year": 2016,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fimmu.2019.00990",
+      "title": "Combination of Immunotherapy With Targeted Therapy: Theory and Practice in Metastatic Melanoma",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1001/jamaoncol.2019.1549",
+      "title": "Comparison of Biomarker Modalities for Predicting Response to PD-1/PD-L1 Checkpoint Blockade: A Systematic Review and Meta-Analysis",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.cell.2018.07.010",
+      "title": "Deep Profiling of Mouse Splenic Architecture With CODEX Multiplexed Imaging",
+      "year": 2018,
+      "og_score": 0.6666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2020.12.06.20244913",
+      "title": "Immune Cell Topography Predicts Response to PD-1 Blockade in Cutaneous T Cell Lymphoma",
+      "year": 2020,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fimmu.2019.02534",
+      "title": "A 40-Marker Panel for High Dimensional Characterization of Cancer Immune Microenvironments by Imaging Mass Cytometry",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1126/sciadv.aax5851",
+      "title": "MIBI-TOF: A Multiplexed Imaging Platform Relates Cellular Phenotypes and Tissue Structure",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.7554/elife.31657",
+      "title": "Highly Multiplexed Immunofluorescence Imaging of Human Tissues and Tumors Using t-CyCIF and Conventional Optical Microscopes",
+      "year": 2018,
+      "og_score": 0.5,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fonc.2018.00315",
+      "title": "Immuno-Oncology: Emerging Targets and Combination Therapies",
+      "year": 2018,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41422-020-0337-2",
+      "title": "The Future of Cancer Immunotherapy: Microenvironment-Targeting Combinations",
+      "year": 2020,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41598-020-66902-0",
+      "title": "Analysis of Immune Checkpoint Drug Targets and Tumor Proteotypes in Non-Small Cell Lung Cancer",
+      "year": 2020,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fonc.2019.01066",
+      "title": "A Comprehensive Analysis of Key Immune Checkpoint Receptors on Tumor-Infiltrating T Cells From Multiple Types of Cancer",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1369/jhc.2010.957191",
+      "title": "Antigen Retrieval Immunohistochemistry: Review and Future Prospects in Research and Diagnosis Over Two Decades",
+      "year": 2011,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s40425-017-0243-4",
+      "title": "Identifying Baseline Immune-Related Biomarkers to Predict Clinical Outcome of Immunotherapy",
+      "year": 2017,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41467-020-20260-7",
+      "title": "An Immune Checkpoint Score System for Prognostic Evaluation and Adjuvant Chemotherapy Selection in Gastric Cancer",
+      "year": 2020,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1172/jci.insight.88955",
+      "title": "Interlesional Diversity of T Cell Receptors in Melanoma With Immune Checkpoints Enriched in Tissue-Resident Memory T Cells",
+      "year": 2016,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1172/jci127726",
+      "title": "The Local Immune Landscape Determines Tumor PD-L1 Heterogeneity and Sensitivity to Therapy",
+      "year": 2019,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1073/pnas.1300136110",
+      "title": "Highly Multiplexed Single-Cell Analysis of Formalin-Fixed, Paraffin-Embedded Cancer Tissue",
+      "year": 2013,
+      "og_score": 0.3333333333333333,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41591-018-0057-z",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41586-019-1914-8",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/ncomms15095",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1039/c6sc05420j",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41587-019-0207-y",
+      "title": "",
+      "year": 0,
+      "og_score": 0.3333333333333333,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/nar/gkq577",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1073/pnas.1708981114",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1126/science.aat5691",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2024.08.05.606553",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1126/science.abq4964",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1242/dev.199847",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1021/nn405717p",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1242/dev.165753",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/nar/gnh099",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1128/aem.70.12.7126-7139.2004",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-022-01669-y",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-022-01663-4",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.devcel.2023.12.018",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41556-020-00611-8",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/gad.268979.115",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1002/dvdy.21437",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/1471-213x-7-8",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/nar/gkt1155",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41586-019-1825-8",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41588-022-01018-x",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fendo.2018.00570",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1242/dev.150920",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1098/rstb.2021.0255",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s12861-021-00239-3",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41586-024-07069-w",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41588-024-01852-1",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.7554/elife.81861",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.7554/elife.14997",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41477-023-01439-4",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/nar/gkae592",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1073/pnas.1612826113",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1073/pnas.95.4.1460",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/nar/4.5.1539",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.7554/elife.73775",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.7717/peerj.453",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-019-0686-2",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.cels.2021.09.012",
+      "title": "",
+      "year": 2022,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/bioinformatics/btac268",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1186/s13058-021-01475-y",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/bioinformatics/btab757",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/bioadv/vbad146",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1007/s11336-022-09899-x",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.patter.2023.100879",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41598-021-83858-x",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41374-020-0417-4",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2024.03.08.584117",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41467-023-42625-4",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1011490",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1009486",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3390/cancers13123031",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1371/journal.pcbi.1009900",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-024-02565-3",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-022-01415-4",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.3389/fimmu.2021.652631",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-024-02328-0",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-025-02824-x",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41374-020-00514-0",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41467-023-40066-7",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2023.11.15.567196",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41590-025-02163-1",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-023-01894-z",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41551-025-01348-1",
+      "title": "Characterization of tumour heterogeneity through segmentation-free representation learning on multiplexed imaging data",
+      "year": 2025,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2024.11.02.621624",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41467-023-40068-5",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1561/2200000056",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1016/j.xpro.2024.103079",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-025-02643-0",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41592-021-01308-y",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s41598-019-41695-z",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1084/jem.20180019",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s43018-023-00576-1",
+      "title": "High-plex immunofluorescence imaging and traditional histology of the same tissue section for discovering image-based biomarkers",
+      "year": 2023,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1101/2023.11.10.566670",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1093/bioinformatics/btac544",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1038/s42003-022-04076-3",
+      "title": "UnMICST: Deep learning with real augmentation for robust segmentation of highly multiplexed images of human tissues",
+      "year": 2022,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    },
+    {
+      "doi": "10.1088/1742-5468/2008/10/p10008",
+      "title": "",
+      "year": 0,
+      "og_score": 0.16666666666666666,
+      "fwd": 0,
+      "has_pdf": true
+    }
+  ]
+}

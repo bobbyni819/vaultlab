@@ -2540,3 +2540,199 @@ def test_arc_collision_walks_through_multiple_rerun_suffixes(
         rerun1, expected_content="v2 content"
     )
     assert resolved2 == rerun1
+
+
+# ---------------------------------------------------------------------------
+# always_include_dois wiring (--always-include flag)
+# ---------------------------------------------------------------------------
+
+
+def test_run_lit_arc_always_include_none_is_identical_to_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """always_include_dois=None must produce the same picks/budget as the legacy path.
+
+    No required DOIs anywhere → no extra metadata in provenance, no
+    +required suffix on picker_method, identical pick set.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    # Walk to a tmpdir without a .vaultlab-project.json so the auto-load
+    # walker finds nothing.
+    monkeypatch.chdir(tmp_path)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+    result = run_lit_arc(
+        "always-include none",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=2,  # force the picker path so we can see the method
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        always_include_dois=None,
+        _today="2026-04-30",
+    )
+    # Picker ran but no required suffix because no required DOIs.
+    json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
+    rec = json.loads(json_p.read_text(encoding="utf-8"))
+    assert rec["params"]["narration"] == "skipped"
+    # The corpus and picks were not augmented by required-papers wiring.
+    assert result.corpus_size >= 3
+
+
+def test_run_lit_arc_always_include_pins_in_corpus_doi_to_rank_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A required DOI already in the corpus is pinned to the top of picks.
+
+    With max_papers_to_summarize=1, the mechanical picker would normally
+    pick the highest-OG paper (Jinek 2012, with citations from both
+    Komor and Gaudelli). Setting always_include_dois=[Komor] forces
+    Komor to rank-1 and so Komor is the sole Tier-A pick.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    monkeypatch.chdir(tmp_path)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+    # Force a budget of 1 so the picker is exercised and only one DOI
+    # survives. Komor (10.1038/nature17946) is the required paper.
+    result = run_lit_arc(
+        "always-include pin",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=1,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        always_include_dois=["10.1038/nature17946"],
+        _today="2026-04-30",
+    )
+    # Komor's summary must exist (was Tier-A) — even though by raw
+    # OG-score Jinek would have won.
+    komor_summary = summary_path(tmp_path, "10.1038/nature17946")
+    assert komor_summary.exists(), "required DOI was not pinned into Tier-A picks"
+    # Run still completed end-to-end.
+    assert result.arc_path.exists()
+
+
+def test_run_lit_arc_always_include_creates_stub_for_doi_not_in_corpus(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A required DOI not in the corpus gets a stub via mocked CrossRef."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    monkeypatch.chdir(tmp_path)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+
+    # Mock CrossRef client returning a plausible Paper for the required DOI.
+    required_doi = "10.1038/s41596-021-00556-8"  # Black/Hickey CODEX protocol
+    mock_paper = Paper(
+        title="Hickey CODEX Imaging Protocol",
+        authors=["Black S", "Phillips D", "Hickey JW"],
+        year=2021,
+        journal="Nature Protocols",
+        doi=required_doi,
+        abstract="Multiplexed imaging via CODEX.",
+        citation_count=500,
+        source_api="crossref",
+    )
+
+    class _MockCR:
+        def resolve_doi(self, doi):
+            if doi == required_doi:
+                return mock_paper
+            return None
+
+    result = run_lit_arc(
+        "always-include stub",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=4,
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        always_include_dois=[required_doi],
+        _crossref_client=_MockCR(),
+        _today="2026-04-30",
+    )
+    # On-disk article stub for the required DOI exists.
+    stub = article_stub_path(tmp_path, required_doi)
+    assert stub.exists(), f"missing on-demand stub at {stub}"
+    stub_text = stub.read_text(encoding="utf-8")
+    assert "Hickey CODEX Imaging Protocol" in stub_text
+    # The required DOI shows up in the corpus (corpus size grew by 1
+    # past the seed-only baseline).
+    assert required_doi in {d.lower() for d in result.summary_paths}
+    # Run completed and produced an arc.
+    assert result.arc_path.exists()
+
+
+def test_run_lit_arc_always_include_required_doi_survives_into_picks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Required DOIs survive into the final picks even with a tight budget.
+
+    With max_papers_to_summarize=1 and a corpus of 4+ papers (3 seeds +
+    1 injected required), the picker would normally drop the freshly-
+    injected required paper (low og_score, no PDF). The required-papers
+    wiring must still keep it as a Tier-A pick.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "vaultlab.research.config.get_config", lambda *a, **k: {}
+    )
+    monkeypatch.chdir(tmp_path)
+
+    seeds = _make_seeds()
+    client = _FakeClient(seeds)
+    required_doi = "10.1038/s41596-021-00556-8"
+    mock_paper = Paper(
+        title="Hickey CODEX Imaging Protocol",
+        authors=["Black S"],
+        year=2021,
+        journal="Nature Protocols",
+        doi=required_doi,
+        abstract="Multiplexed imaging via CODEX.",
+        citation_count=500,
+        source_api="crossref",
+    )
+
+    class _MockCR:
+        def resolve_doi(self, doi):
+            return mock_paper if doi == required_doi else None
+
+    result = run_lit_arc(
+        "always-include survives",
+        kb_root=tmp_path,
+        max_seeds=5,
+        max_papers_to_summarize=1,  # tight budget: only 1 Tier-A slot
+        _client=client,
+        _fetch_refs=_fake_fetch_refs,
+        _acquire=_fake_acquire,
+        _llm_summary=_fake_llm_summary(),
+        always_include_dois=[required_doi],
+        _crossref_client=_MockCR(),
+        _today="2026-04-30",
+    )
+    # The required DOI survives into the picks even though its
+    # og_score is 0 — it's pinned to rank 1.
+    assert required_doi in {d.lower() for d in result.summary_paths}
+    # The summary file actually exists for the required DOI (Tier-A
+    # picked it up because it was pinned).
+    req_summary = summary_path(tmp_path, required_doi)
+    assert req_summary.exists()

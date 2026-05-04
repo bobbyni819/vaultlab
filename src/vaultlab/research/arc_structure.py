@@ -424,12 +424,55 @@ def resolve_structure(
     )
 
 
+# ---------------------------------------------------------------------------
+# Scope → depth coupling (added 2026-05-01)
+# ---------------------------------------------------------------------------
+
+
+# Default depth flag per scope. Bobby's principle (2026-05-01):
+# review-paper scope should automatically read MORE papers, not just
+# bucket the same papers into more sections. Coupling scope to depth
+# encodes "want a comprehensive review? read everything cached."
+#
+# Users can still override with --depth explicitly. The coupling is a
+# DEFAULT, not a hard constraint.
+_SCOPE_TO_DEFAULT_DEPTH: dict[str, str] = {
+    "short": "fast",          # 3 sections, ~3 paragraphs → 20 Tier-A enough
+    "standard": "balanced",    # 6 sections, ~6 paragraphs → 50 Tier-A
+    "review-paper": "thorough",  # 10 sections, ~16 paragraphs → all cached
+    "review_paper": "thorough",  # alias
+}
+
+
+def default_depth_for_scope(scope: str | ArcStructure | None) -> str:
+    """Return the recommended ``depth`` flag for a given scope.
+
+    Args:
+        scope: ``None`` / ``str`` / :class:`ArcStructure`. The scope's
+            ``name`` field is consulted; falls back to ``"balanced"``
+            for any unrecognized scope.
+
+    Returns:
+        One of ``"fast"`` / ``"balanced"`` / ``"thorough"`` / ``"complete"``.
+        ``"balanced"`` is the conservative fallback when the scope is
+        unrecognized.
+    """
+    if scope is None:
+        return "fast"
+    if isinstance(scope, ArcStructure):
+        name = scope.name
+    else:
+        name = str(scope)
+    return _SCOPE_TO_DEFAULT_DEPTH.get(name.strip().lower(), "balanced")
+
+
 __all__ = [
     "ArcSection",
     "ArcStructure",
     "SHORT",
     "STANDARD",
     "REVIEW_PAPER",
+    "default_depth_for_scope",
     "get_named_structure",
     "make_custom_structure",
     "resolve_structure",

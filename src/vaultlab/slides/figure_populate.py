@@ -61,15 +61,176 @@ class FigurePopulateResult:
     placeholder_dois: list[str] = field(default_factory=list)
 
 
+def _paperclip_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["MSYS_NO_PATHCONV"] = "1"
+    return env
+
+
+def _list_paperclip_figures(
+    paper_id: str, *, paperclip_binary: str, timeout: int = 30,
+) -> list[str]:
+    """Return the actual filenames in paperclip's figures dir for a paper.
+
+    Paperclip's `ls /papers/<id>/figures/` prints all files on a single
+    line separated by 2+ spaces, then a few metadata lines. Filters out
+    metadata lines and returns the file list.
+
+    Returns empty list on any failure.
+    """
+    try:
+        r = subprocess.run(
+            [paperclip_binary, "ls", f"/papers/{paper_id}/figures/"],
+            capture_output=True, timeout=timeout, env=_paperclip_env(),
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+    if r.returncode != 0:
+        return []
+
+    raw = r.stdout
+    text = None
+    for enc in ("utf-8", "cp1252", "latin-1"):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    if text is None:
+        return []
+
+    files: list[str] = []
+    # Strict filename pattern: word-chars / dots / dashes, ending in a 2-5 char extension.
+    # Rejects "file_b.jpg · trailing-junk" or any token with embedded whitespace
+    # / cp1252 separators that survived decoding.
+    name_re = re.compile(r"^[\w.\-]+\.[a-zA-Z]{2,5}$")
+    seen: set[str] = set()
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith(("(", "[", "💡", "ERR:", "INFO:")):
+            continue
+        if "—" in s or "->" in s or "read-only" in s.lower():
+            continue
+        # Split on any whitespace and validate each candidate strictly
+        for c in s.split():
+            c = c.strip()
+            if name_re.match(c) and c not in seen:
+                seen.add(c)
+                files.append(c)
+    return files
+
+
+_FIG_PRIORITY_PATTERNS = (
+    # Highest: main first-figure indicators across publishers
+    re.compile(r"(?i)(?:^|[._\-])fig(?:ure)?[._\-]?0*1[._\-]?(?:html|main)?\."),
+    re.compile(r"(?i)(?:^|[._\-])g0*0?1[._\-]?(?:html)?\."),  # PMC publisher slug
+    re.compile(r"(?i)_fig0*1\."),                              # bioRxiv style
+    # Mid: any figure_N or fig_N (small N preferred via sort below)
+    re.compile(r"(?i)(?:^|[._\-])fig(?:ure)?[._\-]?\d+\."),
+    re.compile(r"(?i)(?:^|[._\-])g\d+\."),
+    re.compile(r"(?i)_fig\d+\."),
+)
+_PREFERRED_EXTS = (".jpg", ".jpeg", ".png")
+_CONVERTIBLE_EXTS = (".tif", ".tiff", ".webp", ".bmp", ".gif")
+
+
+def _is_main_figure_candidate(fname: str) -> bool:
+    """Reject equation glyphs, table images, supplementary, etc."""
+    low = fname.lower()
+    bad = (
+        "equ", "ieq", "scheme", "logo", "icon", "thumb",
+        "supp", "_si_", "_sup_", "tbl", "table", "graphabs",
+    )
+    return not any(b in low for b in bad)
+
+
+def _pick_main_figure(filenames: list[str]) -> str | None:
+    """Pick the best 'main figure 1' candidate from a paperclip ls listing.
+
+    Strategy:
+        1. Filter out non-image files and known-bad slugs (equations, icons).
+        2. Walk priority regex patterns; for each pattern find all matches.
+        3. Within a pattern hit, prefer JPG/PNG over TIFF, prefer larger
+           publisher slugs (`_HTML.jpg`) over generic `.gif`.
+        4. Fall back to the first usable image if no pattern hits.
+    """
+    images = [
+        f for f in filenames
+        if f.lower().endswith(_PREFERRED_EXTS + _CONVERTIBLE_EXTS)
+        and _is_main_figure_candidate(f)
+    ]
+    if not images:
+        return None
+
+    def _ext_rank(f: str) -> int:
+        low = f.lower()
+        for i, ext in enumerate(_PREFERRED_EXTS):
+            if low.endswith(ext):
+                return i
+        for i, ext in enumerate(_CONVERTIBLE_EXTS):
+            if low.endswith(ext):
+                return len(_PREFERRED_EXTS) + i
+        return 99
+
+    for pat in _FIG_PRIORITY_PATTERNS:
+        hits = [f for f in images if pat.search(f)]
+        if not hits:
+            continue
+        # Sort: best ext first, then prefer "_HTML" variants over plain
+        hits.sort(key=lambda f: (_ext_rank(f), 0 if "_html" in f.lower() else 1, f))
+        return hits[0]
+
+    images.sort(key=lambda f: (_ext_rank(f), f))
+    return images[0]
+
+
+def _normalize_image_to_jpg(raw: bytes, src_ext: str, out_path: Path) -> Path | None:
+    """Save raw bytes to ``out_path`` as JPG. Convert if not already JPG/PNG.
+
+    python-pptx accepts JPG and PNG; TIFF / WEBP / BMP / GIF must be
+    converted first. Returns the path the bytes ended up at, or None on
+    failure (silently swallows Pillow errors).
+    """
+    src_ext = src_ext.lower().lstrip(".")
+    if src_ext in ("jpg", "jpeg", "png"):
+        out_path.write_bytes(raw)
+        return out_path
+    try:
+        from io import BytesIO
+        from PIL import Image
+        img = Image.open(BytesIO(raw))
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        # Force a .jpg suffix on the output
+        if out_path.suffix.lower() not in (".jpg", ".jpeg"):
+            out_path = out_path.with_suffix(".jpg")
+        img.save(out_path, format="JPEG", quality=88)
+        return out_path
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Pillow conversion failed for %s: %s", src_ext, exc)
+        return None
+
+
 def fetch_figure_from_paperclip(
     paper_id: str,
     *,
     cache_dir: Path,
     paperclip_binary: str | None = None,
+    min_bytes: int = 8_000,
 ) -> Path | None:
-    """Try to download figure_1.jpg from paperclip's virtual filesystem.
+    """Download a 'main figure' from paperclip's virtual filesystem.
 
-    Returns local path if successful, None otherwise.
+    First lists the paper's ``figures/`` directory to discover the
+    publisher-specific filename (PMC slugs like ``MOL2-19-3465-g001.jpg``,
+    bioRxiv versioned names like ``690313v1_fig1.tif``, arXiv canonical
+    ``figure_1.jpg``), picks the best 'figure 1' candidate, fetches it,
+    and converts TIFF / WEBP / BMP / GIF to JPG via Pillow so python-pptx
+    can ingest it.
+
+    Returns local cache path on success, ``None`` on failure.
     """
     if not paperclip_binary:
         paperclip_binary = shutil.which("paperclip")
@@ -78,27 +239,31 @@ def fetch_figure_from_paperclip(
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     out_path = cache_dir / f"{paper_id}_figure_1.jpg"
-    if out_path.exists() and out_path.stat().st_size > 5000:
+    if out_path.exists() and out_path.stat().st_size >= min_bytes:
         return out_path
 
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
-    env["MSYS_NO_PATHCONV"] = "1"
+    files = _list_paperclip_figures(paper_id, paperclip_binary=paperclip_binary)
+    if not files:
+        return None
 
-    # Try figure_1, then a few common fallbacks
-    for fname in ("figure_1.jpg", "figure_1_a.jpg", "figure_2.jpg", "fig_1.jpg"):
-        try:
-            r = subprocess.run(
-                [paperclip_binary, "cat", f"/papers/{paper_id}/figures/{fname}"],
-                capture_output=True,
-                timeout=60,
-                env=env,
-            )
-        except (subprocess.TimeoutExpired, OSError):
-            continue
-        if r.returncode == 0 and len(r.stdout) > 5000 and r.stdout[:3] == b"\xff\xd8\xff":
-            out_path.write_bytes(r.stdout)
-            return out_path
+    pick = _pick_main_figure(files)
+    if not pick:
+        return None
+
+    try:
+        r = subprocess.run(
+            [paperclip_binary, "cat", f"/papers/{paper_id}/figures/{pick}"],
+            capture_output=True, timeout=120, env=_paperclip_env(),
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if r.returncode != 0 or len(r.stdout) < min_bytes:
+        return None
+
+    src_ext = "." + pick.rsplit(".", 1)[-1]
+    saved = _normalize_image_to_jpg(r.stdout, src_ext, out_path)
+    if saved and saved.exists() and saved.stat().st_size >= min_bytes:
+        return saved
     return None
 
 
@@ -213,11 +378,15 @@ def populate_deck_with_figures(
 
     paperclip_binary = shutil.which("paperclip")
 
-    # Identify figure-gap slides — section_intro / figure-titled slides
-    # without an existing image.
+    # Identify figure-gap slides — figure-intended content slides without
+    # an existing image. Section dividers are excluded by the audit (they
+    # are intentional chapter transitions, not figure targets).
     from vaultlab.slides.audit import audit_deck
     audit = audit_deck(deck_path)
-    gap_slides = [s for s in audit.per_slide if s.figure_gap]
+    gap_slides = [
+        s for s in audit.per_slide
+        if s.figure_gap and not s.is_section_divider
+    ]
     if not gap_slides:
         logger.info("No figure-gap slides in %s; nothing to populate", deck_path)
         # Still copy to the output path for consistency
@@ -281,56 +450,159 @@ def populate_deck_with_figures(
     available_iter = iter(available_dois)
     unavail_iter = iter(unavailable_dois)
 
+    # Use the proper layout primitives shared with vaultlab.slides.layouts.figure
+    from vaultlab.slides.layouts._helpers import (
+        add_picture_fit, apply_font, sizes as _sizes,
+    )
+    SIZES = _sizes()
+
+    def _classify_existing_layout(slide):
+        """Categorize a figure-gap slide so we know how to place the figure.
+
+        Returns ``(layout_kind, title_sh, dominant_body, decoration_shapes)``:
+
+        - ``layout_kind``: "title_only" (only short title text, no body) or
+          "title_plus" (title + dominant body block).
+        - ``title_sh``: the title shape (first short non-empty text).
+        - ``dominant_body``: the SINGLE largest non-title text shape — that's
+          the bullet block we resize/relocate. ``None`` if title-only.
+        - ``decoration_shapes``: page numbers, navigation footers, version
+          labels — text shapes we leave UNTOUCHED. Resizing these is what
+          caused the multi-shape stack-overlap bug on 2026-05-03.
+
+        The dominant body is picked by largest area among non-title text
+        shapes, which reliably picks the bullet block over page-number
+        shapes (typically <0.5 sq in vs >20 sq in for bullets).
+        """
+        title_sh = None
+        candidates = []  # (shape, area)
+        for sh in slide.shapes:
+            if not sh.has_text_frame:
+                continue
+            txt = (sh.text_frame.text or "").strip()
+            if not txt:
+                continue
+            if title_sh is None and len(txt) < 120:
+                title_sh = sh
+                continue
+            try:
+                area = (sh.width or 0) * (sh.height or 0)
+            except (AttributeError, TypeError):
+                area = 0
+            candidates.append((sh, area))
+
+        if not candidates:
+            return "title_only", title_sh, None, []
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        dominant = candidates[0][0]
+        decorations = [sh for sh, _ in candidates[1:]]
+        return "title_plus", title_sh, dominant, decorations
+
     for s in gap_slides:
         slide = prs.slides[s.index - 1]
-        slide_w = prs.slide_width
-        slide_h = prs.slide_height
-        pic_w = Inches(4.0)
-        pic_h = Inches(2.5)
-        left = slide_w - pic_w - Inches(0.3)
-        top = slide_h - pic_h - Inches(0.5)
+        sw_in = prs.slide_width / 914400
+        sh_in = prs.slide_height / 914400
 
-        # Try to use a real figure first
+        layout_kind, title_sh, dominant_body, decoration_shapes = _classify_existing_layout(slide)
+
+        # Compute figure box per layout.
+        fig_top_in = 1.2
+        cap_h_in = 0.4
+        cit_h_in = 0.4
+        cap_gap = 0.05
+
+        if layout_kind == "title_plus" and dominant_body is not None:
+            # Hickey-lab style: figure on LEFT, bullets on RIGHT. Only the
+            # SINGLE dominant body shape (the bullet block) gets resized;
+            # decoration shapes (page numbers, navigation, footers) stay
+            # untouched to avoid the stacked-shape overlap bug.
+            fig_left_in = 0.4
+            fig_w_in = sw_in * 0.58
+            fig_h_in = sh_in - fig_top_in - cap_gap - cap_h_in - cit_h_in - 0.1
+            if fig_h_in < 3.0:
+                fig_h_in = 3.0
+            body_left_in = fig_left_in + fig_w_in + 0.3
+            body_top_in = fig_top_in
+            body_w_in = sw_in - body_left_in - 0.3
+            body_h_in = fig_h_in
+            dominant_body.left = Inches(body_left_in)
+            dominant_body.top = Inches(body_top_in)
+            dominant_body.width = Inches(body_w_in)
+            dominant_body.height = Inches(body_h_in)
+            # Decoration shapes are NOT touched.
+        else:
+            # title-only: figure dominates centrally below title.
+            fig_left_in = 0.5
+            fig_w_in = sw_in - 1.0
+            fig_h_in = sh_in - fig_top_in - cap_gap - cap_h_in - cit_h_in - 0.1
+
+        # Try to insert a real figure
         try:
             doi = next(available_iter)
             fig_path = resolved[doi]
-            slide.shapes.add_picture(
-                str(fig_path), left, top, width=pic_w, height=pic_h,
+            add_picture_fit(
+                slide, str(fig_path),
+                Inches(fig_left_in), Inches(fig_top_in),
+                Inches(fig_w_in), Inches(fig_h_in),
             )
-            # Caption
-            caption_top = top + pic_h + Emu(60_000)
-            caption = slide.shapes.add_textbox(left, caption_top, pic_w, Inches(0.4))
-            tf = caption.text_frame
-            tf.text = f"Figure: {doi}"
-            for p in tf.paragraphs:
-                for r in p.runs:
-                    r.font.size = Pt(8)
-                    r.font.italic = True
-                    r.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+
+            # Caption — italic 12pt Roboto, directly below figure
+            cap_top_in = fig_top_in + fig_h_in + cap_gap
+            cx = slide.shapes.add_textbox(
+                Inches(fig_left_in), Inches(cap_top_in),
+                Inches(fig_w_in), Inches(cap_h_in),
+            )
+            cx.text_frame.text = f"Figure 1 — {doi}"
+            cx.text_frame.word_wrap = True
+            apply_font(cx.text_frame, size=12, pres=prs)
+            for para in cx.text_frame.paragraphs:
+                for run in para.runs:
+                    run.font.italic = True
+
+            # Citation footer — 9pt Roboto, bottom of slide
+            cit = slide.shapes.add_textbox(
+                Inches(0.3), Inches(sh_in - cit_h_in),
+                Inches(sw_in - 0.6), Inches(cit_h_in - 0.05),
+            )
+            cit.text_frame.text = (
+                f"Source: https://doi.org/{doi}" if "/" in doi
+                else f"Source: paperclip /papers/{doi}/"
+            )
+            apply_font(cit.text_frame, size=9, pres=prs)
+
             inserted_dois.append(doi)
             continue
         except StopIteration:
             pass
 
-        # Aspirational mode: drop a FIGURE NEEDED placeholder
+        # Aspirational: full-size FIGURE NEEDED placeholder where the figure
+        # would have gone. Visible call-to-action box, not a corner stamp.
         if mode == "aspirational":
             try:
                 doi = next(unavail_iter)
             except StopIteration:
                 continue
-            placeholder = slide.shapes.add_textbox(left, top, pic_w, pic_h)
-            tf = placeholder.text_frame
+            ph = slide.shapes.add_textbox(
+                Inches(fig_left_in), Inches(fig_top_in),
+                Inches(fig_w_in), Inches(fig_h_in),
+            )
+            tf = ph.text_frame
+            tf.word_wrap = True
             tf.text = (
                 f"📥 FIGURE NEEDED\n\n"
                 f"Manually fetch Figure 1 from:\n"
                 f"https://doi.org/{doi}\n\n"
                 f"Drop the image here to complete this slide."
             )
-            for p in tf.paragraphs:
-                p.alignment = 2  # center
-                for r in p.runs:
-                    r.font.size = Pt(11)
-                    r.font.color.rgb = RGBColor(0xAA, 0x33, 0x33)
+            apply_font(tf, size=18, bold=True, pres=prs)
+            for para in tf.paragraphs:
+                try:
+                    from pptx.enum.text import PP_ALIGN
+                    para.alignment = PP_ALIGN.CENTER
+                except Exception:
+                    pass
+                for run in para.runs:
+                    run.font.color.rgb = RGBColor(0xAA, 0x33, 0x33)
             placeholder_dois.append(doi)
 
     prs.save(str(out_path))

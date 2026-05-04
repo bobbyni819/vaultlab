@@ -115,6 +115,11 @@ from vaultlab.research.picker import (
     pick_top_n_content_aware,
     write_picker_decision,
 )
+from vaultlab.research.required_papers import (
+    apply_required_to_picks,
+    load_required_dois_from_project_config,
+    normalize_dois,
+)
 from vaultlab.research.summarize import (
     DEFAULT_MODEL,
     PaperSummary,
@@ -552,6 +557,14 @@ def _write_article_stub(kb_root: Path, paper: Paper) -> Path | None:
         lines.append(f'source: "{paper.source_api}"')
     lines.append(f"created: {date.today().isoformat()}")
     lines.append("tags: [article, literature, lit-arc-seed]")
+    # Persist abstract in frontmatter (added 2026-05-01) so Tier-B
+    # summarization + abstract_recall.get_abstract_for_doi can find it
+    # programmatically without parsing the markdown body. Multi-line
+    # YAML scalar (``abstract: |``) handles paragraph breaks safely.
+    if paper.abstract:
+        lines.append("abstract: |")
+        for body_line in paper.abstract.split("\n"):
+            lines.append(f"  {body_line}")
     lines.append("---")
     lines.append("")
     lines.append(f"# {paper.title or paper.doi}")
@@ -1276,6 +1289,7 @@ def build_arc_prompt(
     summaries: dict[str, PaperSummary],
     top_og: list[tuple[str, float]],
     top_co_citation: list[tuple[str, str, int]],
+    additional_wikilinks: list[str] | None = None,
 ) -> str:
     """Build the user-message text for the lineage-arc LLM call.
 
@@ -1284,6 +1298,11 @@ def build_arc_prompt(
     * per-paper TL;DRs + first 2 key findings, bucketed by year
     * the top-OG list (so Claude can lean on the "always-cited" papers)
     * top co-citation pairs (so Claude can spot tightly coupled lineages)
+    * (optional) ``additional_wikilinks`` — slugs of cumulative-corpus
+      Tier-A summaries from prior runs, available on disk at
+      ``Wiki/Summaries/<slug>.md``. The narrator is instructed to read
+      these files when composing paragraphs to incorporate cumulative
+      knowledge beyond this run's picks.
 
     Each paper is identified by ``[[<doi-slug>|Author Year]]`` so the
     model has the exact wikilink target it must emit.
@@ -1333,6 +1352,32 @@ def build_arc_prompt(
         )
     cocite_block = "\n".join(cocite_lines) if cocite_lines else "(none)"
 
+    # Cumulative-corpus recall block (added 2026-05-01).
+    if additional_wikilinks:
+        # Cap to 50 to keep prompt manageable; narrator will pick which
+        # to actually use based on topical fit.
+        capped = additional_wikilinks[:50]
+        recall_block = "\n".join(f"- [[{slug}]]" for slug in capped)
+        if len(additional_wikilinks) > 50:
+            recall_block += (
+                f"\n(...{len(additional_wikilinks) - 50} more "
+                f"cumulative-corpus papers omitted from prompt)"
+            )
+        cumulative_section = f"""
+
+CUMULATIVE-CORPUS PAPERS (Tier-A summaries from prior runs available on disk):
+These wikilinks resolve to ``Wiki/Summaries/<slug>.md`` files containing
+full Tier-A summaries you can READ when composing paragraphs. They were
+NOT in this run's top-30 picks but are topic-relevant Tier-A papers
+accumulated from prior research projects. Cite them where they
+strengthen the arc — especially for foundational / seminal-methods
+material that the per-run picker may have under-weighted due to
+recency-biased composite scoring.
+{recall_block}
+"""
+    else:
+        cumulative_section = ""
+
     return f"""\
 TOPIC: {topic}
 
@@ -1346,6 +1391,8 @@ CITATION RULES:
 - Lean on the "Top OG papers" list when describing foundational work.
 - Lean on "Top co-citation pairs" to spot pairs that often appear together.
 - Never invent a citation that's not in the lists below.
+- You MAY also cite from CUMULATIVE-CORPUS PAPERS (below) — read those
+  files when relevant; they're already on disk.
 
 PER-PAPER SUMMARIES (bucketed):
 
@@ -1360,7 +1407,7 @@ TOP OG PAPERS (most-cited in our seed set):
 
 TOP CO-CITATION PAIRS:
 {cocite_block}
-
+{cumulative_section}
 OUTPUT FORMAT:
 Return ONLY a JSON object:
 
@@ -1533,11 +1580,43 @@ def prepare_arc_task(
     top_co: list[tuple[str, str, int]] = (
         list(metrics.co_citation_pairs[:10]) if metrics is not None else []
     )
+
+    # Cumulative-corpus recall (added 2026-05-01 from CODEX additive-run feedback):
+    # The per-run picker only sees this run's candidates. The Wiki/Summaries
+    # folder accumulates Tier-A summaries from all prior runs across all
+    # topics. Without merging, the narrator misses topic-relevant
+    # foundational papers that are already on disk (e.g., the 2026-05-01
+    # CODEX run missed Goltsev 2018 *Cell* — the namesake paper — because
+    # it was Tier-A from a prior run but not in this run's top-30 picks).
+    #
+    # We expose the cumulative paths as additional wikilink targets in the
+    # prompt rather than parsing them into PaperSummary structures, so
+    # the narrator (SDK or Claude Code) reads each file itself when
+    # composing paragraphs. This keeps memory usage low and avoids a
+    # markdown→PaperSummary parser dependency here.
+    from vaultlab.research.corpus_recall import gather_relevant_summaries
+
+    this_run_dois = {doi.lower() for doi in summaries.keys()}
+    cumulative_paths = gather_relevant_summaries(
+        topic=topic,
+        kb_root=Path(kb_root),
+    )
+    this_run_slugs = {slugify_doi(d) for d in this_run_dois}
+    additional_wikilinks: list[str] = []
+    for p in cumulative_paths:
+        # Each path is Wiki/Summaries/<doi-slug>.md. Skip papers already
+        # in this run's summaries dict (compare slug to slugified DOI form).
+        slug = p.stem
+        if slug in this_run_slugs:
+            continue
+        additional_wikilinks.append(slug)
+
     prompt = build_arc_prompt(
         topic=topic,
         summaries=summaries,
         top_og=top_og,
         top_co_citation=top_co,
+        additional_wikilinks=additional_wikilinks,
     )
     output_path = ensure_parent(concept_path(Path(kb_root), topic, "lineage", date_str))
     method_relpath = output_path.name + ".method.md"
@@ -1855,6 +1934,7 @@ def run_lit_arc(
     speaker: str = "",
     acquire_figures: bool = False,
     figure_cache_dir: Path | None = None,
+    always_include_dois: list[str] | None = None,
     # Test injection points (default to real implementations):
     _client: Any | None = None,
     _llm_summary: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
@@ -1863,6 +1943,7 @@ def run_lit_arc(
     _acquire: Any | None = None,
     _acquire_figures: Any | None = None,
     _summarize_corpus_fn: Any | None = None,
+    _crossref_client: Any | None = None,
     _today: str | None = None,
     _now: str | None = None,
 ) -> LineageRunResult:
@@ -2167,6 +2248,139 @@ def run_lit_arc(
         )
 
     # ------------------------------------------------------------------
+    # Phase 4c: required-papers injection (--always-include)
+    # ------------------------------------------------------------------
+    # Resolve user-required DOIs (explicit kwarg wins; otherwise load from
+    # the project's .vaultlab-project.json). For any required DOI that the
+    # picker's corpus walk did not surface, fetch a CrossRef-backed stub
+    # so PDF acquisition can attempt the full waterfall and the picker can
+    # see the candidate. If acquisition still fails, the existing Tier-B
+    # fallback path picks them up via abstract.
+    if always_include_dois is None:
+        # Walk up from cwd looking for the project config dir so callers
+        # don't have to thread a project_dir through.
+        loaded_required: list[str] = []
+        try:
+            project_root: Path | None = None
+            _cur = Path.cwd().resolve()
+            while True:
+                if (_cur / ".vaultlab-project.json").exists():
+                    project_root = _cur
+                    break
+                if _cur.parent == _cur:
+                    break
+                _cur = _cur.parent
+        except Exception:  # pragma: no cover — defensive
+            project_root = None
+        if project_root is not None:
+            try:
+                loaded_required = load_required_dois_from_project_config(
+                    project_dir=project_root
+                )
+            except Exception:  # pragma: no cover — never break the run
+                logger.exception(
+                    "load_required_dois_from_project_config failed"
+                )
+        required_dois_normalized = loaded_required
+    else:
+        required_dois_normalized = normalize_dois(always_include_dois)
+
+    if required_dois_normalized:
+        from vaultlab.research.abstract_recall import (
+            ensure_article_stub_for_doi,
+        )
+        from vaultlab.research.paper import Paper as _Paper
+
+        missing_required = [
+            d for d in required_dois_normalized
+            if d.lower() not in {k.lower() for k in corpus.papers}
+        ]
+        added_count = 0
+        for req_doi in missing_required:
+            # Use the injected CrossRef client if provided (test mode);
+            # otherwise let abstract_recall build the real one lazily.
+            paper_meta = None
+            if _crossref_client is not None:
+                try:
+                    paper_meta = _crossref_client.resolve_doi(req_doi)
+                except Exception as exc:  # pragma: no cover — defensive
+                    logger.warning(
+                        "CrossRef resolve_doi failed for required DOI %s: %s",
+                        req_doi,
+                        exc,
+                    )
+                    paper_meta = None
+            else:
+                from vaultlab.research.abstract_recall import (
+                    _make_crossref_client,
+                )
+                client_cr = _make_crossref_client()
+                if client_cr is not None:
+                    try:
+                        paper_meta = client_cr.resolve_doi(req_doi)
+                    except Exception as exc:  # pragma: no cover — defensive
+                        logger.warning(
+                            "CrossRef resolve_doi failed for required DOI %s: %s",
+                            req_doi,
+                            exc,
+                        )
+                        paper_meta = None
+
+            if paper_meta is not None:
+                # Add to corpus.papers using the metadata we just got.
+                paper_for_corpus = _Paper(
+                    title=getattr(paper_meta, "title", "") or "",
+                    authors=list(getattr(paper_meta, "authors", []) or []),
+                    year=int(getattr(paper_meta, "year", 0) or 0),
+                    journal=getattr(paper_meta, "journal", "") or "",
+                    doi=req_doi,
+                    pmid=getattr(paper_meta, "pmid", "") or "",
+                    abstract=getattr(paper_meta, "abstract", "") or "",
+                    citation_count=int(
+                        getattr(paper_meta, "citation_count", 0) or 0
+                    ),
+                    source_api=(
+                        getattr(paper_meta, "source_api", "")
+                        or "crossref-required"
+                    ),
+                )
+                corpus.papers[req_doi] = paper_for_corpus
+                added_count += 1
+
+            # Create the on-disk stub so the corpus has a Sources/Articles/
+            # entry consistent with every other paper. ensure_article_stub_for_doi
+            # is idempotent and re-uses the metadata fetch when needed.
+            try:
+                ensure_article_stub_for_doi(
+                    doi=req_doi,
+                    kb_root=kb_root,
+                    crossref_client=_crossref_client,
+                )
+            except Exception:  # pragma: no cover — never break the run
+                logger.exception(
+                    "ensure_article_stub_for_doi failed for required DOI %s",
+                    req_doi,
+                )
+
+        if added_count > 0:
+            # Recompute metrics so the newly-added required papers show up
+            # in og_score / forward_influence rankings (they will be low,
+            # but the picker pinning step below makes them rank-1 anyway).
+            try:
+                compute_metrics(corpus)
+            except Exception:  # pragma: no cover — defensive
+                logger.exception(
+                    "compute_metrics rerun after required-paper injection failed"
+                )
+
+        _emit(
+            progress,
+            "required_papers",
+            n_required=len(required_dois_normalized),
+            n_added_to_corpus=added_count,
+        )
+
+    # ------------------------------------------------------------------
     # Phase 5: PDF acquisition (waterfall)
     # ------------------------------------------------------------------
     _emit(progress, "phase", "acquire_pdfs", n_papers=corpus.n_papers)
@@ -2468,6 +2682,42 @@ def run_lit_arc(
                 n=resolved_max_papers,
                 pdf_cache_dir=pdf_cache_dir,
             )
+
+        # Pin user-required DOIs to the top of the pick list, regardless
+        # of the picker's score-based ranking (--always-include behaviour).
+        # We wrap the flat DOI list into pick-dicts so apply_required_to_picks
+        # can do its work, then unwrap back to a DOI list. If a required
+        # DOI isn't in the pick list, we synthesize an entry from the
+        # corpus so it survives into the final picks.
+        if required_dois_normalized:
+            picks_as_dicts: list[dict] = [
+                {"doi": d, "rank": i + 1}
+                for i, d in enumerate(keep_list)
+            ]
+            candidate_pool: dict[str, dict] = {}
+            for cd, cp in corpus.papers.items():
+                candidate_pool[cd.lower()] = {
+                    "title": cp.title or "",
+                    "year": cp.year or 0,
+                    "og_score": 0.0,
+                    "has_pdf": False,
+                    "is_seed": False,
+                }
+            merged_picks = apply_required_to_picks(
+                picks=picks_as_dicts,
+                required_dois=required_dois_normalized,
+                candidate_pool=candidate_pool,
+            )
+            new_keep_list: list[str] = []
+            seen: set[str] = set()
+            for entry in merged_picks:
+                d = (entry.get("doi") or "").lower()
+                if d and d not in seen:
+                    new_keep_list.append(d)
+                    seen.add(d)
+            keep_list = new_keep_list
+            picker_method = f"{picker_method}+required"
+
         keep = set(keep_list)
         tier_a_dois = keep
         _emit(

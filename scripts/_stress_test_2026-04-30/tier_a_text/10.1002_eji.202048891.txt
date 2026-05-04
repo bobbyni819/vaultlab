@@ -1,0 +1,326 @@
+Basic
+1262 JuliaKennedy-Darlingetal. DOI:10.1002/eji.202048891 Eur.J.Immunol.2021.51:1262–1277
+New technology
+Research Article
+Highly multiplexed tissue imaging using repeated
+oligonucleotide exchange reaction
+Julia Kennedy-Darling
+∗1,5,
+Salil S. Bhate
+∗1,2,3
+, John W. Hickey
+∗1,2
+,
+Sarah Black1,2 , Graham L. Barlow1,2 , Gustavo Vazquez1,2,
+Vishal G. Venkataraaman1,2, Nikolay Samusik1,6 , Yury Goltsev1,2 ,
+Christian M. Schürch
+∗∗1,2,4
+and Garry P. Nolan
+∗∗1,2
+1DepartmentofMicrobiology&Immunology,StanfordUniversitySchoolofMedicine,
+Stanford,CA,USA
+2DepartmentofPathology,StanfordUniversitySchoolofMedicine,Stanford,CA,USA
+3DepartmentofBioengineering,StanfordUniversity,Stanford,CA,USA
+4DepartmentofPathologyandNeuropathology,UniversityHospitalandComprehensive
+CancerCenterTübingen,Tübingen,Germany
+5AkoyaBiosciences,1505O’BrienDrive,MenloPark,CA,USA
+6BectonDickinson,SanJose,CA,USA
+Multiparametertissueimagingenablesanalysisofcell-cellinteractionsinsitu,thecellular
+basisfortissuestructure,andnovelcelltypesthatarespatiallyrestricted,givingcluesto
+biologicalmechanismsbehindtissuehomeostasisanddisease.Here,westreamlinedand
+simplifiedthemultiplexedimagingmethodCO-DetectionbyindEXing(CODEX)byvalidat-
+ing58uniqueoligonucleotidebarcodesthatcanbeconjugatedtoantibodies.Weshowed
+thatbarcodedantibodiesretainedtheirspecificityforstainingcognatetargetsinhuman
+tissue.Antibodieswerevisualizedoneatatimebyaddingafluorescentlylabeledoligonu-
+cleotidecomplementarytooligonucleotidebarcode,imaging,stripping,andrepeatingthis
+cycle.Withthiswedevelopedapanelof46antibodiesthatwasusedtostainfivehuman
+lymphoid tissues: three tonsils, a spleen, and a LN. To analyze the data produced, an
+imageprocessingandanalysispipelinewasdevelopedthatenabledsingle-cellanalysis
+onthedata,includingunsupervisedclustering,thatrevealed31celltypesacrossalltis-
+sues.Wecomparedcell-typecompositionswithinanddirectlysurroundingfolliclesfrom
+thedifferentlymphoidorgansandevaluatedcell-celldensitycorrelations.Thissequen-
+tialoligonucleotideexchangetechniqueenablesafacileimagingoftissuesthatleverages
+pre-existingimaginginfrastructuretodecreasethebarrierstobroaduseofmultiplexed
+imaging.
+Keywords: CODEX (cid:2) DNA-conjugated antibodies (cid:2) Multiplexed tissue imaging (cid:2) Single-cell
+analysis (cid:2)Spatialsingle-cellbiology
+(cid:2)
+AdditionalsupportinginformationmaybefoundonlineintheSupportingInformationsection
+attheendofthearticle.
+Correspondence:Prof.ChristianM.SchürchandProf.GarryP.Nolan ∗JuliaKennedy-Darling,SalilS.Bhate,andJohnW.Hickeycontributedequally
+e-mail:christian.schuerch@med.uni-tuebingen.de; tothework.
+gnolan@stanford.edu ∗∗ChristianM.SchürchandGarryP.Nolanarethecoseniorauthors.
+©2021TheAuthors.EuropeanJournalofImmunologypublishedbyWiley-VCHGmbH www.eji-journal.eu
+ThisisanopenaccessarticleunderthetermsoftheCreativeCommonsAttributionLicense,whichpermitsuse,distributionandreproductionin
+anymedium,providedtheoriginalworkisproperlycited.
+
+Eur.J.Immunol.2021.51:1262–1277 Newtechnology 1263
+Introduction ThefirstversionoftheCODEXimagingplatformwasbasedon
+iterative rendering of DNA-conjugated antibodies by DNA poly-
+Identifying cells and cell phenotype through antibody binding merase primer extension and fluorescent dNTP analogs [27].
+to known proteins is a fundamental tool in basic research and CODEX provides a multiplexed technique that can be easily
+clinical practice. Spatial information provided by cellular local- adopted with minor modifications to regular fluorescent micro-
+izationiscriticalforunderstandingtissuehomeostasisandchar- scopes.However,useofenzymesintheoligonucleotidedetection
+acterizing disease [1–11]. Currently, immunohistochemistry and stepincreasedthecomplexity,backgroundsignal,andcostofthe
+immunofluorescenceimagingaretheworkhorsesfordefiningcel- method.Tosimplifyandspeeduptheimagingprocess,wehere
+lular and subcellular protein organization for pathologists and updated the technique to use chaotropic solvents that facilitate
+biologists. These modalities allow a limited number of proteins iterativeannealingandstrippingofcomplementary,fluorescently
+tobeinvestigatedsimultaneously;however,simultaneouscharac- labeledDNAprobestoDNA-conjugatedantibodies.
+terizationofcellphenotypewithmultipleproteinsformanycell Here, we tested the components of this newly developed
+typeshasbeenshownnecessarytopredicttherapeuticoutcomes CODEXmultiparameterimagingmethod.Wevalidatedthespeci-
+[8–10].Additionally,thecharacterizationandidentificationoftis- ficity and labeling efficiency of 59 unique oligonucleotide bar-
+suesubstructures(e.g.tertiarylymphoidstructures)bysimultane- codes and several dozen antibodies using iterative cycles of
+ousidentificationofmultiplecelltypesordiscretecellsubsetsis annealing, imaging, and stripping using automated fluidics. For
+important,sincesuchhavebeenassociatedwithdiseasesuscepti- this report, the primary antibody panel included major immune
+bilityandimmunotherapyresponse[1–7]. cell markers, including CD3, CD4, CD8, CD20, and CD66, func-
+Recently, several imaging technologies have been developed tional markers such as CD279 (also known as PD-1), markers
+that have multiplexing capabilities of flow or mass cytometry of nonimmune cell populations, and markers of structural fea-
+(beyond 30 markers). These techniques enable detailed cata- tures such as vasculature. These antibodies were used to stain
+loguingoflocationandcoordinationofcellularphenotypes,cell- five cellularly dense human lymphoid tissues and imaging was
+cell interactions, and larger cellular ensembles. Methods based performedusingtherepeatedoligonucleotideexchangereaction
+on mass cytometry employ isotope-labeled antibodies and use withthedevelopedCODEXtechnique.Wedemonstrateaprocess-
+raster laser ablation (imaging mass cytometry [IMC]) [12] or ingpipelineforaligningcyclicimaging,segmentationofcellsin
+ion beams (multiplexed ion beam imaging [MIBI]) for imag- thedata,andunsupervisedclusteringthatledtotheclassification
+ing [13,14]. Other techniques employ matrix-assisted laser des- of31majorcelltypes.Finally,inademonstrationthatthetech-
+orption/ionization (MALDI) trapped ion-mobility spectrometry niquecanbeusedtocharacterizetissuearchitecture,weusedthe
+(TIMS) [15] or Raman scattering or vibrational signatures of spatial coordinates of single cells to compare the cell-type com-
+chemical bonds to perform multiplexed imaging [16], yet these position of follicles and correlated cell-cell densities across the
+techniqueslackresolution,arelimitedinmultiplexingabilities,or humantonsil,spleen,andLN.
+requirespecializedinstrumentsandexpertise. In summary, the updated and simplified CODEX platform
+Most advanced optical multiplexing methods are limited by allows for robust, reproducible identification, and quantification
+spectral overlap restricting simultaneous detection to ten mark- of single cells within complex tissues. This platform enables
+ersorfewer[17].Toovercometheselimitations,techniqueslike advanced analysis of intercellular relationships and overarching
+multiepitope-ligand cartography (MELC) [18], multiplexed fluo- tissue architecture. Deep, spatially resolved phenotyping of the
+rescencemicroscopy(MxIF)[19],tissue-basedcyclicimmunoflu- cellularcomponentsindiseases,suchasautoimmunityandcan-
+orescence (t-CyCIF) [20], and iterative indirect immunofluores- cer,willadvanceourunderstandingofhowspatialfeaturescon-
+cenceimaging(4i)[21]usecyclicimmunofluorescenceimaging tributetodiseasebiologyandhelpdevelopnoveldiagnosticsand
+protocolsinvolvingfluorophoreinactivationorantibodystripping therapeutics.
+and restaining. Because each cyclic stripping or bleaching step
+requires a substantial time (hours), increasing the number of
+parameters linearly increases the amount of time necessary for Results
+onetissue.
+AnotherapproachusesDNA-barcodedantibodiesthatarevisu- CODEXmulticycleimagingusingDNAoligonucleotide
+alized by cyclic addition and removal of fluorescently labeled barcodesandautomatedfluidics
+DNAprobes.Techniquesbasedonthisprincipleincludeexchange-
+pointsaccumulationinnanoscaletopography(PAINT)[22],DNA The approach for the newly adapted CODEX high-parameter
+exchangeimaging(DEI)[23],immunostainingwithsignalampli- imaging uses iterative cycles of annealing and stripping flu-
+fication by exchange reaction (immuno-SABER) [24], quantum- orescently labeled DNA reporter oligonucleotides complemen-
+dot SABER [25], barcoded-antibody based cyclic immunofluo- tary to DNA barcodes conjugated to antibodies (Fig. 1A). First,
+rescence (cyCIF) [26], and CO-Detection by indEXing (CODEX) antibodies are each labeled with a unique oligonucleotide tag,
+[27,28].TheseDNA-basedsystemshavetheadvantagesofasin- designedtominimizenonspecificoligonucleotide-oligonucleotide
+gle staining procedure, fast run times, and comparably simple and oligonucleotide-tissue binding. Second, the oligonucleotide-
+chemistries. conjugated antibodies are used to stain a tissue section. Third,
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+1264 JuliaKennedy-Darlingetal. Eur.J.Immunol.2021.51:1262–1277
+Figure1. CODEXisamultiplexedtissueimagingtechniquethatreliesonantibodiesconjugatedtouniqueoligonucleotides.(A)Schematicof
+repeatedoligonucleotideexchangeworkflowforCODEXimaging.Briefly,antibodiesconjugatedwithuniqueoligonucleotidebarcodesareused
+tostainatissuesection.Threeantibodiesboundtothetissuearethenrenderedvisiblebyaddingdifferentcomplementaryfluorescentoligonu-
+cleotides.Afterimaging,thereporteroligonucleotidesarestrippedthroughtheuseofachaotropicsolvent.Thecycleisrepeateduntilallantibodies
+withinthepanelhavebeenrevealedandimaged.(B)Dataacquiredarethenconcatenatedandprocessed.Themethodenablesevaluationofupto
+60markerssimultaneously.
+a robotic fluidics device is used to implement the following flu- library (Fig. 2A). We aliquoted murine splenocytes into 59 indi-
+idicsprotocol:threefluorescentdye-conjugatedoligonucleotides vidualtubesandthenindividuallyconjugatedaliquotsoftheanti-
+dissolved in a chaotropic solvent are added to the stained tis- mouseCD45antibodytoeachbarcodeandusedthesebarcoded
+sue.Thechaotropicsolventenablesroomtemperaturehybridiza- antibodies to stain the 59 different aliquots of mouse spleno-
+tionofthefluorescentreporteroligonucleotidestotheircomple- cytes. After staining, all splenocyte aliquots were combined into
+mentaryDNAbarcodesconjugatedtouniqueantibodies.Fourth, asingle-cellspread.ThesignalforeachCODEXbarcodechannel
+images of the antibody binding events are captured by fluores- wasrevealedbyhybridizationofuptothreecomplementaryfluo-
+cent microscopy. Fifth, the three reporter oligonucleotides are rescent(FAM,Cy3,orCy5)oligonucleotidespercycleofCODEX
+removedbychangingthesolvent,followedbyawashingstep.The multicycle imaging. If cross-reactivity between oligonucleotides
+hybridizationprocessisthenrepeatedwiththreeotherfluorescent ortissueisminimal,thenthereshouldbelowsignalfromother
+dye-conjugatedoligonucleotides,andthiscycleisrepeatedforas fluorophoreswithineachcycleandacrosscycles.
+many iterations as necessary to capture the spatial locations of We analyzed the multichannel imaging data visually to eval-
+eachantibodyinthepanel(Fig.1AandB). uatewhicholigonucleotidesexhibitcross-reactivitywithanother
+The two core components of this technology are (1) the oligonucleotide. For every pixel in the image, we evaluated the
+sequenceorthogonalbarcodelibraryenablingassociationofeach threechannelswiththegreatestmeasuredintensity.Wethenpro-
+fluorescence signal to a specific antibody clone and (2) the flu- ducedanimagewherethechannelwiththehighestintensity(for
+idics protocol used to add and remove the fluorescently labeled each individual pixel) is represented in blue, the channel with
+oligonucleotides in each imaging step. The fluidics protocol is the second highest intensity in green, and the channel with the
+fullyautomatedusingoff-the-shelfcomponentsandcontrolsoft- third highest intensity in red. Because most pixels were blue,
+ware that integrates with the microscope’s control software to thisindicatedtherewasminimaloligonucleotidecross-reactivity
+coordinatethedeliveryofreagentsandimageacquisition. (Fig.2B).
+Sinceeachcellpopulationwasstainedseparately,eachspleno-
+cyte should only be labeled by one barcode. To further quantify
+ValidationofCODEXoligonucleotidebarcode possible cross-reactivity, we segmented single cells as previously
+specificityandannealing/strippingefficiency reported[27].Populationsofcellswereidentifiedthatwerepos-
+itive for each barcode sequence by manual gating of the single-
+Wecreatedanoligonucleotidelibraryof59uniquebarcodeswith cellexpressiondata.Wequantifiedtheoverlap(intersectionover
+sequencesselectedtoeliminatebindingbetweenotherbarcodes theunion)ofoligonucleotidesequencesofeachpairandplotted
+or genomic DNA (Supporting Information Table S1). We first thisonaheatmap.Onlythreepairsshowedevenminimalcross-
+evaluatedcross-reactivityofourCODEXbarcodeoligonucleotide reactivity (Fig. 2C). These sequences were not used together in
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+Eur.J.Immunol.2021.51:1262–1277 Newtechnology 1265
+Figure2. Validationofuniqueoligonucleotidebarcodelibrary.(A)Overallschematicfortestingoligonucleotideorthogonality.(i)Fifty-ninespleno-
+cytealiquotsweremade,and(ii)eachonewasstainedwithanti-mouseCD45antibodywithauniqueoligonucleotidebarcode.(iii)Allaliquots
+werepooledandfixedonaslideandrenderedvisiblethroughCODEXmulticycleimaging.Inprinciple,(v)cellsshouldonlydisplayonefluorophore
+and(vi)anindividualcellshouldonlybestainedinonecycle.(B)Imagegeneratedbyevaluatingeachpixelanddisplayingthehighestintensity
+pixelfromallofthecycleswiththecolorblue,thesecondhighestintensitypixelfromallofthecycleswiththecolorgreen,andthethirdhighest
+intensitypixelfromallofthecycleswithred(n=1experimentalreplicate,15×106splenocytesquantifiedacross59barcodes).(C)Heatmapof
+quantifiedintersectionoverunionofeacholigonucleotidepairfromsingle-cellsegmentedimagedataoftheanti-CD45stainedsplenocytesforall
+59oligonucleotides.(D)RepresentativeimagesfromCODEX16-cycleexperimentwhereoligonucleotide-conjugatedanti-CD21(green)wasrendered
+visibleinthefirstcycle,anti-CD3(red)inthesecondcycle,bothinthethirdcycle,andneitherinthefourthcycle;thefourcycleswererepeated
+threetimes(n=1experimentalreplicateover16channels).(E)Quantificationoffluorescentintensitiesforthetwochannelsacrossall16cycles.
+Scalebars:100μm,20xmagnification.
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+1266 JuliaKennedy-Darlingetal. Eur.J.Immunol.2021.51:1262–1277
+subsequentexperiments.Theseresultsalsodemonstratetheeffi- lution, subtract background signal, segment single cells, and
+ciencyoftheannealingandstrippingfluidicsprotocolasfluores- perform unsupervised single-cell clustering. This software is
+cent barcodes from prior cycles were not present in subsequent available for download at https://github.com/nolanlab/CODEX
+imagingcycles. and https://github.com/nolanlab/vortexand currently supports
+TofurthervalidatetheCODEXtechnique,a16-cycleimaging images generated from Keyence and Zeiss microscopes. The
+experimentwasperformedusinghumantonsiltissuestainedwith “CODEXUploader”isusedforautomatedimagestitching,decon-
+barcode-conjugated antibodies targeting CD21 and CD3. CD21 volution, drift compensation, background subtraction, and cycle
+shouldonlystainBcellsandfollicularDCs,whereasCD3should concatenation. The “CODEX Segmenter” enables automated
+only stain T cells. We first added the dye-conjugated oligonu- single-cell segmentation using a watershed algorithm. The “Vor-
+cleotide complementary to the barcode conjugated to the CD21 teX” interface is used to apply the previously described X-shift
+antibody and performed imaging. Second, this oligonucleotide unsupervisedclustering[29](Fig.4A).
+wasremoved,andweaddedthedye-conjugatedoligonucleotide Inadditiontoimaginguptothreeantibodiespercycleacross
+complementarytothatconjugatedtotheCD3antibodyandper- three fluorescent channels (FAM, Cy3, and Cy5), we also mea-
+formed imaging. Third, this oligonucleotide was removed, and sured the nuclear signal from Hoechst dye during every cycle
+weaddeddye-conjugatedoligonucleotidescomplementarytobar- forimageregistration.Thenuclearstainandthecellmembrane
+codesconjugatedtoboththeCD3andCD21antibodiesandper- markerCD45wereusedtogethertosegmentindividualcells.This
+formedimaging.Inthefourthcycle,thesewereremoved,nodye- generated a multiparameter dataset consisting of fluorescence
+conjugatedoligonucleotidewasadded,andthetissuewasimaged intensityreadingsforeachofthe46antibodychannelson2.3mil-
+(Fig. 2D). These fluidics cycles were repeated three more times lionindividualcellsinthisexperiment.Thedatasetgeneratedis
+(for a total of 16 cycles) and the signal associated with each comparableinformtothatresultingfrommasscytometryormul-
+markerwasmeasured.Thefluorescenceintensityassociatedwith tiparameter flow cytometry, but the spatial coordinates of each
+each marker was reduced to background levels after each cycle segmentedcellareretained.Figure4Bshowstwoofthe46mark-
+and the signal generated from the addition of CODEX reporters ers,cytokeratinandCD3,inatraditionalflowcytometry-likeplot.
+was reproducible (within 20% of signal intensity) across addi- EachgatedpopulationcanthenbevisualizedbyX/Ycoordinates.
+tionalcycles(Fig.2E). In this example, the populations correctly differentiate between
+epithelialandT-cell-richregionsofthetonsil.
+With 46 proteins measured simultaneously, manual gating of
+CODEXmulticycleimagingofdensehumanlymphoid cellpopulationsistediousandcanbeuserbiased.Consequently,
+tissueswitha46-markerantibodypanel we performed unsupervised clustering analysis using the X-shift
+algorithm[29].Intotal,31clusterswereidentified,andcellsub-
+Aftervalidatingboththeoligonucleotidebarcodelibraryandthe typeswereassignedbasedonexpressionofkeymarkers(Fig.4C,
+automated fluidics protocol for CODEX imaging, 46 antibodies SupportingInformationFigs.S1and2).Theidentifiedcelltypes
+were conjugated to unique CODEX barcodes (Supporting Infor- correspond to all major cell subsets (immune, stromal, vascula-
+mationTableS2).Theantibodieschosentargetmarkersofmajor ture).Theantibodiesinourpanelwereselectedtoenableiden-
+immune and nonimmune cell populations as well as structural tification of immune cell subsets, and clusters corresponding to
+features such as vasculature (Fig. 3A).Each antibody conjugate T cells, B cells, macrophages, DCs, and NKCs were identified.
+wastestedseparatelywithtissuesknowntoexpressthemarkerof Furthermore,thisintegratedpipelinealsoresolvedkeyfunctional
+interestforvalidationpriortothemulticycleexperiment. subpopulationssuchasplasmacells,T-follicularhelpercells,and
+Thisantibodypanelwasusedtostainfivefresh-frozenhuman activatedT-helpercells.Onlyasubsetofcellsdisplayedrelatively
+tissue sections (3 tonsils, 1 LN, and 1 spleen). We imaged areas few identifying markers, such as the cluster-labeled tetraspanin
+ofapproximately0.5cm2 pertissuebutretainedsingle-cellreso- positive cells, which were positive for CD81 and CD9, likely a
+lution by stitching together overlapping imaged tiles (Fig. 3B). stromal cell subset. In the future, additional stromal cell mark-
+Representative images from each of the 46 antibody channels erscouldbeincludedtodistinguishthesecellularidentities.The
+andanuclearchannel(Hoechst33342)areshowninanexample immunecellsubsetswereobservedatsimilarfrequenciesacross
+foronetilefromtonsil9338inFig.3C.Expectedcolocalizations lymphoidtissues,withhigherpercentagesofinnateimmunecells
+of markers across the B-cell follicle, epithelium, and T-cell zone likemacrophagesfoundinthespleenthaninothertissues(Sup-
+regionsofthetissuewereobservedforeachstainedchannelinde- portingInformationFigs.S1andS2),asexpected.
+pendentoftheimagingcycleinwhichthemarkerwasdetected.
+Characterizationofcell-typedistributioninand
+Single-cellanalysisofCODEXmulticycleimagingof aroundB-cellfolliclesacrosslymphoidtissues
+humanlymphoidtissue
+The spleen, the LN, and the tonsils are all secondary lymphoid
+To process the single-cell multiparametric imaging data, we organs that are main sites of immunity. Structurally and func-
+developed software to align cyclic images, perform deconvo- tionally,eachisdistinct,buttheseorgansallhaveB-cellfollicles,
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+Eur.J.Immunol.2021.51:1262–1277 Newtechnology 1267
+Figure3. UseoftheCODEXprotocoltostaincellularlydensehumanlymphoidtissueswithapanelof46antibodies(n=1CODEXmulticycle
+imagingofeachtissuewithstatedantibodypanel:3tonsils,eachfromadifferentdonor,1spleenfromanotherdonor,and1lymphnodefrom
+anotherdonor).(A)The46-antibodypanelcontainsantibodiestokeyadaptiveandinnateimmune,functional,andstromal,andepithelialmarkers.
+(B)OverviewimagesoffivelymphoidtissuesampleswithCytokeratin(blue),CD19(red),andCD3(green)shown.Thehighermagnificationtile
+imageshowstonsil9338withCD19(blue),CD57(grey),CD8(green),Ki67(yellow),CollagenIV(magenta),CD4(red),andCytokeratin(cyan).(C)
+Representativeimagesofazoomedintilefromtonsil9338ofallmarkersandHoechststaining.Scalebars:100μm,20×magnification.
+whicharecriticalforantibodyresponses.Usingourmultiparam- within images of each tissue type (Fig. 5A). The relative distri-
+eterdataset,weinvestigatedthecell-typecompositionsoftheB- butions of cell types across each follicle were averaged for each
+cellfolliclesofthedifferenttissues. tissue,representedbytheinnercircleofthepiechart(Fig.5B).
+We identified follicle regions based on CD19 expression and The relative distribution of each of these cell types surrounding
+also using tissue morphology based on Hoechst nuclear staining thefollicleregionswerecalculated,definedasaperimeterof1.2
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+1268 JuliaKennedy-Darlingetal. Eur.J.Immunol.2021.51:1262–1277
+Figure4. ProcessingofCODEXmultiparameterimagingdata.(A)Theimageanalysiswasperformedusingour“CODEXUploader”forimagepro-
+cessing,“CODEXsegmenter”forcellsegmentation,and“VORTEX”forunsupervisedsingle-cellclustering.(B)Exampleofsegmenteddatafromtonsil
+8953asanfcsfilewithpopulationsgatedonfluorescentintensityofCD3orCytokeratin(nopriorgating).ThesegatedCD3+andCytokeratin+pop-
+ulationsareplottedwith×(mm),y(mm)coordinatestorevealspatiallocationsofthepopulationsinthetissue.(C)UMAPplotofalldatawith
+the31celltypesidentifiedbyunsupervisedclusteringindicatedbycolor(totalnumberofcellsquantifiedfromsingle-cellsegmentationfromall
+tissuesimaged=2.3×106cells).
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+Eur.J.Immunol.2021.51:1262–1277 Newtechnology 1269
+Figure5. Cell-typecompositionswithinandsurroundinglymphoidtissuefolliclestructures.(A)CODEXmultiparameterimagingdatawereused
+toperformunsupervisedclusteringtoidentifykeysubtypes.CD19expressiondatawereusedtomanuallyidentifyfollicleswithintissues.Cell-type
+compositionsoffollicleareasandofcellsdirectlysurroundingthefollicleswereanalyzedusingthesemasks.(B-D)Averagecell-typecompositions
+offolliclesfrom(B)threetonsiltissues,(C)alymphnode,and(D)aspleen;theinnerpiecirclecorrespondstotheareawithineachidentifiedfollicle
+andtheouterrimcorrespondstothecellsdirectlysurroundingthefollicle(adiameterof1.2timesthesizeofacell).
+timesthemaximumdistancebetweencellswithinthesegmented (Fig. 5B, inner circle), as expected. However, tonsils 9338 and
+follicleregion,asrepresentedbytheoutercircleofthepiechart. 8953 had higher proportions of proliferating B cells, than tonsil
+Comparingthefolliclesofthethreetonsilsimaged,intrafollic- 6677,andtonsil6677hadahigherproportionofrestingBcells,
+ularcellulardistributionsweresimilarwith20-30%CD4+Tcells, suggestive ofpotentially activeimmune responses within tonsils
+60-70%Bcells,andabout10%othercellandstromalcelltypes 9338 and 8953. The cell frequencies in the areas surrounding
+© 2021 The Authors.European Journal of Immunology published by www.eji-journal.eu
+Wiley-VCHGmbH
+
+1270 JuliaKennedy-Darlingetal. Eur.J.Immunol.2021.51:1262–1277
+thefolliclesoftonsilsweresimilarbetweentonsilsamples.How- B cells [32], this anticorrelation likely corresponds to marginal
+ever, there were higher proportions of CD4+ T cells (40-50%), zonestructurewithinthespleen[33].
+lowerproportionsofBcells(∼33%),andmorebloodvesselsand
+blood vessel cells near the ECM (∼20%) than within the folli-
+cles(Fig.5B,outercircle).Additionally,proliferatingBcellswere Discussion
+presentatsignificantlylowerproportions(1-2%)intheareassur-
+roundingthefolliclesthanwithinfolliclesacrossalltonsils. ThestreamlinedversionofmultiplexedCODEXimagingreported
+Comparisonofthefolliclesfromdifferentsecondarylymphoid hereusesoligonucleotide-barcodedantibodiestostaintissuesand
+organsrevealedconsiderabledivergenceincellularcompositions. iterativeannealingandstrippingoffluorescentlylabeledreporter
+Folliclesfromtonsilsweremorecellularlycomparabletofollicles oligonucleotides to detect antibody binding. The repeated
+fromtheLN(Fig.5C)thanthosefromthespleen(Fig.5D).There oligonucleotide exchange reactions eliminate the need for enzy-
+wasahigherproportionofCD19+/CD22+/CD40+ Bcellswithin matic reactions to detect antibody binding, decreasing the com-
+folliclesofspleen(∼66%)thanwithinfolliclesoftonsilsandLN plexity, time required, cost, computational analysis, and back-
+(33-50%)(Fig.5B-D,innercircle).Additionally,theproportionof ground signal associated with the original method [27]. This is
+helperT(CD4+)cellswithinthesplenicfollicles(∼10%)wasless
+enabled by using DMSO-based buffers, which act as chaotropic
+thanthoseoftonsilandLN(20-30%)(Fig.5B-D,innercircle). solventsthatreducethemeltingpointofDNAsuchthatanneal-
+Differenceswereevenlargerinproportionsofcellpopulations ing and stripping of the DNA fluorescent barcodes can be done
+surroundingfolliclesofdifferentsecondarylymphoidorgans.For at room temperature [34]. Magnesium (Mg2+) ions also coun-
+example,helperT(CD4+)cellsmadeupabout33%ofcellssur-
+teractthenegativechargesofDNAandimproveduplexstability
+roundingfolliclesintonsils(Fig.5B,outercircle),approximately [35,36]. The method employs a robotic fluidics system that can
+66% in LN (Fig. 5D, outer circle), and about 20% in the spleen beintegratedwithafluorescentmicroscope,whichwillfacilitate
+(Fig. 5D, outer circle). Moreover, the areas outside the follicle adoption by laboratories that use traditional immunofluorescent
+regions in the spleen contained higher proportions of granulo- imaging.
+cytes,macrophages,andTcellsnearECMthanineithertheLN The 59 oligonucleotide barcodes designed were not cross-
+ortonsils(∼50%vs.10-15%)(Fig.5B-D,outercircle). binding, bound specifically to cells, and were efficiently
+hybridized and removed using chaotropic solvents. Oligonu-
+cleotidebarcodedesign is scalable, and thenumber ofbarcodes
+Correlatedcell-typedensitieswithinfollicleregions could be expanded in the future to enable more than 59 mark-
+erstobeidentifiedsimultaneously.Forinstance,additionalfluo-
+Beyond calculating the cellular compositions of distinct regions, rophoresbeyondthethreedeployedhereeachcyclecouldexpand
+spatially resolved cell-type identification enables assessment of thepanelsizeinagiventimeframeorreducethetimeforanalysis
+the local densities of various cell types. Under the assumption ofagivenpanelsizedependingonhowtheprobesaredeployed.
+that cell types move along density gradients, cell types with Validation of additional barcodes would allow antibodies to be
+correlatedlocaldensitiescouldindicatethatacommonmolecu- used in multiple antibody panels without the need for barcode
+lar program drives positioning, whereas anticorrelated cell-type reconjugation.
+densitiescouldcorrespondtoamolecularprogramthatmaintains Usingtherepeatedoligonucleotideexchangereactionsmethod
+separation. overcomestwochallengesfacedinmultiplexedfluorescentimag-
+We randomly extracted regions of 100 by 100 pixels across ing.First,comparedtoothermultiparameterfluorescentimaging
+eachfollicleregionforeachtissueandcomputedthefrequencies techniques, this method has less spectral overlap as fewer fluo-
+of cell types in each of these regions. We then evaluated corre- rophoresareusedpercycle.Second,batcheffectsareminimized
+lations in these frequencies (Fig. 6, Supporting Information Fig. bystainingwithallantibodiesatonceandusingthebarcodesto
+S3).Inallthreetissuetypes,therearetwomodulesofcelltypes rendereachantibodyfluorescent.
+withstronglycorrelateddensities.Thefirstconsistsofproliferat- Here, we applied the modified CODEX technique to analyze
+ingB-cellpopulations, CD19+ Bcells,follicularDCs,andhelper fresh frozen human immune organ sections. This technique is
+Tcells(Fig.6,redboxes).Thismoduleisconsistentwiththepre- equallyapplicabletootherclinicalspecimens,includingformalin-
+viously described composition of the light zone of the B-cell GC fixed, paraffin-embedded tissue with minor modifications to the
+[30,31]. staining protocol, enabling large retrospective analyses through
+Theothermoduleofhighlycorrelatedcelldensitiesthatwas theimagingoftissuemicroarrays[28].Moreover,using3Dtissue
+commontoallthreetissuetypesconsistedofcollagenIV+ blood clearing techniques or expansion microscopy, this method could
+vessels and CD3+ cells and CD45+ cells that were near ECM be applied to image multiple parameters within larger 3D vol-
+(Fig.6,purplebox).Thisvascularmodulewasanticorrelatedwith umesorfocusedsuper-resolutionofasinglecell[37-39].
+thelightzonemodule.ThisalsoshowedthattheCD22+/CD40+ We stained five cellularly dense lymphoid tissues, including
+B cells were anticorrelated with this vasculature module in the samplesfromtonsil,LN,andspleen,withapanelof46barcoded
+spleen,whereasthiswaslargelynotthecasefortheLNortonsil antibodies. Image processing and cell segmentation generated
+(yellow box). As CD22 and CD40 are markers of marginal zone datasets analogous to those generated by multiplexed flow
+© 2021

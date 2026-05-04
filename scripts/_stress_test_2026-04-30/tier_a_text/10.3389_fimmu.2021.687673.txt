@@ -1,0 +1,357 @@
+METHODS
+published:19May2021
+doi:10.3389/fimmu.2021.687673
+Highly Multiplexed Phenotyping of
+Immunoregulatory Proteins in the
+Tumor Microenvironment by CODEX
+Tissue Imaging
+DarciPhillips1,2,ChristianM.Schürch1,3,MichaelS.Khodadoust4,YounH.Kim2,4,
+GarryP.Nolan1andSizunJiang1*
+1DepartmentofPathology,StanfordUniversitySchoolofMedicine,Stanford,CA,UnitedStates,2Departmentof
+Dermatology,StanfordUniversitySchoolofMedicine,Stanford,CA,UnitedStates,3DepartmentofPathologyand
+Neuropathology,UniversityHospitalandComprehensiveCancerCenterTübingen,Tübingen,Germany,4Divisionof
+Editedby: Oncology,StanfordUniversitySchoolofMedicine,Stanford,CA,UnitedStates
+PedroBerraondo,
+CimaUniversidaddeNavarra,Spain Immunotherapiesarerevolutionizingcancertreatmentbyboostingthenaturalabilityofthe
+Reviewedby:
+immunesystem.Inadditiontoantibodiesagainsttraditionalcheckpointmoleculesortheir
+CarlosE.DeAndrea,
+ligands (i.e., CTLA-4, PD-1, and PD-L1), therapies targeting molecules such as ICOS,
+UniversityofNavarra,Spain
+JonZugazagoitia, IDO-1, LAG-3, OX40, TIM-3, and VISTA are currently in clinical trials. To better inform
+IndependentResearcher,
+clinical care and the design of therapeutic combination strategies, the co-expression of
+Madrid,Spain
+immunoregulatoryproteinsonindividualimmunecellswithinthetumormicroenvironment
+*Correspondence:
+SizunJiang mustberobustlycharacterized.Highlymultiplexedtissueimagingplatforms,suchasCO-
+sizunj@stanford.edu DetectionbyindEXing(CODEX),areprimedtomeetthisneedbyenabling>50markersto
+be simultaneously analyzed in single-cells on formalin-fixed paraffin-embedded (FFPE)
+Specialtysection:
+tissuesections.Assemblyandvalidationofantibodypanelsisparticularlychallenging,with
+Thisarticlewassubmittedto
+CancerImmunityandImmunotherapy, respecttothespecificityofantigendetectionandrobustnessofsignaloverbackground.
+asectionofthejournal
+Herein,wereportthedesign,development,optimization,andapplicationofa56-marker
+FrontiersinImmunology
+CODEXantibodypaneltoeightcutaneousTcelllymphoma(CTCL)patientsamples.This
+Received:29March2021
+Accepted:27April2021 panel is comprised of structural, tumor, and immune cell markers, including eight
+Published:19May2021
+immunoregulatory proteins that are approved or currently undergoing clinical trials as
+Citation:
+immunotherapy targets. Here we provide a resource to enable extensive high-
+PhillipsD,SchürchCM,
+dimensional, spatially resolved characterization of the tissue microenvironment across
+KhodadoustMS,KimYH,
+NolanGPandJiangS(2021) tumortypes andimaging modalities. Thisframework provides researchers with areadily
+HighlyMultiplexedPhenotypingof
+applicable blueprint to study tumor immunology, tissue architecture, and enable
+ImmunoregulatoryProteinsinthe
+TumorMicroenvironmentby mechanistic insights intoimmunotherapeutic targets.
+CODEXTissueImaging.
+Front.Immunol.12:687673. Keywords:immunotherapy,CODEXmultiplexedtissueimaging,immunophenotyping,immunoregulatoryproteins,
+doi:10.3389/fimmu.2021.687673 tumormicroenvironment,cancerimmunity,lymphoma
+FrontiersinImmunology | www.frontiersin.org 1 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+INTRODUCTION AfundamentalaspectoftheCODEXmethodologyreliesupon
+a well-designed and validated antibody panel. Combining up to
+Immunotherapies work through the blockage or stimulation of 60markersinasingleexperimentrequiresthatallantibodiesto
+immunoregulatoryproteinstoenhancethebody’sinnateabilityto
+stain robustly under the same antigen retrieval condition, and
+targetanddestroytumorcells.CTLA-4,PD-1,andPD-L1arethe that antibody performance is optimized by the imaging order.
+most widely studied inhibitory checkpoint molecules, and drugs Herein, we describe the establishment of a 56-marker panel to
+targeting these proteins have revolutionized treatment for analyze FFPE cutaneous T cell lymphoma (CTCL) tissues by
+numerous solid and hematological malignancies (1). CODEX. This panel comprises immune, tumor, and structural
+Unfortunately, only about 20% of patients derive long-lasting (e.g.,epithelial,stromal,vascular)markers.Italsoincludeseight
+benefits from current immunotherapies (2). Novel therapies immunoregulatory proteins—ICOS, IDO-1, LAG-3, PD-1, PD-
+targeting inhibitory (e.g., IDO-1, LAG-3, TIGIT, TIM-3, VISTA) L1, OX40, Tim-3, and VISTA—to simultaneously phenotype,
+and stimulatory (e.g., ICOS, GITR, OX40, 4-IBB) proteins within localize, and quantify these functional molecules on individual
+thetumormicroenvironment(TME)areunderactiveinvestigation cells within the TME, adding important insights to the field of
+(3–7).Clinicaltrialsarealsounderwaytocombinethesenovelpre-
+cancer immunotherapy. This work serves as a blueprint for
+clinicaltreatmentswithestablishedanti-CTLA-4(i.e.,ipilimumab) customizing CODEX antibody panels and provides researchers
+and anti-PD-1 (i.e., pembrolizumab and nivolumab) therapies for and clinicians with a working antibody panel for high-
+greatereffect(7–13).Thisexpandinglistoftargetsunderscoresthe
+dimensional characterization of the TME, with broad
+urgent need to characterize the expression of immunoregulatory adaptability to different malignancies of interest or alternative
+proteins,inthenativecontextofindividualcellswithintheTME,to imaging platforms, such as Imaging Mass Cytometry (IMC)
+driveimmunotherapyselectionforcancerpatients(14). (22–24), Multiplexed Ion Beam Imaging (MIBI) (25–28), and
+Clinical staining of immunoregulatory proteins is routinely tissue-basedcyclicimmunofluorescence(t-CyCIF)(29).
+performed with conventional one- or two-color
+immunohistochemistry (IHC). Studying more than two markers
+eitherrequiresacarefulselectionofprimaryantibodies(i.e.,raised
+in different species to prevent cross-reactivity with the secondary METHODS
+antibodies) or the use of consecutive tissue sections, which is
+Tissue Material
+problematic for studying samples with low tissue availability and
+makesitextremelydifficulttoco-localizemarkersatthesingle-cell SkintumorsampleswereobtainedfromCTCLpatientstreatedat
+level. Therefore, conventional IHC drastically limits accurate Stanford University. Written informed consent was obtained
+classification of both cell-type and function (e.g., reactive PD-1+ from all patients. The use of their tissues for this research was
+CD4+ T cells versus immunosuppressive PD-1+ FOXP3+ CD4+ T fullyanonymizedandapprovedbytheStanfordUniversityIRB
+cells). This in turn limits a comprehensive understanding of the Administrative Panels onHumanSubjects inMedical Research
+TMEandthefactorsunderlyingimmunotherapyresponsiveness. (HSR46894).FFPEhistologyblocksweregeneratedaccordingto
+The emergence of multiplexed tissue imaging has enabled standard pathology procedures (30). A tissue microarray was
+researchers to overcome these challenges and to further our then created from eight CTCL specimens (Supplementary
+understanding of cancer immunotherapy. Recent work Table 1). Tissue microarray cores were 0.6 mm in diameter
+exemplifies how multiplexed IHC (mIHC) is superior to single- andacquiredfromthemostheavilytumor-infiltratedareaofthe
+plex PD-L1 IHC, tumor mutational burden, or gene expression biopsy. The tissue microarray was sectioned at 4-µm thickness
+™
+profilingforpredictingresponsetoPD-1/PD-L1blockadetherapies and mounted onto Vectabond -treated (Vector Laboratories,
+across 10 different solid tumors (15). CO-Detection by indEXing Burlingame, CA, USA; #SP-1800) square glass coverslips
+(CODEX), a commercialized and accessible multiplexed tissue (Electron Microscopy Sciences, Hatfield, PA, USA; #72204-01),
+imaging platform (Akoya Biosciences, Menlo Park, California, aspreviouslydescribed(16,19).
+USA), uses oligonucleotide-conjugated antibodies and sequential
+fluorescentreporters,todetectupto60markerssimultaneouslyina Antibodies and DNA Oligonucleotide
+single tissue section at resolutions that resolve individual cells. As Conjugation
+such,CODEXgeneratesdetailedinformationonthedistributionof Commercially available purified, carrier-free monoclonal and
+differentcellularphenotypes,whilemaintainingthemorphological polyclonalanti-humanantibodies(Table1)wereconjugatedto
+context of healthy and diseased tissues (16). Since the CODEX maleimide-modified short DNA oligonucleotides [TriLink
+methodwasfirstdescribedin2018(17),thistechnologyhasbeen Biotechnologies, San Diego, CA, USA; for detailed
+successfullyadaptedforuseinFFPEtissues(16,18)andappliedto oligonucleotide sequences see (16)] at a 2:1 weight/weight ratio
+immunophenotypesolid(16)andhematological(19)malignancies. of oligonucleotide to antibody, as previously described (16, 18,
+Establishmentofacompanioncomputationalframeworkhasbeen 19). Conjugated antibodies were subsequently stored at 4°C,
+crucialforprocessingrawCODEXimagingdata,mappingcellular where they remained stable for at least 1 year. Conjugated
+interactions, and analyzing cellular neighborhoods (16–21). These antibodies were titrated and validated under the supervision of
+studieshaveacceleratedthediscoveryofnewimmunecellsubsets a board-certified pathologist (C.M.S.) and confirmed with an
+(16, 17) and biomarkers (19), and correlated spatial organization online database (The Human Protein Atlas; www.proteinatlas.
+withcancerprognosis(16)andimmunotherapeuticoutcomes(19). org)(31).
+FrontiersinImmunology | www.frontiersin.org 2 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+TABLE1| Markerpanel(56antibodiesand2nuclearstains)forCODEX.
+Target Clone Supplier Oligo* Fluorophore Dilution Exposuretime Cycle Channel
+CD1a O10+CA1/71 NovusBiologicals 43 Cy5 1:100 1/2s 19 4
+CD2 RPA-2.10 Biolegend 25 Cy5 1:25 1/2s 7 4
+CD3 MRQ-39 CellMarque 77 Cy5 1:100 1/2s 16 4
+CD4 EPR6855 Abcam 20 ATTO550 1:100 1/2s 7 3
+CD5 UCHT2 Biolegend 75 ATTO550 1:50 1/2s 8 3
+CD7 MRQ-56 CellMarque 63 ATTO550 1:100 1/2s 19 3
+CD8 C8/144B NovusBiologicals 8 Cy5 1:50 1/5s 17 4
+CD11b EPR1344 Abcam 28 Cy5 1:50 1/2s 21 4
+CD11c EP1347Y Abcam 49 ATTO550 1:50 1/2s 11 3
+CD15 MMA BDBiosciences 14 Alexa488 1:200 1/8.5s 13 2
+CD16 D1N9L CellSignalingTechnology 26 ATTO550 1:100 1/2s 12 3
+CD20 rIGEL/773 NovusBiologicals 48 ATTO550 1:200 1/4s 10 3
+CD25 4C9 CellMarque 24 ATTO550 1:100 1/2s 9 3
+CD30 BerH2 CellMarque 57 ATTO550 1:25 1/2s 5 3
+CD31 C31.3+C31.7+C31.10 NovusBiologicals 68 ATTO550 1:200 1/5s 24 3
+CD34 QBEnd/10 NovusBiologicals 38 ATTO550 1:100 1/4s 22 3
+CD38 EPR4106 Abcam 66 ATTO550 1:100 1/5s 23 3
+CD45 B11+PD7/26 NovusBiologicals 56 ATTO550 1:400 1/8.5s 26 3
+CD45RA HI100 Biolegend 72 Cy5 1:50 1/2s 15 4
+CD45RO UCH-L1 Biolegend 2 ATTO550 1:100 1/4s 20 3
+CD56 MRQ-42 CellMarque 29 Cy5 1:50 1/2s 3 4
+CD57 HCD57 Biolegend 30 ATTO550 1:200 1/4s 16 3
+CD68 KP-1 Biolegend 70 Cy5 1:100 1/4s 23 4
+CD69 polyclonal R&DSystems 36 ATTO550 1:200 1/2s 15 3
+CD138 B-A38 NovusBiologicals 76 ATTO550 1:100 1/8.5s 25 3
+CD162 HECA-452 NovusBiologicals 46 Cy5 1:200 1/8.5s 27 4
+CD163 EDHu-1 NovusBiologicals 45 Cy5 1:200 1/4s 21 3
+CD194 L291H4 Biolegend 71 Cy5 1:100 1/2s 20 4
+CD206 polyclonal R&DSystems 55 ATTO550 1:100 1/2s 14 3
+a-SMA polyclonal Abcam 69 Alexa488 1:200 1/3s 10 2
+b-catenin 14 BDBiosciences 51 Cy5 1:50 1/2s 18 4
+BCL-2 124 NovusBiologicals 41 ATTO550 1:50 1/2s 18 3
+CCR6 polyclonal NovusBiologicals 53 Cy5 1:25 1/2s 5 4
+CollagenIV polyclonal Abcam 33 Cy5 1:200 1/4s 24 4
+Cytokeratin C11 Biolegend 62 Cy5 1:200 1/5s 22 4
+DRAQ5 N/A CellSignalingTechnology N/A Cy5 1:100 1/5s 28 4
+EGFR D38B1 CellSignalingTechnology 58 ATTO550 1:25 1/2s 13 3
+FoxP3 236A/E7 Abcam 61 ATTO550 1:100 1/4s 3 3
+GATA3 L50-823 CellMarque 60 Cy5 1:100 1/2s 2 4
+GranzymeB EPR20129-217 Abcam 81 Alexa488 1:200 1/8.5s 14 2
+HLA-DR EPR3692 Abcam 65 ATTO550 1:200 1/4s 17 3
+Hoechst33342 N/A ThermoFisherScientific N/A Hoechst 1:1000 1/150s 1-28 1
+ICOS D1K2T CellSignalingTechnology 74 Cy5 1:100 1/2s 14 4
+IDO-1 D5J4E CellSignalingTechnology 59 Cy5 1:25 1/2s 12 4
+Ki-67 B56 BDBiosciences 6 Cy5 1:100 1/5s 8 4
+LAG-3 D2G4O CellSignalingTechnology 42 Cy5 1:25 1/2s 10 4
+Mastcelltryptase AA1 Abcam 44 ATTO550 1:200 1/100s 27 3
+MMP-9 L51/82 Biolegend 80 Cy5 1:200 1/6s 26 4
+MUC-1 955 NovusBiologicals 15 Alexa488 1:100 1/2s 11 2
+OX40 polyclonal R&DSystems 67 Cy5 1:100 1/2s 9 4
+PD-1 D4W2J CellSignalingTechnology 23 Cy5 1:50 1/2s 11 4
+PD-L1 E1L3N CellSignalingTechnology 11 ATTO550 1:50 1/2s 6 3
+Podoplanin D2-40 Biolegend 32 Cy5 1:200 1/3s 25 4
+T-bet D6N8B CellSignalingTechnology 5 ATTO550 1:100 1/2s 2 3
+TCR-g/d H-41 SantaCruzBiotechnology 52 ATTO550 1:100 1/2s 4 3
+Tim-3 polyclonal R&DSystems 21 Cy5 1:50 1/2s 4 4
+Vimentin RV202 BDBiosciences 7 Alexa488 1:200 1/4s 12 2
+VISTA D1L2G CellSignalingTechnology 79 Cy5 1:50 1/2s 13 4
+*DNAoligonucleotidesequencesaredetailedinTableS1C(Schürch,C.M.,etal.Cell.2020;https://doi.org/10.1016/j.cell.2020.07.005)(16).
+FrontiersinImmunology | www.frontiersin.org 3 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+CODEX Multiplexed Tissue Staining and M1macrophages,M2macrophages,andtumorcellsbymanual
+Image Acquisition gatinginCellEngine(https://cellengine.com).
+CODEX staining and imaging were performed as previously
+Visualizing CODEX Data
+described(16,18,19).Briefly,thecoverslipcontainingthetissue
+section was baked at 70°C for 1 hour, deparaffinized in xylene, Seven-color overlay images with select markers were created in
+ImageJ (https://imagej.net/). Simulated brightfield IHC images
+rehydratedinethanol,andwashedinddH Obeforeperforming
+2 weregeneratedfromCODEXfluorescencedatausinganImageJ
+heat-inducedepitoperetrievalwithDakotargetantigenretrieval
+macro(https://bitbucket.org/davemason/makehdab/src/master/).
+solution, pH 9 (Agilent Technologies, Santa Clara, CA, USA;
+Voronoidiagramsofassignedcell-typeswerecreatedinPython,
+#S236784-2) at 97°C for 10 min on a LabVison PT Module
+(Thermo Fisher Scientific, #A80400012). The coverslip was
+withslightmodificationstopreviouslydescribedscripts(https://
+github.com/nolanlab/NeighborhoodCoordination/)(16).
+subsequently blocked using blocking buffer [S2 buffer
+containingB1 (1:20),B2(1:20), B3(1:20), and BC4(1:15)] and
+stainedwiththe56-markerantibodypanel(Table1)toavolume
+of 100 µl overnight at 4°C. After fixation with 1.6% RESULTS
+paraformaldehyde, 100% methanol, and BS3 (Thermo Fisher
+Scientific, Waltham, MA, USA; #21580), the coverslip was Here, we describe the development, optimization, and
+mounted onto a custom-made acrylic plate (Bayview Plastic application of a 56-marker antibody panel to characterize the
+Solutions, Fremont, CA, USA). Imaging of the CODEX composition,spatialorganization,andfunctionalimmunestatus
+multicycle experiment was performed using an inverted of the TME in FFPE tumors by CODEX (Table 1). Marker
+fluorescence microscope (Keyence, Osaka, Japan; model BZ- selection was based on 1) in-house testing of antibody
+X710) equipped with a CFI Plan Apo l 20x/0.75 objective performance in IHC and FFPE-CODEX (16, 18, 19), 2) IHC
+(Nikon, Tokyo, Japan), a microfluidics instrument (Akoya experience in clinical pathology laboratories, 3) commercially
+Biosciences, Menlo Park, CA, USA), and CODEX driver available fluorophore-conjugated antibodies that either in their
+software (Akoya Biosciences, Menlo Park, CA, USA). Light conjugated or unconjugated forms work in IHC, 4) IHC and
+exposure times and the order ofmarkers per cycle are outlined FFPE multiplexed tissue imaging publications, and 5) online
+inTable1.TheHoechstnuclearstain(ThermoFisherScientific; databaseslikeTheHumanProteinAtlas(www.proteinatlas.org)
+#62249) was acquired in each cycle and DRAQ5 nuclear stain (31). Notably, 51 of the 56 antibodies in this panel have been
+(Cell Signaling Technology, Danvers, MA, USA; #4084L) was used in other multiplexed imaging studies (Supplementary
+acquired in the final cycle. After completion of the multi-cycle Table 2) (16, 18, 23, 24, 26–29). These 51 antibodies were
+reaction, manual hematoxylin and eosin (H&E) staining was studied in different tissues (e.g., tonsil, breast cancer, colon
+performedaccordingtostandardpathologyprocedures(30),and cancer, pancreatic cancer, squamous cell carcinoma, etc.),
+thetissuemicroarraywasre-imagedinbrightfieldmode. using different modalities (i.e., CODEX, MIBI, IMC, t-CyCIF),
+and by different research groups (i.e., in different countries, by
+Processing and Analysis of CODEX Data different operators), which emphasizes the reproducibility of
+RawTIFFimagefileswereprocessedusingtheCODEXToolkit, these markers and satisfies an orthogonal strategy for antibody
+as previously described (18, 19). Briefly, after the data was validation (32). The key contribution of the current study is
+uploaded, cell segmentation was performed using DRAQ5 thereforethepresentationofarobust,working56-markerpanel
+nuclearstain.Antibodyexpression wasquantifiedatthesingle- focused on immunophenotyping and immunoregulation.
+cell level and this data was cleaned by gating using CellEngine Interested researchers can easily purchase, conjugate, and
+(https://cellengine.com). This yielded a total of 25,456 cells titrate the antibodies shown in Table 1 as a starting point for
+acrosstheeighttissuemicroarray cores.TheresultantFCSfiles theirownmultiplexedtissueimagingpanels.
+were imported into the VorteX clustering software (20) and All antibodies were conjugated to unique maleimide-modified
+subjected to unsupervised X-shift clustering, with the following DNA oligonucleotides (with lengths between 10-19 nucleotides),
+30 parameters: CD1a, CD3, CD4, CD7, CD8, CD11c, CD15, added to tissues that were subjected to high pH (pH 9) antigen
+CD20, CD25, CD30, CD31, CD34, CD38, CD45, CD56, CD68, retrieval buffer, incubated overnight at 4°C, and tested/titrated in
+CD138, CD163, CD206, a-smooth muscle actin, cell size, CODEX single-staining experiments. Antibody testing was
+cytokeratin, FoxP3, HLA-DR, Ki-67, mast cell tryptase, PD-1, performed using tonsil (Supplementary Figure 1) and a tissue
+PD-L1, podoplanin, and vimentin. Cell morphology and size microarray with 16 healthy and 54 cancerous tissues (16, 18) to
+were used to further refine clusters manually and those with ensuretheinclusionofappropriatepositiveandnegativecontrols.
+similar features were merged, resulting in 18 cell-types. As all Conjugatedantibodieswerestainedatadilutionbetween1:25and
+specimens did not contain epithelium, and in turn Langerhans 1:200 and visually evaluated for subcellular localization (e.g.,
+cells, clusters with CD11c+ dendritic cells and Langerhans cells nucleus, cytoplasm, membrane), cell-type (e.g., immune,
+were merged and classified as antigen presenting cells (APC). tumor, or stromal cells), signal intensity, dynamic range, and
+Thisledto17cell-types(Figure2A).Theexpressionfrequencies signal-to-noiseratio.
+of ICOS, IDO-1, LAG-3, PD-1, PD-L1, OX40, Tim-3, and Afterdeterminingtheoptimalconditionsforeachconjugated
+VISTA were determined for CD4+ T cells, CD8+ T cells, Tregs, antibody by CODEX single-staining, a 56-marker multicycle
+FrontiersinImmunology | www.frontiersin.org 4 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+experiment was performed on a CTCL tissue microarray morphology, we were able to confidently stratify immune cell-
+compiled from eight patients (Supplementary Figures 2 and types, even when they were bordering other lineage-specific
+3A, B). All antibodies performed as expected when imaged immune cells (Figure 3). Two representative H&E-stained
+during the CODEX multicycle experiment (Supplementary samples from the same tissue section, with six zoomed-in
+Figure 4), including the seven polyclonal antibodies used in Voronoi diagrams representing the cell-types identified, are
+this panel, which showed consistent staining intensity, shown in Figures 3A, B. The major immune cell-types,
+appropriate spatial expression patterns, and no anomalous stratified by lymphoid and myeloid lineages, are shown as
+cross-reactivity. Importantly, the reproducibility of antibody Voronoi cell-type representations, 20x fluorescence images,
+staining is high within a single CODEX multicycle experiment and simulated brightfield images, which recreate the staining
+for a given tissue region (16, 18, 21), between patient samples pattern that would be observed by conventional IHC using
+(Supplementary Figure 5) as well as across experiments chromogenic methods (Figure 3C, top to bottom). Together,
+processed in parallel (19). For all CODEX experiments, the these data demonstrate the capability of this well-designed and
+first cycle is a “blank” cycle (i.e., no fluorescent titratedpaneltoeffectivelyenumeratemajorimmunecell-types
+oligonucleotides are added). This is critical for assigning cell- andvisualizetheirlocationwithintheoverallTMEarchitecture.
+types from imaging data, which consists of subtracting Inadditiontophenotypicstratification,weleverageduponthe
+background fluorescence signals that arise from auto- high multiplexing capabilities of CODEX to include functional
+fluorescence and non-specific antibody binding (measured markers,particularlyimmunoregulatoryproteinsthatareessential
+from the “blank” cycle), segmenting the image to identify for the study of cancer immunology and immunotherapy.
+individual cells, and integrating the staining intensity of all Specifically, we focused on eight functional immune molecules
+markersoneachcelltoidentifycell-types. that are the targets of approved or in trial immunotherapies:
+The 56-marker panel consists of structural, tumor, and ICOS, IDO-1, LAG-3, OX40, PD-1, PD-L1, TIM-3, and VISTA
+immune markers as well as antibodies against proteins that (Figure 4A) (2, 33–37). Representative examples of the staining
+reflect functional cellular states and immune regulation. A patternofthesemarkersonTcells,macrophages,andtumorcells
+representative seven-color overlay image shows structural, areshown(Figure4A).Proteinexpressioncomparisonsofimmune
+lymphoid, myeloid, and tumor cell markers in a CTCL tissue andtumorcellsrevealthatPD-L1waspredominantlyexpressedon
+microarray core (Figure 1). Seven-color overlay images for all tumor cells, while ICOS, IDO-1, LAG-3, and OX40 were
+tissuemicroarraycoresareshowninSupplementaryFigure3C. predominantly present on immune cells, and TIM-3 and VISTA
+Thispanelenables extensiveimmunophenotyping:33ofthe were expressed on both tumor and immune cells in similar
+56 antibodies recognize antigens specific for T cells, B cells, proportions (Figure 4B). The expression of each
+plasmacells,NKcells,macrophages,dendriticcells,Langerhans immunoregulatory protein varies across immune cell-types and
+cells,granulocytes,andmastcells.Infact,11ofthe17identified individual patients (Figure 4C and Supplementary Figure 6),
+cell-types were immune specific, where dendritic cells and consistent with previous reports (26, 38–41). For example, PD-1
+Langerhans cells were merged and classified as APCs (Figure wasstronglyexpressedonCD4+Tcells,ICOSonCD4+Tcellsand
+2A).Theimmunecell-typesincludeAPCs,Bcells,CD4+Tcells, Tregs, TIM-3 on M1 and M2 macrophages, and VISTA on M1
+CD8+Tcells,granulocytes,M1macrophages,M2macrophages, macrophages.Theseresultsdemonstratehowsimultaneousanalysis
+mast cells, NK cells, plasma cells, and Tregs. The frequency of of phenotypic and functional markers on single-cells, within their
+immune cell subsets across all patients identified populations native spatial, tissue context, is a powerful approach for
+withhigh(APCs,18%;CD4+Tcells,18%;CD8+Tcells,20%;M2 understanding the diverse landscape of functional immune
+macrophages, 18%; Tregs, 10%), medium (B cells, 4%; M1 molecules in cancer, and their roles in the immunotherapy
+macrophages, 7%), and low abundance (NK cells, 2%; responsivenessacrosspatients.
+granulocytes, 1%; mast cells, 1%; plasma cells, 1%) (Figure
+2B). Voronoi diagrams (i.e., cell position plots) were used to
+generateamapofimmunecell-typepositions(Figure2C).These DISCUSSION
+maps reveal substantial spatial heterogeneity between patients,
+suggestingdynamicandvariableeffectsofimmunesurveillance Advancements in cancer immunotherapies require intimate
+withintheTME. knowledge of the orchestrated interaction and organization of
+Theidentificationofimmunecell-typeshashistoricallybeen cancer and immune cells. Multiplexed immunophenotyping
+based on the presence or absence of cluster of differentiation approaches are essential in our efforts to identify predictive
+(CD) proteins, other cell surface markers, and lineage-specific biomarkers of response and reveal insights into therapeutic
+transcription factors. Distinguishing cell-types in high mechanisms of action. Established, clinically accessible mIHC
+dimensional tissue imaging data can be challenging due to 1) tissue imaging techniques are limited by the number of markers
+lateralmarkerspilloverofcellsadjacenttoeachother,2)variable (≤7),whileothermultiparametertechnologies(e.g.,masscytometry
+staining intensity of lineage-specific proteins across cell-types, (CyTOF)andsingle-cellRNAseq)lackspatialcontext.TheCODEX
+and 3) simultaneously integration of lineage-specific marker multiplexedtissueimagingmethodutilizedinthisstudyovercomes
+expression patterns. Using higher-order unsupervised X-shift theselimitations,andthe56-markerantibodypanelestablishedhere
+clustering (20) and manual refinement based on cell size and enables extensive immunophenotyping of archival FFPE cancer
+FrontiersinImmunology | www.frontiersin.org 5 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+FIGURE1| Detectionofstructural,lymphoid,myeloid,andtumormarkersbyCODEXinasingleCTCLtissuemicroarraycore(patient6).Seven-coloroverlayimage
+withcytokeratin(epithelium;green),vimentin(stroma;blue),CD31(vasculature;gray),Ki-67(proliferation;red),CD45(leukocytes;cyan),CD3(Tcells;magenta),and
+CD68(macrophages;yellow).BelowpanelsshowH&E,Hoechst(nuclear),andindividualmarkerstainings.Scalebars,100µm.
+specimens.Constructionofapanelthatcapturesstructuralmarkers, the TME, which are critical for advancing the field of
+major immune cell-types and markers that inform cellular cancerimmunotherapy.
+functional states (e.g., Ki-67 for proliferation and granzyme B for AnimportantprerequisiteforthestudyofFFPEtissuesisthe
+cytotoxicity), including immunoregulatory proteins, is paramount need for antigen retrieval, which involves the reversal of
+towards this goal. This work presents a blueprint for providing crosslinks formed during formalin fixation, to make epitopes
+novelinsightsintothespatialorganizationandfunctionalstatusof accessible for antibody binding. Antigen retrieval involves
+FrontiersinImmunology | www.frontiersin.org 6 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+A B
+C
+FIGURE2| Detectingcell-typesbyCODEX.(A)HeatmapofCODEX-identifiedcell-typesclustersbyproteinexpression;antigenpresentingcells(APCs)includedendritic
+cells(DCs)andLangerhanscells(LCs).(B)Immunecellcompositioninallpatients.(C)Voronoidiagramsmappingcell-typepositions,coloredaccordingtothelegend.
+boilingtissuesinaspecifiedpHbuffer(rangingfrompH3to10) expected when they intermixed with other antibodies. When
+and detergents. Since the pH can greatly influence antibody combined, some antibodies may generate unexpected staining
+binding(24,42)andtheentireCODEXantibodypanelisstained patterns not observed individually, due to aberrant cross-
+simultaneouslyonasingletissuesection,allantibodiesmustbe reactivity between antigens and/or oligonucleotides (43, 44).
+optimized to perform with the same antigen retrieval protocol. Second, multiple overlapping markers must be used to
+ThepaneldescribedhereisoptimizedforantigenretrievalatpH accurately classify cell-types. For instance, in this panel, Tregs
+9, followed by antibody staining at 4°C overnight. In total, we weredefinedbyco-expressionofFoxP3,CD25,CD3,CD4,and
+conjugated 59 antibodies for implementation in this panel. 56 CD45 (and lack of co-expression of non-lineage specific
+antibodieseventuallypassedourqualitycontrolassessmentand markers). This ability to visually inspect the spatial expression
+were deemed as successfully conjugated and validated in FFPE pattern of antibodies and cross-validate them against lineage-
+human tissues, translating to a 94.9% success rate (i.e., 56/59 specific markers is a unique capability of highly multiplexed
+antibodies). The three antibodies that did not pass our tissue imaging and an important milestone of antibody
+assessment were TCR-a/b (clones G-11, T10B9), CTLA-4 validation. Third, the multicycle panel order must be carefully
+(clones 2188A, BN13, L3D10), and TIGIT (clone TG1), likely considered. Importantly, after 10 cycles of iterative washing,
+owing to alteration of the antibody structure during the partial hybridization, and stripping, we observe a slight decrease in
+reductionstepoftheCODEXconjugation,thehighpHantigen signal strength of nuclear markers (16). Thus, antibodies that
+retrieval condition, aberrant oligonucleotide-antigen target nuclear markers and other low abundance proteins were
+interactions,and/orlowsignalintensity. placed in earlier cycles. As marker intensity and tissue
+Establishment a CODEX antibody panel, as described here, morphology is not otherwise degraded during a multicycle (16,
+involvesseveralconsiderations.First,antibodiesmustperformas 18), the other markers were distributed to balance the panel
+FrontiersinImmunology | www.frontiersin.org 7 May2021 | Volume12 | Article687673
+
+Phillipsetal. CODEXImagingofTumorMicroenvironments
+A B
+C
+FIGURE3| Visualizingimmunecell-typesbyCODEX.(A,B)H&EstainingsfortwodifferentCTCLpatientsandcorrespondingVoronoidiagramsfrom6select
+regions;seeFigure2BforfullVoronoidiagram.(C)Majorimmunecell-typesseparatedbylineageandshownas:1)azoomed-inregionfromonethesixselected
+Voronoidiagrams,color-codedasin(A,B)(toppanel),2)aCODEXfluorescentimagewithHoechstnuclearstain(blue)andthemarkerofinterest(white)(middle
+panel),and3)asimulatedbrightfieldIHCimageforthemarkerofinterest(bottompanel).Scalebars:(A,B)100µm,(C)10µm.
+across the fluorescent channels (i.e., Alexa488, ATTO550, and Immunotherapy is achieved thr

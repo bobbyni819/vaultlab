@@ -2315,6 +2315,46 @@ def _collect_citations_from_summaries(
 #   quality** work expects: an LLM-driven plan generator emits this dict
 #   shape, ``build_from_plan`` renders it deterministically.
 
+def _auto_pick_figure_layout(
+    image_path: str,
+    bullets: Any,
+) -> str:
+    """Pick a figure-slide layout automatically from image aspect + bullet count.
+
+    Rules:
+    - aspect > 1.8 (very wide, like a multi-panel horizontal diagram) →
+      ``figure_above_bullets`` so the figure gets full slide width.
+    - aspect < 0.55 (very tall, like a stacked-bar vertical chart) →
+      ``figure_above_bullets`` so the figure gets the upper half wide.
+    - no bullets → ``figure_only`` (full-width centered hero).
+    - aspect 0.55–1.8 with bullets → ``default`` (figure left + bullets right).
+
+    Falls back to ``default`` when the image can't be read or PIL is missing.
+    """
+    has_bullets = bool(bullets)
+    if not image_path:
+        return "default"
+    try:
+        from PIL import Image
+        from pathlib import Path as _P
+        p = _P(image_path)
+        if not p.exists():
+            return "default"
+        with Image.open(p) as im:
+            iw, ih = im.size
+        if ih <= 0:
+            return "default"
+        aspect = iw / ih
+    except Exception:  # noqa: BLE001
+        return "default"
+
+    if not has_bullets:
+        return "figure_only"
+    if aspect >= 1.8 or aspect <= 0.55:
+        return "figure_above_bullets"
+    return "default"
+
+
 # Slide types the dict-plan builder understands.
 SUPPORTED_PLAN_SLIDE_TYPES: frozenset[str] = frozenset({
     "title",
@@ -2431,6 +2471,12 @@ def build_from_plan(
             slide = add_section_divider(pres, slide_spec.get("title", ""))
         elif stype == "figure":
             layout = slide_spec.get("layout", "default")
+            if layout in ("default", "auto"):
+                # Auto-pick layout from figure aspect + bullet count.
+                layout = _auto_pick_figure_layout(
+                    slide_spec.get("image_path", ""),
+                    slide_spec.get("bullets"),
+                )
             if layout == "figure_only":
                 slide = add_figure_only_slide(
                     pres,

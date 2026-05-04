@@ -263,3 +263,47 @@ def test_render_binning_coverage_includes_all_structure_sections():
 def test_get_named_structure_returns_canonical():
     assert get_named_structure("short") is SHORT
     assert get_named_structure("STANDARD") is STANDARD  # case-insensitive
+
+
+# ---------------------------------------------------------------------------
+# Scope -> depth coupling
+# ---------------------------------------------------------------------------
+
+
+def test_default_depth_for_short_scope_is_fast():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope("short") == "fast"
+
+
+def test_default_depth_for_standard_scope_is_balanced():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope("standard") == "balanced"
+
+
+def test_default_depth_for_review_paper_is_thorough():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope("review-paper") == "thorough"
+    assert default_depth_for_scope("review_paper") == "thorough"
+
+
+def test_default_depth_accepts_arc_structure_instance():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope(SHORT) == "fast"
+    assert default_depth_for_scope(STANDARD) == "balanced"
+    assert default_depth_for_scope(REVIEW_PAPER) == "thorough"
+
+
+def test_default_depth_for_none_returns_fast():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope(None) == "fast"
+
+
+def test_default_depth_for_unknown_string_falls_back_to_balanced():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope("custom-scope-name") == "balanced"
+
+
+def test_default_depth_is_case_insensitive():
+    from vaultlab.research.arc_structure import default_depth_for_scope
+    assert default_depth_for_scope("REVIEW-PAPER") == "thorough"
+    assert default_depth_for_scope("Standard") == "balanced"

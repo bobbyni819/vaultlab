@@ -21,6 +21,16 @@ class Paper:
         pdf_url: Direct URL to a PDF if available.
         citation_count: Number of citations (from Semantic Scholar or other source).
         source_api: Which API provided this record ("pubmed", "springer", "semantic").
+        relation: Optional CrossRef ``relation`` metadata mapping relation
+            names to lists of related-work entries. Shape::
+
+                {"is-preprint-of": [{"id": "10.1038/...", "id-type": "doi"}],
+                 "has-preprint":  [{"id": "10.1101/...", "id-type": "doi"}]}
+
+            Used by :mod:`vaultlab.research.version_preference` to unify
+            preprint↔published-version pairs in the corpus. ``None`` (the
+            default) means the originating source did not supply relation
+            data — preserves backward compatibility.
     """
 
     title: str = ""
@@ -34,6 +44,7 @@ class Paper:
     pdf_url: str = ""
     citation_count: int = 0
     source_api: str = ""
+    relation: dict[str, list[dict]] | None = None
 
     def to_dict(self) -> dict:
         """Convert to a plain dict (for JSON serialization)."""
@@ -49,6 +60,7 @@ class Paper:
             "pdf_url": self.pdf_url,
             "citation_count": self.citation_count,
             "source_api": self.source_api,
+            "relation": self.relation,
         }
 
     @classmethod
@@ -66,6 +78,7 @@ class Paper:
             pdf_url=d.get("pdf_url", ""),
             citation_count=d.get("citation_count", 0),
             source_api=d.get("source_api", ""),
+            relation=d.get("relation"),
         )
 
     def __str__(self) -> str:

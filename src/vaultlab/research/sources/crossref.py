@@ -108,6 +108,13 @@ class CrossRefClient:
 
             journals = item.get("container-title", [])
 
+            # Capture CrossRef relation metadata (preprint↔published links,
+            # supplements, etc.) so downstream code in
+            # ``vaultlab.research.version_preference`` can dedupe pairs.
+            relation = item.get("relation")
+            if relation is not None and not isinstance(relation, dict):
+                relation = None
+
             return Paper(
                 title=title,
                 authors=self._parse_authors(item.get("author", [])),
@@ -123,6 +130,7 @@ class CrossRefClient:
                 pdf_url=pdf_url,
                 citation_count=item.get("is-referenced-by-count", 0),
                 source_api="crossref",
+                relation=relation,
             )
         except Exception as e:
             logger.debug("Failed to parse CrossRef item: %s", e)

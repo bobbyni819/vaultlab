@@ -510,6 +510,61 @@ def _call_anthropic(
     return parsed, in_tok, out_tok
 
 
+def _call_anthropic_text(
+    *,
+    text_input: str,
+    prompt: str,
+    api_key: str,
+    model: str,
+    max_tokens: int = DEFAULT_MAX_TOKENS // 4,  # Tier-B is short
+) -> tuple[dict[str, Any], int, int]:
+    """Tier-B SDK call: text input (abstract) instead of PDF document.
+
+    Sister function to :func:`_call_anthropic`. Used by ``summarize_one``
+    when no PDF is available but the abstract qualifies for Tier-B
+    summarization.
+
+    Args:
+        text_input: The abstract text. Embedded into the user message.
+        prompt: The Tier-B prompt (built by :func:`tier_b.build_tier_b_prompt`).
+            Already includes the abstract — ``text_input`` is passed
+            separately for explicitness but isn't re-injected.
+        api_key: Anthropic API key.
+        model: Model id.
+        max_tokens: Lower than Tier-A — Tier-B summaries are short.
+
+    Returns:
+        ``(parsed_json, input_tokens, output_tokens)`` tuple.
+    """
+    import anthropic
+
+    # The Tier-B prompt already includes the abstract; we pass it as
+    # plain user text. ``text_input`` is accepted for API symmetry with
+    # the future batched-reader path but isn't re-injected here.
+    _ = text_input  # unused; abstract is in `prompt`
+
+    client = anthropic.Anthropic(api_key=api_key)
+    from vaultlab.research.tier_b import _TIER_B_SYSTEM_PROMPT
+
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=_TIER_B_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    text_chunks: list[str] = []
+    for block in response.content:
+        if getattr(block, "type", "") == "text":
+            text_chunks.append(block.text)
+    full_text = "\n".join(text_chunks).strip()
+
+    parsed = _extract_json(full_text)
+    in_tok = getattr(response.usage, "input_tokens", 0) or 0
+    out_tok = getattr(response.usage, "output_tokens", 0) or 0
+    return parsed, in_tok, out_tok
+
+
 # ---------------------------------------------------------------------------
 # Tier C stub helpers (no LLM)
 # ---------------------------------------------------------------------------
@@ -947,6 +1002,7 @@ def summarize_paper(
     paper_metadata: dict[str, Any],
     corpus_metrics: "CorpusMetrics | None" = None,
     corpus: "Corpus | None" = None,
+    kb_root: Path | None = None,
     crossref_refs_missing: bool = False,
     api_key: str | None = None,
     model: str = DEFAULT_MODEL,
@@ -998,8 +1054,75 @@ def summarize_paper(
         acquisition_license=acquisition_license,
     )
 
-    # Tier C: no PDF -> stub.
+    # No PDF: try Tier-B (abstract-only summarization) before falling
+    # through to Tier-C stub. Added 2026-05-01 to address coverage gap
+    # — papers like Black 2021 *Nature Protocols* (paywalled) become
+    # citable via abstract-derived summary instead of being invisible
+    # to the narrator.
     if pdf_path is None or not Path(pdf_path).exists():
+        from vaultlab.research.abstract_recall import get_abstract_for_doi
+        from vaultlab.research.tier_b import (
+            apply_tier_b_response,
+            build_tier_b_prompt,
+            should_run_tier_b,
+        )
+
+        # Robust abstract retrieval: corpus.papers → KB stub frontmatter
+        # → KB stub body → CrossRef live fetch. The Tier-B gate then
+        # checks length sufficiency before any LLM call.
+        # Network fetches are disabled when ``_llm`` is injected (test
+        # mode) to keep tests hermetic.
+        abstract = get_abstract_for_doi(
+            doi=doi,
+            corpus=corpus,
+            kb_root=Path(kb_root) if kb_root is not None else None,
+            allow_fetch=(kb_root is not None and _llm is None),
+        )
+
+        if should_run_tier_b(pdf_acquired=False, abstract=abstract):
+            try:
+                tier_b_prompt = build_tier_b_prompt(
+                    paper_metadata={
+                        "title": summary.title,
+                        "authors": summary.authors,
+                        "year": summary.year,
+                        "journal": summary.journal,
+                        "doi": summary.doi,
+                    },
+                    abstract=abstract,
+                    role_hint=summary.role_in_set,
+                )
+                tier_b_caller = _llm or _call_anthropic_text
+                if _llm is None:
+                    api_key = load_anthropic_api_key(api_key)
+                    parsed, in_tok, out_tok = tier_b_caller(
+                        text_input=abstract,
+                        prompt=tier_b_prompt,
+                        api_key=api_key,
+                        model=model,
+                    )
+                else:
+                    # Test injection: _llm is the SAME signature as
+                    # _call_anthropic (pdf_bytes-based). Coerce by passing
+                    # the abstract bytes as pdf_bytes so existing test
+                    # harnesses still work.
+                    parsed, in_tok, out_tok = tier_b_caller(
+                        pdf_bytes=abstract.encode("utf-8"),
+                        prompt=tier_b_prompt,
+                        api_key=api_key or "test",
+                        model=model,
+                    )
+                apply_tier_b_response(summary=summary, response=parsed)
+                summary.tokens_input = in_tok
+                summary.tokens_output = out_tok
+                return summary
+            except Exception:
+                # Tier-B is best-effort. If the LLM call fails (network,
+                # rate-limit, parse error), fall through to Tier-C stub
+                # rather than crashing the whole corpus summarization.
+                pass
+
+        # Tier-C fallback: no PDF and no Tier-B viable.
         summary.tier = "C"
         summary.source_pdf = ""
         return summary
@@ -1234,6 +1357,7 @@ def summarize_corpus(
     progress: Callable[[str, int, int], None] | None = None,
     reader: SummaryReader | None = None,
     tier_a_dois: set[str] | frozenset[str] | None = None,
+    batch_size: int = 1,
     _llm: Callable[..., tuple[dict[str, Any], int, int]] | None = None,
 ) -> dict[str, PaperSummary]:
     """Build summaries for every paper in ``corpus.papers`` and write them.
@@ -1270,6 +1394,16 @@ def summarize_corpus(
         reader: Optional Claude-Code-side callback. When given,
             replaces the SDK call. Receives a :class:`SummarizationTask`
             and must return a dict matching ``task.response_schema``.
+            When ``batch_size > 1`` the reader is also invoked with a
+            :class:`vaultlab.research.batched_reader.BatchSummarizationTask`
+            for batched chunks; readers that don't yet understand the
+            batch task should keep ``batch_size=1``.
+        batch_size: Group Tier-A papers (those with cached PDFs in the
+            ``tier_a_dois`` budget) into chunks of this size and ask the
+            reader to summarize each chunk in one call. Default ``1`` =
+            previous one-paper-per-call behavior. Only honored in
+            reader-mode; SDK mode currently ignores it (batched SDK
+            calls require ``_call_anthropic`` changes).
         _llm: Test injection for the SDK path.
 
     Returns:
@@ -1386,6 +1520,7 @@ def summarize_corpus(
             },
             corpus_metrics=metrics,
             corpus=corpus,
+            kb_root=kb_root,  # threads through to abstract_recall for Tier-B
             crossref_refs_missing=refs_missing,
             api_key=api_key,
             model=model,
@@ -1398,6 +1533,136 @@ def summarize_corpus(
 
     # Reader mode is sequential because Claude Code sessions are single-threaded.
     if reader is not None or parallel <= 1:
+        # Optional batched-reader path: when batch_size > 1 in reader mode,
+        # group Tier-A papers (with cached PDFs and inside the budget) into
+        # chunks and ask the reader to summarize each chunk in one call.
+        # Tier-C / Tier-B papers (no PDF or out-of-budget) keep the existing
+        # one-paper-at-a-time path because they don't share the batch shape.
+        if reader is not None and batch_size and batch_size > 1:
+            from vaultlab.research.batched_reader import (
+                apply_batch_response_to_summary,
+                parse_batch_response,
+                prepare_batch_task,
+            )
+
+            batchable: list[str] = []
+            non_batchable: list[str] = []
+            for doi in dois:
+                pdf_path = cache_path_for(doi, pdf_cache_dir)
+                in_budget = (
+                    tier_a_dois is None or doi in tier_a_dois
+                )
+                if in_budget and pdf_path.exists():
+                    batchable.append(doi)
+                else:
+                    non_batchable.append(doi)
+
+            done = 0
+            # Walk batchable DOIs in fixed-size chunks.
+            for start in range(0, len(batchable), batch_size):
+                chunk = batchable[start : start + batch_size]
+                pdf_specs: list[tuple[str, Path, dict[str, Any]]] = []
+                metas_by_doi: dict[str, dict[str, Any]] = {}
+                pdf_by_doi: dict[str, Path] = {}
+                refs_missing_by_doi: dict[str, bool] = {}
+                for doi in chunk:
+                    paper = corpus.papers[doi]
+                    pdf_path = cache_path_for(doi, pdf_cache_dir)
+                    metadata = {
+                        "title": paper.title,
+                        "authors": paper.authors,
+                        "year": paper.year,
+                        "journal": paper.journal,
+                        "doi": paper.doi,
+                        "citation_count": paper.citation_count,
+                    }
+                    pdf_specs.append((doi, pdf_path, metadata))
+                    metas_by_doi[doi] = metadata
+                    pdf_by_doi[doi] = pdf_path
+                    refs_missing_by_doi[doi] = (
+                        doi in corpus.references
+                        and not corpus.references.get(doi)
+                    )
+
+                applied: set[str] = set()
+                # Single-paper "batches" can fall through to per-paper
+                # since batched_reader.should_batch enforces MIN_BATCH_SIZE=2.
+                if len(pdf_specs) >= 2:
+                    try:
+                        batch_task = prepare_batch_task(pdf_specs=pdf_specs)
+                        batch_response = reader(batch_task) or {}
+                        per_paper = parse_batch_response(
+                            response=batch_response,
+                            dois=[d for d, _, _ in pdf_specs],
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "summarize_corpus: batch of %d failed (%s); "
+                            "falling back to per-paper",
+                            len(pdf_specs), exc,
+                        )
+                        per_paper = {}
+
+                    for doi in chunk:
+                        per = per_paper.get(doi.lower())
+                        if per is None:
+                            continue  # missing -> per-paper fallback below
+                        summary = _build_base_summary(
+                            doi=doi,
+                            paper_metadata=metas_by_doi[doi],
+                            corpus_metrics=metrics,
+                            corpus=corpus,
+                            acquisition_source="",
+                            acquisition_license="",
+                        )
+                        apply_batch_response_to_summary(
+                            summary=summary,
+                            per_paper_response=per,
+                            pdf_path=pdf_by_doi[doi],
+                        )
+                        write_summary_to_kb(
+                            summary, kb_root, overwrite=overwrite,
+                        )
+                        results[doi] = summary
+                        applied.add(doi)
+                        done += 1
+                        if progress is not None:
+                            progress(doi, done, total)
+
+                # Per-paper fallback for any DOIs the batch dropped or
+                # for single-element chunks below MIN_BATCH_SIZE.
+                for doi in chunk:
+                    if doi in applied:
+                        continue
+                    try:
+                        _, summary = _one_reader(doi)
+                    except Exception as exc:
+                        logger.warning(
+                            "summarize_corpus: %s failed: %s", doi, exc,
+                        )
+                        done += 1
+                        continue
+                    results[doi] = summary
+                    done += 1
+                    if progress is not None:
+                        progress(doi, done, total)
+
+            # Tier-C / out-of-budget papers go through the regular path.
+            for doi in non_batchable:
+                try:
+                    _, summary = _one_reader(doi)
+                except Exception as exc:
+                    logger.warning(
+                        "summarize_corpus: %s failed: %s", doi, exc,
+                    )
+                    done += 1
+                    continue
+                results[doi] = summary
+                done += 1
+                if progress is not None:
+                    progress(doi, done, total)
+            return results
+
         for i, doi in enumerate(dois, 1):
             try:
                 _, summary = _one(doi)

@@ -26,6 +26,10 @@ from vaultlab.research.citation_lookup import (
     get_references_via_crossref,
 )
 from vaultlab.research.paper import Paper
+from vaultlab.research.version_preference import (
+    PreprintPublishedPair,
+    find_pairs_from_crossref_relations,
+)
 
 if TYPE_CHECKING:
     from vaultlab.research.graph_metrics import CorpusMetrics
@@ -69,6 +73,12 @@ class Corpus:
     references: dict[str, list[str]] = field(default_factory=dict)
     cited_by: dict[str, list[str]] = field(default_factory=dict)
     metrics: "CorpusMetrics | None" = None
+    preprint_pairs: list[PreprintPublishedPair] = field(default_factory=list)
+    """Preprint↔published-version pairs discovered from CrossRef ``relation``
+    metadata on the seed papers. Populated by
+    :func:`build_corpus_from_seeds`. Used by
+    :func:`vaultlab.research.version_preference.filter_duplicates_from_picks`
+    to drop preprints when the published version is also picked."""
 
     # ------------------------------------------------------------------
     # Convenience views
@@ -209,6 +219,27 @@ def build_corpus_from_seeds(
         _add_paper(corpus, seed)
     seed_dois = [_normalize_doi(s.doi) for s in seeds if s.doi]
     _walk_one_layer(corpus, seed_dois, fetch)
+
+    # Discover preprint↔published-version pairs from CrossRef ``relation``
+    # metadata carried on the seed papers. Pairs are stored on the corpus
+    # so the picker can drop the preprint when the published version
+    # makes it into the final picks.
+    candidate_relations = [
+        {"doi": p.doi, "relation": p.relation}
+        for p in corpus.papers.values()
+        if p.doi and p.relation
+    ]
+    if candidate_relations:
+        corpus.preprint_pairs = find_pairs_from_crossref_relations(
+            candidates=candidate_relations
+        )
+        if corpus.preprint_pairs:
+            logger.info(
+                "Discovered %d preprint↔published pair(s) in corpus '%s'",
+                len(corpus.preprint_pairs),
+                topic,
+            )
+
     logger.info(
         "Built corpus '%s': %d seeds, %d papers, %d edges",
         topic,

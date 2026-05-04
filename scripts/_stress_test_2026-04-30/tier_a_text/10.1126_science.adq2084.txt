@@ -1,0 +1,437 @@
+Published as: Science. 2025 April 18; 388(6744): eadq2084–eadq2084.
+Deep-tissue transcriptomics and subcellular imaging at high
+spatial resolution
+Valentina Gandin1,†, Jun Kim1,†, Liang-Zhong Yang1, Yumin Lian1, Takashi Kawase1, Amy
+Hu1, Konrad Rokicki1, Greg Fleishman1, Paul Tillberg1, Alejandro Aguilera Castrejon1,
+Carsen Stringer1, Stephan Preibisch1, Zhe J. Liu1,*
+1Janelia Research Campus, Howard Hughes Medical Institute, Ashburn, VA 20147, USA
+Abstract
+Limited color channels in fluorescence microscopy have long constrained spatial analysis in
+biological specimens. Here, we introduce cycleHCR, a method that integrates multicycle DNA
+barcoding with Hybridization Chain Reaction (HCR) to overcome this limitation. cycleHCR
+enables highly multiplexed imaging of RNA and proteins using a unified barcode system. Whole-
+embryo transcriptomics imaging achieved precise three-dimensional gene expression and cell fate
+mapping across a specimen depth of ~310 μm. When combined with expansion microscopy,
+cycleHCR revealed an intricate network of 10 subcellular structures in mouse embryonic
+fibroblasts. In mouse hippocampal slices, multiplex RNA and protein imaging uncovered complex
+gene expression gradients and cell-type-specific nuclear structural variations. cycleHCR provides
+a quantitative framework for elucidating spatial regulation in deep tissue contexts for research and
+potentially diagnostic applications.
+Main text:
+Understanding the spatial organization of molecular components within complex tissue
+samples is crucial for deciphering the biological regulations that underpin animal
+development and disease states. Marked advancements in microscopy, tissue clearing and
+This work is licensed under a Creative Commons Attribution 4.0 International License, which allows reusers to distribute, remix,
+adapt, and build upon the material in any medium or format, so long as attribution is given to the creator. The license allows for
+commercial use.
+*Correspondence: liuz11@hhmi.org (Z.J.L.).
+†These authors contributed equally to this work
+Author contributions:
+Z.J.L. conceived and designed the study, conducted robotic arm, fluidics, and microscope assembly and programming, and performed
+probe design and assembly. V.G. conducted cycleHCR RNA and protein imaging experiments with mouse embryonic stem cells,
+cerebellar, and hippocampal slices. J.K. and Z.J.L. performed image processing and single-cell analysis, including image stitching,
+registration, spot detection, 3D cell segmentation, spot-to-cell assignment, cell mask-based intensity calculation, UMAP analysis, and
+gene-to-cluster assignment. L.Y. and A.A.C. prepared E6.5-7.0 mouse embryos for cycleHCR RNA imaging. V.G. and Y.L. validated
+antibodies for cycleHCR protein imaging. Y.L., A.H., and P.T. prepared the expanded mouse embryonic fibroblast for cycleHCR
+protein imaging. C.S. wrote custom codes for Cellpose-based 3D segmentation incorporating both xy and yz models and compatible
+with large datasets. T.K., K.R., G.F., and S.P. developed the Nextflow-orchestrated image processing workflow. Z.J.L. wrote the
+manuscript with inputs from other authors.
+Competing interests:
+Z.J.L. and V.G. are named as co-inventors on a patent application titled “METHODS AND COMPOSITIONS FOR IMAGING RNA
+AND PROTEIN TARGETS IN BIOLOGICAL SPECIMENS”, application number: 63/643,155. Authors declare no other competing
+interests.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 2
+expansion techniques over the past decades have enabled deeper imaging with enhanced
+clarity and resolution (1–3). However, a fundamental limitation of fluorescent imaging
+remains - it cannot simultaneously image multiple molecular components or color channels
+due to the restricted availability of labeling dyes and their spectrum overlaps.
+Recent advances in high-throughput spatial omics, notably single-molecule in situ
+hybridization (ISH) techniques like MERFISH and seqFISH (4, 5), as well as in situ
+sequencing methods such as FISSEQ and STARmap (6, 7) have improved our capacity
+to spatially decode molecular identities, particularly for RNA species. These methods are
+further optimized for thick tissue applications ranging from 90 to 200 μm ( 8, 9). Despite
+notable improvements, several technical limitations remain. First, they rely on cross-round
+barcoding, which requires precise single-molecule localization of multiple RNA species
+in the same image, cross-round spot registration, and de-mixing of spots to assign them
+to specific genes. This approach is particularly sensitive to molecular crowding, where
+dense targets obscure the detection of others, limiting these techniques to sparse targets
+that can still be resolved when compressed in the same image (fig. S1). As a result,
+cross-round barcoding is not well-suited for multiplex imaging of high-abundance targets
+like proteins or densely packed RNA structures. Another limitation of these strategies is
+the lack of empirical ground-truth images for visualization and validation of each target,
+which is crucial for applications requiring direct image verification (10). Moreover, precise
+cross-round spot registration and de-mixing become increasingly challenging in thick tissue
+datasets especially when image tiling and stitching are required.
+The development of split Hybridization Chain Reaction (HCR) techniques has begun to
+address several critical challenges in deep tissue imaging: First, the proximity binding
+requirement of split probes to initiate HCR allows for high specificity in the probe
+hybridization process. This feature enables single-shot imaging of RNA and protein
+molecules without the need for cross-round decoding and proofing (11–13). Second, HCR
+based signal amplification permits the use of objectives with low numerical apertures
+and long working distances, enabling fast and reliable deep-tissue detection, as recently
+demonstrated in whole-brain imaging (14). Third, the inherent single-shot nature of HCR
+imaging obviates the need for cross-round decoding, making this technique impervious
+to molecular crowding and suitable for imaging both sparse and dense targets. Achieving
+multi-round HCR imaging has been demonstrated through the time-consuming process of
+primary probe removal by DNase treatment and rehybridization (15). Currently, this method
+allows for only one round of imaging every 3 – 5 days, creating a bottleneck in the workflow
+and limiting the number of targets that can be effectively examined.
+cycleHCR: concept and implementation
+Here, we introduce cycleHCR technology that enables high-throughput, single-shot imaging
+of RNA and protein species within thick tissue specimens. At the core of cycleHCR RNA
+imaging lies the optimization and selection of 45-bp split primary probes (Fig. 1A and fig.
+S2). Distinguished by their high melting temperatures (> 90°C) for probe-RNA interactions,
+these probes ensure robust and stable binding under stringent conditions efficiently clearing
+away other components such as HCR chains and barcoding probes across multiple imaging
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 3
+cycles (fig. S3–S4). Another distinction of cycleHCR RNA imaging is the introduction of
+a barcoding phase, which uses 14-bp split Left (L) and Right (R) DNA barcodes (Fig.
+1A). The specificity for each RNA species is determined by the split barcode sequence on
+the primary probe. The downstream HCR reaction is only triggered when both specific L
+and R readout probes with split initiators are present (Fig. 1B), achieving specific target
+recognition both in cultured cells and thick tissue specimens (Fig. 1B–E). Through the
+combination of 30 unique L and 30 unique R probes per color channel (Table S1), cycleHCR
+facilitates the generation of up to 900 distinct barcodes, thereby enabling the potential
+encoding of 2,700 targets across three channels (Fig. 1D).
+The use of highly stable primary probes and precise barcoding negates the need for primary
+probe removal and rehybridization during multicycle HCR imaging. Through optimization,
+a consistent temperature of 32°C allows for signal removal in 20 minutes (fig. S4) and
+HCR amplification in 1.5 hours, achieving about half of the signal intensity of overnight
+amplification (fig. S5). Efficient barcoding is accomplished in under 30 minutes using high
+concentrations (150 ~ 200 nM) of L + R probes at this temperature. These optimizations
+collectively reduce the duration of one detection cycle to within 4 hours. Additionally,
+using an oxygen scavenger imaging buffer prevents photo-crosslinking during imaging
+(fig. S6), maintaining detection fidelity across multiple imaging cycles. Consistent with
+previous studies showing that longer probes with higher melting temperatures improve
+probe hybridization efficiency (16–18), we found that the 45-bp split probes produced
+substantially brighter signals than the traditional 25-bp split HCR probes under our stringent
+hybridization condition. Although adding the barcoding stage with L + R probes reduced
+fluorescent signals intensity by about 20%, the signals still exceeded the intensity observed
+with 25-bp probes (fig. S7). Systematic validation showed negligible cross-talks between
+L + R barcodes at 32°C (fig. S8 and S9A). Nuclear volumes remained consistent over 40
+imaging cycles, indicating minimal sample deformation (fig. S9B). Further analysis revealed
+that HCR amplification at this temperature with 1.5 hours achieved 103.7-, 88.3-, and
+121.3-fold amplification for the 488, 561, and 640 channels, respectively (fig. S10). Gene
+expression measurements using two distinct codebooks showed high correlation (r = 0.93)
+(Fig. 1F), validating the linearity and reliability of cycleHCR detection.
+Transitioning towards full automation, our setup incorporates a programmable robotic arm
+for precise preparation of L + R readout mixes, and an automated imaging and fluidic
+system capable of executing cycleHCR protocols and image acquisition without the need
+of human supervision (fig. S3). This setup supports up to five imaging rounds analyzing
+15 RNA species daily. Consistency and reproducibility in data analysis are facilitated by
+a scalable and portable Nextflow (19) image processing workflow that manages essential
+tasks such as image stitching, cross-cycle registration, spot detection, cell segmentation, and
+spot-to-cell assignment (fig. S11).
+For high-resolution imaging of thick specimens, our setup utilizes spinning disk confocal
+microscopy equipped with silicone oil immersion objectives that offer long working
+distances up to 550 μm. A laser illumination uniformizer ensures homogeneous illumination
+(fig. S12), facilitating robust image stitching with BigStitcher (20) (fig. S13–S14).
+By integrating hydrogel-embedding and enzymatic digestion-based tissue clearing with
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 4
+cycleHCR, we achieved three-dimensional (3D) visualization of subcellular RNA patterns
+with reliable spot detection in thick tissues, spanning both sparsely and densely labeled
+regions over 500 μm, using RS-FISH ( 21) (Fig. 1G). For example, within a ~200 μm
+section of mouse cerebellum (fig. S14 and S15A; Movie 1), we observed dense Slc1a3
+mRNA clusters in Bergmann glia (fig. S15B), Rgs8 transcriptional bursting sites in Purkinje
+nuclei (fig. S15C), and Rgs8 transcripts along dendrites (fig. S15D). Approximately 50%
+of Purkinje cells displayed two Rgs8 bursting sites, with no cell exceeding this number
+(fig. S15E), suggesting a diploid genome in Purkinje cells. RNA spot intensities remained
+consistent across the entire imaging depth (fig. S16).
+Whole-embryo transcriptomics imaging
+To explore gene regulation and cell-fate determination in early development, we focused on
+an intact E6.5-7.0 mouse embryo, requiring ~310 μm axial coverage. Leveraging cycleHCR,
+we performed whole-mount transcriptomics imaging of 254 lineage-specific genes and 12
+non-targeting barcodes through 89 imaging cycles over 20 days, achieving edge-to-edge
+imaging clarity and robust RNA spot detection (Fig. 2A–D and fig. S17; Movie 2; Table S2).
+High system stability and lack of substantial sample deformation enabled accurate cross-
+cycle image registration (fig. S18). The resulting single-shot images revealed distinct mRNA
+localization patterns (fig. S19), highlighting complex transcriptional programs during early
+embryogenesis.
+For single-cell gene expression analysis, we utilized Cellpose (22) for 3D nucleus
+segmentation, applying a specialist model trained on both xy and yz planes and refined
+through size filtering, reaching ~87.6% initial accuracy. Manual curation further refined
+segmentation, identifying ~11,029 nuclei (fig. S20). The set of 254 lineage-specific genes
+was selected to cover diverse cell types from E5.5 to E12.5 during early development
+(23, 24). We applied stringent localization parameters, with expected silent genes at this
+developmental stage and non-targeting barcode combinations typically having fewer than
+200 spot counts across the embryo (Table S3), indicating a conservative false positive
+detection rate of ~0.018 spots per cell. After evaluating various spot-to-cell assignment
+methods (fig. S21–S22), we adopted the most conservative approach, assigning spots based
+on Cellpose masks which are slightly dilated compared to nuclei (Fig. 2E). This strategy
+only captures spots in proximity to or within the nucleus and minimizes contamination for
+accurate 3D gene expression mapping at the single-cell level (Table S4). Furthermore, for
+densely expressed targets such as Col4a1, the spot counts per cell show a strong correlation
+with overall fluorescence intensity at the single-cell level (fig. S1), indicating reliable and
+unsaturated gene expression estimation for high-abundance transcripts. Our data showed
+significant correlation (P-value: 5.74e-13) and spatial alignment with previously published
+scRNA-seq, in situ hybridization (ISH) and immunohistochemistry (IHC) data (23, 25–36)
+(fig. S23–S24), validating the labeling specificity and detection sensitivity of cycleHCR.
+3D cell-fate mapping
+After initial filtering, we identified 186 actively transcribed genes and excluded 484 cells
+with low gene expression levels (fig. S25A–B). The detection rate of actively transcribed
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 5
+genes remained stable throughout imaging cycles, suggesting primary probes and RNA were
+well preserved through the imaging process (fig. S25C). Barcode swapping between active
+and silent genes revealed swapped expression patterns, confirming that low spot counts were
+attributed to low gene expression rather than barcode identity (fig. S26). Uniform Manifold
+Approximation and Projection (UMAP) (37) analysis on these genes revealed 9 distinct cell
+clusters (C1-C9) (Fig. 3A), expanding from 5 ~ 7 clusters previously recognized through
+single-cell sequencing at this developmental stage (23, 38, 39). cycleHCR identified clusters
+span a wide range of cell counts, from 286 in the smallest cluster (C6) to 3,223 in the largest
+(C1). Only 876 cells were left unallocated, as they lacked clear UMAP cluster association
+and were spatially scattered throughout the embryo without defined patterns (fig. S27).
+Gene clustering, UMAP imputation, and 3D spatial gene expression visualization showed
+extensive gene expression overlaps among clusters (Fig 3A; fig. S28), underscoring the
+intricate genetic interactions shaping early development.
+Preliminary lineage assignment, based on marker gene analysis with comparison to previous
+studies (40, 41), suggests C1 as the epiblast (Pim2, Dnmt3b and Prom1), C2 as the primitive
+streak (Eomes, Axin2 and Mcm5), C3 as nascent mesoderm (Lefty2, Mixl1 and Frzb), C4
+as extra-embryonic mesoderm lineages (T (primitive streak and allantois progenitors (42)),
+Tbx3 (allantois progenitors) and F2r (blood progenitors)), C5 as extraembryonic ectoderm
+(Tex19.1, Ahnak and Tead4), C6 as visceral endoderm (Cer1 and Dkk1), C7, C9 as diverse
+endoderm lineages (Col4a1, Sox17, Cubn, Gata4 and Cldn6) and C8 as putative endothelial
+cells (Cdh5 and Vim).
+To gain insights into the spatial organization and developmental context of these
+transcriptionally defined clusters, we proceeded to map them back to their 3D spatial
+locations within the embryo, revealing well-organized structures (Fig. 3B; Movie 3).
+Specifically, the 3D map shows the anatomical segregation of interior clusters - C1
+(epiblast), C2 (primitive streak), C3 (nascent mesoderm), C4, and C5 (extraembryonic
+ectoderm) - into embryonic (C1, C2, C3) and extraembryonic (C5) domains, with C4 serving
+as a demarcation between the two domains. Within the embryo, the epiblast (C1), primitive
+streak (C2), and nascent mesoderm (C3), arrange into distinct, symmetrical layers across
+the midline. The endoderm clusters, C6, C7 and C9, also demonstrate spatial segregation,
+with C6 encasing the embryonic clusters (C1, C2, C3), C7 encircling the extraembryonic
+ectoderm (C5), and cells from C9 sparsely surrounding C6 and C7. Adding to this complex
+structure, the C8 covers endoderm layers, forming concentric rings.
+The anatomical arrangement of identified clusters further refines the interpretation of
+potential cell fates. For example, the spatial positioning of C1 (Epiblast), C2 (Primitive
+Streak) and C3 (Nascent mesoderm) aligns with established developmental processes at this
+stage, including gastrulation and mesoderm migration (43, 44). Notably, C4, positioned
+between embryonic and extraembryonic domains, likely represents extra-embryonic
+mesoderm (allantois and blood progenitors (F2r, Tbx3 and Wnt5a)) destined to form the
+umbilical cord connecting the fetus to the placenta (45, 46). The extraembryonic ectoderm
+(C5) is set to become the placental cone (47). Gene expression and spatial positioning
+identify C6 (Cer1 and Dkk1) and C7 (Cubn) as visceral and extraembryonic endoderm cells
+directly interacting with the embryo (Fig. 3B) (48), with C6 more concentrated near the
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 6
+epiblast and C7 laterally positioned and enriched in the extraembryonic region. C9, lacking
+direct embryo contact and with highly specific expression of the gene encoding extracellular
+matrix protein - Col4a1 (Fig. 3B), represents the parietal endoderm, eventually contributing
+to the parietal yolk sac (49). The putative endothelial cells (C8) mark emerging blood
+vasculature (50), crucial for supporting both embryonic and extraembryonic structures.
+Detailed cross-comparison with scRNA-seq data from the same developmental stage (23)
+reveals an under-representation of C3 (nascent mesoderm) and C9 (parietal endoderm),
+along with the absence of C4 (allantois and blood progenitors) and C8 (endothelial cells)
+from previous scRNA-seq UMAP clusters (fig. S24). These differences could be due to
+the low cell recovery rate (~39.5 cells per embryo) and potential selection biases during
+single-cell isolation (fig. S23). The precise enumeration and localization of minor or nascent
+cell groups, such as C4, C8, and C9, underscore the utility of cycleHCR for in situ spatial
+analysis of cell types in intact specimens.
+3D spatial analysis of gene expression gradients and heterogeneity
+Extensive studies showed that cell fate and lineage commitment during early development
+begin with a heterogeneous “salt and pepper” pattern, which gradually forms specific
+expression gradients over time (51, 52). The 3D spatial information embedded within our
+cycleHCR data enables us to dissect these gradients and expression heterogeneity within
+each UMAP cluster. Establishing methods to analyze these patterns should advance our
+understanding of how new cell fates and structures emerge spatially. To analyze these
+patterns, we first transformed Cartesian xyz cell positions into three independent axes
+relevant to embryonic structure: distal-proximal, anterior-posterior, and radial (Fig. 4A). We
+found that gene expression on the left and right sides of the embryo is highly correlated,
+despite cells on each side being positioned at different axial locations during imaging (Fig.
+4B–C). This further validates our ability to reliably detect gene expression across 3 color
+channels at different imaging depths.
+The well-known Brachyury (T) was found to be over-represented in C2, C3, and C4 in the
+imputed UMAP map (Fig. 4D). We then analyzed gene expression gradients within these
+clusters using linear regression along the three defined axes, observing extensive gradients
+and heterogeneity in single-cell gene expression (Fig. 4E, Table S5). For example, in C2, T
+expression is higher in the proximal region, while Midn expression is higher in the distal
+region. In C3, T, the mesoderm marker Lefty2, and the definitive endoderm marker Foxa2
+occupy distinct spatial regions, with Lefty2 and Foxa2 exhibiting opposite gradients. In
+C4, T is concentrated in the posterior side, whereas the blood progenitor marker F2r is
+more highly expressed in the anterior side of the cluster. These findings illustrate how our
+dataset can help elucidate the emerging spatial expression patterns that underlie cell-fate
+determination during gastrulation.
+Recent studies have demonstrated the necessity to investigate gene co-expression at the
+single cell level (53, 54). Next, we conducted a co-expression analysis revealing distinct
+cluster-specific gene co-expression programs (Fig. 4F; Table S6). By combining gradient
+and co-expression maps, we identified gene pairs that share similar gradients but exhibit
+varying co-expression levels within single cells, suggesting that genes with similar gradients
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 7
+do not necessarily mark the same cell population. Together, these resources and insights
+will aid developmental biologists in understanding complex genetic interplays during early
+development with high spatial precision.
+cycleHCR protein imaging
+To harness the high specificity of cycleHCR for multiplex protein imaging, we next
+developed an antibody complex that simultaneously recognizes the target and anchors a
+cycleHCR barcode within the polyacrylamide gel matrix for imaging readout (Fig. 5A). The
+in vitro complex assembly begins by attaching a docking sequence to the antibody using
+a light-activated oYo linker (55), followed by annealing a gel anchoring probe that binds
+through DNA complementarity. This gel-anchoring probe carries a L + R barcode and a 5’
+acrydite group for covalent gel incorporation. Once embedded, the barcode is permanently
+retained in the gel matrix, eliminating the need for the antibody to remain present and
+ensuring signal stability across imaging cycles. We have developed a distinct set of 25 Left
+(pL) and 25 (pR) Right protein barcodes, orthogonal to our RNA-focused set, enabling
+potential joint imaging of RNA and proteins. This method allowed precise, antibody-based
+protein detection over multiple cycleHCR rounds in cultured cells and mouse hippocampal
+slices (Fig. 5A; fig. S29–S30; Table S7).
+Embedding barcoding oligos into the gel preserves spatial information during later
+processing steps, making cycleHCR ideal for coupling with tissue clearing and expansion
+microscopy. To integrate protein cycleHCR imaging with expansion microscopy (56), we
+stabilized the expansion gel with a second, non-expandable gel overlay. This ensured
+stable imaging and robust image alignment through multiple cycles (fig. S31; Table S7),
+allowing us to capture high-resolution images of 10 subcellular structures in primary mouse
+embryonic fibroblasts (Fig. 5B; Movie 4). 3D segmentation revealed the complex spatial
+organization of these structures (Fig. 5B; fig. S32; Movie 5), including distinct nuclear
+regions enriched for heterochromatin, nucleolar fibrillar centers, nuclear speckles, and active
+enhancers. These results highlight the potential utility of cycleHCR protein imaging in
+characterizing subcellular structures and their interrelations.
+Multiplex RNA and protein imaging via cycleHCR
+Next, we investigated the potential of cycleHCR technology for unified multiplex RNA and
+protein imaging within hippocampal slices. We constructed a library targeting 120 genes that
+label diverse cell types in the hippocampus (Table S8). A 40 - 60 μm thick hippocampal slice
+was first stained with 8 cycleHCR barcoded antibodies (Table S7). After gel embedding,
+tissue clearing, and hybridization of the cycleHCR RNA library, 44 readout cycles were
+conducted over 11 days, with 40 cycles targeting RNA and 4 cycles targeting proteins. High
+system stability and precise cross-cycle image registration (fig. S33) ensured high-quality
+visualization of RNA and protein signals through cycleHCR rounds (Fig. 6A–D; fig. S34;
+Movie 6). Accurate 3D cell segmentation and spot identification facilitated single-cell gene
+expression analysis (fig. S35–S36; Table S9). Consistent with the mouse embryo data, gene
+expression maps generated by cycleHCR are well aligned with previously published ISH
+and RNA-seq data (57, 58) (fig. S37). Utilizing UMAP-based clustering, we uncovered
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 8
+6 transcriptionally and spatially segregated clusters (denoted as C1-C6), corresponding
+to distinct neuronal and glial cell types (Fig. 6E; fig. S38–S39). We then repeated the
+experiment by imaging the transcriptome of the same 120 genes with 15 antibodies (fig.
+S40; Table S7; Movie 7), observing similar UMAP clustering (fig. S41). Further analysis
+revealed complex gene expression gradients along the middle line of C1-C2-C3, with 33
+genes displaying descending expression and 7 genes showing ascending expression (Fig.
+6F–G; fig. S42). The unified cycleHCR readout of RNA and protein compositions enabled
+cell-type characterization and sub-cellular structural investigation within the same specimen,
+unveiling cluster-specific nuclear structural variations (Fig. 6H and fig. S43).
+Discussion
+Biological systems are complex networks of interconnected components, making it crucial
+to understand their interrelationships within intact tissue environments. Conventional
+fluorescence microscopy, constrained by fluorescent dye limitations, only allows for
+the observation of a limited number of components, limiting our comprehension of
+complex spatial regulations. Deep tissue imaging further faces challenges such as high
+autofluorescence and the necessity for objectives with low numerical apertures and long
+working distances, which are not well-suited for detecting dim single molecules. As a result,
+in situ hybridization based spatial omics imaging techniques are largely limited to thin tissue
+sections (4, 5, 10), leading to a loss of three-dimensional context. Recently, cross-round
+barcoding techniques have been extended to image thicker samples (90 – 200 μm) by
+deep-learning-based image processing (59), DNA branching amplification (8), rolling circle
+amplification (RCA) (9) and RCA combined with in situ hybridization (60).
+The comparison of cycleHCR to these methods highlights both its advantages and
+its primary limitation which is lower throughput. This limitation stems from the
+Hybridization Chain Reaction (HCR) amplification process and its single-shot-per-target
+approach. However, cycleHCR effectively mitigates issues related to molecular crowding
+by not requiring spot-level registration and de-mixing across multiple rounds, enabling
+straightforward and robust spatial analysis of sparse and dense targets in deep tissues. The
+amplification process also enhances signal strength and contrast against the background,
+enabling imaging of intact tissues without the need for thin sectioning while providing
+empirical images for direct visualization and validation of each target.
+Unlike other cross-round barcoding systems limited to RNA, cycleHCR offers the ability
+to image both RNA and protein using the same barcoding system. The integration of RNA
+and protein imaging bridges the gap between identifying cell types and understanding their
+subcellular protein arrangements, providing a comprehensive view of complex biological
+systems. Particularly, a promising direction is to use RNA information to create cell type
+labels, while applying artificial intelligence-based methods to automatically discover cell-
+type-specific protein structural features.
+Additionally, cycleHCR uses unlabeled barcoding probes along with only six common
+fluorescently labeled HCR hairpin probes for both RNA and protein imaging, greatly
+reducing probe synthesis costs compared to cross-round barcoding strategies as well as other
+Science. Author manuscript; available in PMC 2025 April 18.
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+HHMI
+Author
+Manuscript
+
+Gandin et al. Page 9
+amplification techniques like clamped or branched oligo structures (61, 62) and multiplex
+HCR (63), which require fluorescently labeled probes for individual barcodes or targets.
+Furthermore, cycleHCR is fully automated, requiring minimal human input, making it
+feasible for broad adoption. Coupling cycleHCR with advanced tissue-clearing techniques
+(14, 64) could improve reagent penetration and further enhance its deep-tissue performance.
+While we have shown that increasing the temperature to 32°C accelerates HCR signal
+amplification, the readout probe binding efficiency and required amplification levels ma

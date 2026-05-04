@@ -1,0 +1,62 @@
+editorial
+Catching up with multiplexed tissue imaging
+Highly multiplexed tissue imaging continues to show its power for biomedical discovery. In this issue, we publish
+tools and guidance for implementing this class of methods and reporting subsequent results.
+I
+mmunofluorescence imaging of tissues guidance for generating robust and multiplexed image data and overcomes
+has been a staple in biomedical research, reproducible imaging data using issues associated with very large datasets.
+enabling researchers to gain rich antibody-based multiplexing approaches. In the spirit of usability, MCMICRO is
+information that can complement what can This piece integrates advice from domain implemented in Nextflow and Galaxy, which
+be seen using traditional approaches such as experts and methods developers to help offer a command line interface and graphical
+histological staining. Immunofluorescence lower the barrier to new users getting user interface, respectively. The software
+imaging offers high spatial resolution optimal results with what can be complicated is extensively documented, and numerous
+over large regions and is uniquely suited and nuanced protocols. In addition to resources are available to implement the
+to imaging the location and abundance describing numerous multiplexed imaging many tools included in the pipeline.
+of specific proteins of interest. Recent approaches, the authors outline strategies Despite our longstanding interest in
+years have seen immunofluorescence for preparing both samples and labeling imaging and microscopy, Nature Methods
+pushed seemingly to its limits in terms of reagents, provide guidance for rigorous does not have a long history of publishing
+multiplexing, with well over 20 targets being antibody validation, and describe how to methods for highly multiplexed tissue
+readily accessible in a given experiment. build suitable multiplexed antibody panels. imaging. Two notable exceptions are our
+These highly multiplexed tissue imaging They also offer an in-depth discussion of 2014 paper from Detlef Günther, Bernd
+experiments (including CyCIF, mIHC, the unique aspects of processing, analyzing Bodenmiller and colleagues describing
+IMC, MELC, mxIF, CODEX and MIBI) can and storing highly multiplexed imaging data. the first application of CyTOF to imaging
+seem like an alphabet soup, but they tend Additionally, they provide an invaluable list tumor tissues and the 2017 paper from
+to have methodological commonalities. of community-validated antibody clones Bodenmiller and colleagues describing
+Most use antibody-based staining to gain against human and mouse proteins suitable histoCAT, a computational analysis toolbox
+target specificity combined with either a for highly multiplexed imaging. for interactive and quantitative analysis of
+fluorescence microscopy or imaging mass A Comment from Sandro Santagata, multiplexed imaging data.
+spectrometry readout. Many of the methods Peter Sorger and colleagues including the Tissue imaging has long been the
+involve cyclic imaging or multiple rounds of HTAN consortium puts forth the Minimum domain of histologists and pathologists,
+staining to achieve high levels of multiplexing. Information about Highly Multiplexed with an emphasis on diagnostic imaging. At
+Although the proteome coverage of these Tissue Imaging (MITI) standard. This Nature Methods, our editorial scope is fixed
+methods does not yet approach what can be work seeks to keep the reporting of these squarely on methods for basic research. This
+achieved for spatial transcriptomics methods, multiplexed imaging data at pace with precludes diagnostic, preclinical, clinical
+this level of multiplexing can already be standards developed for genomics and other and translational methods, including digital
+used to distinguish among cell types and microscopy data. The authors emphasize that pathology — a methods space that has
+give detailed insight into tissue architecture, the imminent release of atlas-type datasets exploded, especially with the rise of deep
+with single-cell resolution. Indeed, these combining highly multiplexed imaging and learning for image analysis. That said, this
+techniques fill a methodological gap yet omics data reveals an immediate need for data area continues to grow and increase its reach
+unfilled by single-cell proteomics approaches and metadata standards that facilitate data into basic research, most notably in areas such
+and are a crucial complement to conventional curation and sharing. The piece promotes as immunology and cancer biology, aligning it
+and spatial omics technologies targeting MITI guidelines and implementations, more closely with our editorial scope.
+the genome and transcriptome. As such, describes the governance and future of MITI, We expect that advances in probes,
+several large consortia including the Human and notes that MITI consortium guidelines barcoding strategies, affinity reagents,
+BioMolecular Atlas Program (HuBMAP), the are designed to be broadly applicable multiplexed detection, microscope
+Human Tumor Atlas Network (HTAN) and and open to updates. Such guidelines are sensitivity and microscope throughput will
+the LifeTime Initiative are working toward necessary to improve the reproducibility and continue to move highly multiplexed tissue
+creating atlases combining data from highly reuse of such highly multiplexed data. imaging forward in important ways. We also
+multiplexed tissue imaging with single-cell A Brief Communication from Peter think improved methods for integrating
+omics data. Such atlases will yield unique Sorger and colleagues describing Multiple multiplexed imaging data with other omics
+insight into tissue structure and function in Choice MICROscopy (MCMICRO) rounds technologies will be crucial to the next
+health and disease. out the series. MCMICRO is a computational phases of technological advancement.
+As with many areas of fast-paced pipeline for analyzing whole-slide images Finally, improved algorithmic and software
+methods growth, sometimes analytical of highly multiplexed tissue imaging data tools for viewing and analyzing highly
+tools, best practices guidelines and optimal that meets the unique needs of these types multiplexed and multi-modal omics data
+reporting standards lag behind early waves of datasets and offers powerful analytical will also be needed to make the most of
+of development and biological applications. capabilities. MCMICRO is open access and these advances. We welcome submissions
+Three papers published in this issue aim allows for modular customization of its that push the limits of these technologies to
+to address these open areas and improve workflow, ultimately enabling researchers enable new biological discovery. ❐
+multiplexed tissue imaging in practice. to handle all analytical steps from
+A Perspective from Andrea Radtke, whole-slide images to single-cell data; it is Published online: 11 March 2022
+Sinem Saka and colleagues provides also compatible with many types of highly https://doi.org/10.1038/s41592-022-01428-z
+Nature Methods | VOL 19 | MarcH 2022 | 259 | www.nature.com/naturemethods 259

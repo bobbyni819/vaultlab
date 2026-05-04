@@ -52,7 +52,7 @@ def add_figure_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
         )
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
@@ -62,7 +62,7 @@ def add_figure_slide(
     has_bullets = len(bullets_list) > 0
 
     fig_top_in = 1.1
-    cap_height_in = 0.4 if caption else 0.0
+    cap_height_in = 0.6 if caption else 0.0  # 12pt × ~2 lines + buffer
     cit_height_in = 0.4 if citation_source else 0.0
     cap_gap = 0.05 if caption else 0.0
     fig_height_in = sh_in - fig_top_in - cap_gap - cap_height_in - cit_height_in
@@ -151,12 +151,12 @@ def add_figure_only_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
         )
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
-    cap_height_in = 0.4 if caption else 0.0
+    cap_height_in = 0.6 if caption else 0.0  # 12pt × ~2 lines + buffer
     cit_height_in = 0.4 if citation_source else 0.0
     cap_gap = 0.1 if caption else 0.0
     fig_top_in = 1.2
@@ -216,7 +216,7 @@ def add_figure_above_bullets_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
         )
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
@@ -301,7 +301,7 @@ def add_two_figure_compare_slide(
 
     if title:
         tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
+            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
         )
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)

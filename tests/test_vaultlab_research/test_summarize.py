@@ -894,3 +894,299 @@ def test_summarize_corpus_sdk_honors_tier_a_dois(tmp_path):
     # And the LLM was only ever invoked for the budgeted paper.
     assert len(seen_llm_calls) == 1
     assert "10.1126/science.1225829" in seen_llm_calls[0]
+
+
+# ---------------------------------------------------------------------------
+# Batched-reader wiring (summarize_corpus(batch_size=...))
+# ---------------------------------------------------------------------------
+
+
+def _make_eight_paper_corpus() -> Corpus:
+    """Eight-paper toy corpus for batch-size tests."""
+    seeds = []
+    for i in range(8):
+        seeds.append(
+            Paper(
+                title=f"Paper {i}",
+                authors=[f"Author{i}"],
+                year=2020 + i,
+                journal="J",
+                doi=f"10.9999/paper-{i}",
+            )
+        )
+    corpus = Corpus(topic="batch-test", seeds=seeds)
+    for s in seeds:
+        corpus.papers[s.doi.lower()] = s
+        corpus.references[s.doi.lower()] = []
+    compute_metrics(corpus)
+    return corpus
+
+
+def test_summarize_corpus_batch_size_one_matches_legacy_behavior(tmp_path):
+    """batch_size=1 (default) must produce per-paper reader calls only."""
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    from vaultlab.research.acquisition import cache_path_for
+
+    for doi in ("10.1126/science.1225829", "10.1038/nature17946"):
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    seen_tasks: list[Any] = []
+
+    def _reader(task):
+        seen_tasks.append(task)
+        # Should only ever receive single-paper tasks at batch_size=1.
+        assert isinstance(task, SummarizationTask)
+        return {
+            "tldr": "a. b. c.",
+            "why_it_matters": ["w"],
+            "methods_summary": "m",
+            "key_findings": ["k1 [p1]", "k2 [p2]", "k3 [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+        batch_size=1,
+    )
+    assert len(seen_tasks) == 2
+    assert all(isinstance(t, SummarizationTask) for t in seen_tasks)
+    assert len(summaries) == 3  # two Tier-A + one Tier-C stub
+
+
+def test_summarize_corpus_batches_eight_papers_into_two_calls(tmp_path):
+    """batch_size=4 with 8 Tier-A papers → exactly 2 batched reader calls."""
+    from vaultlab.research.acquisition import cache_path_for
+    from vaultlab.research.batched_reader import BatchSummarizationTask
+
+    corpus = _make_eight_paper_corpus()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    for doi in corpus.papers:
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    batch_calls: list[BatchSummarizationTask] = []
+    per_paper_calls: list[Any] = []
+
+    def _reader(task):
+        if isinstance(task, BatchSummarizationTask):
+            batch_calls.append(task)
+            return {
+                "summaries": {
+                    doi: {
+                        "tldr": f"{doi}. b. c.",
+                        "why_it_matters": ["w"],
+                        "methods_summary": "m",
+                        "key_findings": ["k1 [p1]", "k2 [p2]", "k3 [p3]"],
+                        "extracted_references": [],
+                    }
+                    for doi in task.dois
+                }
+            }
+        per_paper_calls.append(task)
+        return {
+            "tldr": "a. b. c.",
+            "why_it_matters": [],
+            "methods_summary": "",
+            "key_findings": ["k [p1]", "k [p2]", "k [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+        batch_size=4,
+    )
+
+    assert len(batch_calls) == 2
+    assert per_paper_calls == []  # no fallback needed
+    assert len(summaries) == 8
+    assert {len(t.dois) for t in batch_calls} == {4}
+    # All summaries should be Tier-A and tagged claude-batch.
+    for s in summaries.values():
+        assert s.tier == "A"
+        assert s.extracted_via == "claude-batch"
+
+
+def test_summarize_corpus_batch_missing_dois_fall_back_to_per_paper(tmp_path):
+    """DOIs the LLM dropped from a batch should re-run via per-paper reader."""
+    from vaultlab.research.acquisition import cache_path_for
+    from vaultlab.research.batched_reader import BatchSummarizationTask
+
+    corpus = _make_corpus_with_metrics()  # 3 papers
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    # Cache PDFs for two Tier-A papers; the third has no PDF (Tier-C).
+    a_dois = ["10.1126/science.1225829", "10.1038/nature17946"]
+    for doi in a_dois:
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    batch_calls: list[BatchSummarizationTask] = []
+    per_paper_calls: list[SummarizationTask] = []
+
+    def _reader(task):
+        if isinstance(task, BatchSummarizationTask):
+            batch_calls.append(task)
+            # Only return the FIRST DOI; drop the second to force fallback.
+            first = task.dois[0]
+            return {
+                "summaries": {
+                    first: {
+                        "tldr": f"{first}. b. c.",
+                        "why_it_matters": ["w"],
+                        "methods_summary": "m",
+                        "key_findings": ["k1 [p1]", "k2 [p2]", "k3 [p3]"],
+                        "extracted_references": [],
+                    },
+                }
+            }
+        per_paper_calls.append(task)
+        return {
+            "tldr": "fallback. b. c.",
+            "why_it_matters": [],
+            "methods_summary": "",
+            "key_findings": ["k [p1]", "k [p2]", "k [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+        batch_size=4,
+    )
+
+    assert len(batch_calls) == 1
+    # Exactly one DOI dropped → exactly one per-paper fallback.
+    assert len(per_paper_calls) == 1
+    fallback_doi = per_paper_calls[0].doi
+    assert fallback_doi in {d.lower() for d in a_dois}
+    # All three summaries (2 Tier-A + 1 Tier-C) are present.
+    assert len(summaries) == 3
+    assert summaries["10.1038/nature24644"].tier == "C"
+    # The dropped paper should show the fallback tldr.
+    assert summaries[fallback_doi].tldr.startswith("fallback")
+
+
+def test_summarize_corpus_batch_excludes_tier_c_papers(tmp_path):
+    """Tier-C papers (no PDF) must NOT be sent through the batched reader."""
+    from vaultlab.research.acquisition import cache_path_for
+    from vaultlab.research.batched_reader import BatchSummarizationTask
+
+    corpus = _make_corpus_with_metrics()  # 3 papers
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    # Only one paper has a PDF; the other two are Tier-C.
+    cache_path_for(
+        "10.1126/science.1225829", pdf_cache,
+    ).write_bytes(_FAKE_PDF_BYTES)
+
+    batch_calls: list[BatchSummarizationTask] = []
+    per_paper_calls: list[SummarizationTask] = []
+
+    def _reader(task):
+        if isinstance(task, BatchSummarizationTask):
+            batch_calls.append(task)
+            return {
+                "summaries": {
+                    doi: {
+                        "tldr": f"{doi}. b. c.",
+                        "why_it_matters": ["w"],
+                        "methods_summary": "m",
+                        "key_findings": ["k [p1]", "k [p2]", "k [p3]"],
+                        "extracted_references": [],
+                    }
+                    for doi in task.dois
+                }
+            }
+        per_paper_calls.append(task)
+        return {
+            "tldr": "single. b. c.",
+            "why_it_matters": [],
+            "methods_summary": "",
+            "key_findings": ["k [p1]", "k [p2]", "k [p3]"],
+            "extracted_references": [],
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+        batch_size=4,
+    )
+
+    # Only one Tier-A paper exists, which is below MIN_BATCH_SIZE=2,
+    # so the batched_reader path should be skipped entirely and the
+    # paper handled per-paper. Tier-C papers must never appear in
+    # any batch.
+    assert batch_calls == []
+    # The single Tier-A paper still reaches the reader as a per-paper task.
+    assert len(per_paper_calls) == 1
+    assert per_paper_calls[0].doi == "10.1126/science.1225829"
+    # All three summaries written, two of them Tier-C stubs.
+    assert len(summaries) == 3
+    tier_c_count = sum(1 for s in summaries.values() if s.tier == "C")
+    assert tier_c_count == 2
+
+
+def test_summarize_corpus_batch_two_papers_only(tmp_path):
+    """A two-paper Tier-A set with batch_size=4 produces one batched call."""
+    from vaultlab.research.acquisition import cache_path_for
+    from vaultlab.research.batched_reader import BatchSummarizationTask
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+
+    for doi in ("10.1126/science.1225829", "10.1038/nature17946"):
+        cache_path_for(doi, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    batch_calls: list[BatchSummarizationTask] = []
+
+    def _reader(task):
+        assert isinstance(task, BatchSummarizationTask)
+        batch_calls.append(task)
+        return {
+            "summaries": {
+                doi: {
+                    "tldr": f"{doi}. b. c.",
+                    "why_it_matters": ["w"],
+                    "methods_summary": "m",
+                    "key_findings": ["k [p1]", "k [p2]", "k [p3]"],
+                    "extracted_references": [],
+                }
+                for doi in task.dois
+            }
+        }
+
+    summaries = summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        reader=_reader,
+        batch_size=4,
+    )
+
+    assert len(batch_calls) == 1
+    assert len(batch_calls[0].dois) == 2
+    # Two Tier-A + one Tier-C stub.
+    assert len(summaries) == 3
+    assert summaries["10.1126/science.1225829"].extracted_via == "claude-batch"
+    assert summaries["10.1038/nature24644"].tier == "C"

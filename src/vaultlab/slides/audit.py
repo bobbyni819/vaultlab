@@ -65,6 +65,12 @@ class SlideAudit:
     is_thin_text: bool
     is_figure_intended: bool  # heuristic: title contains "figure", "image", section_intro layout, etc.
     figure_gap: bool  # True if figure_intended but n_images == 0
+    is_section_divider: bool = False  # title-only chapter transition (no body); never a figure target
+    overlapping_shapes: int = 0  # count of shapes whose bbox intersects another shape's bbox by >50%
+    text_overflow_shapes: int = 0  # estimated text height > container height by >10%
+    offslide_shapes: int = 0  # shapes whose bbox extends past slide canvas edges
+    title_too_long: bool = False  # title >100 chars (will wrap awkwardly)
+    over_bulleted: bool = False  # >7 bullets in any single text frame
 
 
 @dataclass
@@ -82,14 +88,49 @@ class DeckAuditResult:
     citations_in_arc: list[str] = field(default_factory=list)  # DOIs cited in the arc
 
     @property
+    def total_overlapping_pairs(self) -> int:
+        return sum(s.overlapping_shapes for s in self.per_slide)
+
+    @property
+    def total_overflowing_shapes(self) -> int:
+        return sum(s.text_overflow_shapes for s in self.per_slide)
+
+    @property
+    def total_offslide_shapes(self) -> int:
+        return sum(s.offslide_shapes for s in self.per_slide)
+
+    @property
+    def n_over_bulleted_slides(self) -> int:
+        return sum(1 for s in self.per_slide if s.over_bulleted)
+
+    @property
+    def n_long_titles(self) -> int:
+        return sum(1 for s in self.per_slide if s.title_too_long)
+
+    @property
     def severity(self) -> str:
         """One of "ok", "warn", "fail"."""
+        # Hard fails: shapes off the slide canvas or many overlap pairs
+        if self.total_offslide_shapes >= 1:
+            return "fail"
+        if self.total_overlapping_pairs >= 3:
+            return "fail"
+        if self.total_overflowing_shapes >= 2:
+            return "fail"
         if self.n_total_images == 0 and self.n_slides >= 5:
-            return "fail"  # 0 images is a hard failure for a research deck
+            return "fail"
+        # Warns: any overflow or overlap, structural issues
         if self.figure_gap_slides > 0 or self.thin_slides > 1:
             return "warn"
+        if self.total_overlapping_pairs > 0:
+            return "warn"
+        if self.total_overflowing_shapes > 0:
+            return "warn"
+        if self.n_over_bulleted_slides > 0:
+            return "warn"
+        if self.n_long_titles > 0:
+            return "warn"
         if self.n_total_images < self.n_slides // 4:
-            # Heuristic: <25% of slides have images for a 5+ slide deck
             return "warn"
         return "ok"
 
@@ -174,31 +215,39 @@ def audit_deck(
         )
         title = ""
         all_text = ""
+        text_shape_chars: list[int] = []
         for sh in slide.shapes:
             if sh.has_text_frame:
                 txt = sh.text_frame.text or ""
                 all_text += txt + "\n"
                 if not title and txt.strip():
                     title = txt.strip().split("\n")[0][:80]
+                if txt.strip():
+                    text_shape_chars.append(len(txt.strip()))
         n_text_chars = len(all_text.strip())
         is_thin = n_text_chars < _THIN_SLIDE_TEXT_THRESHOLD and n_images == 0
+
+        # Detect section_divider: title-only slide with no body content.
+        # Specifically: exactly one non-empty text shape, that shape's text
+        # is short (<120 chars), AND no images. These are chapter transitions
+        # ("BACKGROUND", "1. Origins", "Take-aways") and should NEVER receive
+        # post-populated figures — figures belong on content slides.
+        is_section_divider = (
+            n_images == 0
+            and len([c for c in text_shape_chars if c > 5]) == 1
+            and text_shape_chars[0] < 120
+        )
 
         title_lc = title.lower()
         is_figure_intended = any(
             kw in title_lc for kw in figure_intended_titles
         )
-        # Section-intro slides (often followed by a figure-or-bullets
-        # slide) are also figure-intended in the canonical 7-slide layout
         if title_lc.startswith(("history", "development", "state of",
                                 "background", "methods", "results")):
             is_figure_intended = True
-        # Review-paper-scope layouts use numbered section titles
-        # ("1. Theoretical foundations", "2. Early methods", etc.) — match
-        # those too. Also catch common review-paper section keywords.
         if re.match(r"^\s*\d+[.\-]?\s+\S", title) or re.match(
             r"^\s*\d+\s*[-]\s*\d+[.\-]?\s+\S", title
         ):
-            # Numbered section header
             is_figure_intended = True
         review_paper_kws = (
             "introduction", "foundation", "framework", "early method",
@@ -210,7 +259,23 @@ def audit_deck(
         if any(k in title_lc for k in review_paper_kws):
             is_figure_intended = True
 
-        figure_gap = is_figure_intended and n_images == 0
+        # Section dividers are NEVER figure-gaps — they're intentional
+        # transitions. The figure goes on the *content* slide that follows.
+        figure_gap = (
+            is_figure_intended and n_images == 0 and not is_section_divider
+        )
+
+        # Shape-overlap detection: count pairs of shapes whose bboxes
+        # overlap by >50% of the smaller shape's area.
+        n_overlap = _count_overlapping_shape_pairs(slide)
+
+        # Text-overflow + off-slide checks
+        n_overflow = _count_text_overflow_shapes(slide)
+        n_offslide = _count_offslide_shapes(slide, prs.slide_width, prs.slide_height)
+
+        # Title length + bullet density
+        title_long = len(title) > 100
+        over_bul = _has_over_bulleted_textbox(slide, threshold=7)
 
         per_slide.append(SlideAudit(
             index=i,
@@ -220,6 +285,12 @@ def audit_deck(
             is_thin_text=is_thin,
             is_figure_intended=is_figure_intended,
             figure_gap=figure_gap,
+            is_section_divider=is_section_divider,
+            overlapping_shapes=n_overlap,
+            text_overflow_shapes=n_overflow,
+            offslide_shapes=n_offslide,
+            title_too_long=title_long,
+            over_bulleted=over_bul,
         ))
 
         n_total_images += n_images
@@ -251,6 +322,133 @@ def audit_deck(
         per_slide=per_slide,
         citations_in_arc=citations,
     )
+
+
+def _count_overlapping_shape_pairs(slide: Any) -> int:
+    """Count shape pairs whose bounding boxes overlap >50% of the smaller area.
+
+    Uses python-pptx position attributes (left/top/width/height in EMU).
+    Catches the "all body shapes stacked at the same coords" failure mode
+    of post-populating figures into existing slides.
+    """
+    boxes = []
+    for sh in slide.shapes:
+        l = getattr(sh, "left", None)
+        t = getattr(sh, "top", None)
+        w = getattr(sh, "width", None)
+        h = getattr(sh, "height", None)
+        # Real EMU values from python-pptx are concrete ints >0. Reject
+        # anything else (None, MagicMock from tests, unset placeholders)
+        # to keep the audit robust under mocking.
+        if not all(isinstance(x, int) and x is not True and x is not False
+                   for x in (l, t, w, h)):
+            continue
+        if w <= 0 or h <= 0:
+            continue
+        boxes.append((l, t, l + w, t + h, w * h))
+
+    overlap_pairs = 0
+    for i in range(len(boxes)):
+        l1, t1, r1, b1, a1 = boxes[i]
+        for j in range(i + 1, len(boxes)):
+            l2, t2, r2, b2, a2 = boxes[j]
+            ix = max(0, min(r1, r2) - max(l1, l2))
+            iy = max(0, min(b1, b2) - max(t1, t2))
+            inter = ix * iy
+            if inter <= 0:
+                continue
+            smaller = min(a1, a2)
+            if smaller > 0 and inter / smaller > 0.5:
+                overlap_pairs += 1
+    return overlap_pairs
+
+
+def _count_text_overflow_shapes(slide: Any) -> int:
+    """Estimate how many text frames have content that exceeds container height.
+
+    Uses a heuristic: avg char width ≈ 0.55 × font_size_pt; line height ≈
+    1.4 × font_size_pt. Counts wrapped lines per paragraph from chars-per-line
+    and sums × line-height. Flags when estimated > container × 1.1.
+
+    Catches the "bullets clip off the bottom" failure mode users see when
+    24pt body content runs longer than its 5-inch box.
+    """
+    n = 0
+    for sh in slide.shapes:
+        if not getattr(sh, "has_text_frame", False):
+            continue
+        try:
+            text = sh.text_frame.text or ""
+        except Exception:  # noqa: BLE001
+            continue
+        if not text.strip():
+            continue
+        w = getattr(sh, "width", None)
+        h = getattr(sh, "height", None)
+        if not (isinstance(w, int) and isinstance(h, int)) or w <= 0 or h <= 0:
+            continue
+        width_in = w / 914400
+        height_in = h / 914400
+
+        # Determine dominant font size (Pt) — read first run's size, default 18
+        font_size_pt = 18
+        for para in sh.text_frame.paragraphs:
+            for run in para.runs:
+                if run.font.size:
+                    font_size_pt = run.font.size.pt
+                    break
+            if font_size_pt != 18:
+                break
+
+        avg_char_w_in = (font_size_pt * 0.55) / 72
+        chars_per_line = max(1, int(width_in / avg_char_w_in))
+        line_height_in = (font_size_pt * 1.4) / 72
+
+        total_lines = 0
+        for para in sh.text_frame.paragraphs:
+            ptext = para.text or ""
+            if not ptext:
+                total_lines += 1
+                continue
+            wrap = max(1, (len(ptext) + chars_per_line - 1) // chars_per_line)
+            total_lines += wrap
+
+        estimated_h_in = total_lines * line_height_in
+        if estimated_h_in > height_in * 1.1:
+            n += 1
+    return n
+
+
+def _count_offslide_shapes(slide: Any, slide_w: int, slide_h: int) -> int:
+    """Count shapes whose bbox extends past the slide canvas edges."""
+    n = 0
+    for sh in slide.shapes:
+        l = getattr(sh, "left", None)
+        t = getattr(sh, "top", None)
+        w = getattr(sh, "width", None)
+        h = getattr(sh, "height", None)
+        if not all(isinstance(x, int) for x in (l, t, w, h)):
+            continue
+        # Allow tiny float-error tolerance: 0.05" = ~46k EMU
+        tol = 46_000
+        if (l + w) > slide_w + tol or (t + h) > slide_h + tol or l < -tol or t < -tol:
+            n += 1
+    return n
+
+
+def _has_over_bulleted_textbox(slide: Any, threshold: int = 7) -> bool:
+    """True if any text frame contains >threshold non-empty paragraphs."""
+    for sh in slide.shapes:
+        if not getattr(sh, "has_text_frame", False):
+            continue
+        try:
+            paragraphs = sh.text_frame.paragraphs
+        except Exception:  # noqa: BLE001
+            continue
+        non_empty = sum(1 for p in paragraphs if (p.text or "").strip())
+        if non_empty > threshold:
+            return True
+    return False
 
 
 def _extract_dois_from_arc(text: str) -> list[str]:

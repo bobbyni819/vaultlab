@@ -58,6 +58,7 @@ _LABELS: dict[str, str] = {
 _MENTAL_MAP_ORDER: list[str] = ["hook", "key_claim", "evidence", "key_terms", "click", "transition"]
 
 DIVIDER = "\n\n--- DETAILED SCRIPT ---\n"
+DIVIDER_WALKTHROUGH = "\n\n--- EXTENDED WALKTHROUGH ---\n"
 
 
 def dual_format(
@@ -198,9 +199,18 @@ def format_speaker_notes(notes: dict[str, Any] | None) -> str:
 
     map_text = _render_mental_map(notes)
     script = notes.get("script")
+    walkthrough = notes.get("extended_walkthrough")
+
+    sections: list[str] = []
+    if map_text:
+        sections.append(map_text)
     if script:
-        return f"{map_text}{DIVIDER}{str(script).strip()}" if map_text else str(script).strip()
-    return map_text
+        s = str(script).strip()
+        sections.append(DIVIDER + s if sections else s)
+    if walkthrough:
+        w = str(walkthrough).strip()
+        sections.append(DIVIDER_WALKTHROUGH + w if sections else w)
+    return "".join(sections)
 
 
 def parse_speaker_notes(text: str) -> dict[str, Any]:

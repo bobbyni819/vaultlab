@@ -36,7 +36,7 @@ def add_text_slide(
     sizes_d = sizes()
 
     tx = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
+        Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
     )
     tx.text_frame.text = title
     apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)

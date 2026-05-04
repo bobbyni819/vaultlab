@@ -381,32 +381,107 @@ claims like "X and Y together established Z"):
 AVAILABLE FIGURES:
 {fig_block}
 
-OUTPUT FORMAT:
-Return ONLY a JSON object matching this shape:
+==============================================================================
+SLIDE QUALITY RULES — non-negotiable. Reference: CAR-T 30-min advisor deck
+(Output/_demos/advisor-package-2026-04-30/car_t_30min_v13.pptx).
+==============================================================================
+
+R1. TITLES ARE DESCRIPTIVE SENTENCES, NOT NOUN HEADINGS.
+    A reader who only sees the titles must follow the argument.
+    GOOD: "TCRs need MHC; CARs bypass it entirely"
+    GOOD: "CD19 CAR-T cured 90% of refractory pediatric leukemia"
+    GOOD: "Solid tumors block immunity at every step of the cycle"
+    BAD:  "Theoretical foundations"  /  "Methods"  /  "1. Background"
+    Title length: keep ≤57 chars when possible (single line at 28pt). Two
+    lines is fine; three is too many.
+
+R2. SECTION DIVIDERS USED SPARINGLY (≤5 per deck).
+    Reserved for major chapter transitions only ("1. Origins (1989-2010)",
+    "2. First Wins"). Title-only, no figure. Section dividers do NOT carry
+    a figure — figures go on content slides that follow.
+    A 7-slide journal-club deck typically has ZERO section dividers — the
+    descriptive content-slide titles ARE the chapter markers.
+
+R3. EVERY FIGURE SLIDE HAS THIS SHAPE:
+    - Title at top (descriptive sentence per R1)
+    - One figure dominant in the body
+    - Caption directly under figure (≤80 chars, single line)
+    - Citation footer at bottom (Authors et al., Journal Year)
+    - Optional bullets (≤4, ≤45 chars each) when adding NEW claims not
+      obvious from the figure itself
+
+R4. THREE-TIER SPEAKER NOTES — every content slide carries all three:
+
+    speaker_notes:
+      # TIER 1 — mental map (keywords for fluent presenter)
+      hook:        "<one-line opener>"
+      key_claim:   "<the slide's load-bearing claim>"
+      evidence:    "<what supports it: figure panel / data point>"
+      key_terms:   ["<3-7 jargon terms>"]
+      click:       "<what each click reveals; '' if static>"
+      transition:  "<one-sentence bridge to next slide>"
+
+      # TIER 2 — script (the say-this version, 200-400 words)
+      script:      "<polished monologue. Cite the paper authors. Reference
+                    specific panels of the figure. Reads like genuine
+                    knowledge synthesis, not a paper-summary copy-paste.>"
+
+      # TIER 3 — extended walkthrough (concept walkthrough for unfamiliar
+      # presenters, 600-900 words). Structure:
+      #   BACKGROUND — what is the underlying concept; jargon defined
+      #   WHY IT MATTERS — context within the lineage
+      #   METHODS — how the result was obtained; experimental detail
+      #   KEY FINDINGS — bullet-by-bullet unpacking of evidence
+      #   READING THE FIGURE — what each panel shows
+      extended_walkthrough: "<concept walkthrough>"
+
+R5. NO POST-POPULATION OF FIGURES ONTO TEXT-ONLY SLIDES.
+    When a figure is available for a paper, emit it as a `figure` slide
+    directly with all four R3 elements baked in. Do NOT emit a `text`
+    slide expecting figures to be stamped on later.
+
+R6. SECTION_DIVIDER ≠ FIGURE GAP. The renderer will skip section_divider
+    slides during figure-population — figures must be on `figure` slides.
+
+R7. BULLET DENSITY: ≤4 bullets per figure slide. ≤7 per text slide.
+    Each bullet is a complete claim that ADDS information (not a label
+    for what's in the figure).
+
+R8. LAYOUT FIELD (optional override): "figure_only" (full-width hero, no
+    bullets) / "figure_above_bullets" (figure top, bullets bottom — use
+    for very wide or very tall figures) / leave unset for auto-pick.
+
+==============================================================================
+
+OUTPUT FORMAT — return ONLY a JSON object matching this shape:
 
 {{
   "story_arc_summary": "<1-2 sentence description of the arc you chose>",
   "slides": [
     {{"type": "title", "title": "...", "subtitle": "...", "author": "..."}},
-    {{"type": "section_divider", "title": "..."}},
+    {{"type": "text", "title": "<descriptive sentence — see R1>",
+      "bullets": ["..."],
+      "speaker_notes": {{ "hook":"...", "key_claim":"...", "evidence":"...",
+        "key_terms":[...], "transition":"...", "script":"...",
+        "extended_walkthrough":"..." }}
+    }},
     {{
       "type": "figure",
-      "title": "...",
+      "title": "<descriptive sentence claim — see R1>",
       "image_path": "<EXACT path from figure_assignments>",
       "claim_paper_doi": "<doi the slide is about>",
       "figure_paper_doi": "<doi whose figure is used; same as claim if not substituted>",
-      "caption": "<1-2 sentences>",
-      "bullets": ["claim from paper [[<slug>|Author Year]] ...", ...],
+      "caption": "<≤80 char caption — see R3>",
+      "citation_source": "<Authors et al., Journal Year>",
+      "bullets": ["<≤4 specific claims>"],
       "speaker_notes": {{
-        "mental_map": {{"hook": "...", "key_claim": "...", "evidence": "...",
-                        "key_terms": [...], "click": "...", "transition": "..."}},
-        "detailed_script": "<200-400 word monologue>"
+        "hook":"...","key_claim":"...","evidence":"...","key_terms":[...],
+        "click":"...","transition":"...",
+        "script":"<200-400 words; see R4>",
+        "extended_walkthrough":"<600-900 words; see R4>"
       }}
     }},
-    {{"type": "multi_figure", "title": "...", "figures": [
-        {{"path": "...", "label": "A", "caption": "..."}}, ...]}},
-    {{"type": "text", "title": "...", "bullets": [...],
-      "speaker_notes": {{...}} }}
+    {{"type": "section_divider", "title": "<sparing — see R2>"}}
   ]
 }}
 
