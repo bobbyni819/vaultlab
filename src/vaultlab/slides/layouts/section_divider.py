@@ -23,6 +23,8 @@ def add_section_divider(pres: Any, title: str) -> Any:
         Inches(sw_in - 1.0), Inches(1.5),
     )
     tx.text_frame.text = title
+
+    tx.text_frame.word_wrap = True
     apply_font(tx.text_frame, size=48, bold=True, pres=pres)
     return slide
 

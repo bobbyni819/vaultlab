@@ -50,6 +50,8 @@ def add_multi_figure_slide(
             Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(1.2)
         )
         tx.text_frame.text = title
+
+        tx.text_frame.word_wrap = True
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
     n = len(figures)

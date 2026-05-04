@@ -2323,6 +2323,10 @@ def _normalize_panel_crop(slide_spec: dict[str, Any]) -> dict[str, Any]:
     crops, and rewrites ``image_path`` to the cropped file. The cropped
     file is cached next to the original so re-runs are idempotent.
 
+    Also appends an FYI line to ``speaker_notes`` pointing at the
+    original full-figure path so the user can manually re-crop if the
+    auto-crop is suboptimal (Bobby's 2026-05-04 ask).
+
     No-ops when:
     - The slide isn't a figure type.
     - No ``panel`` field is set.
@@ -2349,6 +2353,20 @@ def _normalize_panel_crop(slide_spec: dict[str, Any]) -> dict[str, Any]:
     new_spec = dict(slide_spec)
     new_spec["image_path"] = str(cropped)
     new_spec["_original_image_path"] = image_path  # keep for debugging
+
+    # Append FYI to speaker_notes so user can manually re-crop if needed
+    notes = dict(new_spec.get("speaker_notes") or {})
+    fyi_line = (
+        f"\n\n[Auto-crop note] This slide shows panel {str(panel).upper()} "
+        f"only, cropped from the full multi-panel figure. "
+        f"Source: {image_path}. "
+        f"If the auto-crop boundary is off, manually crop the source and "
+        f"replace the image on this slide."
+    )
+    existing_walkthrough = notes.get("extended_walkthrough") or ""
+    notes["extended_walkthrough"] = existing_walkthrough + fyi_line
+    new_spec["speaker_notes"] = notes
+
     return new_spec
 
 
@@ -2357,45 +2375,65 @@ def _auto_pick_figure_layout(
     bullets: Any,
     caption_position: str | None = None,
 ) -> str:
-    """Pick a figure-slide layout automatically from image aspect + bullet count.
+    """Pick a figure-slide layout automatically from image aspect + content + bullets.
 
-    Rules:
-    - caption_position == "right" → ``figure_with_side_caption`` (caption +
-      bullets + citation in right gutter; figure uses full slide height).
-      Use this for wide figures with detailed sub-panels where you want
-      the figure to dominate.
-    - aspect > 1.8 (very wide, like a multi-panel horizontal diagram) →
-      ``figure_above_bullets`` so the figure gets full slide width.
-    - aspect < 0.55 (very tall, like a stacked-bar vertical chart) →
-      ``figure_above_bullets`` so the figure gets the upper half wide.
-    - no bullets → ``figure_only`` (full-width centered hero).
-    - aspect 0.55–1.8 with bullets → ``default`` (figure left + bullets right).
+    Rules (in order of priority):
 
-    Falls back to ``default`` when the image can't be read or PIL is missing.
+    1. Explicit ``caption_position == "right"`` → ``figure_with_side_caption``
+       (caption + bullets + citation in right gutter; figure uses full
+       slide height).
+    2. Wide-flat figure (aspect 1.4-3.0) with bullets → ``figure_top_caption_br``
+       (figure full slide width on top; caption in bottom-right corner;
+       bullets in bottom-left). Bobby's 2026-05-04 ask: maximize figure
+       area for flat-rectangle figures.
+    3. Wide-flat figure with sparse pixel content + no bullets →
+       ``figure_top_caption_br`` (small-content figures need maximal area).
+    4. Very wide (>3.0 aspect, marginal/banner) with bullets →
+       ``figure_above_bullets``.
+    5. Very tall (<0.55 aspect) → ``figure_above_bullets`` so figure gets
+       the upper half wide.
+    6. No bullets → ``figure_only`` (full-width centered hero).
+    7. Aspect 0.55–1.4 with bullets → ``default`` (figure left + bullets right).
+
+    Falls back to ``default`` when the image can't be read.
     """
     has_bullets = bool(bullets)
     if caption_position == "right":
         return "figure_with_side_caption"
     if not image_path:
         return "default"
+
+    # Pull both aspect AND content density via the figures.density helper
     try:
-        from PIL import Image
-        from pathlib import Path as _P
-        p = _P(image_path)
-        if not p.exists():
-            return "default"
-        with Image.open(p) as im:
-            iw, ih = im.size
-        if ih <= 0:
-            return "default"
-        aspect = iw / ih
+        from vaultlab.figures.density import analyze_figure_density
+        density = analyze_figure_density(image_path)
     except Exception:  # noqa: BLE001
+        density = None
+    if density is None:
         return "default"
 
+    aspect = density.aspect
+
+    # Wide-flat with bullets → figure-top-caption-BR (figure stretches to
+    # full width)
+    if 1.4 <= aspect <= 3.0 and has_bullets:
+        return "figure_top_caption_br"
+
+    # Sparse-content wide-flat without bullets → also benefits from full
+    # width (otherwise small content gets shrunk in figure_only)
+    if density.small_content_warning and not has_bullets:
+        return "figure_top_caption_br"
+
+    # Extreme aspect (very wide >3.0 or tall <0.55) with bullets →
+    # figure_above_bullets
+    if (aspect > 3.0 or aspect < 0.55) and has_bullets:
+        return "figure_above_bullets"
+
+    # No bullets → hero figure
     if not has_bullets:
         return "figure_only"
-    if aspect >= 1.8 or aspect <= 0.55:
-        return "figure_above_bullets"
+
+    # Default 0.55-1.4 aspect with bullets → figure-left + bullets-right
     return "default"
 
 
@@ -2477,6 +2515,7 @@ def build_from_plan(
         add_figure_above_bullets_slide,
         add_figure_only_slide,
         add_figure_slide,
+        add_figure_top_caption_br_slide,
         add_figure_with_side_caption_slide,
         add_multi_figure_slide,
         add_quote_slide,
@@ -2543,6 +2582,15 @@ def build_from_plan(
                 )
             elif layout == "figure_with_side_caption":
                 slide = add_figure_with_side_caption_slide(
+                    pres,
+                    image_path=slide_spec.get("image_path", ""),
+                    title=slide_spec.get("title", ""),
+                    caption=slide_spec.get("caption", ""),
+                    bullets=slide_spec.get("bullets"),
+                    citation_source=slide_spec.get("citation_source", ""),
+                )
+            elif layout == "figure_top_caption_br":
+                slide = add_figure_top_caption_br_slide(
                     pres,
                     image_path=slide_spec.get("image_path", ""),
                     title=slide_spec.get("title", ""),

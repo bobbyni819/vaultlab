@@ -42,6 +42,8 @@ def add_title_slide(
     height = Inches(2.0)
     tx = slide.shapes.add_textbox(left, top, width, height)
     tx.text_frame.text = title
+
+    tx.text_frame.word_wrap = True
     apply_font(tx.text_frame, size=48, bold=True, pres=pres)
 
     if subtitle:
