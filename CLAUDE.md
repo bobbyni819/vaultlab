@@ -147,6 +147,73 @@ tests/                              # pytest
 2. Fill in: ingest, qc, processing modules + sibling `.md` docs
 3. Add tests in `tests/test_vaultlab_data/`
 
+### Build a slide deck for a topic
+
+The 2026-05-03 Path-A architecture (Bobby's "use Claude as the brain" rule):
+
+1. **DON'T** post-populate figures onto text-only slides. Generate `figure`
+   slides directly with all four R3 elements baked in (title + figure +
+   caption + citation_source).
+
+2. **Use the helpers** — they reduce per-deck authoring burden 3-5×:
+
+   ```python
+   from vaultlab.research.notes_from_summary import (
+       load_summary, speaker_notes_from_summary,
+   )
+   from vaultlab.research.figure_picker import pick_best_figure_for_doi
+   from vaultlab.research.deck_cache import deck_decision
+
+   # For a paper cited across multiple decks, get the cached decision
+   d = deck_decision("10.1038_s41586-022-05672-3")  # Sorin 2023
+   # → DeckDecision(doi, figure_path, speaker_notes, citation, cached_at)
+
+   # OR fresh per-paper:
+   record = load_summary("10.1038_s41586-022-05672-3")
+   notes = speaker_notes_from_summary(record, hook="...", key_claim="...",
+                                       transition="...")
+   figure = pick_best_figure_for_doi("10.1038_s41586-022-05672-3")
+   ```
+
+3. **Slide-spec shape** for `figure` slides:
+
+   ```python
+   {
+       "type": "figure",
+       "title": "<descriptive sentence — e.g., 'Spatial neighbourhoods, "
+                "not cell frequencies, predict LUAD survival'>",
+       "image_path": str(figure_path),
+       "caption": "<≤110 char single-line caption>",
+       "citation_source": record.citation_footer(),  # 'Sorin et al. 2023 | Nature'
+       "bullets": ["≤4 short bullets, ≤45 chars each"],
+       "speaker_notes": notes,  # 3-tier: mental_map + script + extended_walkthrough
+       "layout": "auto",  # or "figure_only" / "figure_above_bullets" — default auto-picks
+   }
+   ```
+
+4. **Build + audit** in one call:
+
+   ```python
+   from vaultlab.slides.deck import build_from_plan
+   from vaultlab.slides.audit import audit_deck
+
+   result = build_from_plan(plan_dict, "out.pptx")
+   # → result["pptx"], result["argument_graph"] (sidecar markdown)
+
+   audit = audit_deck(result["pptx"])
+   assert audit.severity == "ok"
+   ```
+
+5. **The argument-graph sidecar** (`<deck>.argument-graph.md`) is auto-
+   written next to the deck. It lists every slide's hook / key_claim /
+   transition so the speaker can audit logical flow without scrolling.
+
+6. **Reference deck**: `Output/_demos/advisor-package-2026-04-30/car_t_30min_v13.pptx`
+   built by `bobby-tools/scripts/generate_car_t_decks.py` is the gold-standard.
+
+See `scripts/_rebuild_*_2026_05_03.py` for working examples of all four
+deck patterns (multi-lung short/review + spatial-tx short/review).
+
 ## Best-practice rules for Claude Code sessions on this repo
 
 These are non-obvious rules that prevent confusing failure modes. Follow them.
