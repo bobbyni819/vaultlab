@@ -2577,6 +2577,14 @@ def build_from_plan(
         _write_marp(plan, marp_path)
         result["marp"] = marp_path
 
+    # Argument-graph sidecar — slide-claim chain for speaker self-audit.
+    # Always written. Independent of write_marp / kb_log.
+    try:
+        from vaultlab.slides.argument_graph import write_argument_graph
+        result["argument_graph"] = write_argument_graph(plan, out_pptx)
+    except Exception:  # noqa: BLE001 — sidecar failure must never break the deck
+        pass
+
     if kb_log is not None:
         report_path = _write_plan_kb_report(plan, out_pptx, kb_log)
         result["report"] = report_path

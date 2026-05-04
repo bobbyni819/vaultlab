@@ -71,6 +71,8 @@ class SlideAudit:
     offslide_shapes: int = 0  # shapes whose bbox extends past slide canvas edges
     title_too_long: bool = False  # title >100 chars (will wrap awkwardly)
     over_bulleted: bool = False  # >7 bullets in any single text frame
+    long_caption: bool = False  # caption >80 chars (forces 2-line wrap)
+    low_contrast_runs: int = 0  # text runs with poor contrast vs slide background
 
 
 @dataclass
@@ -108,6 +110,14 @@ class DeckAuditResult:
         return sum(1 for s in self.per_slide if s.title_too_long)
 
     @property
+    def n_long_captions(self) -> int:
+        return sum(1 for s in self.per_slide if s.long_caption)
+
+    @property
+    def total_low_contrast_runs(self) -> int:
+        return sum(s.low_contrast_runs for s in self.per_slide)
+
+    @property
     def severity(self) -> str:
         """One of "ok", "warn", "fail"."""
         # Hard fails: shapes off the slide canvas or many overlap pairs
@@ -117,6 +127,8 @@ class DeckAuditResult:
             return "fail"
         if self.total_overflowing_shapes >= 2:
             return "fail"
+        if self.total_low_contrast_runs >= 3:
+            return "fail"  # invisible text is a hard fail
         if self.n_total_images == 0 and self.n_slides >= 5:
             return "fail"
         # Warns: any overflow or overlap, structural issues
@@ -129,6 +141,10 @@ class DeckAuditResult:
         if self.n_over_bulleted_slides > 0:
             return "warn"
         if self.n_long_titles > 0:
+            return "warn"
+        if self.n_long_captions > 0:
+            return "warn"
+        if self.total_low_contrast_runs > 0:
             return "warn"
         if self.n_total_images < self.n_slides // 4:
             return "warn"
@@ -295,6 +311,16 @@ def audit_deck(
         else:
             over_bul = _has_over_bulleted_textbox(slide, threshold=7)
 
+        # Caption length: a caption shape is detected as the smallest
+        # text frame in the lower half of the slide containing italic 12pt
+        # content. We use a simpler heuristic: any 12pt text >80 chars is
+        # likely a caption that wraps awkwardly.
+        long_cap = _has_long_caption(slide)
+
+        # Color contrast: count text runs whose color clashes with the
+        # plain-theme background (dark theme = white-ish text required).
+        n_low_contrast = _count_low_contrast_runs(slide, prs)
+
         per_slide.append(SlideAudit(
             index=i,
             title=title,
@@ -309,6 +335,8 @@ def audit_deck(
             offslide_shapes=n_offslide,
             title_too_long=title_long,
             over_bulleted=over_bul,
+            long_caption=long_cap,
+            low_contrast_runs=n_low_contrast,
         ))
 
         n_total_images += n_images
@@ -451,6 +479,79 @@ def _count_offslide_shapes(slide: Any, slide_w: int, slide_h: int) -> int:
         tol = 46_000
         if (l + w) > slide_w + tol or (t + h) > slide_h + tol or l < -tol or t < -tol:
             n += 1
+    return n
+
+
+def _has_long_caption(slide: Any, max_chars: int = 110) -> bool:
+    """True if any 12pt-or-smaller italic text shape exceeds max_chars.
+
+    Heuristic for "caption is too long and will wrap awkwardly under the
+    figure." Captions in our layouts are 12pt italic; if a 12pt italic run
+    has >80 chars it's almost certainly a multi-line wrap.
+    """
+    for sh in slide.shapes:
+        if not getattr(sh, "has_text_frame", False):
+            continue
+        try:
+            tf = sh.text_frame
+            for para in tf.paragraphs:
+                for run in para.runs:
+                    if (
+                        run.font.size
+                        and run.font.size.pt <= 12
+                        and run.font.italic
+                        and len(run.text or "") > max_chars
+                    ):
+                        return True
+        except Exception:  # noqa: BLE001
+            continue
+    return False
+
+
+def _count_low_contrast_runs(slide: Any, pres: Any) -> int:
+    """Count text runs with poor contrast vs the slide-background theme.
+
+    Heuristic: when the presentation uses a dark plain-theme template
+    (``_vaultlab_plain_theme == "dark"``), text runs MUST have a near-
+    white color (R+G+B sum ≥ 600 / 765). Anything darker is a contrast
+    bug — invisible text. Light theme is the inverse.
+
+    Returns 0 when the theme is unknown (don't false-positive).
+    """
+    theme = getattr(pres, "_vaultlab_plain_theme", None)
+    if theme not in ("dark", "light"):
+        return 0
+    n = 0
+    for sh in slide.shapes:
+        if not getattr(sh, "has_text_frame", False):
+            continue
+        try:
+            for para in sh.text_frame.paragraphs:
+                for run in para.runs:
+                    if not (run.text or "").strip():
+                        continue
+                    color_obj = run.font.color
+                    try:
+                        rgb = color_obj.rgb
+                    except (AttributeError, TypeError):
+                        # No explicit color → inherits from theme; assume OK
+                        continue
+                    if rgb is None:
+                        continue
+                    # Sum of R+G+B (each 0-255). Brightness ≈ this/3.
+                    try:
+                        r, g, b = (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF
+                    except TypeError:
+                        continue
+                    brightness = r + g + b
+                    if theme == "dark" and brightness < 450:
+                        # Dark text on dark background = invisible
+                        n += 1
+                    elif theme == "light" and brightness > 600:
+                        # Light text on light background = invisible
+                        n += 1
+        except Exception:  # noqa: BLE001
+            continue
     return n
 
 
