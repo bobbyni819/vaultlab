@@ -2370,6 +2370,40 @@ def _normalize_panel_crop(slide_spec: dict[str, Any]) -> dict[str, Any]:
     return new_spec
 
 
+def _normalize_trim_margin(slide_spec: dict[str, Any]) -> dict[str, Any]:
+    """Auto-trim the white margin around a figure before placement.
+
+    Bobby's 2026-05-04 ask: figures cached from PyMuPDF often carry a
+    generous white-margin border around the actual content, which makes
+    the placed image visibly smaller than it could be (aspect-fit shrinks
+    based on the WHOLE image including padding). Pre-trimming makes the
+    visible content fill the layout box.
+
+    Set ``"no_trim": True`` on a slide spec to opt out (e.g., when the
+    margin is intentional whitespace for annotations).
+    """
+    if slide_spec.get("type") not in ("figure",):
+        return slide_spec
+    if slide_spec.get("no_trim"):
+        return slide_spec
+    image_path = slide_spec.get("image_path")
+    if not image_path:
+        return slide_spec
+    try:
+        from vaultlab.figures.trim_margins import trim_white_margin
+        trimmed = trim_white_margin(image_path, margin_keep_px=10)
+    except Exception:  # noqa: BLE001
+        return slide_spec
+    if trimmed is None:
+        return slide_spec
+    if str(trimmed) == str(image_path):
+        # Already tight — no change needed
+        return slide_spec
+    new_spec = dict(slide_spec)
+    new_spec["image_path"] = str(trimmed)
+    return new_spec
+
+
 def _auto_pick_figure_layout(
     image_path: str,
     bullets: Any,
@@ -2547,6 +2581,7 @@ def build_from_plan(
     for slide_spec in slides_plan:
         slide_spec = _normalize_bullet_annotations(slide_spec)
         slide_spec = _normalize_panel_crop(slide_spec)
+        slide_spec = _normalize_trim_margin(slide_spec)
 
         stype = slide_spec.get("type", "text")
         notes = slide_spec.get("speaker_notes")

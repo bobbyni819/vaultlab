@@ -248,7 +248,7 @@ def plan() -> dict:
 
 
 def main() -> int:
-    out_path = OUT_DIR / "review-2026-05-04-rebuilt-v3.pptx"
+    out_path = OUT_DIR / "review-2026-05-04-rebuilt-v4.pptx"
     print(f"Building {out_path.name} ...")
     plan_dict = plan()
 

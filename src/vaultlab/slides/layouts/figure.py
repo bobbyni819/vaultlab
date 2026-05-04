@@ -396,9 +396,12 @@ def add_figure_with_side_caption_slide(
         tx.text_frame.word_wrap = True
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
-    # Figure occupies left 70%, full height under title to slide bottom
-    fig_top_in = 1.6
-    fig_height_in = sh_in - fig_top_in - 0.3
+    # Figure occupies left 62%, near-full height under title.
+    # Tightened 2026-05-04: fig_top 1.6→1.4, bot_margin 0.3→0.15 to
+    # squeeze every inch of vertical space for the figure (since square
+    # figures here are height-bound).
+    fig_top_in = 1.4
+    fig_height_in = sh_in - fig_top_in - 0.15
     fig_width_in = sw_in * 0.62
     fig_left = Inches(0.4)
 
@@ -408,15 +411,20 @@ def add_figure_with_side_caption_slide(
         Inches(fig_width_in), Inches(fig_height_in),
     )
 
-    # Right-side column: caption / bullets / citation stacked
+    # Right-side column: caption (top, biggest) / bullets (middle) /
+    # citation (bottom). Bobby's 2026-05-04 ask: "still put the biggest
+    # caption on top, put the small figure caption like below, then put
+    # the citation on the very bottom."
     col_left_in = 0.4 + fig_width_in + 0.3
     col_width_in = sw_in - col_left_in - 0.4
 
     bullets_list = list(bullets) if bullets else []
     has_bullets = len(bullets_list) > 0
 
+    # Caption at top of right column — sized to actually-needed height
+    # (1 line at 12pt × ~80 chars typical). Was 1.2 in (waste); now 0.7 in.
     cap_top_in = fig_top_in
-    cap_height_in = 1.2 if caption else 0.0
+    cap_height_in = 0.7 if caption else 0.0
     if caption:
         cx = slide.shapes.add_textbox(
             Inches(col_left_in), Inches(cap_top_in),
@@ -430,8 +438,8 @@ def add_figure_with_side_caption_slide(
                 run.font.italic = True
 
     if has_bullets:
-        bul_top_in = cap_top_in + cap_height_in + 0.2
-        bul_height_in = sh_in - bul_top_in - 0.7  # leave room for citation
+        bul_top_in = cap_top_in + cap_height_in + 0.15
+        bul_height_in = sh_in - bul_top_in - 0.55  # leave room for citation
         bx = slide.shapes.add_textbox(
             Inches(col_left_in), Inches(bul_top_in),
             Inches(col_width_in), Inches(bul_height_in),
@@ -456,8 +464,8 @@ def add_figure_with_side_caption_slide(
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(col_left_in), Inches(sh_in - 0.6),
-            Inches(col_width_in), Inches(0.4),
+            Inches(col_left_in), Inches(sh_in - 0.45),
+            Inches(col_width_in), Inches(0.35),
         )
         cit.text_frame.text = citation_source
         cit.text_frame.word_wrap = True
@@ -510,18 +518,18 @@ def add_figure_top_caption_br_slide(
     has_bullets = len(bullets_list) > 0
 
     # Figure occupies full slide width × upper portion of available height.
-    # Bottom strip height adapts to bullet count so 4 bullets at 18pt fit
-    # without overflow (each bullet ≤55 chars wraps to 1 line; bigger
-    # bullets get 2 lines and the strip needs ~0.4in per extra bullet line).
-    fig_top_in = 1.6
+    # Bottom strip height adapts to bullet count. Tightened 2026-05-04
+    # to give the figure more vertical space (Bobby: "shift them down a
+    # bit still and make that rectangle a bit larger").
+    fig_top_in = 1.4  # was 1.6
     n_bullets = len(bullets_list)
     if n_bullets >= 4:
-        bottom_strip_height_in = 2.4
+        bottom_strip_height_in = 2.0  # was 2.4
     elif n_bullets >= 2:
-        bottom_strip_height_in = 2.0
+        bottom_strip_height_in = 1.7  # was 2.0
     else:
-        bottom_strip_height_in = 1.5
-    fig_height_in = sh_in - fig_top_in - bottom_strip_height_in - 0.2
+        bottom_strip_height_in = 1.3  # was 1.5
+    fig_height_in = sh_in - fig_top_in - bottom_strip_height_in - 0.15
     fig_width_in = sw_in - 0.6
     fig_left = Inches(0.3)
 
@@ -533,12 +541,13 @@ def add_figure_top_caption_br_slide(
 
     bottom_top_in = fig_top_in + fig_height_in + 0.15
 
-    # Bullets on bottom-left (when present)
+    # Bullets on bottom-left (when present). Reduced paragraph spacing
+    # so 4 bullets fit in the tightened 2.0-in bottom strip.
     if has_bullets:
         bul_width_in = sw_in * 0.50
         bx = slide.shapes.add_textbox(
             Inches(0.5), Inches(bottom_top_in),
-            Inches(bul_width_in), Inches(bottom_strip_height_in - 0.1),
+            Inches(bul_width_in), Inches(bottom_strip_height_in - 0.05),
         )
         tf = bx.text_frame
         tf.word_wrap = True
@@ -552,20 +561,22 @@ def add_figure_top_caption_br_slide(
                 p = tf.add_paragraph()
                 p.text = text
             try:
-                p.space_before = _Pt(4)
-                p.space_after = _Pt(2)
+                p.space_before = _Pt(2)
+                p.space_after = _Pt(1)
             except Exception:
                 pass
         apply_font(tf, size=18, pres=pres)
 
-    # Caption + citation in bottom-right
+    # Caption + citation in bottom-right, tightly stacked. Caption at top
+    # of bottom-right column gets only ~0.7 in (was full strip height —
+    # huge waste). Citation snug at the very bottom of the slide.
     br_left_in = sw_in * 0.55
     br_width_in = sw_in - br_left_in - 0.3
 
     if caption:
         cx = slide.shapes.add_textbox(
             Inches(br_left_in), Inches(bottom_top_in),
-            Inches(br_width_in), Inches(bottom_strip_height_in - 0.5),
+            Inches(br_width_in), Inches(0.7),
         )
         cx.text_frame.text = caption
         cx.text_frame.word_wrap = True
@@ -576,8 +587,8 @@ def add_figure_top_caption_br_slide(
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(br_left_in), Inches(sh_in - 0.5),
-            Inches(br_width_in), Inches(0.4),
+            Inches(br_left_in), Inches(sh_in - 0.45),
+            Inches(br_width_in), Inches(0.35),
         )
         cit.text_frame.text = citation_source
         cit.text_frame.word_wrap = True
