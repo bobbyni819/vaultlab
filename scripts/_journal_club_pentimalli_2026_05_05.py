@@ -125,8 +125,56 @@ def apply_inline_emphasis(pptx_path):
 
                 n_changed += 1
 
+    # ------- analogy-slide animations (renderer doesn't handle these) -------
+    # For every analogy slide: reveal the LEFT-side group (familiar label +
+    # body) on click 1, RIGHT-side group (scientific label + body) on click 2.
+    # Title, arrow, and citation stay visible from slide load.
+    from vaultlab.slides.animations import appear_together_on_click
+
+    n_analogy = 0
+    for slide in pres.slides:
+        # Detect "analogy" by structure: 5+ text shapes, with a small middle
+        # textbox roughly centered and shorter than the side bodies.
+        shapes = list(slide.shapes)
+        text_shapes = [s for s in shapes if getattr(s, "has_text_frame", False)]
+        if len(text_shapes) < 5:
+            continue
+        # Heuristic: find shapes by horizontal third of slide.
+        sw = pres.slide_width
+        sh = pres.slide_height
+        title_cutoff = int(sh * 0.13)  # ~1.0" — excludes title (T=0.3) but keeps labels (T≥1.2)
+        bottom_cutoff = int(sh * 0.92)  # ~6.9" — excludes citation row
+        left_third = sw * 0.40
+        right_third = sw * 0.60
+
+        left_shapes = []
+        right_shapes = []
+        for s in text_shapes:
+            if not isinstance(s.top, int) or not isinstance(s.left, int):
+                continue
+            if s.top < title_cutoff:
+                continue  # title row
+            if s.top > bottom_cutoff:
+                continue  # citation row
+            cx = s.left + s.width // 2
+            if cx < left_third:
+                left_shapes.append(s)
+            elif cx > right_third:
+                right_shapes.append(s)
+            # middle = arrow → leave as always-visible
+
+        if not (len(left_shapes) >= 2 and len(right_shapes) >= 2):
+            continue
+
+        try:
+            appear_together_on_click(slide, left_shapes, click_index=0)
+            appear_together_on_click(slide, right_shapes, click_index=1)
+            n_analogy += 1
+        except Exception:  # noqa: BLE001
+            pass
+
     pres.save(pptx_path)
-    return n_changed
+    return n_changed, n_analogy
 
 KB = Path("G:/My Drive/Knowledge/vaultlab")
 FIG_CACHE = Path("C:/Users/bobby/.cache/vaultlab/_deck_figures_2026_05_03")
@@ -1148,8 +1196,9 @@ def main() -> int:
     pptx_path = result["pptx"]
     print(f"  built: {pptx_path}  ({pptx_path.stat().st_size:,} bytes)")
 
-    n_emph = apply_inline_emphasis(pptx_path)
+    n_emph, n_analogy = apply_inline_emphasis(pptx_path)
     print(f"  emphasis: applied to {n_emph} paragraphs")
+    print(f"  analogy animations: added to {n_analogy} slide(s)")
 
     audit = audit_deck(out_path)
     print(f"  severity:               {audit.severity}")

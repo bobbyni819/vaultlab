@@ -2878,20 +2878,23 @@ def _auto_animate_slide(
     if stype == "figure":
         bullets = slide_spec.get("bullets")
         if bullets and len(bullets) > 1:
-            picture_left_edges = [s.left for s in slide.shapes if s.shape_type == 13]
-            min_picture_left = min(picture_left_edges) if picture_left_edges else 0
-            best_match = None
+            # Find any text frame with at least len(bullets) paragraphs.
+            # Only the bullets text-list will have that many paragraphs —
+            # titles, captions, and citations are single-line — so a
+            # paragraph-count match uniquely identifies the bullets box
+            # across every figure layout (side-caption, top-caption-br,
+            # above-bullets). Pre-2026-05-05 this had an extra
+            # `shape.left > min_picture_left` filter that failed on
+            # `figure_top_caption_br` where bullets live BELOW the figure,
+            # not to its right — so slide 11 lost its animations.
             for shape in slide.shapes:
                 if not shape.has_text_frame:
                     continue
                 tf = shape.text_frame
                 if len(tf.paragraphs) < len(bullets):
                     continue
-                if shape.left > min_picture_left:
-                    best_match = tf
-                    break
-            if best_match is not None:
-                bullet_reveal(slide, best_match)
+                bullet_reveal(slide, tf)
+                return
 
 
 def _write_plan_kb_report(plan: dict[str, Any], pptx_path: Path, kb_log: Any) -> Path:
