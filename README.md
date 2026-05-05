@@ -17,13 +17,13 @@
 
 ## About
 
-I'm Bobby Ni, a PhD student in Biomedical Engineering at Duke. I do wet-lab spatial omics and a lot of computational work.
+I'm Bobby Ni, a PhD student in Biomedical Engineering in the **Hickey Lab** at Duke University. I do wet-lab spatial omics — CODEX multiplexed protein imaging, MALDI imaging mass spectrometry, scRNA-seq integration — and a lot of computational work alongside it.
 
 Research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers piling up in Drive; notes on a lab NAS; archives on University OneDrive; updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
 
 VaultLab puts all of it into an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have.
 
-I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I've found more value operating inside Claude Code. The push to ship this came from watching what [Garry Tan](https://github.com/garrytan/gstack), [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), [James Zou](https://github.com/zou-group/virtual-lab), and others have built — open-source, opinionated, hackable. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
+I've used OpenHands and other agent harnesses to automate workflows. Token cost rarely justified the lift. I've found more value operating inside Claude Code. The push to ship this came from watching what [Garry Tan](https://github.com/garrytan/gstack), [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), [James Zou](https://github.com/zou-group/virtual-lab), and others have built — open-source, opinionated, hackable. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
 
 ---
 
@@ -31,46 +31,69 @@ I've used OpenClaw to automate workflows. Token cost doesn't justify the lift. I
 
 ---
 
-## Centralized memory
+## Centralized memory — one LLM session sees everything
 
-Inside Claude Code, VaultLab reads your whole research ecosystem and writes back into it. Five context sources, one place the LLM looks:
+VaultLab is a **research operating system** for Claude Code. The LLM doesn't just read code — it reads your literature, your meetings, your inbox + calendar, your knowledge base, your project state, all under one session. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* Onboarding a new lab member is sharing the Drive folder.
 
-| Source | What VaultLab does with it |
+| Context source | What VaultLab does with it |
 |---|---|
-| **Knowledge base** (Obsidian-native markdown) | Per-paper summaries with citation graph, lineage arcs, project pages, manuscript drafts — all linked by `[[wikilinks]]`. Grows with your work. |
-| **Literature** (NCBI, Semantic Scholar, Springer, Elsevier, bioRxiv, CrossRef) | Multi-source search → citation-graph metrics (OG-score, forward-influence, year-buckets) → LLM-driven lineage binning → grounded summaries with `[pN]` page markers. |
-| **Built-in meeting recorder** | Captures any meeting on your machine — Zoom, Teams, in-person — and transcribes locally (Whisper) or via cloud. Ask *"what did we decide about cluster 7 last Tuesday?"* and the answer comes from the transcript. |
-| **Inbox + calendar + work log** | Outlook (Windows) or Gmail + Google Docs lab log + Calendar. *"Brief me on this morning"* works without you setting context. |
-| **Project state** | Every project has a `START_HERE.md` VaultLab maintains. Read one file, you're caught up in 30 seconds. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* |
-
-Onboard a lab member by sharing the Drive folder. That's the whole onboarding.
+| **Knowledge base** | Obsidian-native markdown that **grows with your work**. Per-paper Tier-A summaries with `[pN]` page-marker citations, citation graphs, lineage arcs, project pages, manuscript drafts — all linked by `[[wikilinks]]`. Plain markdown means it lives on Google Drive, OneDrive, a lab NAS, or any folder that syncs. No vector DB, no hidden state, no proprietary format. Onboarding: share the Drive folder. |
+| **Literature** | Seven literature APIs orchestrated in parallel — NCBI/PubMed, CrossRef, Semantic Scholar, Springer Nature, Elsevier, bioRxiv, and the **paperclip-MCP 8M-paper biomedical corpus**. Cross-source dedup. Citation-graph ranking. *Content-aware picker reads up to 400 abstracts in one batched LLM call* before ranking — never lets a deceptive citation count outrank a topical paper. Full-text Tier-A reading on the picks. See [Literature search](#literature-search-across-seven-apis-in-parallel) below for depth. |
+| **Built-in meeting recorder + transcriber** | Captures any meeting on your machine — Zoom, Teams, in-person — and transcribes **locally** (Whisper) or via cloud. Auto-summarized into the KB. Ask *"what did we decide about cluster 7 last Tuesday?"* and the answer comes from the transcript. Works whether or not you remembered to schedule it. |
+| **Outlook (Windows) + entire Google Workspace** | Full Outlook COM integration — read inbox, send with signature preserved, reply to threads, manage drafts, search across folders, mass email with personalization, flagged-email management, calendar events, contacts, tasks. **Entire Google Workspace** via Google APIs — Gmail, Drive, Docs, Sheets, Calendar. Lab work-log entries auto-append to a shared Google Doc. *"Brief me on this morning"* assembles your day's calendar + unread emails + open tasks + recent work-log entries in one view. |
+| **Cross-project state** | Every project has a `START_HERE.md` VaultLab maintains. Read one file and you're caught up in 30 seconds — what you were working on, what's blocking you, what to do next. Cross-project intelligence surfaces automatically when you start a new analysis. The KB IS the smartness layer; cross-project reasoning emerges via wikilinks + Tier-A summaries. |
 
 ---
 
 ## Features
 
-### Multi-agent crosstalk
+### Literature search across seven APIs in parallel
 
-For decisions where one-shot LLM output isn't enough — `/lit-report` (deep-research mode), the picker step in `/lit-arc`, the rigor pass in `/build-deck` — VaultLab runs an adversarial meeting: an analyst proposes, a critic challenges, a synthesizer integrates. Bounded at five rounds, 10-minute wall-clock cap, structured-JSON-only outputs to prevent the spiral.
+`/lit-arc <topic>` and `/lit-report <topic>` orchestrate **seven literature sources in parallel** — NCBI/PubMed, CrossRef, Semantic Scholar, Springer Nature, Elsevier, bioRxiv, and the [paperclip](https://paperclip.gxl.ai) biomedical-paper corpus (~8M full-text papers). Each query is fanned out to **5 reformulated sub-queries** (the original, plus method-focused / disease-focused / model-organism-focused / mechanism-focused variants). Results are deduplicated across all sources by DOI + title fuzzy match.
 
-The picker meeting catches off-topic seminal papers that a pure citation-graph rank would miss (the spatial-transcriptomics run nearly used a cancer-testis-antigen paper as the foundational figure because it had a cached PMC figure — the literature critic caught that). The rigor auditor walks the finished output before it's saved, flagging claims without page-marker evidence and references that aren't actually cited in the body. The bigger the question, the more agents weigh in.
+**Citation-graph ranking.** VaultLab computes OG-score (Kessler bibliographic coupling — fraction of seed papers citing each candidate) and forward-influence (in-degree on the seed-x-seed subgraph) across the deduplicated corpus. The graph is the *first* filter, not the last.
 
-### Slide decks from anything
+**Content-aware picker — the killer detail.** After citation-graph ranking gives a coarse pool of typically 200–400 candidates, VaultLab reads **all of them in a single batched LLM call** (yes, all 200–400 abstracts, taking advantage of Claude's 1M-token context window). The picker's job is to override the citation graph where conceptual lineage and citation count disagree — a 2018 method paper that defined a field gets ranked above a 2024 incremental application with 50× the citations. The picker writes a per-pick rationale to the project's decisions log. *No deceptive citation counts; no skim-rank.*
 
-`/build-deck <source>` composes a deck — figures, captions, speaker notes, click-through animations — from whatever you point it at:
+**User-directable.** You can pin specific DOIs as must-include (*"don't return without reading these three papers"*), focus on a particular lab (*"over-weight anything from the Schurch group"*), restrict by year/journal/open-access status, or specify a topical seed paper to anchor the corpus around. The picker respects the constraint and explains why each pick fits.
 
-- A paper PDF — auto-extracts figures, summarizes claims, drafts speaker notes
-- Your wet-lab data — picks a recipe, renders the figure, drafts caption + interpretation
-- A manuscript draft — turns each section into a slide block
-- Just a topic — VaultLab pulls relevant context from your KB and composes from scratch
+**Tier-A reading.** For the top picks (default 8–10, configurable up to 30+), VaultLab fetches the full PDF via a waterfall — Unpaywall → PubMed Central → bioRxiv → Springer OA → Elsevier — then reads it via Claude as a `document` content block. Returns structured JSON: `tldr` / `why_it_matters` / `methods_summary` / `key_findings` (each with `[pN]` page-marker citations) / `extracted_references`. Anything VaultLab claims about a paper is traceable to a specific page.
 
-Exports `.pptx` using native PowerPoint shapes (animatable, editable post-export — not rasterized images). Works for journal clubs, lab meetings, conference talks, dissertation defenses. Speaker notes come in two formats: a tight outline for talks and a paragraph script for rehearsal.
+**Batched-PDF reading** (≥2 PDFs, ≤100 MB total) ships multiple full PDFs in one LLM call, leveraging the 1M-context window for cross-paper synthesis — it can compare methods sections across three papers in a single call instead of three sequential reads.
 
-### Drafts figures from your data
+**LLM-driven lineage binning.** Every paper gets binned by *conceptual lineage*, not just publication year. A 2018 method paper goes in *history* if it's foundational. A 2024 incremental application goes in *development*, not *sota*. The LLM gets the deterministic year-quartile assignment as a hint, then overrides it where conceptual lineage and chronology disagree. Solves the empty-history-bin failure that pure-quartile binning produces.
 
-Not just "wraps matplotlib." VaultLab carries a recipe library — every recipe cites at least three published examples. Tell it *"make a marker dot-plot for these clusters"* and you get a publication-tight figure rendered from a recipe (axis ticks, colorbar position, font sizes drawn from a layout used in real Cell or Nature papers), plus an auto-generated caption that references the source method paper.
+**Surfaces papers you can't auto-acquire.** When a high-priority paper is paywalled and OA-fallback fails, VaultLab tells you which papers to fetch manually — `vaultlab fetch-list paywalled` produces a shopping list with citation, DOI, and a one-line "why this matters." You don't lose track of the gap.
 
-Recipes cover marker dot-plots, UMAP embeddings with cluster overlays, neighborhood-enrichment plots, statistical-test result panels, and multi-panel composites. No invented visualizations — every layout traces back to published work, and the recipe metadata records which paper each pattern came from.
+**The corpus is yours to keep.** `Wiki/Summaries/<doi-slug>.md` has structured per-paper summaries; `Wiki/Concepts/<topic>-lineage-<scope>-<date>.md` has the assembled history → development → SOTA arc with `[[wikilinks]]` to the summaries. The KB grows with every search.
+
+### Slide decks that compose themselves around your figures
+
+`/build-deck <source>` composes a deck from whatever you point it at — a paper PDF, your wet-lab data, a manuscript draft, just a topic. VaultLab interrogates the source, picks the figures, drafts the speaker notes, audits the layout, and exports a native PowerPoint file (animatable shapes, editable post-export — never rasterized images).
+
+**The figure-understanding step is real.** For paper figures, VaultLab reads them two ways: (1) the *sequence* — fig 1 is almost always experimental design, fig 2–3 are typically core results, fig N is the model — and (2) the *pixels* — content-density segmentation, panel detection via recursive XY-cut on whitespace gaps, single-panel cropping when only panel A is needed, white-margin auto-trim for tighter layouts. Multi-panel figures stay multi-panel; sparse schematics get the full slide width.
+
+**Each figure slide picks its own layout** based on aspect ratio + content density + bullet count. Square multi-panel → side-caption (figure dominates 62% of slide width × full height; caption + bullets + citation in right gutter). Landscape banner → top-caption-with-bottom-right-caption (figure stretches across full slide width on top; bullets bottom-left, caption bottom-right). Pure schematics with no bullets → hero figure-only slide. The dispatcher picks; you don't write per-slide layout code.
+
+**Speaker notes come in three tiers** so the same deck supports cold-reading the paper *and* rehearsing a 25-minute talk:
+
+- `mental_map` — 5-line scannable keywords for the fluent presenter
+- `script` — ~280 words of the say-this-out-loud monologue
+- `extended_walkthrough` — ~750 words of background, jargon definitions, and "why this matters" for someone presenting cold
+
+**Animations are click-by-click.** Bullets reveal one at a time; analogy-style strengths-vs-limitations slides reveal each side on its own click; multi-figure panels build up. Click-through rehearsal works in PowerPoint and Keynote without any cleanup.
+
+**Inline emphasis is automatic.** ALL-CAPS labels are bolded; punchy result numbers and drug-target names get an accent color; take-aways pop. You write `**SAMPLE**` and `[c]340 644 cells[/c]` in your bullets and they render as bold + accent-color runs.
+
+**Audit pass before you open the deck.** Every build runs a layout audit — overflow / overlap / off-slide / contrast / long-title / long-caption / over-bulleted / figure-gap / thin-text. Severity = `fail` blocks delivery. Companion sidecars are written alongside the .pptx: `argument-graph.md` (slide-by-slide claim chain), `practice-script.md`, `flashcards.md`, `story-arc.md`.
+
+**It actively interacts with you.** When a paper is paywalled and OA fallback fails, the deck builder asks you to fetch the PDF manually before continuing — it tells you exactly which DOIs and why they matter to the deck. When a figure aspect doesn't match any default layout, it surfaces the choice. When the audit detects a layout regression, it reports per-slide which bullet overflowed by how many lines.
+
+Use it for journal clubs, lab meetings, conference talks, prelim/qual exams, dissertation defenses. The pipeline is the same; the templates differ.
+
+#### See it in action — last week's output
+
+A 16-slide journal-club deck for **Pentimalli & Rajewsky 2025** in *Cell Systems* (3D NSCLC atlas via CosMx + SHG ECM imaging). VaultLab pulled all 7 figures from the paper PDF, auto-picked layouts (side-caption for the 6 square multi-panels, top-caption-br for the one landscape figure), wrote 3-tier speaker notes from the cached Tier-A summary, animated the bullets click-by-click, and applied inline emphasis (bold ALL-CAPS labels, accent color on `2.28×`, `51%`, `DC niches`, `MIF`/`CCR7`/`PD-L1`/`CTLA-4`/`Tim-3`). Strengths-vs-limitations rendered as a side-by-side analogy slide; take-home as a quote slide. Audit pass at 0 overflow / 0 overlap. Build time: **~90 seconds.** Companion *cold-read briefing* generated alongside — 14-term glossary + slide-by-slide narrative + 10-point cheat sheet, designed for presenting the paper without opening the PDF.
 
 ### Citations with traceable evidence
 
@@ -78,11 +101,17 @@ Drafts methods or background sections with `[N]` markers, then verifies every on
 
 Hover a citation in your draft to see the exact passage. Hallucinated citations get flagged automatically. VaultLab refuses to ship a manuscript section if any citations are unresolved — no "trust me" output where the reader has to chase down whether the citations are real.
 
-### LLM-driven lineage binning
+### Drafts figures from your data
 
-Reads the abstract of every paper in a corpus and decides *history* / *development* / *state-of-the-art* by conceptual lineage, not just publication year. A 2018 method paper goes in *history* if it's foundational. A 2024 incremental application goes in *development*, not *sota*. The LLM gets the deterministic year-quartile assignment as a hint, then overrides it where conceptual lineage and chronology disagree.
+Not just "wraps matplotlib." VaultLab carries a recipe library — every recipe cites at least three published examples. Tell it *"make a marker dot-plot for these clusters"* and you get a publication-tight figure rendered from a recipe (axis ticks, colorbar position, font sizes drawn from a layout used in real *Cell* or *Nature* papers), plus an auto-generated caption that references the source method paper.
 
-Solves the empty-history-bin failure that pure-quartile binning produces. When every paper in a CODEX corpus is from 2018 onward, there's still a foundational method in there somewhere — the LLM finds it. The arc-generation step then has real history-bucket content to work with instead of placeholder text.
+Recipes cover marker dot-plots, UMAP embeddings with cluster overlays, neighborhood-enrichment plots, statistical-test result panels, and multi-panel composites. No invented visualizations — every layout traces back to published work, and the recipe metadata records which paper each pattern came from.
+
+### Multi-agent crosstalk for high-stakes decisions
+
+For decisions where one-shot LLM output isn't enough — `/lit-report` (deep-research mode), the picker step in `/lit-arc`, the rigor pass in `/build-deck` — VaultLab runs an adversarial meeting: an analyst proposes, a critic challenges, a synthesizer integrates. Bounded at five rounds, 10-minute wall-clock cap, structured-JSON-only outputs to prevent the spiral.
+
+The picker meeting catches off-topic seminal papers that a pure citation-graph rank would miss (the spatial-transcriptomics run nearly used a cancer-testis-antigen paper as the foundational figure because it had a cached PMC figure — the literature critic caught that). The rigor auditor walks the finished output before it's saved, flagging claims without page-marker evidence and references that aren't actually cited in the body. The bigger the question, the more agents weigh in.
 
 ### Wraps the analysis tools you trust
 
