@@ -51,10 +51,25 @@ def add_text_slide(
         )
         tf = bx.text_frame
         tf.word_wrap = True
-        tf.text = bullets_list[0]
+
+        def _bullet_prefix(b: str) -> str:
+            """Prepend `•  ` unless the bullet already starts with a numeric/glyph marker.
+
+            Skips: lines already starting with •, ◦, -, *, or a digit followed by `.` or `)`
+            (so numbered lists like "1.  Foo" stay clean and don't render as `•  1.  Foo`).
+            """
+            if not b:
+                return b
+            if b[0] in "•◦-*":
+                return b
+            if len(b) >= 2 and b[0].isdigit() and b[1] in ".)":
+                return b
+            return f"•  {b}"
+
+        tf.text = _bullet_prefix(bullets_list[0])
         for b in bullets_list[1:]:
             p = tf.add_paragraph()
-            p.text = b
+            p.text = _bullet_prefix(b)
         apply_font(tf, size=sizes_d["body"], pres=pres)
 
     return slide

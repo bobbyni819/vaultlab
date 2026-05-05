@@ -31,6 +31,103 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 from vaultlab.slides.audit import audit_deck
 from vaultlab.slides.deck import build_from_plan
 
+
+# ---------------------------------------------------------------------------
+# Inline-emphasis post-processor
+# ---------------------------------------------------------------------------
+# Walks the rendered .pptx, parses markdown-style markers in paragraph text,
+# and splits each paragraph into formatted runs.
+#
+# Markers:
+#   **text**      → bold
+#   [c]text[/c]   → accent color (warm red-orange) + bold (take-away emphasis)
+#
+# Applied to every text frame on every slide. Existing run-level formatting
+# (size, font name, base color) is preserved. Italic intentionally not used —
+# single asterisks would collide with bullet styling, and bold + color give
+# enough visual hierarchy for journal-club-grade decks.
+
+def apply_inline_emphasis(pptx_path):
+    """Post-process: split runs at markdown markers and apply emphasis."""
+    import re
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+    from pptx.oxml.ns import qn
+
+    ACCENT = RGBColor(0xC8, 0x4B, 0x31)  # warm accent for take-aways / numbers / drug targets
+    PATTERN = re.compile(r"(\*\*[^*]+\*\*|\[c\][^\[]+\[/c\])")
+
+    pres = Presentation(pptx_path)
+    n_changed = 0
+
+    for slide in pres.slides:
+        for shape in slide.shapes:
+            if not getattr(shape, "has_text_frame", False):
+                continue
+            for para in shape.text_frame.paragraphs:
+                text = para.text
+                if not text or not PATTERN.search(text):
+                    continue
+                if not para.runs:
+                    continue
+                base = para.runs[0]
+                base_size = base.font.size
+                base_name = base.font.name
+                base_bold = base.font.bold
+                base_italic = base.font.italic
+                try:
+                    base_color = base.font.color.rgb
+                except Exception:  # noqa: BLE001
+                    base_color = None
+
+                tokens = []
+                pos = 0
+                for m in PATTERN.finditer(text):
+                    if m.start() > pos:
+                        tokens.append((text[pos:m.start()], None))
+                    matched = m.group(0)
+                    if matched.startswith("**"):
+                        tokens.append((matched[2:-2], "bold"))
+                    elif matched.startswith("[c]"):
+                        tokens.append((matched[3:-4], "color"))
+                    pos = m.end()
+                if pos < len(text):
+                    tokens.append((text[pos:], None))
+
+                p_elem = para._p
+                for child in list(p_elem):
+                    if child.tag in (qn("a:r"), qn("a:br")):
+                        p_elem.remove(child)
+
+                for txt, fmt in tokens:
+                    if not txt:
+                        continue
+                    r = para.add_run()
+                    r.text = txt
+                    if base_name:
+                        r.font.name = base_name
+                    if base_size:
+                        r.font.size = base_size
+                    if base_bold:
+                        r.font.bold = True
+                    if base_italic:
+                        r.font.italic = True
+                    if base_color and fmt != "color":
+                        try:
+                            r.font.color.rgb = base_color
+                        except Exception:  # noqa: BLE001
+                            pass
+                    if fmt == "bold":
+                        r.font.bold = True
+                    elif fmt == "color":
+                        r.font.color.rgb = ACCENT
+                        r.font.bold = True
+
+                n_changed += 1
+
+    pres.save(pptx_path)
+    return n_changed
+
 KB = Path("G:/My Drive/Knowledge/vaultlab")
 FIG_CACHE = Path("C:/Users/bobby/.cache/vaultlab/_deck_figures_2026_05_03")
 SLUG = "10.1016_j.cels.2025.101261"
@@ -86,12 +183,12 @@ def plan() -> dict:
                 "type": "text",
                 "title": "Why this paper — first proof that routine 3D multimodal profiling is feasible on clinical FFPE",
                 "bullets": [
-                    "SAMPLE — one patient, early-stage non-small-cell lung cancer (NSCLC), formalin-fixed paraffin-embedded (FFPE) block",
-                    "DESIGN — 34 consecutive 5-µm sections, registered into one 3D coordinate frame via STIM software",
-                    "MODALITIES — CosMx 1000-plex spatial transcriptomics + label-free second-harmonic generation (SHG) extracellular matrix imaging + H&E",
-                    "SCALE — 340 644 cells → 18 cell types → 10 multicellular niches",
-                    "HEADLINE — 3D recovers dendritic-cell (DC) niches + T-cell continuity that 2D analysis erases",
-                    "DRUGGABILITY — niche-resolved checkpoint signalling: MIF, CCR7, PD-L1, CTLA-4, Tim-3",
+                    "**SAMPLE** — one patient, early-stage non-small-cell lung cancer (NSCLC), formalin-fixed paraffin-embedded (FFPE) block",
+                    "**DESIGN** — [c]34 consecutive 5-µm sections[/c], registered into one 3D coordinate frame via STIM software",
+                    "**MODALITIES** — CosMx 1000-plex spatial transcriptomics + label-free second-harmonic generation (SHG) extracellular matrix imaging + H&E",
+                    "**SCALE** — [c]340 644 cells[/c] → 18 cell types → 10 multicellular niches",
+                    "**HEADLINE** — 3D recovers [c]dendritic-cell niches + T-cell continuity[/c] that 2D analysis erases",
+                    "**DRUGGABILITY** — niche-resolved checkpoint signalling: [c]MIF, CCR7, PD-L1, CTLA-4, Tim-3[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "What does this paper add over Schurch 2020 / Goltsev 2018?",
@@ -145,11 +242,11 @@ def plan() -> dict:
                 "type": "text",
                 "title": "Who built this — Berlin × Munich × Padua × NanoString consortium",
                 "bullets": [
-                    "RAJEWSKY LAB (Max Delbrück Center, MDC Berlin) — first author Pentimalli; systems biology + spatial omics; built STIM registration tool",
-                    "COSCIA LAB (MDC Berlin) — rising spatial-proteomics methods lead (ex-Mann lab, Munich)",
-                    "KLAUSCHEN LAB (Charité + Ludwig Maximilian Univ, LMU Munich) — computational pathology; independent H&E annotations",
-                    "PICCOLO LAB (Univ of Padua) — Hippo / YAP-TAZ pathway; mechano-transduction + epithelial-to-mesenchymal transition (EMT) framing",
-                    "NANOSTRING → BRUKER (Liang, Gregory) — co-designed the CosMx 1000-plex cancer panel",
+                    "**RAJEWSKY LAB** (Max Delbrück Center, MDC Berlin) — first author Pentimalli; systems biology + spatial omics; built STIM registration tool",
+                    "**COSCIA LAB** (MDC Berlin) — rising spatial-proteomics methods lead (ex-Mann lab, Munich)",
+                    "**KLAUSCHEN LAB** (Charité + Ludwig Maximilian Univ, LMU Munich) — computational pathology; [c]independent H&E annotations[/c]",
+                    "**PICCOLO LAB** (Univ of Padua) — Hippo / YAP-TAZ pathway; mechano-transduction + epithelial-to-mesenchymal transition (EMT) framing",
+                    "**NANOSTRING → BRUKER** (Liang, Gregory) — co-designed the CosMx 1000-plex cancer panel",
                 ],
                 "speaker_notes": {
                     "hook": "Why should you trust this paper before you've read a single figure?",
@@ -216,12 +313,12 @@ def plan() -> dict:
                 "type": "text",
                 "title": "The field — 3D spatial omics is having a moment",
                 "bullets": [
-                    "2018 — CO-Detection by indEXing (CODEX) + imaging mass cytometry (IMC) reach ~50-plex protein imaging",
-                    "2020 — Schürch (colorectal cancer): cellular neighbourhoods predict outcome in 2D CODEX",
-                    "2021-2023 — Hickey CODEX pipeline + Sorin 416-patient lung adenocarcinoma IMC (all 2D)",
-                    "2022-2024 — Visium / CosMx / Xenium scale spatial transcriptomics to 1 000+ genes per section",
-                    "2024 — Human BioMolecular Atlas (HuBMAP) + Human Cell Atlas (HCA) push 3D; Hickey/Agmon couple Vivarium agent-based model with CODEX",
-                    "2025 — Pentimalli: first 3D × multimodal × clinical FFPE",
+                    "**2018** — CO-Detection by indEXing (CODEX) + imaging mass cytometry (IMC) reach ~50-plex protein imaging",
+                    "**2020** — Schürch (colorectal cancer): cellular neighbourhoods predict outcome in 2D CODEX",
+                    "**2021-2023** — Hickey CODEX pipeline + Sorin 416-patient lung adenocarcinoma IMC (all 2D)",
+                    "**2022-2024** — Visium / CosMx / Xenium scale spatial transcriptomics to 1 000+ genes per section",
+                    "**2024** — Human BioMolecular Atlas (HuBMAP) + Human Cell Atlas (HCA) push 3D; Hickey/Agmon couple Vivarium agent-based model with CODEX",
+                    "**2025** — [c]Pentimalli: first 3D × multimodal × clinical FFPE[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "What's the 30-second history of how we got here?",
@@ -304,9 +401,9 @@ def plan() -> dict:
                 "caption": "Fig 1 — section layout, H&E, UMAP of 340 k cells, atlas label-transfer.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "PATIENT — 1 early-stage NSCLC, archival FFPE block, 16 mm² region of interest",
-                    "DESIGN — 34 sections × 5 µm; 6 sections imaged with CosMx 1000-plex",
-                    "DATA — 114 M transcripts → 340 644 cells → 18 cell types",
+                    "**PATIENT** — 1 early-stage NSCLC, archival FFPE block, 16 mm² region of interest",
+                    "**DESIGN** — 34 sections × 5 µm; 6 sections imaged with CosMx 1000-plex",
+                    "**DATA** — [c]114 M transcripts → 340 644 cells → 18 cell types[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "How do you actually build a 3D atlas from a single FFPE block?",
@@ -378,9 +475,9 @@ def plan() -> dict:
                 "caption": "Fig 2 — z-stack, 50-µm neighbourhood definition, 10 niches, H&E concordance.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "DEFINITION — 3D neighbourhood = cells within a 50-µm sphere (z-neighbours included)",
-                    "RESULT — 10 niches with distinct cell-type compositions (heatmap, panel D)",
-                    "VALIDATION — niches match independent pathologist H&E annotation (panel E)",
+                    "**DEFINITION** — 3D neighbourhood = cells within a 50-µm sphere (z-neighbours included)",
+                    "**RESULT** — [c]10 niches[/c] with distinct cell-type compositions (heatmap, panel D)",
+                    "**VALIDATION** — niches match [c]independent pathologist H&E[/c] (panel E)",
                 ],
                 "speaker_notes": {
                     "hook": "Are these 'niches' just clustering artefacts, or do they mean anything?",
@@ -460,9 +557,9 @@ def plan() -> dict:
                 "caption": "Fig 3 — 3D vs 2D: bigger neighbourhoods, DC niche only in 3D, T-cell bridges.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "PANEL B — 3D vs 2D: 32 vs 22 cells, 9 vs 7 cell types (p<0.005)",
-                    "PANEL D — DC-niche cells reassigned to tumour surface (51%) or T-cell (24%) in 2D",
-                    "PANEL E — T-cell-niche spatial continuity restored only in 3D",
+                    "**PANEL B** — 3D vs 2D: [c]32 vs 22 cells, 9 vs 7 cell types[/c] (p<0.005)",
+                    "**PANEL D** — DC-niche cells reassigned to tumour surface ([c]51%[/c]) or T-cell ([c]24%[/c]) in 2D",
+                    "**PANEL E** — T-cell-niche spatial continuity [c]restored only in 3D[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "Does the third dimension actually buy you anything clinically?",
@@ -541,9 +638,9 @@ def plan() -> dict:
                 "caption": "Fig 4 — 480-pair activity score; niche ligands; DC-niche druggable network.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "METHOD — 480 CellChat receptor-ligand pairs scored at 50-µm radius in 3D",
-                    "PATTERN — niche-specific ligands (PDGFB → vascular; CCL19 + CXCL9 → DC + T-cell)",
-                    "PAYOFF — DC-niche druggable network: MIF, CCR7, PD-L1, CTLA-4, Tim-3",
+                    "**METHOD** — 480 CellChat receptor-ligand pairs scored at 50-µm radius in 3D",
+                    "**PATTERN** — niche-specific ligands (PDGFB → vascular; CCL19 + CXCL9 → DC + T-cell)",
+                    "**PAYOFF** — DC-niche druggable network: [c]MIF, CCR7, PD-L1, CTLA-4, Tim-3[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "If 3D exposes the DC niche, what is the DC niche actually doing?",
@@ -623,9 +720,9 @@ def plan() -> dict:
                 "caption": "Fig 5 — SHG ECM, 3 compartments, 6 fibroblast states, ECM regulators.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "MODALITY — SHG = label-free collagen + elastin imaging (no antibody, no stain)",
-                    "ECM — 3 compartments: homeostatic / degraded / desmoplastic",
-                    "FIBROBLASTS — 6 transcriptomic states couple to specific ECM compartments",
+                    "**MODALITY** — SHG = label-free collagen + elastin imaging ([c]no antibody, no stain[/c])",
+                    "**ECM** — 3 compartments: homeostatic / degraded / desmoplastic",
+                    "**FIBROBLASTS** — [c]6 transcriptomic states[/c] couple to specific ECM compartments",
                 ],
                 "speaker_notes": {
                     "hook": "Cells live in matrix — does the matrix follow the cells or do the cells follow the matrix?",
@@ -720,9 +817,9 @@ def plan() -> dict:
                 "caption": "Fig 6 — tumour pseudotime captures EMT; EMT niche is collagen-poor.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "TRAJECTORY — pseudotime: epithelial → mesenchymal",
-                    "GRADIENT — highest at invasive front (p<0.0001)",
-                    "SURPRISE — EMT niche is collagen-POOR",
+                    "**TRAJECTORY** — pseudotime: epithelial → mesenchymal",
+                    "**GRADIENT** — highest at invasive front (p<0.0001)",
+                    "**SURPRISE** — EMT niche is [c]collagen-POOR[/c]",
                 ],
                 "speaker_notes": {
                     "hook": "Where exactly in 3D space is the tumour invading from?",
@@ -806,9 +903,9 @@ def plan() -> dict:
                 "caption": "Fig 7 — EMT-niche markers; tumour-fibroblast-macrophage druggable model.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "TUMOUR CELLS — NDRG1 + LGALS1 (galectin-1; immunosuppressive)",
-                    "MYOFIBROBLASTS — VEGFA + IGFBP5 (angiogenic; modulates IGF axis)",
-                    "MACROPHAGES — SPP1 (osteopontin; pro-tumour-permissive marker)",
+                    "**TUMOUR CELLS** — [c]NDRG1 + LGALS1[/c] (galectin-1; immunosuppressive)",
+                    "**MYOFIBROBLASTS** — [c]VEGFA + IGFBP5[/c] (angiogenic; modulates IGF axis)",
+                    "**MACROPHAGES** — [c]SPP1[/c] (osteopontin; pro-tumour-permissive marker)",
                 ],
                 "speaker_notes": {
                     "hook": "What is each cell type in the EMT niche actually contributing?",
@@ -887,16 +984,16 @@ def plan() -> dict:
                 "title": "Strengths vs limitations — what would you trust?",
                 "familiar_label": "What this paper PROVES",
                 "familiar_body": (
-                    "3D multimodal profiling on FFPE is templated + feasible.\n\n"
-                    "Single-section 2D loses DC niches + T-cell continuity.\n\n"
+                    "**3D multimodal on FFPE is feasible + templated.**\n\n"
+                    "Single-section 2D loses [c]DC niches + T-cell continuity[/c].\n\n"
                     "Niche grammar (18 types → 10 niches) survives independent H&E.\n\n"
                     "DC-niche druggable network is spatially-resolved."
                 ),
                 "scientific_label": "What still needs validation",
                 "scientific_body": (
-                    "n=1 — 2.28× and 51% from one patient.\n\n"
+                    "**n=1** — 2.28× and 51% from one patient.\n\n"
                     "EMT-collagen-poor — Fig 6F overlap is substantial.\n\n"
-                    "CellChat conflates expression w/ signalling — needs CRISPR.\n\n"
+                    "CellChat conflates expression w/ signalling — needs [c]CRISPR validation[/c].\n\n"
                     "Generalisation to infection, fibrosis untested."
                 ),
                 "arrow_text": "vs",
@@ -960,9 +1057,9 @@ def plan() -> dict:
             {
                 "type": "quote",
                 "quote": (
-                    "Single-section 2D spatial omics is biased toward false negatives. "
-                    "The dendritic-cell niches and T-cell continuity that drive "
-                    "immunotherapy response are recoverable only in 3D."
+                    "Single-section 2D spatial omics is biased toward [c]false negatives[/c]. "
+                    "The **dendritic-cell niches** and **T-cell continuity** that drive "
+                    "immunotherapy response are recoverable [c]only in 3D[/c]."
                 ),
                 "attribution": "the take-home from Pentimalli & Rajewsky 2025",
                 "speaker_notes": {
@@ -1006,11 +1103,11 @@ def plan() -> dict:
                 "type": "text",
                 "title": "Discussion seeds — where would you push this paper?",
                 "bullets": [
-                    "1.  BUDGET — would you spend on CosMx 3D / 1 sample, or 2D / 50 samples? Why?",
-                    "2.  ARTEFACT vs BIOLOGY — is 'DC niche only in 3D' a methods artefact or real? How would you test?",
-                    "3.  GENERALISABILITY — does the EMT-niche cooperative survive in metastatic disease? Treatment-naïve vs post-immunotherapy?",
-                    "4.  MINIMUM USEFUL 3D — is 6 sections the floor? 3? 2 + interpolation?",
-                    "5.  CLINICAL PATHOLOGY — is single-section H&E still enough for diagnostic decisions?",
+                    "1.  **BUDGET** — would you spend on CosMx 3D / 1 sample, or 2D / 50 samples? Why?",
+                    "2.  **ARTEFACT vs BIOLOGY** — is 'DC niche only in 3D' a methods artefact or real? How would you test?",
+                    "3.  **GENERALISABILITY** — does the EMT-niche cooperative survive in metastatic disease? Treatment-naïve vs post-immunotherapy?",
+                    "4.  **MINIMUM USEFUL 3D** — is 6 sections the floor? 3? 2 + interpolation?",
+                    "5.  **CLINICAL PATHOLOGY** — is single-section H&E still enough for diagnostic decisions?",
                 ],
                 "speaker_notes": {
                     "hook": "Open the floor.",
@@ -1050,6 +1147,9 @@ def main() -> int:
     )
     pptx_path = result["pptx"]
     print(f"  built: {pptx_path}  ({pptx_path.stat().st_size:,} bytes)")
+
+    n_emph = apply_inline_emphasis(pptx_path)
+    print(f"  emphasis: applied to {n_emph} paragraphs")
 
     audit = audit_deck(out_path)
     print(f"  severity:               {audit.severity}")
