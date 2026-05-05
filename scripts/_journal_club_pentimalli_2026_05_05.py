@@ -139,7 +139,162 @@ def plan() -> dict:
                 },
             },
 
-            # 3 — fig1 — Experimental design
+            # 3 — Who built this (text — institution-grouped bullets)
+            {
+                "type": "text",
+                "title": "Who built this — Berlin × Munich × Padua × NanoString consortium",
+                "bullets": [
+                    "MDC Berlin (Rajewsky lab) — 1st author Pentimalli; Rajewsky is systems-bio heavyweight (lncRNAs, organoids, single-cell)",
+                    "MDC Berlin (Coscia lab) — rising spatial-proteomics methods lead, ex-Mann lab",
+                    "Charité / LMU Munich (Klauschen lab) — leading computational pathologist; pathologist-validated annotations",
+                    "Padua (Piccolo lab) — Hippo / YAP-TAZ luminary, contributes mechano/EMT framing",
+                    "NanoString → Bruker (Liang, Gregory) — co-developed the CosMx 1000-plex panel",
+                ],
+                "speaker_notes": {
+                    "hook": "Why should you trust this paper before you've read a single figure?",
+                    "key_claim": "This isn't a one-lab effort. It's a Berlin-Munich-Padua-NanoString consortium covering systems biology, spatial-proteomics methods, computational pathology, mechano-signalling, and the platform vendor. Cross-validation is built into the author list.",
+                    "evidence": "Cell Systems 2025; first author Pentimalli (Rajewsky lab), corresponding Klauschen + Rajewsky; co-authors include Coscia (spatial proteomics) and Piccolo (Hippo/YAP-TAZ).",
+                    "transition": "And the field around it has been priming for this paper for ~5 years.",
+                    "script": (
+                        "Quick credentialling pass before figures. Pentimalli is a Rajewsky-lab "
+                        "postdoc; Rajewsky founded systems biology at MDC Berlin and has been pushing "
+                        "spatial-omics for the last decade. Klauschen at Munich runs one of the top "
+                        "computational-pathology labs and his group does the pathologist H&E "
+                        "annotations independently of the molecular analysis — that's the "
+                        "orthogonal-validation you'll see on slide 5. Coscia is the rising star in "
+                        "spatial-proteomics methods, ex-Mann lab. Piccolo is the Hippo/YAP-TAZ "
+                        "guy from Padua and brings the mechano/EMT framing. NanoString — now "
+                        "Bruker after the 2024 acquisition — co-developed the 1000-plex CosMx "
+                        "panel; the assay is fresh-from-vendor, not arms-length. So when you "
+                        "evaluate the methods later, remember: this is a consortium with the "
+                        "platform vendor, the pathologist, the spatial-proteomics expert, and "
+                        "two systems-biology labs. The cross-checks are in the author list."
+                    ),
+                    "extended_walkthrough": (
+                        "WHY EACH AUTHOR CONTRIBUTION MATTERS — a quick read of the consortium.\n\n"
+                        "RAJEWSKY (MDC Berlin) — corresponding author, systems-biology lab. Famous "
+                        "for the lncRNA/circRNA work in the 2010s, then pivoted hard into spatial "
+                        "transcriptomics + organoids in the 2020s. The lab built STIM, the "
+                        "registration tool used here. Reputation: methodologically rigorous, "
+                        "publishes in Cell / Nature / Nat Methods.\n\n"
+                        "KLAUSCHEN (Munich) — corresponding author, computational pathology. His "
+                        "group develops AI-based pathology models and does pathologist-grade tissue "
+                        "annotations. The pathologist H&E annotation in Fig 2 is from his lab — "
+                        "that's the independent ground-truth check on the molecular niche analysis.\n\n"
+                        "COSCIA (MDC Berlin) — spatial-proteomics methods. Ex-Mann lab in Munich. "
+                        "Brings the LCMS-MS deep proteomics complement to the CosMx transcriptomics "
+                        "(though most of that proteomics work is in supplements / future papers).\n\n"
+                        "PICCOLO (Padua) — Hippo/YAP-TAZ pathway. The mechano-transduction framing "
+                        "of EMT and ECM stiffness is his contribution. Why YAP-TAZ matters: stiff "
+                        "(desmoplastic) ECM activates YAP/TAZ → fibroblast activation → more matrix "
+                        "deposition — positive-feedback loop. This is referenced in Fig 5/6/7.\n\n"
+                        "PENTIMALLI (Rajewsky lab postdoc) — first author, did most of the wet-lab "
+                        "+ analysis. Italian by training, comes through Padua before MDC. Background "
+                        "is computational, not just experimental.\n\n"
+                        "NANOSTRING / BRUKER (Liang, Gregory) — vendor co-authors. This means the "
+                        "1000-plex CosMx panel was co-designed for cancer-relevance, and the "
+                        "assay parameters were optimised together rather than the academic group "
+                        "buying off-the-shelf reagents. The 0.27% off-target rate from the "
+                        "negative-control probes is the result of that co-design.\n\n"
+                        "WHAT THIS DOES TO TRUST — collaborative consortium papers in spatial "
+                        "biology have a mixed track record. Sometimes the cross-discipline collab "
+                        "is meaningful (this paper); sometimes it's a co-author list of "
+                        "convenience. Tells: are there multiple corresponding authors from "
+                        "different fields (yes), is the methods section detailed enough to "
+                        "reproduce (yes — supplementary methods is ~50 pages), and does the "
+                        "narrative structure of the paper require all the contributions (yes — "
+                        "you cannot tell this story without the pathology, the platform, AND "
+                        "the systems biology). All three checks pass, so I take this paper at "
+                        "face value."
+                    ),
+                },
+            },
+
+            # 4 — The field — where 3D spatial omics is going (text)
+            {
+                "type": "text",
+                "title": "The field — 3D spatial omics is having a moment",
+                "bullets": [
+                    "2018 — CODEX (Goltsev) + IMC (Bodenmiller) launch ~50-plex protein imaging",
+                    "2020 — Schurch CRC: cellular neighbourhoods predict outcome in 2D CODEX",
+                    "2021-2023 — Hickey CODEX pipeline + Sorin 416-patient LUAD IMC (all 2D)",
+                    "2022-2024 — Visium / CosMx / Xenium scale to 1000+ genes per section",
+                    "2024 — HuBMAP / HCA push 3D atlases; Hickey/Agmon Vivarium + CODEX integrate",
+                    "2025 — Pentimalli: first 3D × multimodal × clinical FFPE",
+                ],
+                "speaker_notes": {
+                    "hook": "What's the 30-second history of how we got here?",
+                    "key_claim": "Spatial omics has been a 7-year arc: 50-plex protein in 2018, neighbourhood concept in 2020, 1000-plex transcriptomics by 2022, 416-patient clinical scale by 2023, 3D atlases by 2024-25. Pentimalli is the first paper that combines all three innovations — 3D + 1000-plex transcriptomics + ECM imaging — on routine clinical FFPE.",
+                    "evidence": "Goltsev 2018 Cell (CODEX); Schurch 2020 Cell (CN concept); Hickey 2021 Front Immunol (pipeline); Sorin 2023 Nature (LUAD); HuBMAP/HCA mission 2020+; Pentimalli 2025 Cell Systems (this paper).",
+                    "transition": "Now to the figures.",
+                    "script": (
+                        "Two-minute history. 2018 — Goltsev introduces CODEX, Bodenmiller extends "
+                        "IMC; both push multiplexed protein imaging to about 50 markers per section. "
+                        "2020 — Schurch publishes the cellular-neighbourhood concept on CRC CODEX, "
+                        "which becomes the dominant analytical framework. 2021-23 — the pipeline "
+                        "matures: Hickey builds the standard CODEX-to-single-cell-table workflow "
+                        "(2021); Sorin scales to 416 LUAD patients on IMC and shows neighbourhood "
+                        "structure beats cell frequencies for clinical prediction (2023). All of "
+                        "that is 2D. Meanwhile, 2022-24 — spatial transcriptomics scales: Visium, "
+                        "CosMx, Xenium each hit 1000+ genes per section. 2024 — HuBMAP and the "
+                        "Human Cell Atlas mission start funding 3D efforts at scale. The Hickey/"
+                        "Agmon Cell Systems paper integrates CODEX with Vivarium ABM. 2025 — "
+                        "Pentimalli is the first to put all three innovations together: 3D, "
+                        "1000-plex transcriptomics, multimodal ECM imaging, on a routine FFPE "
+                        "block. Each piece existed; the integration didn't until now."
+                    ),
+                    "extended_walkthrough": (
+                        "WHY THIS HISTORY MATTERS FOR EVALUATING THE PAPER — knowing the timeline "
+                        "tells you what's genuinely novel vs. what's a refinement.\n\n"
+                        "(1) 'Cellular neighbourhoods' — NOT NEW. Concept from Schurch 2020. "
+                        "Pentimalli's contribution: extending it to 3D.\n"
+                        "(2) 'Multiplexed RNA imaging' — NOT NEW. CosMx existed before this paper. "
+                        "Pentimalli's contribution: doing it on 6 sections of one block.\n"
+                        "(3) 'Niche-resolved druggable signalling' — PARTIALLY NEW. The CellChat "
+                        "spatial-activity score was published in 2D before; doing it in 3D and "
+                        "showing the DC-niche network is genuinely new.\n"
+                        "(4) 'SHG ECM imaging' — NOT NEW. SHG is decades old in optics. The "
+                        "contribution is doing it co-registered with CosMx in 3D.\n"
+                        "(5) '3D vs 2D systematic comparison' — NEW. Nobody had run this comparison "
+                        "rigorously before. The 2.28× number and the niche-reassignment matrix in "
+                        "Fig 3 are the novel quantitative findings.\n"
+                        "(6) 'On routine clinical FFPE' — NEW IN COMBINATION. Each previous 3D "
+                        "paper used research-grade fresh tissue or model systems. FFPE is the "
+                        "gating constraint for clinical translation.\n\n"
+                        "WHERE THE FIELD IS HEADED NEXT — three trajectories:\n\n"
+                        "(a) Cohort-scale 3D atlases. Pentimalli is n=1; the next step is n=20-100 "
+                        "to test reproducibility of the niche grammar. HuBMAP and HCA are funding "
+                        "this. Expect a 2026-27 Pentimalli-style paper with multiple patients.\n\n"
+                        "(b) Multimodal extension. CosMx + SHG covers transcripts + matrix. Adding "
+                        "spatial proteomics (CODEX or MIBI on adjacent sections) gets you proteins. "
+                        "Adding metabolomics (MALDI-MSI) gets you metabolites. The 5-modality 3D "
+                        "atlas is the obvious next 5-year goal.\n\n"
+                        "(c) Functional perturbation. Right now this is descriptive. The next big "
+                        "advance is perturbation — CRISPR knockouts of MIF or CCL19 in matched "
+                        "model systems and re-running the 3D atlas. Pentimalli explicitly "
+                        "acknowledges this gap.\n\n"
+                        "WHY A LAB DOING SPATIAL BIOLOGY SHOULD CARE — three concrete things:\n\n"
+                        "(1) The 2D-vs-3D systematic-bias result is general. If you're publishing "
+                        "anything about niche structure or rare-cell-type localisation from "
+                        "single-section 2D, this paper will be cited as evidence your finding "
+                        "could be a 2D artefact. Get ahead of it.\n\n"
+                        "(2) The CosMx-on-FFPE part is reproducible. If you have a CosMx-equipped "
+                        "shared facility (Duke does), the 6-section workflow is doable.\n\n"
+                        "(3) The CellChat 3D-spatial activity score is a reusable analytical "
+                        "method. You don't need 3D data to use it — works on 2D too — and gives "
+                        "more biologically meaningful signalling readouts than gene-expression "
+                        "co-occurrence."
+                    ),
+                },
+            },
+
+            # 5 — Section divider
+            {
+                "type": "section_divider",
+                "title": "Now the figures — 7 of them, 1 headline",
+            },
+
+            # 6 — fig1 — Experimental design
             {
                 "type": "figure",
                 "layout": "auto",
@@ -724,17 +879,27 @@ def plan() -> dict:
                 },
             },
 
-            # 10 — Critique / limitations / thesis bridge
+            # 10 — Critique / limitations (analogy layout: strengths | limitations)
             {
-                "type": "text",
-                "title": "What this paper proves, what it doesn't, and where the thesis-world picks up",
-                "bullets": [
-                    "PROOF — 3D multimodal profiling on routine clinical FFPE is now feasible and informative",
-                    "PROOF — single-section 2D analysis systematically loses DC niches + T-cell continuity",
-                    "LIMIT — n=1 patient; structural claims are mechanistic but not population-level",
-                    "LIMIT — cancer, not infection; immunology is similar but pathogen kinetics differ",
-                    "BRIDGE — replace 'tumour' with 'infected epithelium' and the 3D-niche grammar transfers cleanly",
-                ],
+                "type": "analogy",
+                "variant": "side_by_side",
+                "title": "Strengths vs limitations — what would you trust?",
+                "familiar_label": "What this paper PROVES",
+                "familiar_body": (
+                    "3D multimodal profiling on FFPE is templated + feasible.\n\n"
+                    "Single-section 2D loses DC niches + T-cell continuity.\n\n"
+                    "Niche grammar (18 types → 10 niches) survives independent H&E.\n\n"
+                    "DC-niche druggable network is spatially-resolved."
+                ),
+                "scientific_label": "What still needs validation",
+                "scientific_body": (
+                    "n=1 — 2.28× and 51% from one patient.\n\n"
+                    "EMT-collagen-poor — Fig 6F overlap is substantial.\n\n"
+                    "CellChat conflates expression w/ signalling — needs CRISPR.\n\n"
+                    "Generalisation to infection, fibrosis untested."
+                ),
+                "arrow_text": "vs",
+                "citation_source": CITATION,
                 "speaker_notes": {
                     "hook": "Where do we land after 7 figures?",
                     "key_claim": "Pentimalli proves the FEASIBILITY of routine 3D multimodal profiling on clinical FFPE and proves the CONSEQUENCES of staying in 2D. The n=1 cohort caveat is real, but the methodological contribution generalises immediately.",
