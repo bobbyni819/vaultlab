@@ -93,7 +93,17 @@ Use it for journal clubs, lab meetings, conference talks, prelim/qual exams, dis
 
 #### See it in action — last week's output
 
+![16-slide JC deck cycling through every slide](docs/screenshots/journal-club-pentimalli-cycle.gif)
+
 A 16-slide journal-club deck for **Pentimalli & Rajewsky 2025** in *Cell Systems* (3D NSCLC atlas via CosMx + SHG ECM imaging). VaultLab pulled all 7 figures from the paper PDF, auto-picked layouts (side-caption for the 6 square multi-panels, top-caption-br for the one landscape figure), wrote 3-tier speaker notes from the cached Tier-A summary, animated the bullets click-by-click, and applied inline emphasis (bold ALL-CAPS labels, accent color on `2.28×`, `51%`, `DC niches`, `MIF`/`CCR7`/`PD-L1`/`CTLA-4`/`Tim-3`). Strengths-vs-limitations rendered as a side-by-side analogy slide; take-home as a quote slide. Audit pass at 0 overflow / 0 overlap. Build time: **~90 seconds.** Companion *cold-read briefing* generated alongside — 14-term glossary + slide-by-slide narrative + 10-point cheat sheet, designed for presenting the paper without opening the PDF.
+
+Two representative slides:
+
+![Headline slide — 3D vs 2D neighbourhoods, with figure left, bullets in side gutter, accent color on take-away numbers](docs/screenshots/slide-08-headline-3d-vs-2d.png)
+*Headline figure slide. Auto-picked `figure_with_side_caption` layout from the figure's square aspect ratio. Bold `PANEL B/D/E` labels; accent color on the take-away numbers.*
+
+![Strengths vs limitations slide rendered as analogy layout with two columns](docs/screenshots/slide-13-analogy-strengths-vs-limitations.png)
+*Strengths vs limitations rendered as an analogy slide. Click 1 reveals the left column; click 2 reveals the right column. Accent color on the take-aways: `DC niches + T-cell continuity` (what's lost in 2D); `CRISPR validation` (what's still needed).*
 
 ### Citations with traceable evidence
 

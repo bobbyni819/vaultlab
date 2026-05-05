@@ -1,8 +1,6 @@
 # Inspirations and intellectual lineage
 
-**Last updated:** 2026-04-28 (initial scaffold; Bobby fills as he goes)
-
-vaultlab is built on the shoulders of many open-source projects. This document is the auditable record of what we drew from where, distinguishing:
+vaultlab is built on the shoulders of many open-source projects. This document is the auditable record of what was drawn from where, updated as new sources are adopted. It distinguishes:
 
 - **CODE** — actual source code copied / adapted (line-for-line) into vaultlab
 - **PATTERN** — architectural pattern adopted, not source-code
