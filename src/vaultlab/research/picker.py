@@ -194,8 +194,13 @@ def picker_response_schema() -> dict[str, Any]:
     }
 
 
-def _truncate_abstract(text: str, *, max_chars: int = 1200) -> str:
-    """Trim an abstract for prompt budget without breaking mid-word."""
+def _truncate_abstract(text: str, *, max_chars: int = 2500) -> str:
+    """Trim an abstract for prompt budget without breaking mid-word.
+
+    Default raised 2026-05-05 from 1200 → 2500 chars so most abstracts
+    (which are typically 1500-2500 chars in PubMed) reach the picker
+    LLM intact rather than being clipped mid-Methods.
+    """
     if not text:
         return "[no abstract]"
     if len(text) <= max_chars:
@@ -327,15 +332,22 @@ def load_abstract_from_kb(kb_root: Path, doi: str) -> str:
     return match.group("body").strip()
 
 
-_AUTO_CAP_THRESHOLD: int = 500
+_AUTO_CAP_THRESHOLD: int = 700
 """When ``coarse_n=None`` and the corpus has more than this many papers,
 automatically cap the candidate pool to :data:`_AUTO_CAP_DEFAULT` to
 avoid blowing the picker's LLM context. Set the threshold high enough
-that small/medium corpora (~250 papers from backward-only expansion)
-still get the "read everything" treatment."""
+that small/medium corpora (~250-500 papers from forward-citation
+expansion) still get the "read everything" treatment.
 
-_AUTO_CAP_DEFAULT: int = 200
-"""When the auto-cap kicks in, this is the number of candidates kept."""
+Raised 2026-05-05 from 500 → 700 to match the 400-cap default — a
+600-paper corpus now passes through to the LLM as 400 candidates."""
+
+_AUTO_CAP_DEFAULT: int = 400
+"""When the auto-cap kicks in, this is the number of candidates kept.
+
+Raised 2026-05-05 from 200 → 400. With the 1M-context Claude model and
+the 2500-char per-abstract budget, 400 abstracts ≈ 250k tokens — well
+under context. Doubles the candidate pool the picker LLM evaluates."""
 
 
 def _build_candidates(

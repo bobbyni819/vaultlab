@@ -242,14 +242,18 @@ def test_prepare_picker_task_default_reads_all_corpus_papers(tmp_path):
 
 
 def test_prepare_picker_task_auto_caps_huge_corpus(tmp_path):
-    """When ``coarse_n=None`` and corpus has > 500 papers, auto-cap to 200."""
+    """When ``coarse_n=None`` and corpus exceeds the threshold, auto-cap kicks in.
+
+    2026-05-05: threshold raised 500 → 700, cap raised 200 → 400. This
+    test now uses an 800-paper corpus to ensure the cap fires.
+    """
     from vaultlab.research.corpus import Corpus
     from vaultlab.research.graph_metrics import compute_metrics
 
-    # Synthesize 600 corpus papers
+    # Synthesize 800 corpus papers (> new 700 threshold)
     seeds = _make_seeds()  # 3 seeds
     big_corpus = Corpus(topic="huge", seeds=seeds, papers={})
-    for i in range(600):
+    for i in range(800):
         p = Paper(
             title=f"paper-{i}",
             year=2020,
@@ -265,8 +269,9 @@ def test_prepare_picker_task_auto_caps_huge_corpus(tmp_path):
     task = prepare_picker_task(
         "t", corpus=big_corpus, target_n=10, kb_root=tmp_path
     )
-    # Auto-cap engages: candidate count should be 200, not 600+
-    assert len(task.candidates) == 200
+    # Auto-cap engages: candidate count should be 400 (the new default),
+    # not 800+.
+    assert len(task.candidates) == 400
 
 
 def test_prepare_picker_task_explicit_coarse_n_overrides_auto_cap(tmp_path):
