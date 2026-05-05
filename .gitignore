@@ -1,7 +1,4 @@
 
-!docs/**/*.pdf
-!examples/**/expected_outputs/*.docx
-!examples/**/expected_outputs/*.pptx
 # Anthropic / API artifacts
 # Build artifacts
 # Data (per .vaultlab-project.json data_sources, real data lives outside repo)
@@ -71,3 +68,9 @@ scripts/_trial_acquisition_cache/
 scripts/_trial_figure_acquisition_cache/
 Thumbs.db
 venv/
+
+# Re-include curated example artifacts AFTER the broad ignore rules above
+# (negation patterns must come last to override *.pptx / *.pdf / *.docx).
+!docs/**/*.pdf
+!examples/**/expected_outputs/*.docx
+!examples/**/expected_outputs/*.pptx

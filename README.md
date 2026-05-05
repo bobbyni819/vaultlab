@@ -105,6 +105,8 @@ Two representative slides:
 ![Strengths vs limitations slide rendered as analogy layout with two columns](docs/screenshots/slide-13-analogy-strengths-vs-limitations.png)
 *Strengths vs limitations rendered as an analogy slide. Click 1 reveals the left column; click 2 reveals the right column. Accent color on the take-aways: `DC niches + T-cell continuity` (what's lost in 2D); `CRISPR validation` (what's still needed).*
 
+**Download the actual `.pptx`** with click animations preserved: [`examples/journal-club/expected_outputs/journal-club-pentimalli-2026-05-05.pptx`](examples/journal-club/expected_outputs/journal-club-pentimalli-2026-05-05.pptx) (18.5 MB). See [`examples/journal-club/README.md`](examples/journal-club/README.md) for what's in the deck and how it was built.
+
 ### Citations with traceable evidence
 
 Drafts methods or background sections with `[N]` markers, then verifies every one *semantically* against the actual source paper. For each citation: VaultLab pulls the candidate sentence from the draft, reads the relevant passages in the cited PDF, and checks that the source actually supports the specific claim being made.
