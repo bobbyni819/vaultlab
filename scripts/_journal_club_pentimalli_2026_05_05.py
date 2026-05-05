@@ -42,10 +42,7 @@ def _fig(n: int) -> str:
     return str(FIG_CACHE / f"{SLUG}_fig{n}.png")
 
 
-CITATION = (
-    "Pentimalli TM, Schallenberg S, ..., Klauschen F, Rajewsky N. "
-    "Cell Systems 2025;16:101261. doi:10.1016/j.cels.2025.101261"
-)
+CITATION = "Pentimalli & Rajewsky, Cell Systems 2025;16:101261"
 
 
 REFS = [
@@ -145,7 +142,7 @@ def plan() -> dict:
             # 3 — fig1 — Experimental design
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "34 serial sections × CosMx 960-plex × SHG-ECM imaging assembled into one 3D atlas",
                 "image_path": _fig(1),
                 "caption": "Fig 1 — section layout, H&E, UMAP of 340 k cells, atlas label-transfer.",
@@ -219,7 +216,7 @@ def plan() -> dict:
             # 4 — fig2 — Cellular neighborhoods + 10 niches
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "10 multicellular niches from 3D neighbourhoods match independent pathologist H&E annotation",
                 "image_path": _fig(2),
                 "caption": "Fig 2 — z-stack, 50-µm neighbourhood definition, 10 niches, H&E concordance.",
@@ -301,7 +298,7 @@ def plan() -> dict:
             # 5 — fig3 — THE HEADLINE: 3D vs 2D
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "HEADLINE — 3D neighbourhoods are 2.28× larger; dendritic-cell niches and T-cell continuity exist ONLY in 3D",
                 "image_path": _fig(3),
                 "caption": "Fig 3 — 3D vs 2D: bigger neighbourhoods, DC niche only in 3D, T-cell bridges.",
@@ -382,7 +379,7 @@ def plan() -> dict:
             # 6 — fig4 — Receptor-ligand activity + DC niche druggable signaling
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "3D receptor-ligand activity scoring exposes a druggable dendritic-cell-niche signalling network",
                 "image_path": _fig(4),
                 "caption": "Fig 4 — 480-pair activity score; niche ligands; DC-niche druggable network.",
@@ -464,7 +461,7 @@ def plan() -> dict:
             # 7 — fig5 — SHG-defined ECM × fibroblast states
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "SHG-defined ECM compartments couple to 6 fibroblast states with distinct matrix-regulator activities",
                 "image_path": _fig(5),
                 "caption": "Fig 5 — SHG ECM, 3 compartments, 6 fibroblast states, ECM regulators.",
@@ -561,7 +558,7 @@ def plan() -> dict:
             # 8 — fig6 — Tumor pseudotime + EMT niche
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "Tumour 3D pseudotime captures EMT — the EMT niche invades collagen-poor ECM",
                 "image_path": _fig(6),
                 "caption": "Fig 6 — tumour pseudotime captures EMT; EMT niche is collagen-poor.",
@@ -647,7 +644,7 @@ def plan() -> dict:
             # 9 — fig7 — Druggable EMT niche
             {
                 "type": "figure",
-                "layout": "figure_above_bullets",
+                "layout": "auto",
                 "title": "EMT niche has a distinct druggable signalling signature — LGALS1 / IGFBP5 / VEGFA / SPP1 / integrins",
                 "image_path": _fig(7),
                 "caption": "Fig 7 — EMT-niche markers; tumour-fibroblast-macrophage druggable model.",
