@@ -86,11 +86,12 @@ def plan() -> dict:
                 "type": "text",
                 "title": "Why this paper — first proof that routine 3D multimodal profiling is feasible on clinical FFPE",
                 "bullets": [
-                    "ONE early-stage NSCLC patient, 34 consecutive 5-µm sections, single FFPE block",
-                    "CosMx 1000-plex spatial transcriptomics × SHG ECM × H&E, all aligned in 3D via STIM",
-                    "340,644 cells → 18 cell types → 10 multicellular niches",
-                    "Headline: 3D recovers DC niches + T-cell continuity that 2D analysis erases",
-                    "Druggable signaling — MIF/CCL19/PD-L1/CTLA-4 — is niche-resolved",
+                    "SAMPLE — one patient, early-stage non-small-cell lung cancer (NSCLC), formalin-fixed paraffin-embedded (FFPE) block",
+                    "DESIGN — 34 consecutive 5-µm sections, registered into one 3D coordinate frame via STIM software",
+                    "MODALITIES — CosMx 1000-plex spatial transcriptomics + label-free second-harmonic generation (SHG) extracellular matrix imaging + H&E",
+                    "SCALE — 340 644 cells → 18 cell types → 10 multicellular niches",
+                    "HEADLINE — 3D recovers dendritic-cell (DC) niches + T-cell continuity that 2D analysis erases",
+                    "DRUGGABILITY — niche-resolved checkpoint signalling: MIF, CCR7, PD-L1, CTLA-4, Tim-3",
                 ],
                 "speaker_notes": {
                     "hook": "What does this paper add over Schurch 2020 / Goltsev 2018?",
@@ -144,11 +145,11 @@ def plan() -> dict:
                 "type": "text",
                 "title": "Who built this — Berlin × Munich × Padua × NanoString consortium",
                 "bullets": [
-                    "MDC Berlin (Rajewsky lab) — 1st author Pentimalli; Rajewsky is systems-bio heavyweight (lncRNAs, organoids, single-cell)",
-                    "MDC Berlin (Coscia lab) — rising spatial-proteomics methods lead, ex-Mann lab",
-                    "Charité / LMU Munich (Klauschen lab) — leading computational pathologist; pathologist-validated annotations",
-                    "Padua (Piccolo lab) — Hippo / YAP-TAZ luminary, contributes mechano/EMT framing",
-                    "NanoString → Bruker (Liang, Gregory) — co-developed the CosMx 1000-plex panel",
+                    "RAJEWSKY LAB (Max Delbrück Center, MDC Berlin) — first author Pentimalli; systems biology + spatial omics; built STIM registration tool",
+                    "COSCIA LAB (MDC Berlin) — rising spatial-proteomics methods lead (ex-Mann lab, Munich)",
+                    "KLAUSCHEN LAB (Charité + Ludwig Maximilian Univ, LMU Munich) — computational pathology; independent H&E annotations",
+                    "PICCOLO LAB (Univ of Padua) — Hippo / YAP-TAZ pathway; mechano-transduction + epithelial-to-mesenchymal transition (EMT) framing",
+                    "NANOSTRING → BRUKER (Liang, Gregory) — co-designed the CosMx 1000-plex cancer panel",
                 ],
                 "speaker_notes": {
                     "hook": "Why should you trust this paper before you've read a single figure?",
@@ -215,11 +216,11 @@ def plan() -> dict:
                 "type": "text",
                 "title": "The field — 3D spatial omics is having a moment",
                 "bullets": [
-                    "2018 — CODEX (Goltsev) + IMC (Bodenmiller) launch ~50-plex protein imaging",
-                    "2020 — Schurch CRC: cellular neighbourhoods predict outcome in 2D CODEX",
-                    "2021-2023 — Hickey CODEX pipeline + Sorin 416-patient LUAD IMC (all 2D)",
-                    "2022-2024 — Visium / CosMx / Xenium scale to 1000+ genes per section",
-                    "2024 — HuBMAP / HCA push 3D atlases; Hickey/Agmon Vivarium + CODEX integrate",
+                    "2018 — CO-Detection by indEXing (CODEX) + imaging mass cytometry (IMC) reach ~50-plex protein imaging",
+                    "2020 — Schürch (colorectal cancer): cellular neighbourhoods predict outcome in 2D CODEX",
+                    "2021-2023 — Hickey CODEX pipeline + Sorin 416-patient lung adenocarcinoma IMC (all 2D)",
+                    "2022-2024 — Visium / CosMx / Xenium scale spatial transcriptomics to 1 000+ genes per section",
+                    "2024 — Human BioMolecular Atlas (HuBMAP) + Human Cell Atlas (HCA) push 3D; Hickey/Agmon couple Vivarium agent-based model with CODEX",
                     "2025 — Pentimalli: first 3D × multimodal × clinical FFPE",
                 ],
                 "speaker_notes": {
@@ -303,9 +304,9 @@ def plan() -> dict:
                 "caption": "Fig 1 — section layout, H&E, UMAP of 340 k cells, atlas label-transfer.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "1 patient, FFPE NSCLC; 34 consecutive 5-µm sections, 16 mm² ROI",
-                    "6 sections × CosMx 960-gene → 114 M transcripts, 340 k cells",
-                    "Cell typing: segmentation + clustering + atlas label transfer",
+                    "PATIENT — 1 early-stage NSCLC, archival FFPE block, 16 mm² region of interest",
+                    "DESIGN — 34 sections × 5 µm; 6 sections imaged with CosMx 1000-plex",
+                    "DATA — 114 M transcripts → 340 644 cells → 18 cell types",
                 ],
                 "speaker_notes": {
                     "hook": "How do you actually build a 3D atlas from a single FFPE block?",
@@ -377,9 +378,9 @@ def plan() -> dict:
                 "caption": "Fig 2 — z-stack, 50-µm neighbourhood definition, 10 niches, H&E concordance.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "3D neighbourhood = cells within 50 µm, sections above + below included",
-                    "Heatmap (D): each niche has distinct cell-type composition",
-                    "Niches match independent pathologist H&E annotation (E)",
+                    "DEFINITION — 3D neighbourhood = cells within a 50-µm sphere (z-neighbours included)",
+                    "RESULT — 10 niches with distinct cell-type compositions (heatmap, panel D)",
+                    "VALIDATION — niches match independent pathologist H&E annotation (panel E)",
                 ],
                 "speaker_notes": {
                     "hook": "Are these 'niches' just clustering artefacts, or do they mean anything?",
@@ -459,9 +460,9 @@ def plan() -> dict:
                 "caption": "Fig 3 — 3D vs 2D: bigger neighbourhoods, DC niche only in 3D, T-cell bridges.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "B: 3D vs 2D — 32 vs 22 cells, 9 vs 7 types (p<0.005)",
-                    "D: DC-niche cells → tumour surface (51%) or T-cell (24%) in 2D",
-                    "E: T-cell continuity restored only in 3D",
+                    "PANEL B — 3D vs 2D: 32 vs 22 cells, 9 vs 7 cell types (p<0.005)",
+                    "PANEL D — DC-niche cells reassigned to tumour surface (51%) or T-cell (24%) in 2D",
+                    "PANEL E — T-cell-niche spatial continuity restored only in 3D",
                 ],
                 "speaker_notes": {
                     "hook": "Does the third dimension actually buy you anything clinically?",
@@ -540,9 +541,9 @@ def plan() -> dict:
                 "caption": "Fig 4 — 480-pair activity score; niche ligands; DC-niche druggable network.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "480 CellChat pairs scored at 50-µm radius in 3D",
-                    "PDGFB → vascular; CCL19 + CXCL9 → DC + T-cell niches",
-                    "DC niche: MIF, CCR7, PD-L1, CTLA-4, Tim-3 — all druggable",
+                    "METHOD — 480 CellChat receptor-ligand pairs scored at 50-µm radius in 3D",
+                    "PATTERN — niche-specific ligands (PDGFB → vascular; CCL19 + CXCL9 → DC + T-cell)",
+                    "PAYOFF — DC-niche druggable network: MIF, CCR7, PD-L1, CTLA-4, Tim-3",
                 ],
                 "speaker_notes": {
                     "hook": "If 3D exposes the DC niche, what is the DC niche actually doing?",
@@ -622,9 +623,9 @@ def plan() -> dict:
                 "caption": "Fig 5 — SHG ECM, 3 compartments, 6 fibroblast states, ECM regulators.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "SHG = label-free collagen + elastin imaging, no stain",
-                    "3 ECM compartments: homeostatic / degraded / desmoplastic",
-                    "6 fibroblast states couple to specific ECM compartments",
+                    "MODALITY — SHG = label-free collagen + elastin imaging (no antibody, no stain)",
+                    "ECM — 3 compartments: homeostatic / degraded / desmoplastic",
+                    "FIBROBLASTS — 6 transcriptomic states couple to specific ECM compartments",
                 ],
                 "speaker_notes": {
                     "hook": "Cells live in matrix — does the matrix follow the cells or do the cells follow the matrix?",
@@ -719,9 +720,9 @@ def plan() -> dict:
                 "caption": "Fig 6 — tumour pseudotime captures EMT; EMT niche is collagen-poor.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "3D pseudotime orders tumour cells epithelial → mesenchymal",
-                    "Highest at stroma-infiltrating front (C, p<0.0001)",
-                    "EMT niche is collagen-POOR, not desmoplastic",
+                    "TRAJECTORY — pseudotime: epithelial → mesenchymal",
+                    "GRADIENT — highest at invasive front (p<0.0001)",
+                    "SURPRISE — EMT niche is collagen-POOR",
                 ],
                 "speaker_notes": {
                     "hook": "Where exactly in 3D space is the tumour invading from?",
@@ -805,9 +806,9 @@ def plan() -> dict:
                 "caption": "Fig 7 — EMT-niche markers; tumour-fibroblast-macrophage druggable model.",
                 "citation_source": CITATION,
                 "bullets": [
-                    "Tumour: NDRG1 + LGALS1 (galectin-1, immunosuppressive)",
-                    "Myofibroblasts: VEGFA + IGFBP5 (angiogenic, pro-IGF)",
-                    "Macrophages: SPP1 (pro-invasive co-option marker)",
+                    "TUMOUR CELLS — NDRG1 + LGALS1 (galectin-1; immunosuppressive)",
+                    "MYOFIBROBLASTS — VEGFA + IGFBP5 (angiogenic; modulates IGF axis)",
+                    "MACROPHAGES — SPP1 (osteopontin; pro-tumour-permissive marker)",
                 ],
                 "speaker_notes": {
                     "hook": "What is each cell type in the EMT niche actually contributing?",
@@ -955,16 +956,61 @@ def plan() -> dict:
                 },
             },
 
-            # 11 — Discussion questions
+            # 14 — Take-home (quote-style slide — single biggest claim)
+            {
+                "type": "quote",
+                "quote": (
+                    "Single-section 2D spatial omics is biased toward false negatives. "
+                    "The dendritic-cell niches and T-cell continuity that drive "
+                    "immunotherapy response are recoverable only in 3D."
+                ),
+                "attribution": "the take-home from Pentimalli & Rajewsky 2025",
+                "speaker_notes": {
+                    "hook": "If you remember one thing, it should be this.",
+                    "key_claim": "Single-section 2D spatial omics is systematically biased toward false negatives at the niche level. The structures that predict immunotherapy response are 3D structures.",
+                    "transition": "Five questions to seed discussion.",
+                    "script": (
+                        "If you take only one sentence away from this paper, take this one: "
+                        "single-section 2D spatial omics is systematically biased toward "
+                        "false negatives at the niche level. The dendritic-cell niches and "
+                        "T-cell continuity that drive immunotherapy response are 3D "
+                        "structures, and a 5-µm slice through them looks like nothing. "
+                        "If your group is publishing niche-level claims from 2D data, you "
+                        "now have to defend why your finding isn't an artefact of that "
+                        "slicing plane. If your group is reading clinical spatial-omics "
+                        "reports, you now have to read negatives as 'absence of signal in "
+                        "this slice', not 'absence of structure'. Everything else in the "
+                        "paper is downstream of this."
+                    ),
+                    "extended_walkthrough": (
+                        "WHY THIS IS THE CORRECT TAKE-HOME — three reasons.\n\n"
+                        "(1) It generalises beyond NSCLC. The geometric argument (2D disc "
+                        "vs 3D ball) is independent of disease. Any niche-level claim from "
+                        "any tumour, any infection, any fibrosis study built on 2D data is "
+                        "vulnerable to the same critique.\n\n"
+                        "(2) It is actionable. You can decide today: are you publishing 2D "
+                        "niche claims (justify why 2D is enough) or 3D (you have a method "
+                        "advantage). The implications for grant writing, paper framing, "
+                        "and clinical interpretation are immediate.\n\n"
+                        "(3) It is testable. The 51% niche-reassignment number is a "
+                        "concrete quantitative prediction that other groups can replicate. "
+                        "If they reproduce 30-70% reassignment in their own 3D atlases, "
+                        "the claim holds. If they find <10%, the claim was n=1 noise. "
+                        "Either way, the field moves forward."
+                    ),
+                },
+            },
+
+            # 15 — Discussion questions
             {
                 "type": "text",
                 "title": "Discussion seeds — where would you push this paper?",
                 "bullets": [
-                    "If you only had budget for 1 modality on 1 sample, would you pick CosMx 3D or 2D + cohort? Why?",
-                    "Is 'DC niche only exists in 3D' a methods artefact or biology? How would you tell?",
-                    "Would the EMT-niche cooperative model survive in metastatic NSCLC? In treatment-naïve vs post-immunotherapy?",
-                    "What would a 'minimum useful 3D' look like — 6 sections? 3? 2 + interpolation?",
-                    "How does this change how we think about clinical pathology — is single-section H&E still enough?",
+                    "1.  BUDGET — would you spend on CosMx 3D / 1 sample, or 2D / 50 samples? Why?",
+                    "2.  ARTEFACT vs BIOLOGY — is 'DC niche only in 3D' a methods artefact or real? How would you test?",
+                    "3.  GENERALISABILITY — does the EMT-niche cooperative survive in metastatic disease? Treatment-naïve vs post-immunotherapy?",
+                    "4.  MINIMUM USEFUL 3D — is 6 sections the floor? 3? 2 + interpolation?",
+                    "5.  CLINICAL PATHOLOGY — is single-section H&E still enough for diagnostic decisions?",
                 ],
                 "speaker_notes": {
                     "hook": "Open the floor.",
