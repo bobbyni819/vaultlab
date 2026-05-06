@@ -68,7 +68,7 @@ The actionable how-to (what primitive for what ask, which role pass before shipp
 
 Skipping these is the single biggest quality leak in the harness — see `Sources/Notes/friction-findings-from-metabolism-run-2026-05-05.md` (KB) for nine concrete ways this went wrong during the dogfood run.
 
-## The six core commitments (META PRINCIPLES)
+## The seven core commitments (META PRINCIPLES)
 
 These are non-negotiable. Every architectural decision serves them.
 
@@ -107,7 +107,21 @@ VaultLab keeps working rather than blocking the user with mid-flight questions. 
 
 **End every turn with one line:** if a grill doc, decisions-log entry, or START_HERE update was written, surface it as `bobby-kb open <path>` so the user can read it on their schedule.
 
-### 6. Centralized memory is the flagship
+### 6. Additive over user state, with maximum context
+
+Every vaultlab primitive READS existing KB state before writing. Defaults to extending existing artifacts (arcs, figures, decks, analyses, audits) rather than redoing them. Pulls FULL context on every invocation — literature summaries, project state, prior decisions, recent commits, code-file structure, data-file schemas — even when the task seems narrow.
+
+**Two complementary disciplines:**
+
+1. **Additive operations.** A user invoking `/lit-arc cancer spatial` for the second time after a prior run should get an EXTENSION of the existing corpus, not a redo. A user asking for a marker dot-plot when one exists should get a VARIANT linked to the prior, not a duplicate. The state-aware defaults table in `READ_FIRST.md` Step 3.5 documents the branching: `--fresh` / `--extend` / `--branch` / `--query-existing` / `--variant`.
+
+2. **Maximum context per invocation.** Even when the task is "refactor this script" — which seems literature-orthogonal — the primitive scans `<kb>/Wiki/Summaries/` for any paper that mentions a relevant analytical pattern, scans `<project>/decisions-log.md` for prior conventions, scans recent commits for related work. Side context surfaces unique vaultlab value: *"Your manuscript draft references this function; Schurch 2020 uses a similar pattern."*
+
+**Implementation rule:** every artifact-producing primitive (`run_lit_arc`, `build_deck`, `figure_from_data`, `plan_deep_think_round`, `cite_audit`, `code_review`, `eda`) starts with a `state_aware_preflight()` call that returns the cross-domain context. The primitive's mode (`--fresh` / `--extend` / etc.) is then a function of that state, not a user-supplied default.
+
+**Anti-pattern to avoid:** stateless primitives that fan out work without checking what's already in the KB. The metabolism dogfood run hit this — friction #3 (resolver picked default KB), friction #7 (collaborator commits silently missed), and the core dispatch failure mode (writing a free-form doc when an existing concept doc covered the question) all trace to "didn't read state first."
+
+### 7. Centralized memory is the flagship
 
 What separates VaultLab from PaperQA / scanpy / FutureHouse / scverse / Aider is the unified memory layer. Six channels stitched into one place the LLM reads:
 

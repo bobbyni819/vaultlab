@@ -104,6 +104,40 @@ The table is grouped by capability area, and the order reflects vaultlab's three
 
 If there's a vaultlab primitive that's purpose-built for the ask, **invoke it.** If not, write the doc. **Default order of precedence: primitive > role pass > free-form doc.** When in doubt, glance at `.claude/commands/COMMANDS.md` for the full slash-command inventory; never invent a name.
 
+## Step 3.5 — State-aware additive defaults (BEFORE invoking any artifact-producing primitive)
+
+**Every primitive that produces an artifact (lit-arc, figure-from-data, deck-build, deep-think-round, EDA, code-review) must FIRST read existing KB state for prior runs on the same topic / project / claim.** vaultlab is additive over user state by design: building on prior work, not redoing it.
+
+Pre-flight glob (run before the primitive's main work):
+
+```python
+# Conceptual — each primitive does its own version of this
+from pathlib import Path
+
+def state_aware_preflight(topic: str, kb_root: Path, project_slug: str) -> dict:
+    return {
+        "existing_arcs": list((kb_root / "Wiki/Concepts").glob(f"*{topic_slug}*lineage*")),
+        "tier_a_count": count_summaries_with_topic_tag(kb_root, topic),
+        "decisions": (kb_root / project_slug / "decisions-log.md").read_text() if exists else None,
+        "prior_outputs": list((kb_root / project_slug / "Output").glob(f"*{topic_slug}*")),
+        "related_concepts": semantic_search_concept_docs(topic, kb_root),
+    }
+```
+
+Branch on what state finds. Default mode + announce it:
+
+| State found | Default mode | Behavior |
+|---|---|---|
+| Nothing relevant | `--fresh` | Full new corpus / full new analysis. Standard pipeline. |
+| Existing arc + ≥30 Tier-A summaries on same topic | `--extend` | Add to existing: only fetch papers NOT already in corpus; rerun picker on combined; rebuild arc with augmented bins. |
+| Near-topic existing arc (≥0.7 conceptual overlap) | `--branch` | Start new arc but pre-seed with the related arc's foundational papers; cross-link arcs. |
+| Same-topic + existing corpus + this is a follow-up question | `--query-existing` | Answer from existing corpus first; only fan out new search if existing doesn't cover. |
+| Existing figures using same recipe | `--variant` | Render new figure but cross-link to prior; note recipe-version + parameter delta. |
+
+**Always announce the choice:** *"You have a 47-paper corpus on cancer spatial transcriptomics from 2026-04-29. I'll extend it (`--extend` mode) — fetching only new papers since, then rerunning the picker on combined."* User can override with `--fresh` if they explicitly want a clean run.
+
+**Maximum-context principle.** Even when the task seems narrow (e.g., "refactor this script"), the primitive should pull cross-domain context: relevant lit summaries, prior decisions, recent commits, related concept docs. Side context yields the unique vaultlab value — *"FYI, your manuscript draft references this function; Schurch 2020 uses a similar pattern."* Don't isolate.
+
 ## Step 4 — Role-pass discipline (BEFORE shipping high-stakes claims)
 
 Every "shippable" doc gets the appropriate role pass before you consider it done. Skipping this is the single biggest quality leak in the harness — a `rigor_auditor` pass on a methodology doc once caught a `major` overclaim that had already been written and was about to ship.
