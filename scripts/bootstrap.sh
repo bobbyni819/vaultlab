@@ -96,12 +96,30 @@ case "$KB_CHECK" in
 esac
 
 # ─────────────────────────────────────────────────────────────────
-# 4. Done
+# 4. Wire vaultlab into Claude Code globally (slash commands + global CLAUDE.md)
+# ─────────────────────────────────────────────────────────────────
+step "Wiring vaultlab into Claude Code..."
+if $PY -m vaultlab.cli claude-setup 2>/dev/null; then
+    ok "Claude Code setup complete"
+elif command -v vaultlab >/dev/null 2>&1; then
+    vaultlab claude-setup
+    ok "Claude Code setup complete"
+else
+    warn "Could not run 'vaultlab claude-setup' — slash commands may not be globally available."
+    warn "Run manually:  vaultlab claude-setup"
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# 5. Done
 # ─────────────────────────────────────────────────────────────────
 echo ""
 ok "Bootstrap complete. Next:"
+echo "  • Open Claude Code in any project folder"
 echo "  • /onboard-me     — natural-language project onboarding (recommended for first-time users)"
 echo "  • /onboard-project — structured onboarding for an existing folder"
 echo "  • /start-project  — quick topic-only scaffold"
 echo "  • /lit-arc <topic> — once a project is onboarded"
+echo ""
+echo "Slash commands now available globally (~/.claude/commands/)."
+echo "Global CLAUDE.md updated to point at READ_FIRST.md for dispatch routing."
 echo ""

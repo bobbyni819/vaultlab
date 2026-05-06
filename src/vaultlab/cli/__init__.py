@@ -206,6 +206,141 @@ def _cmd_paperclip_sql(argv: list[str]) -> int:
         return 1
 
 
+def _find_vaultlab_repo_root() -> Path | None:
+    """Locate the vaultlab repo root (where READ_FIRST.md + .claude/commands/ live).
+
+    Strategy: start from the installed ``vaultlab`` package location and walk
+    up looking for the marker files. Works for editable installs and for
+    git-cloned-and-pip-installed cases. Returns ``None`` if not found
+    (typical of pure-PyPI installs without the source repo on disk).
+    """
+    import vaultlab
+
+    pkg_path = Path(vaultlab.__file__).resolve().parent  # .../site-packages/vaultlab/ OR .../src/vaultlab/
+    for candidate in [pkg_path, *pkg_path.parents]:
+        if (candidate / "READ_FIRST.md").exists() and (candidate / ".claude" / "commands").is_dir():
+            return candidate
+    return None
+
+
+def _cmd_claude_setup(argv: list[str]) -> int:
+    """Wire vaultlab into Claude Code globally — slash commands + global CLAUDE.md.
+
+    Closes a friction point a fresh user hits: they pip install vaultlab,
+    they open Claude Code in their own project, and Claude has no idea
+    vaultlab exists. This subcommand:
+
+    1. Copies vaultlab's ``.claude/commands/*.md`` -> ``~/.claude/commands/``
+       so its slash commands appear in EVERY Claude Code session, not only
+       sessions opened in the vaultlab repo
+    2. Writes (or appends to) ``~/.claude/CLAUDE.md`` a "## VaultLab" pointer
+       block citing the absolute path of vaultlab's ``READ_FIRST.md`` so any
+       fresh session reads the dispatch table first
+
+    Idempotent — safe to re-run after ``git pull`` to refresh the slash
+    commands. Won't duplicate the CLAUDE.md block if already present.
+
+    Usage:
+        vaultlab claude-setup [--dry-run]
+    """
+    import datetime
+    import shutil
+
+    dry_run = "--dry-run" in argv
+
+    repo_root = _find_vaultlab_repo_root()
+    user_claude = Path.home() / ".claude"
+    user_commands = user_claude / "commands"
+    user_claude_md = user_claude / "CLAUDE.md"
+
+    if dry_run:
+        print("vaultlab claude-setup --dry-run — no files will be modified.\n")
+
+    if repo_root is None:
+        print(
+            "vaultlab: cannot locate vaultlab repo root on this machine.\n"
+            "  Slash-command copy will be skipped. CLAUDE.md block can still\n"
+            "  be written (it will reference the package path instead of repo).\n"
+            "\n"
+            "  To get full setup, clone the repo and pip-install editable:\n"
+            "    git clone https://github.com/bobbyni819/vaultlab\n"
+            "    pip install -e ./vaultlab\n"
+            "    vaultlab claude-setup",
+            file=sys.stderr,
+        )
+        repo_marker = "(pure PyPI install — slash commands not auto-copied)"
+    else:
+        src_commands = repo_root / ".claude" / "commands"
+        n_copied = 0
+        skipped_meta = {"README.md", "COMMANDS.md"}
+        if not dry_run:
+            user_commands.mkdir(parents=True, exist_ok=True)
+        for md in sorted(src_commands.glob("*.md")):
+            if md.name in skipped_meta:
+                continue
+            target = user_commands / md.name
+            if dry_run:
+                print(f"  [dry-run] would copy: {md.name} -> {target}")
+            else:
+                shutil.copy(md, target)
+            n_copied += 1
+        if not dry_run:
+            print(f"vaultlab: copied {n_copied} slash command(s) to {user_commands}")
+        else:
+            print(f"vaultlab: [dry-run] would copy {n_copied} slash command(s) to {user_commands}")
+        repo_marker = str(repo_root)
+
+    block_marker = "## VaultLab — research companion harness"
+    today = datetime.date.today().isoformat()
+    if repo_root is not None:
+        read_first_path = repo_root / "READ_FIRST.md"
+    else:
+        read_first_path = Path("(see https://github.com/bobbyni819/vaultlab/blob/main/READ_FIRST.md)")
+    block = (
+        f"\n{block_marker}\n\n"
+        f"Installed at: `{repo_marker}`\n\n"
+        f"When the user asks anything related to literature search, figure generation, "
+        f"data analysis, citation auditing, manuscript drafting, deck building, or any "
+        f"knowledge-base-driven research workflow: read `{read_first_path}` FIRST. "
+        f"It has the dispatch table that maps natural-language asks to vaultlab primitives "
+        f"(`/lit-arc`, `/build-deck`, `/cite audit`, `methods_critic`, `rigor_auditor`, "
+        f"figure recipes, plus state-aware additive defaults).\n\n"
+        f"Slash commands installed at `{user_commands}` are vaultlab's; they appear in every "
+        f"Claude Code session.\n\n"
+        f"Auto-installed by `vaultlab claude-setup` on {today}. Re-run after `git pull` to refresh.\n"
+    )
+
+    if user_claude_md.exists():
+        existing = user_claude_md.read_text(encoding="utf-8")
+        if block_marker in existing:
+            if dry_run:
+                print(f"vaultlab: [dry-run] {user_claude_md} already has vaultlab block (would skip)")
+            else:
+                print(f"vaultlab: {user_claude_md} already has vaultlab block (skipping append)")
+        else:
+            new_content = existing.rstrip() + "\n" + block
+            if dry_run:
+                print(f"vaultlab: [dry-run] would append vaultlab block to {user_claude_md}")
+            else:
+                user_claude_md.write_text(new_content, encoding="utf-8")
+                print(f"vaultlab: appended vaultlab block to {user_claude_md}")
+    else:
+        if dry_run:
+            print(f"vaultlab: [dry-run] would create {user_claude_md} with vaultlab block")
+        else:
+            user_claude_md.parent.mkdir(parents=True, exist_ok=True)
+            user_claude_md.write_text(block.lstrip("\n"), encoding="utf-8")
+            print(f"vaultlab: created {user_claude_md} with vaultlab block")
+
+    if not dry_run:
+        print(
+            "\nDone. Open Claude Code anywhere on this machine.\n"
+            "  - Slash commands: now globally available\n"
+            "  - First-message routing: Claude reads READ_FIRST.md and dispatches per the table"
+        )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point registered in pyproject.toml as ``vaultlab``.
 
@@ -229,6 +364,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_paperclip_grep(rest)
     if cmd == "paperclip-sql":
         return _cmd_paperclip_sql(rest)
+    if cmd == "claude-setup":
+        return _cmd_claude_setup(rest)
 
     print(f"vaultlab: unknown command {cmd!r}", file=sys.stderr)
     _print_usage(stream=sys.stderr)
@@ -239,14 +376,20 @@ def _print_usage(stream: object = None) -> None:
     if stream is None:
         stream = sys.stdout
     msg = (
-        "vaultlab v0.0.1 — alpha scaffold\n"
+        "vaultlab v0.0.2 — alpha\n"
         "\n"
         "Usage:\n"
-        "  vaultlab init [<kb-root-path>]            Configure KB root\n"
+        "  vaultlab init [<kb-root-path>]            Configure KB root (one-time)\n"
+        "  vaultlab claude-setup [--dry-run]         Wire slash commands + global CLAUDE.md\n"
         "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
         "  vaultlab fetch-list paywalled <log>       Manual-fetch shopping list\n"
         "  vaultlab paperclip-grep <pat> [path]      Regex over paperclip corpus\n"
         "  vaultlab paperclip-sql \"<query>\"          SQL over paperclip corpus\n"
+        "\n"
+        "First-time setup (recommended order):\n"
+        "  pip install vaultlab\n"
+        "  vaultlab init                              # set KB root\n"
+        "  vaultlab claude-setup                      # make slash commands global\n"
         "\n"
         "Other commands (search, run, project, etc.) are exposed as Claude Code\n"
         "slash commands inside .claude/commands/. See README.md for the full\n"

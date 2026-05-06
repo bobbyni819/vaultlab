@@ -94,12 +94,38 @@ if ($kbcheck -like "OK*") {
 }
 
 # ─────────────────────────────────────────────────────────────────
-# 4. Done
+# 4. Wire vaultlab into Claude Code globally (slash commands + global CLAUDE.md)
+# ─────────────────────────────────────────────────────────────────
+Write-Step "Wiring vaultlab into Claude Code..."
+$claudeSetup = & $py -m vaultlab.cli claude-setup 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Ok "Claude Code setup complete"
+} else {
+    if (Get-Command vaultlab -ErrorAction SilentlyContinue) {
+        & vaultlab claude-setup
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok "Claude Code setup complete"
+        } else {
+            Write-Warn2 "vaultlab claude-setup failed; slash commands may not be globally available."
+            Write-Host "  Run manually:  vaultlab claude-setup"
+        }
+    } else {
+        Write-Warn2 "Could not run 'vaultlab claude-setup' (vaultlab CLI not on PATH)."
+        Write-Host "  Slash commands may not be globally available. Run manually:  vaultlab claude-setup"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────
+# 5. Done
 # ─────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Ok "Bootstrap complete. Next:"
+Write-Host "  • Open Claude Code in any project folder"
 Write-Host "  • /onboard-me     — natural-language project onboarding (recommended for first-time users)"
 Write-Host "  • /onboard-project — structured onboarding for an existing folder"
 Write-Host "  • /start-project  — quick topic-only scaffold"
 Write-Host "  • /lit-arc <topic> — once a project is onboarded"
+Write-Host ""
+Write-Host "Slash commands now available globally (~/.claude/commands/)."
+Write-Host "Global CLAUDE.md updated to point at READ_FIRST.md for dispatch routing."
 Write-Host ""
