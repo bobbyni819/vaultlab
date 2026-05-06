@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vaultlab"
-version = "0.0.1"
+version = "0.0.2"
 description = "From microscope to manuscript, in one repo. The AI lab for biological researchers."
 readme = "README.md"
 license = {file = "LICENSE"}
