@@ -68,7 +68,7 @@ The actionable how-to (what primitive for what ask, which role pass before shipp
 
 Skipping these is the single biggest quality leak in the harness — see `Sources/Notes/friction-findings-from-metabolism-run-2026-05-05.md` (KB) for nine concrete ways this went wrong during the dogfood run.
 
-## The seven core commitments (META PRINCIPLES)
+## The nine core commitments (META PRINCIPLES)
 
 These are non-negotiable. Every architectural decision serves them.
 
@@ -121,7 +121,53 @@ Every vaultlab primitive READS existing KB state before writing. Defaults to ext
 
 **Anti-pattern to avoid:** stateless primitives that fan out work without checking what's already in the KB. The metabolism dogfood run hit this — friction #3 (resolver picked default KB), friction #7 (collaborator commits silently missed), and the core dispatch failure mode (writing a free-form doc when an existing concept doc covered the question) all trace to "didn't read state first."
 
-### 7. Centralized memory is the flagship
+### 7. Context preservation invariant (sessions never zero-shoot)
+
+**No vaultlab session re-starts from zero.** Every Claude Code session that touches a vaultlab project must, before answering the user's first task, glob the project's KB directory and report what relevant prior work exists. If nothing is reported, that's a bug — refuse to proceed until the agent confirms the glob ran. The KB IS the persistence layer; there's no in-memory state to lose.
+
+**Required reads on session start:**
+
+1. `<kb>/<project>/START_HERE.md` — daily brief, newest day on top. Tells the agent what was happening, what's blocked, what to do next.
+2. `<kb>/<project>/decisions-log.md` — append-only design + scope decisions. Tells the agent which methods are already canonical (e.g., *"we use spearman after Round 8"*).
+3. `<kb>/<project>/Output/` glob — what artifacts already exist for this project's topic.
+4. `<kb>/Wiki/Concepts/<related-topics>` — concept docs that may overlap the current ask.
+5. **For collaborative projects:** `git log <branch>..origin/<base> --since='14d'` — what commits other authors pushed since the last session.
+
+**Required reads on every artifact-producing primitive** (per READ_FIRST.md Step 3.5): glob the canonical output paths for prior runs on the same topic + branch on state (`--fresh` / `--extend` / `--branch` / `--query-existing` / `--variant`).
+
+**For spawned sub-agents:** when an orchestrator spawns analyst / critic / synthesizer sub-agents (via `plan_deep_think_round`, `plan_ensemble_critic`, etc.), the system prompt for each MUST include:
+- The relevant KB excerpts (per-paper Tier-A summaries, decisions log, prior concept docs) loaded as context
+- The explicit instruction *"this is what the project has already done; do NOT redo it; build on it"*
+- The output schema so the sub-agent's work feeds back into the KB cleanly
+
+**Anti-pattern to refuse:** any sub-agent invocation whose system prompt is just the role's task description without the KB context preamble. That's the path to "the agent suddenly forgot all about the previous work" — Bobby's stated worst-case. Refuse to invoke until the preamble is present.
+
+### 8. Methods are lifted from accredited published work, never invented
+
+**vaultlab's value comes from disciplined orchestration of established methods, not from novel techniques.** When implementing any new orchestrator, primitive, or recipe, the rule is:
+
+1. **Identify the published source first.** What paper / well-tested OSS project / prior gstack-style harness did this pattern? Cite it.
+2. **Document the lineage explicitly.** New module → entry in `INSPIRATIONS.md` with `CODE` / `PATTERN` / `CONCEPT` / `TOOL` classification. New recipe → `<recipe>.md` cites ≥3 anchor papers. New role → `roles/<name>/prompt.md` cites the original methodology.
+3. **If you can't cite a source, that's a smell.** Means we're either re-inventing or operating outside the discipline. Either find the source or flag it for design review.
+
+**Established sources we draw from:**
+
+| Pattern | Source | Where it lives in vaultlab |
+|---|---|---|
+| Multi-agent meeting (analyst → critic → synthesizer + bounded loops + structured-JSON-only) | virtual-lab (Swanson et al., *Nature* 2025; Zou group, Stanford) | `runner/meetings.py`, `workflows/crosstalk.py` |
+| Plan → execute → verify → refine inner loop with reflection-round caps | AI-Scientist (Sakana AI) | `runner/reflection.py`, `workflows/deep_think.py` |
+| Wiki-grows-with-work + LLM-maintains-the-wiki | Karpathy's LLM Wiki gist | `kb/`, `Wiki/Concepts/`, `Wiki/Summaries/` |
+| Per-paper grounded summaries with `[pN]` page-marker citations | PaperQA2 (FutureHouse) | `research/summarize.py` |
+| Hover-to-see-quote citation UX | NotebookLM (Google) | `citations/` |
+| Multi-source literature search + cross-source dedup | paperclip-MCP, scverse practice | `research/sources/`, `research/unified_search.py` |
+| Recipe library — figures with cited published examples | scverse / scanpy gallery, bioconductor vignettes, squidpy | `figures/recipes/` |
+| Markdown-as-instruction-files Claude Code skill bundle | gstack (Garry Tan) | `.claude/commands/`, `roles/<name>/prompt.md` |
+
+When you build something new, this table grows by one row. Refuse to ship a new orchestrator without an `INSPIRATIONS.md` entry.
+
+**Why this matters for adoption:** the PI's 2026-05-06 framing was *"helping with analysis and coming up with literature review, figures and image understanding"* — and a lab member trying vaultlab needs to be able to TRUST the methods. *"Why use vaultlab's lit-arc instead of writing it yourself?"* gets the answer: *"Because the picker uses the same content-aware ranking pattern from virtual-lab, the multi-agent crosstalk is bounded by the protocol from AI-Scientist, the citation grounding mirrors PaperQA2 + NotebookLM. Each piece has a track record elsewhere; vaultlab is the integration."*
+
+### 9. Centralized memory is the flagship
 
 What separates VaultLab from PaperQA / scanpy / FutureHouse / scverse / Aider is the unified memory layer. Six channels stitched into one place the LLM reads:
 
