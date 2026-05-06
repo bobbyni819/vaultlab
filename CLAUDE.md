@@ -2,6 +2,40 @@
 
 This file is the first thing Claude Code reads when opening the vaultlab repo. Treat it as the source of truth for how to navigate, modify, and extend vaultlab.
 
+## First-encounter checklist (run this BEFORE any vaultlab call)
+
+When Claude Code arrives at a project that uses vaultlab, run these three checks **before** invoking any slash command. Skipping them leaves the user staring at `ModuleNotFoundError` or `KbRootNotConfigured` from three layers deep — bad first impression.
+
+```python
+# 1. Importable?
+try:
+    import vaultlab  # noqa: F401
+except ImportError:
+    # Don't try to use vaultlab. Point the user at the bootstrap.
+    print("vaultlab not installed. Run: pwsh scripts/bootstrap.ps1  (or bash scripts/bootstrap.sh)")
+    raise SystemExit(1)
+
+# 2. KB root resolvable?
+from vaultlab.context import resolve_kb_root, KbRootNotConfigured
+try:
+    kb_root = resolve_kb_root()
+except KbRootNotConfigured as exc:
+    print(f"KB not configured. Run `vaultlab init` (default: {exc.suggested_default}).")
+    raise SystemExit(1)
+
+# 3. Project config? (only matters if cwd is INSIDE a project folder)
+from vaultlab.onboarding import load_project_config_from_cwd
+project_cfg = load_project_config_from_cwd()
+# If None, the user hasn't onboarded yet. Suggest /onboard-me (natural-language path).
+```
+
+If any check fails:
+- (1) failed → run `scripts/bootstrap.ps1` or `scripts/bootstrap.sh`
+- (2) failed → `vaultlab init` (one-time, prompts for default KB root)
+- (3) None → `/onboard-me` (natural-language) or `/onboard-project` (structured) or `/start-project "<topic>"` (topic-only)
+
+This checklist is a **prose contract**, not an enforced precondition — every slash command currently does its own resolve-or-fail. The contract just shifts the failure mode from "import error in line N of orchestrator" to "human-readable next step."
+
 ## What vaultlab is
 
 `vaultlab` is a **research companion** for biological scientists — an open-source capability layer for Claude Code that integrates literature search, citation verification, wet-lab data analysis, figure generation, manuscript drafting, slide deck creation, AND life-context (Google Docs/Sheets/Drive/Gmail/Calendar, Outlook on Windows).
