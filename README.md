@@ -15,6 +15,27 @@
 
 > *"Most lit-search tools answer one question. VaultLab is what happens when your literature, your wet-lab data, your meeting transcripts, your inbox, and your manuscript live in one place that an LLM can read."*
 
+## Quickstart — paste this into Claude Code
+
+Open Claude Code anywhere on your machine and paste:
+
+```
+Hi Claude. Set me up to use vaultlab — github.com/bobbyni819/vaultlab.
+Bootstrap end-to-end (each step idempotent — skip if already done):
+
+1. Check `python -c "import vaultlab"`. If missing, clone the repo
+   to ~/code/vaultlab and `pip install -e ~/code/vaultlab`.
+2. Run `vaultlab init` (accept default ~/vaultlab-kb if prompted).
+3. Run `vaultlab claude-setup` to wire slash commands + global CLAUDE.md.
+4. Read vaultlab/READ_FIRST.md and absorb the dispatch table.
+5. Ask me what project I want to set up. When I describe it, run
+   /onboard-me to drive the natural-language intake.
+
+Summarize what's installed, then wait for my project description.
+```
+
+Claude does the entire bootstrap — clone → pip install → KB init → slash command wiring → reads the dispatch table → asks what project you want. After step 5, slash commands like `/lit-arc`, `/build-deck`, `/cite audit` are available in every Claude Code session on your machine. Full walkthrough: [`QUICKSTART.md`](QUICKSTART.md).
+
 ## About
 
 I'm Bobby Ni, a PhD student in Biomedical Engineering in the **Hickey Lab** at Duke University. I do wet-lab spatial omics — CODEX multiplexed protein imaging, MALDI imaging mass spectrometry, scRNA-seq integration — and a lot of computational work alongside it.
