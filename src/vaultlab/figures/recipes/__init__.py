@@ -8,14 +8,15 @@ The six archetypes (per
 ``Sources/Notes/figure-archetypes-implementation-roadmap-2026-05-06.md``):
 
 - :mod:`marker_dot_plot` — per-cluster expression of N markers (Hickey 2021)
-- :mod:`umap_overlay` — 2D projection colored by cluster/marker (Pentimalli 2025) [STUB]
+- :mod:`umap_overlay` — 2D projection colored by cluster/marker (Pentimalli 2025)
 - :mod:`heatmap` — cell × feature / co-occurrence matrix (Schurch 2020)
-- :mod:`stat_test_panel` — bar/box/violin with significance brackets (Sorin 2023) [STUB]
-- :mod:`multi_panel_composite` — A-B-C-D panel grid (Pentimalli 2025 main figs) [STUB]
-- :mod:`spatial_map_overlay` — tissue image with cell/niche overlay (Pentimalli 2025, Sorin 2023) [STUB]
+- :mod:`stat_test_panel` — bar/box/violin with significance brackets (Sorin 2023)
+- :mod:`multi_panel_composite` — A-B-C-D panel grid (Pentimalli 2025 main figs)
+- :mod:`spatial_map_overlay` — tissue image with cell/niche overlay (Pentimalli 2025, Sorin 2023)
 
-[STUB] = API documented; render() raises NotImplementedError. Two anchor
-recipes (marker_dot_plot, heatmap) are fully implemented for v0.0.3.
+All six archetypes are fully implemented as of v0.0.3. Each ``render()`` returns
+the saved figure ``Path`` and writes a sibling ``.provenance.json`` recording
+the recipe version + anchor papers + input hash.
 """
 
 from vaultlab.figures.recipes import (
