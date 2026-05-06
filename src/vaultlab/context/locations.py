@@ -349,34 +349,68 @@ class KbRootNotConfigured(RuntimeError):
         self.suggested_default = suggested_default or (Path.home() / _DEFAULT_KB_ROOT_NAME)
 
 
+def _bobby_kb_config_candidate_paths() -> list[Path]:
+    """Return all candidate paths where bobby_kb's ``config.json`` may live.
+
+    Order of preference:
+
+    1. ``~/.config/bobby_kb/config.json`` — Unix-style; works on Linux,
+       macOS, and Windows accounts where the user has manually adopted
+       this convention (Bobby's home machine).
+    2. ``%APPDATA%/bobby_kb/config.json`` — Windows-idiomatic per-user
+       roaming config; this is where bobby_kb itself writes on Windows
+       when no ``.config`` directory exists in the user's home (the
+       case on the lab laptop user account `yn81`).
+    3. ``%LOCALAPPDATA%/bobby_kb/config.json`` — fallback for Windows
+       installs that prefer non-roaming config.
+
+    Pre-2026-05-06 the resolver only checked path #1, so any Windows user
+    whose bobby_kb config landed at the idiomatic ``%APPDATA%`` location
+    fell through silently to the first-run prompt — friction finding #5
+    from the metabolism dogfood run.
+    """
+    candidates = [Path.home() / ".config" / "bobby_kb" / "config.json"]
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        candidates.append(Path(appdata) / "bobby_kb" / "config.json")
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        candidates.append(Path(local_appdata) / "bobby_kb" / "config.json")
+    return candidates
+
+
 def _bobby_kb_root_from_config() -> Path | None:
-    """Read ``~/.config/bobby_kb/config.json`` (if present) and return the
-    KB root.
+    """Read bobby_kb's ``config.json`` from any candidate location and
+    return the KB root.
 
     bobby_kb's config stores ``root`` (parent of all KBs) and optionally
     ``default_kb`` (which subfolder is the active one). For Bobby's machine
     today: ``root="G:/My Drive/Knowledge"``, ``default_kb="vaultlab"`` →
     returns ``Path("G:/My Drive/Knowledge/vaultlab")``.
 
+    Searches the list returned by :func:`_bobby_kb_config_candidate_paths`
+    in order; first readable file with valid ``root`` wins.
+
     Returns ``None`` when:
-    - the file does not exist
-    - the file is unreadable / malformed (we never want this compat bridge
-      to crash the resolver)
+    - no candidate file exists
+    - all readable candidates are unreadable / malformed (we never want this
+      compat bridge to crash the resolver)
     """
-    cfg_path = Path.home() / ".config" / "bobby_kb" / "config.json"
-    if not cfg_path.exists():
-        return None
-    try:
-        data = json.loads(cfg_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    root = data.get("root")
-    if not isinstance(root, str) or not root:
-        return None
-    default_kb = data.get("default_kb")
-    if isinstance(default_kb, str) and default_kb:
-        return Path(root) / default_kb
-    return Path(root)
+    for cfg_path in _bobby_kb_config_candidate_paths():
+        if not cfg_path.exists():
+            continue
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        root = data.get("root")
+        if not isinstance(root, str) or not root:
+            continue
+        default_kb = data.get("default_kb")
+        if isinstance(default_kb, str) and default_kb:
+            return Path(root) / default_kb
+        return Path(root)
+    return None
 
 
 def _is_interactive() -> bool:
