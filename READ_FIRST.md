@@ -65,12 +65,16 @@ The table is grouped by capability area, and the order reflects vaultlab's three
 
 | If the user says... | Invoke... | Don't... |
 |---|---|---|
-| "analyze / explore my data" / "what's interesting in this dataset" | `plan_deep_think_round` (Analyst → Domain Expert → Methods Critic → Synthesizer) — multi-agent adversarial reasoning over actual data | Single-author exploration |
+| "analyze / explore my data" / "what's interesting in this dataset" | `/explore-data <file>` (4-role meeting + auto-lit-pointer for top finding) | Single-author exploration |
+| "what should I do next" / "pick up where I left off" | `/next-analysis [hint]` (state read + cross-project analogs + ranked candidates) | Re-read everything yourself |
 | "is this finding rigorous?" / "would this survive review" | `methods_critic` role pass (rates ROBUST / NEEDS_VALIDATION / WEAK / UNSUPPORTED with a specific test for each) | Give your opinion |
 | "audit my methodology / draft" / "check for overclaims" | `rigor_auditor` role pass (claim grounding + page-marker integrity + overclaim detection; outputs structured JSON) | Skim and comment |
 | "give me a second opinion on X" | `plan_ensemble_critic` (N parallel critics + Area Chair meta-reviewer) | Just answer yourself |
+| "this throws on row N" / "help me debug" | `/debug <traceback>` (analyst → critic → synthesizer + auto-logs lesson to decisions-log) | One-shot fix without root-cause |
+| "audit this collaborator's notebook" / "review what X did" | `/code-review <file-or-author>` (rigor_auditor + decisions-log convention check + drafted message to author) | Skim + comment |
 | "use a Wilcoxon test on these two groups" / specific stats request | `vaultlab.stats` curated index (real package + version + canonical-method paper) | Hallucinate a function name |
 | "is this analysis leaky / has bugs" | Analyst → Critic crosstalk via `plan_deep_think_round` | Eyeball the code |
+| "find related work in my other projects" / "cross-project patterns" | `/find-analogs <concept>` (cross-KB walk + multi-agent meeting + structural analogy report) | Hand-hunt across folders |
 
 ### Figure generation (publication-tight, recipe-backed)
 
@@ -99,6 +103,7 @@ The table is grouped by capability area, and the order reflects vaultlab's three
 | "brief me on today" | `/brief` (calendar + emails + tasks + work log) | Manually check each source |
 | "log this to my work doc" | `/update <description>` | Open Google Doc directly |
 | "send the EOD to John" | `/eod` | Compose by hand |
+| "do a live demo for my PI" / "show me end-to-end" | `/demo [topic]` (narrated full pipeline, 5-min target, pre-cached fallback) | Wing it |
 
 ### The pattern
 

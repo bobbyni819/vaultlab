@@ -63,6 +63,14 @@ For v0.0.1, most commands print "not yet implemented." See [Roadmap](../README.m
 - `/narrate-finding` — KB Wiki/Concepts page for a finding
 - `/lit-dive` — stateful literature deep-dive over paperclip corpus
 
+### Cross-project + workflow orchestrators (NEW v0.0.3)
+- `/find-analogs <concept>` — cross-project pattern recognition; structural analogs across all KBs (lifts virtual-lab multi-agent meeting + Karpathy LLM Wiki cross-link)
+- `/next-analysis [hint]` — "what should I do next" — project-state-aware deep-think round (lifts AI-Scientist plan-execute-verify + virtual-lab 4-role meeting)
+- `/debug <traceback>` — multi-agent debug round, auto-logs lesson to decisions-log (virtual-lab + AI-Scientist verifier-driven termination)
+- `/code-review <file-or-author>` — rigor_auditor pass + decisions-log convention check + drafted feedback message (PaperQA2 grounding + gstack review checklist)
+- `/explore-data <file>` — pure EDA via 4-role meeting + auto-lit-pointer for top finding (virtual-lab + scanpy/squidpy EDA conventions + PaperQA2)
+- `/demo [topic]` — live narrated end-to-end demo with 5-min wall-clock target + pre-cached fallback (gstack live-demo pattern + AI-Scientist bounded loop)
+
 ### Pre-registration
 - `/plan draft <topic>` — draft a pre-registration plan
 - `/plan compare-to-actual <plan> <run>` — flag deviations as warnings
