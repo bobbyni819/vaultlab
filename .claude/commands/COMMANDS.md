@@ -16,7 +16,9 @@ For v0.0.1, most commands print "not yet implemented." See [Roadmap](../README.m
 ## v0.1.0 (target 2026-05-27)
 
 ### Project + KB management
-- `/onboard-project [path]` — discover + understand a new project
+- `/onboard-me [path] [-- "<freeform>"]` — natural-language onboarding (paste any description; vaultlab parses)
+- `/onboard-project [path]` — structured-Q&A onboarding for an existing project folder
+- `/start-project "<topic>"` — topic-only scaffold; no folder, no questions
 - `/research-status` — current focus, recent activity, files to read next
 - `/groom-kb` — KB consistency audit + tidying
 - `/kb [compile|ask|lint|ingest]` — KB operations
