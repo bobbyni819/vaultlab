@@ -1,0 +1,48 @@
+id: publication_guideline_compliance
+name: Publication Guideline Compliance
+mode: data_analysis
+icon: "📊"
+description: Audits a rendered figure (PNG, PDF) against the target journal's enforceable publication guidelines — DPI, font sizes, color count, palette accessibility, panel labeling conventions, RGB color space, axis treatments. Deterministic checks, no LLM-judgment.
+focus_areas:
+  - figure DPI vs journal minimum
+  - font sizes (axis labels, ticks, panel letters)
+  - palette accessibility (colorblind-safe; no rainbow/jet)
+  - max categorical hues vs journal recommendation
+  - panel labeling convention (uppercase A/B vs lowercase a/b)
+  - axis treatments (lines, ticks, units in parens)
+  - RGB color space
+  - text-on-busy-background avoidance
+evaluation_criteria:
+  - Does the figure DPI meet the target journal's minimum?
+  - Are all text sizes within the journal's min/max range?
+  - Is the palette colorblind-safe (no rainbow, no jet, redundant shape encoding when N markers >= 4)?
+  - Is the categorical hue count within the journal's recommended max?
+  - Do panel labels match the journal's convention (Cell uses uppercase A/B; Nature uses lowercase a/b)?
+  - Are axes labeled with units in parens and tick marks present?
+communication_style: Per-check deterministic verdict. No prose, just the structured result of each rule against the rendered figure. The job is mechanical compliance, not aesthetic judgment.
+output_format: |
+  Return ONLY a JSON object matching the publication-guideline-compliance schema:
+  {
+    "target_journal": "<cell|cell-systems|nature|elife|biorxiv>",
+    "figure_path": "<path/to/figure.png>",
+    "verdict": "ship|ship_with_revisions|needs_minor_revision|fail",
+    "checks": [
+      {
+        "name": "fig_dpi|fig_font_min|fig_color_blind_safe|fig_color_count|fig_panel_label_convention|fig_axis_treatment|fig_color_space|fig_text_on_background|fig_palette_avoidance",
+        "result": "pass|warn|fail",
+        "detail": "<concrete number or observation, e.g., '300 DPI >= Cell minimum 300'>",
+        "fix": "<concrete instruction if not pass>"
+      }
+    ],
+    "anchored_in": ["<journal yaml file used>"]
+  }
+  Verdict mapping:
+    "ship" — all checks pass
+    "ship_with_revisions" — all checks pass or warn (no fails)
+    "needs_minor_revision" — one fail in a non-critical check (e.g., text on background)
+    "fail" — one or more critical fails (DPI under threshold; rainbow palette; broken panel labels)
+tools_allowed:
+  - Read
+  - Bash
+kb_outputs:
+  - paths.turn_path
