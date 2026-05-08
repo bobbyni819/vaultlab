@@ -1,0 +1,57 @@
+# eLife - assessment vocabulary + structured peer review
+# Source: elifesciences.org/about/elife-assessments + elifesciences.org/about/peer-review (fetched 2026-05-08)
+# Used by: vaultlab.roles.journal_reviewer + vaultlab.roles.pi_evaluator
+# Note: eLife's two-axis rubric (significance x evidence) is adopted as vaultlab's canonical verdict schema
+#       across ALL target journals, not just eLife — it's the most disciplined publicly-published rubric.
+journal: elife
+publisher: elife-sciences
+last_fetched: 2026-05-08
+schema_version: v0.1
+
+assessment_rubric:
+  significance:
+    - level: landmark
+      definition: "findings with profound implications that are expected to have widespread influence"
+    - level: fundamental
+      definition: "findings that substantially advance our understanding of major research questions"
+    - level: important
+      definition: "findings that have theoretical or practical implications beyond a single subfield"
+    - level: valuable
+      definition: "findings that have theoretical or practical implications for a subfield"
+    - level: useful
+      definition: "findings that have focused importance and scope"
+  evidence:
+    - level: exceptional
+      definition: "exemplary use of existing approaches that establish new standards for a field"
+    - level: compelling
+      definition: "evidence that features methods, data and analyses more rigorous than the current state-of-the-art"
+    - level: convincing
+      definition: "appropriate and validated methodology in line with current state-of-the-art"
+    - level: solid
+      definition: "methods, data and analyses broadly support the claims with only minor weaknesses"
+    - level: incomplete
+      definition: "main claims are only partially supported"
+    - level: inadequate
+      definition: "methods, data and analyses do not support the primary claims"
+
+peer_review_process:
+  stages:
+    - submission
+    - peer_review
+    - reviewed_preprint_published
+    - revised_version_published
+    - version_of_record
+  reviewer_outputs:
+    - public_review  # describes strengths + weaknesses
+    - elife_assessment  # significance + evidence verdict
+  revision_policy:
+    free_to_revise: true
+    reviews_update_with_revision: true
+
+# vaultlab adopts these as canonical output schema for pi_evaluator + journal_reviewer:
+#
+# pi_evaluator output:
+#   {"significance": "valuable", "evidence": "solid", "concerns": [...]}
+#
+# journal_reviewer output:
+#   {"verdict_journal_style": "ship_with_revisions", "evidence_axis": "convincing", "issues": [...]}

@@ -1,0 +1,39 @@
+# bioRxiv - preprint server (no peer review; minimal formatting)
+# Source: biorxiv.org/about-biorxiv (mirrored 2026-05-08; direct fetch 403)
+# Used by: vaultlab — primarily for adoption_evaluator (most users preprint everything)
+preprint_server: biorxiv
+publisher: cshl-press
+last_fetched: 2026-05-08
+schema_version: v0.1
+
+submission:
+  accepts:
+    - new_research_articles
+    - preliminary_reports
+    - reviews
+    - methods_papers
+  rejects:
+    - opinion_pieces_alone
+    - meta_analyses_without_data
+    - hypothesis_papers_without_data
+  content_review: basic_screening_only  # not peer review — only spam/eligibility check
+  pdf_format_required: true
+  metadata_required: [title, authors, abstract, license, conflict_of_interest_statement]
+
+versioning:
+  multiple_versions_allowed: true
+  versions_visible_to_readers: true
+  doi_per_version: true
+
+data_code_availability:
+  recommended_strongly: true
+  not_strictly_required: true
+  recommended_repos: [github, zenodo, figshare, dryad]
+
+connection_to_published_journals:
+  transfer_supported: [elife, cell, plos, embo]
+  cross_posting_allowed: true
+
+# vaultlab note: bioRxiv preprints are typical first-publishing venue.
+# adoption_evaluator and figure_lead should default to bioRxiv-friendly figure standards
+# (which are similar to Cell/Nature DPI/font but with no strict format requirements).

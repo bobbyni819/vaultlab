@@ -1,0 +1,57 @@
+# Nature - enforceable figure rules
+# Source: research-figure-guide.nature.com (fetched 2026-05-08)
+# Used by: vaultlab.roles.publication_guideline_compliance
+journal: nature
+publisher: springer-nature
+last_fetched: 2026-05-08
+schema_version: v0.1
+
+figure:
+  dpi:
+    photographic_min: 300
+    text_containing_min: 400
+    line_art_min: 1000
+    proof_max: 450
+  format:
+    preferred: [pdf, eps]
+    accept: [pdf, eps, tiff, ai]
+    vector_required_for: [text, scale_bars, line_art]
+    flatten_text: false
+    flatten_line_art: false
+  color:
+    space: rgb
+    print_conversion: cmyk_handled_by_publisher
+    accessible_palette_required: true
+  font:
+    family: [helvetica, arial]
+    size_min_pt: 5
+    size_max_pt: 7
+    panel_label_pt: 8
+    panel_label_weight: bold
+    panel_label_case: lowercase  # a, b, c (distinct from Cell's A, B, C)
+    panel_label_italic: false
+  panel_layout:
+    label_position: top-left
+  text_in_figure:
+    overlap_allowed: false
+    on_busy_backgrounds_allowed: false
+    colored_text_allowed: false
+  graphs:
+    axis_lines_required: true
+    tick_marks_required: true
+    units_in_parens_required: true  # "Data (unit)"
+
+statistical_reporting:
+  sample_size_required: true
+  exact_p_values_required: true  # not "p<0.05"
+  multiple_testing_correction_required: true
+  data_points_on_bars_required: true
+  error_bar_definition_required: true  # SD/SEM/95%CI must be stated
+
+review_criteria:
+  significance: required
+  robustness: required
+  novelty: required
+  generality: required
+  clarity: required
+  reviewer_style: specific_actionable_critique  # not vague "more work needed"

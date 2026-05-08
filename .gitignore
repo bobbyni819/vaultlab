@@ -74,3 +74,5 @@ venv/
 !docs/**/*.pdf
 !examples/**/expected_outputs/*.docx
 !examples/**/expected_outputs/*.pptx
+!src/vaultlab/data/
+!src/vaultlab/data/**

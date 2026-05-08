@@ -1,0 +1,59 @@
+# Cell Press - enforceable figure rules (covers Cell, Cell Systems, Cell Reports, Cell Reports Methods, Chem, Matter)
+# Source: cell.com/figureguidelines (mirrored from search 2026-05-08; direct fetch was 403)
+# Used by: vaultlab.roles.publication_guideline_compliance
+journal: cell
+publisher: elsevier-cell-press
+covers: [cell, cell-systems, cell-reports, cell-reports-methods, chem, matter, immunity, cancer-cell, neuron]
+last_fetched: 2026-05-08
+schema_version: v0.1
+
+figure:
+  dpi:
+    color_min: 300
+    grayscale_min: 300
+    bw_min: 500
+    line_art_min: 1000
+  format:
+    preferred: [tiff, eps, pdf]
+  color:
+    space: rgb
+    print_conversion: cmyk_handled_by_publisher
+    max_categorical_colors: 12  # cell-family convention; not strictly enforced
+    accessible_palette_required: true  # editorial preference
+  font:
+    family: [avenir, arial]  # Avenir preferred; Arial acceptable
+    size_min_pt: 6
+    size_max_pt: 8
+    panel_label_case: uppercase  # A, B, C (distinct from Nature)
+    panel_label_weight: bold
+  dimensions:
+    single_column_mm: 85
+    double_column_mm: 174
+
+methods_section:
+  self_contained: true  # readers should not need to read prior papers
+  code_availability_required: true
+  data_availability_required: true
+  statistical_method_disclosure_required: true
+  software_version_pin_required: true
+  fdr_correction_disclosure_required: true
+
+writing:
+  hedged_voice_required_when: "n_donors_or_replicates < 10"
+  example_hedged: "is consistent with X"
+  example_unhedged_avoid: "demonstrates X"
+
+review_criteria:
+  significance: required
+  methodology: required
+  data_quality: required
+  abstract_body_alignment: required
+  hedged_voice_for_low_n: required
+  code_data_availability: required
+  reviewer_style: specific_actionable_critique
+
+per_journal_overrides:
+  cell-systems:
+    methodology_focus: high  # quantitative + computational methods
+    target_audience: biology + computational
+    code_availability_strict: true
