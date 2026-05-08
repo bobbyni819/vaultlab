@@ -23,6 +23,11 @@ EXPECTED_ROLE_IDS = {
     "team_lead",
     "figure_reader",
     "rigor_auditor",
+    # SPEC-B meta-agent roles (shipped 2026-05-08)
+    "journal_reviewer",
+    "expert_reviewer",
+    "adoption_evaluator",
+    "publication_guideline_compliance",
 }
 
 
@@ -102,6 +107,33 @@ ROUND_TRIP_SIGNATURES: dict[str, list[str]] = {
         "final gate before a document ships",
         "Page-marker integrity",
         "passed",
+    ],
+    # SPEC-B meta-agent roles (signatures match prompts authored 2026-05-08)
+    "journal_reviewer": [
+        "You are a Journal Reviewer.",
+        "Cell",
+        "Nature",
+        "eLife",
+        "structured verdict",
+    ],
+    "expert_reviewer": [
+        "You are an Expert Reviewer.",
+        "PI",
+        "advisor",
+        "would_signoff_for_grant",
+        "Anticipated PI / advisor questions",
+    ],
+    "adoption_evaluator": [
+        "You are an Adoption Evaluator.",
+        "fresh new user",
+        "first 30 minutes",
+        "what_they_see",
+    ],
+    "publication_guideline_compliance": [
+        "You are a Publication Guideline Compliance",
+        "DPI",
+        "journal_guidelines",
+        "fig_dpi",
     ],
 }
 
