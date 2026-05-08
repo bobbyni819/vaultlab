@@ -109,23 +109,43 @@ def test_expert_reviewer_uses_elife_two_axis() -> None:
     assert "evidence_axis" in fmt
 
 
-def test_expert_reviewer_is_audience_neutral() -> None:
-    """expert_reviewer prompt does not anchor in academic-PI structure.
+def test_expert_reviewer_uses_pi_archetype_as_gold_standard() -> None:
+    """expert_reviewer leverages PI / advisor as the ideal-archetype.
 
-    Generalizes to solo researchers, postdocs, industry researchers — anyone
-    facing peer review or expert scrutiny, not just academic students with PIs.
+    Per Bobby 2026-05-08: "PI / advisor / mentor" is the gold-standard
+    archetype because they have full project oversight + domain expertise.
+    The role is named expert_reviewer (audience-neutral) but the prompt
+    leans on PI archetype as the simulated voice.
     """
     role = load_role("expert_reviewer")
     text = role.system_prompt + role.description
     text_lower = text.lower()
-    # Should not lean on PI-specific language as the primary frame
-    assert text_lower.count("pi ") < 3, (
-        "expert_reviewer should not lean heavily on 'PI' framing; "
-        "it should speak about expert reviewers, peer reviewers, and "
-        "domain experts more generally"
+    # PI / advisor / mentor archetype must be present (gold standard)
+    has_pi_archetype = (
+        "pi" in text_lower or "advisor" in text_lower or "mentor" in text_lower
     )
-    # Should explicitly mention expert / peer reviewer language
-    assert "expert" in text_lower or "peer review" in text_lower
+    assert has_pi_archetype, (
+        "expert_reviewer must reference the PI/advisor/mentor archetype "
+        "as the gold standard for full-project-oversight expert review"
+    )
+
+
+def test_expert_reviewer_scales_beyond_academic_pi() -> None:
+    """expert_reviewer also explicitly scales to non-academic-PI users.
+
+    Solo researchers, postdocs, industry researchers, lab heads — the role
+    must not be anchored only in formal academic PI structure.
+    """
+    role = load_role("expert_reviewer")
+    text = role.system_prompt + role.description
+    text_lower = text.lower()
+    # Must mention at least one non-academic-PI user category
+    non_pi_users = ["solo researcher", "postdoc", "industry", "lab head"]
+    found = sum(1 for cat in non_pi_users if cat in text_lower)
+    assert found >= 2, (
+        "expert_reviewer must scale beyond academic-PI structure; "
+        f"found {found}/{len(non_pi_users)} non-PI user categories mentioned"
+    )
 
 
 def test_adoption_evaluator_has_what_they_see() -> None:
