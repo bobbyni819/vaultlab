@@ -18,7 +18,7 @@ from vaultlab.roles import load_role, list_roles
 
 META_AGENT_ROLES = [
     "journal_reviewer",
-    "pi_evaluator",
+    "expert_reviewer",
     "adoption_evaluator",
     "publication_guideline_compliance",
 ]
@@ -92,21 +92,40 @@ def test_journal_reviewer_uses_elife_axis() -> None:
     )
 
 
-def test_pi_evaluator_has_two_signoff_axes() -> None:
-    """pi_evaluator distinguishes grant-readiness vs paper-readiness."""
-    role = load_role("pi_evaluator")
+def test_expert_reviewer_has_two_signoff_axes() -> None:
+    """expert_reviewer distinguishes grant-readiness vs paper-readiness."""
+    role = load_role("expert_reviewer")
     fmt = role.output_format
-    assert "would_sign_off_for_grant" in fmt
-    assert "would_sign_off_for_paper" in fmt
-    assert "expected_questions" in fmt
+    assert "would_signoff_for_grant" in fmt
+    assert "would_signoff_for_paper" in fmt
+    assert "expert_questions" in fmt
 
 
-def test_pi_evaluator_uses_elife_two_axis() -> None:
-    """pi_evaluator uses eLife two-axis (significance × evidence) rubric."""
-    role = load_role("pi_evaluator")
+def test_expert_reviewer_uses_elife_two_axis() -> None:
+    """expert_reviewer uses eLife two-axis (significance × evidence) rubric."""
+    role = load_role("expert_reviewer")
     fmt = role.output_format
     assert "significance_axis" in fmt
     assert "evidence_axis" in fmt
+
+
+def test_expert_reviewer_is_audience_neutral() -> None:
+    """expert_reviewer prompt does not anchor in academic-PI structure.
+
+    Generalizes to solo researchers, postdocs, industry researchers — anyone
+    facing peer review or expert scrutiny, not just academic students with PIs.
+    """
+    role = load_role("expert_reviewer")
+    text = role.system_prompt + role.description
+    text_lower = text.lower()
+    # Should not lean on PI-specific language as the primary frame
+    assert text_lower.count("pi ") < 3, (
+        "expert_reviewer should not lean heavily on 'PI' framing; "
+        "it should speak about expert reviewers, peer reviewers, and "
+        "domain experts more generally"
+    )
+    # Should explicitly mention expert / peer reviewer language
+    assert "expert" in text_lower or "peer review" in text_lower
 
 
 def test_adoption_evaluator_has_what_they_see() -> None:
