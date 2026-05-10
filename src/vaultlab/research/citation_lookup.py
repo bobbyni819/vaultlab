@@ -34,8 +34,15 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-USER_AGENT = "vaultlab/0.1 (mailto:bobby.ni@duke.edu)"
-"""Polite User-Agent string for all citation-lookup HTTP calls."""
+from vaultlab.research._polite_pool import get_user_agent
+
+USER_AGENT = get_user_agent("vaultlab-citation-lookup")
+"""Polite User-Agent string for all citation-lookup HTTP calls.
+
+Resolved at import-time from the user's
+``VAULTLAB_POLITE_POOL_EMAIL`` env var or
+``~/.config/vaultlab/config.json``.
+"""
 
 CROSSREF_BASE = "https://api.crossref.org/works"
 S2_BASE = "https://api.semanticscholar.org/graph/v1"

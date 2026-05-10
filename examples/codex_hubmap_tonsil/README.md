@@ -40,9 +40,9 @@ To be added at v0.1.0. Will include:
 - Auto-drafted Methods section with verified `[N]` citations
 - 12-slide journal-club deck with speaker notes
 
-## Why this matters for the launch story
+## Why this matters
 
-This is the demo that proves the "from microscope to manuscript" tagline. PaperQA stops at literature. scanpy stops at clustering. FutureHouse skips the bench. **vaultlab does the whole loop.**
+This demo exercises the full end-to-end path: imaging data → cell segmentation → clustering → manuscript-bound figure + methods text + journal-club deck. PaperQA covers literature. scanpy covers clustering. FutureHouse skips the bench. vaultlab covers the whole loop with one set of slash commands and one knowledge base.
 
 ## Reference
 

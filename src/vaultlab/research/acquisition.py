@@ -21,7 +21,8 @@ Design notes
 * **Polite delays.**  100 ms between calls to the same source by default;
   PMC/NCBI uses 0.34 s (3 req/s) without a key, 0.1 s (10 req/s) with one.
 * **User-Agent.**  Every HTTP request carries the standard vaultlab
-  polite-pool header (``vaultlab/0.1 (mailto:bobby.ni@duke.edu)``).
+  polite-pool header (``vaultlab/<version> (mailto:<configured-email>)``;
+  see :mod:`vaultlab.research._polite_pool` for resolution order).
 * **HTTP error handling.**  ``404`` is "this source doesn't have it" (move
   to the next tier).  ``401``/``403`` is "no access" (move on).  ``5xx`` is
   retried once with a 2 s backoff before falling through.
@@ -59,10 +60,18 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-USER_AGENT = "vaultlab/0.1 (mailto:bobby.ni@duke.edu)"
-"""Polite User-Agent header sent on every acquisition request."""
+from vaultlab.research._polite_pool import get_polite_pool_email, get_user_agent
 
-UNPAYWALL_EMAIL = "bobby.ni@duke.edu"
+USER_AGENT = get_user_agent("vaultlab-research")
+"""Polite User-Agent header sent on every acquisition request.
+
+Resolved at import-time from the user's
+``VAULTLAB_POLITE_POOL_EMAIL`` env var or
+``~/.config/vaultlab/config.json``. Falls back to the unconfigured
+no-reply default if neither is set.
+"""
+
+UNPAYWALL_EMAIL = get_polite_pool_email()
 """Email passed to Unpaywall's polite-pool ``email=`` query parameter."""
 
 UNPAYWALL_BASE = "https://api.unpaywall.org/v2/"

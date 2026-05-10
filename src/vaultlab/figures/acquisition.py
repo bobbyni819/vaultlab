@@ -68,6 +68,7 @@ from vaultlab.research.acquisition import (
     _PoliteSession,
     doi_slug,
 )
+from vaultlab.research._polite_pool import get_polite_pool_email as _get_polite_pool_email_lazy
 from vaultlab.research.corpus import Corpus
 
 logger = logging.getLogger(__name__)
@@ -288,7 +289,7 @@ def _doi_to_pmcid(doi: str, session: _PoliteSession) -> str | None:
             "idtype": "doi",
             "format": "json",
             "tool": "vaultlab",
-            "email": "bobby.ni@duke.edu",
+            "email": _get_polite_pool_email_lazy(),  # configurable; see vaultlab.research._polite_pool
         },
     )
     if resp is None or resp.status_code != 200:

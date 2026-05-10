@@ -61,9 +61,9 @@ Before each step, announce what's about to happen + which primitive will run + w
 
 ```
 "Now the picker is reading 200-400 abstracts in one batched LLM call —
-this is the killer detail vs. naive citation-graph ranking. It'll tag
-each paper as ROBUST / RELEVANT / OFF-TOPIC and write the rationale
-to decisions-log."
+this is the substantive difference vs. citation-graph-only ranking.
+It'll tag each paper as ROBUST / RELEVANT / OFF-TOPIC and write the
+rationale to decisions-log."
 ```
 
 Then invoke the actual primitive. Wait for completion. Surface the output before moving to the next step.

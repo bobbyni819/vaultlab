@@ -1,6 +1,8 @@
-"""vaultlab — the AI lab for biological researchers.
+"""vaultlab — Claude Code setup for biological research.
 
-From microscope to manuscript, in one repo.
+Literature, knowledge base, data analysis, figures, and manuscripts in
+one workspace. Runs inside Claude Code; KB is plain markdown on
+whatever cloud sync you already use.
 
 This is the slim public barrel. The full surface is at submodule level:
 

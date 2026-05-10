@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vaultlab"
-version = "0.0.2"
-description = "From microscope to manuscript, in one repo. The AI lab for biological researchers."
+version = "0.0.3"
+description = "Claude Code setup for biological research — literature, knowledge base, data analysis, figures, and manuscripts in one workspace."
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.12,<3.14"

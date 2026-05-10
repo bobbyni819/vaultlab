@@ -23,9 +23,11 @@ from vaultlab.research.paper import Paper
 
 logger = logging.getLogger(__name__)
 
+from vaultlab.research._polite_pool import get_polite_pool_email, get_user_agent
+
 _BASE_URL = "https://api.openalex.org/works"
-_USER_AGENT = "vaultlab/0.1 (mailto:bobby.ni@duke.edu)"
-_MAILTO = "bobby.ni@duke.edu"
+_USER_AGENT = get_user_agent("vaultlab-openalex")
+_MAILTO = get_polite_pool_email()
 
 
 class OpenAlexClient:
