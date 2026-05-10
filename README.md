@@ -71,23 +71,36 @@ VaultLab gives Claude Code a research-shaped working memory. The LLM doesn't jus
 
 ### Literature search across seven APIs in parallel
 
-`/lit-arc <topic>` and `/lit-report <topic>` orchestrate **seven literature sources in parallel** — NCBI/PubMed, CrossRef, Semantic Scholar, Springer Nature, Elsevier, bioRxiv, and the [paperclip](https://paperclip.gxl.ai) biomedical-paper corpus (~8M full-text papers). Each query is fanned out to **5 reformulated sub-queries** (the original, plus method-focused / disease-focused / model-organism-focused / mechanism-focused variants). Results are deduplicated across all sources by DOI + title fuzzy match.
+**The conceptual workflow.** A vaultlab literature search casts a wide net, narrows it through a citation graph, **reads hundreds of abstracts in a single LLM call** to override the graph where it's wrong, then **reads 8 to 50+ full PDFs end-to-end** depending on scope. Every claim ends up traceable to a specific page of a specific paper.
 
-**Citation-graph ranking.** VaultLab computes OG-score (Kessler bibliographic coupling — fraction of seed papers citing each candidate) and forward-influence (in-degree on the seed-x-seed subgraph) across the deduplicated corpus. The graph is the *first* filter, not the last.
+Concretely, in order:
 
-**Content-aware picker.** After citation-graph ranking gives a coarse pool of typically 200–400 candidates, VaultLab reads all of them in a single batched LLM call — all 200–400 abstracts, leveraging Claude's 1M-token context. The picker overrides the citation graph where conceptual lineage and citation count disagree — a 2018 method paper that defined a field outranks a 2024 incremental application with 50× the citations. Each pick's rationale is written to the project's decisions log. No skim-rank; no deceptive citation counts ranked first.
+1. **Cast: 7 sources in parallel.** Every query fans out to **NCBI/PubMed, CrossRef, Semantic Scholar, Springer Nature, Elsevier, bioRxiv, and the [paperclip](https://paperclip.gxl.ai) 8M-paper biomedical corpus**. Each query is reformulated into **5 sub-queries** (original + method-focused + disease-focused + model-organism-focused + mechanism-focused). Results dedupe across all 7 sources by DOI + fuzzy title match.
+
+2. **Coarse rank: the citation graph.** **OG-score** (Kessler bibliographic coupling — fraction of seed papers citing each candidate) and **forward-influence** (in-degree on the seed-x-seed subgraph) shrink the corpus to a manageable pool. The graph is the first filter, not the last.
+
+3. **Override the graph by reading abstracts.** vaultlab reads **all 200–400 abstracts from the coarse pool in a single batched LLM call**, leveraging Claude's 1M-token context. The picker overrides the citation graph where conceptual lineage and citation count disagree — *a 2018 method paper that defined a field outranks a 2024 incremental application with 50× the citations.* Each pick's rationale is written to the project's decisions log.
+
+4. **Deep-read the picks.** For the top selections — **default 8–10 papers for a standard `/lit-arc`, scaling to 50+ for thorough scope and 100+ for review-paper scope** — vaultlab fetches the full PDF (Unpaywall → PubMed Central → bioRxiv → Springer OA → Elsevier waterfall), then reads each via Claude as a `document` content block. Output: structured JSON per paper with `tldr` / `why_it_matters` / `methods_summary` / `key_findings`, each with `[pN]` page-marker citations.
+
+5. **Assemble + persist.** Papers get binned by conceptual lineage (history → development → SOTA), the corpus assembles into a lineage arc with `[[wikilinks]]` between summaries, and **the whole thing is yours to keep** as plain markdown in `Wiki/Summaries/` + `Wiki/Concepts/`. The KB grows with every search; future runs build on past corpus instead of restarting.
+
+**Why this matters in practice.** PaperQA stops at literature retrieval. Tools that only do citation-graph ranking get fooled by high-cite incremental papers and miss foundational ones. Skim-tier readers don't surface the methods nuance you need. vaultlab does all three layers — graph, semantic, deep-read — and gives you per-page traceability for every claim downstream.
+
+The entry points are `/lit-arc <topic>` (corpus + arc + summaries) and `/lit-report <topic>` (formal report with sections). They share the same pipeline; the difference is the output format.
+
+<details>
+<summary><b>More: user-directable picks, batched-PDF reading, paywall handling, lineage binning</b></summary>
 
 **User-directable.** You can pin specific DOIs as must-include (*"don't return without reading these three papers"*), focus on a particular lab (*"over-weight anything from the Schurch group"*), restrict by year/journal/open-access status, or specify a topical seed paper to anchor the corpus around. The picker respects the constraint and explains why each pick fits.
 
-**Tier-A reading.** For the top picks (default 8–10, configurable up to 30+), VaultLab fetches the full PDF via a waterfall — Unpaywall → PubMed Central → bioRxiv → Springer OA → Elsevier — then reads it via Claude as a `document` content block. Returns structured JSON: `tldr` / `why_it_matters` / `methods_summary` / `key_findings` (each with `[pN]` page-marker citations) / `extracted_references`. Anything VaultLab claims about a paper is traceable to a specific page.
+**Batched-PDF reading** (≥2 PDFs, ≤100 MB total) ships multiple full PDFs in one LLM call, leveraging the 1M-context window for cross-paper synthesis — comparing methods sections across three papers in a single call instead of three sequential reads.
 
-**Batched-PDF reading** (≥2 PDFs, ≤100 MB total) ships multiple full PDFs in one LLM call, leveraging the 1M-context window for cross-paper synthesis — it can compare methods sections across three papers in a single call instead of three sequential reads.
+**LLM-driven lineage binning.** Every paper gets binned by conceptual lineage, not just publication year. A 2018 method paper goes in *history* if it's foundational. A 2024 incremental application goes in *development*, not *sota*. The LLM gets the deterministic year-quartile assignment as a hint, then overrides it where conceptual lineage and chronology disagree. Solves the empty-history-bin failure that pure-quartile binning produces.
 
-**LLM-driven lineage binning.** Every paper gets binned by *conceptual lineage*, not just publication year. A 2018 method paper goes in *history* if it's foundational. A 2024 incremental application goes in *development*, not *sota*. The LLM gets the deterministic year-quartile assignment as a hint, then overrides it where conceptual lineage and chronology disagree. Solves the empty-history-bin failure that pure-quartile binning produces.
+**Surfaces papers you can't auto-acquire.** When a high-priority paper is paywalled and OA-fallback fails, vaultlab surfaces it via `vaultlab fetch-list paywalled` — a shopping list with citation, DOI, and a one-line "why this matters." You don't lose track of the gap.
 
-**Surfaces papers you can't auto-acquire.** When a high-priority paper is paywalled and OA-fallback fails, VaultLab tells you which papers to fetch manually — `vaultlab fetch-list paywalled` produces a shopping list with citation, DOI, and a one-line "why this matters." You don't lose track of the gap.
-
-**The corpus is yours to keep.** `Wiki/Summaries/<doi-slug>.md` has structured per-paper summaries; `Wiki/Concepts/<topic>-lineage-<scope>-<date>.md` has the assembled history → development → SOTA arc with `[[wikilinks]]` to the summaries. The KB grows with every search.
+</details>
 
 ### Slide decks that compose themselves around your figures
 
