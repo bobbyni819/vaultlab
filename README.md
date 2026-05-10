@@ -38,13 +38,14 @@ Claude does the entire bootstrap — clone → pip install → KB init → slash
 
 ## About
 
-I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I do wet-lab spatial omics — CODEX multiplexed protein imaging, MALDI imaging mass spectrometry, scRNA-seq integration — and a lot of computational work alongside it.
+I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I'm doing wet-lab, spatial omics work and building computational tools to create virtual tissue simulations.
 
-Research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers piling up in Drive; notes on a lab NAS; archives on University OneDrive; updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
+Biomedical research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers and notes piling up in Box; data on a lab NAS; archives on OneDrive; updates from collaborators from five different email chains. The university hands you several storage locations; the lab adds its own. Context lives everywhere - and VaultLab can organize all of it. VaultLab also handles massive literature paper fetching and review, draws on principles from frontier, LLM-powered scientific research frameworksm, creates figures, and writes code and manuscript drafts.
 
-VaultLab puts all of it into an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have.
+All of it lives in an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have. VaultLab amplifies your research capabilities and does exactly what you want and beyond.
 
-I've used OpenClaw and other agent harnesses to automate workflows. Token cost rarely justified the lift. I've found more value operating inside Claude Code. The push to ship this came from watching what [Garry Tan](https://github.com/garrytan/gstack), [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), [James Zou](https://github.com/zou-group/virtual-lab), and others have built — open-source, opinionated, hackable. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
+
+I've used OpenClaw and other agent harnesses to automate workflows. I've found more value operating inside Claude Code as a hands-on, human element is much needed in biomedical research. The push to ship this came from watching what [Garry Tan](https://github.com/garrytan/gstack), [Andrej Karpathy](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), [James Zou](https://github.com/zou-group/virtual-lab), and others have built — open-source, opinionated, hackable. Most of what's here adapts beyond research; the KB, citation auditing, and slide composition work on any topic.
 
 ---
 
