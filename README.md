@@ -40,7 +40,9 @@ Claude does the entire bootstrap — clone → pip install → KB init → slash
 
 I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I'm doing wet-lab, spatial omics work and building computational tools to create virtual tissue simulations.
 
-Biomedical research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers and notes piling up in Box; data on a lab NAS; archives on OneDrive; updates from collaborators from five different email chains. The university hands you several storage locations; the lab adds its own. Context lives everywhere - and VaultLab can organize all of it. VaultLab also handles massive literature paper fetching and review, draws on principles from frontier, LLM-powered scientific research frameworksm, creates figures, and writes code and manuscript drafts.
+Biomedical research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers and notes piling up in Box; data on a lab NAS; archives on OneDrive; updates from collaborators from five different email chains. The university hands you several storage locations; the lab adds its own. Context lives everywhere - and VaultLab can organize all of it. 
+
+VaultLab also handles massive literature paper fetching and review and draws on principles from frontier, LLM-powered scientific research frameworks to creates figures and write code and manuscript drafts.
 
 All of it lives in an Obsidian knowledge base that Claude Code reads. The KB is plain markdown — runs on whatever storage you already have. VaultLab amplifies your research capabilities and does exactly what you want and beyond.
 
