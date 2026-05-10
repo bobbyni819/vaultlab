@@ -115,7 +115,7 @@ def test_paperclip_sections_pulls_per_section():
 def test_paperclip_sections_skips_empty_sections():
     pc = MagicMock()
     pc.list_sections.return_value = ["Abstract", "References"]
-    pc.get_section.side_effect = lambda pid, name: ("Abstract body" if name == "Abstract" else "")
+    pc.get_section.side_effect = lambda pid, name: "Abstract body" if name == "Abstract" else ""
 
     r = _result(source="paperclip")
     sections = read_paper_sections(r, paperclip_client=pc, paperclip_paper_id="x")

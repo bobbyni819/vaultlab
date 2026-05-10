@@ -1281,7 +1281,7 @@ def build_arc_prompt(
         if not items:
             return f"({name}: no papers in this bucket)\n"
         # Sort by year ascending for narrative flow.
-        items = sorted(items, key=lambda s: (s.year or 0))
+        items = sorted(items, key=lambda s: s.year or 0)
         lines = [f"### {name} bucket ({len(items)} papers)"]
         for s in items[:25]:  # cap to keep prompt manageable
             slug = slugify_doi(s.doi) if s.doi else "?"
