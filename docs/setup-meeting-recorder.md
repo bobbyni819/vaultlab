@@ -35,15 +35,21 @@ When set up:
 
 ## Step 1: Install meeting_recorder
 
-While `meeting_recorder` is not yet on PyPI, install from source:
+Easiest path — install from PyPI as `vaultlab-meetings`:
 
 ```powershell
-cd C:\Users\bobby\Downloads
-# If you don't have it already:
-git clone https://github.com/bobbyni819/meeting_recorder
-cd meeting_recorder
-pip install -e ".[local]"   # includes faster-whisper + torch for local transcription
+pip install "vaultlab-meetings[local]"   # includes faster-whisper + torch for local transcription
 ```
+
+Or install from source (e.g., if you want to hack on it):
+
+```powershell
+git clone https://github.com/bobbyni819/meeting-recorder
+cd meeting-recorder
+pip install -e ".[local]"
+```
+
+Note: the PyPI install name is `vaultlab-meetings` (the `meeting-recorder` name was already taken on PyPI). The Python import name is still `meeting_recorder` — that's deliberate so existing scripts don't break.
 
 For cloud-only (OpenAI Whisper API; no GPU needed):
 
