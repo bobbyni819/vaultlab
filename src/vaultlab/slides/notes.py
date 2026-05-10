@@ -224,7 +224,7 @@ def parse_speaker_notes(text: str) -> dict[str, Any]:
         for label, key in label_to_key.items():
             prefix = f"{label}:"
             if line.upper().startswith(prefix):
-                value = line[len(prefix):].strip()
+                value = line[len(prefix) :].strip()
                 if key == "key_terms":
                     result[key] = [t.strip() for t in value.split(",") if t.strip()]
                 else:

@@ -142,9 +142,7 @@ class TestLoadFromCwd:
     rule); these tests pin its behaviour at the seam.
     """
 
-    def test_load_project_config_from_cwd_finds_in_parent(
-        self, tmp_path: Path
-    ) -> None:
+    def test_load_project_config_from_cwd_finds_in_parent(self, tmp_path: Path) -> None:
         """Helper walks up from a nested subdirectory to the project root."""
         cfg = VaultLabProjectConfig(
             slug="codex-test",
@@ -164,9 +162,7 @@ class TestLoadFromCwd:
         assert loaded.topic == "CODEX cellular neighborhoods"
         assert loaded.kb_root == "G:/My Drive/Knowledge/vaultlab"
 
-    def test_load_project_config_from_cwd_returns_none_when_absent(
-        self, tmp_path: Path
-    ) -> None:
+    def test_load_project_config_from_cwd_returns_none_when_absent(self, tmp_path: Path) -> None:
         """No config anywhere up the tree → None (not a raise)."""
         # tmp_path is an isolated dir below pytest's basetemp; pytest
         # fixtures guarantee no .vaultlab-project.json lives in it.
@@ -174,9 +170,7 @@ class TestLoadFromCwd:
         empty.mkdir()
         assert load_project_config_from_cwd(start=empty) is None
 
-    def test_load_project_config_from_cwd_accepts_file_path(
-        self, tmp_path: Path
-    ) -> None:
+    def test_load_project_config_from_cwd_accepts_file_path(self, tmp_path: Path) -> None:
         """Helper tolerates being pointed at a file (uses parent dir)."""
         cfg = VaultLabProjectConfig(slug="x", topic="t")
         save_config(cfg, tmp_path)

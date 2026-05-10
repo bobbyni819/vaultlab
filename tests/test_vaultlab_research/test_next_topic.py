@@ -5,10 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from vaultlab.research.next_topic import (
-    NextTopicProposal,
     NextTopicTask,
-    PriorTopicRecord,
-    next_topic_response_schema,
     prepare_next_topic_task,
     propose_next_topics,
     read_open_questions,
@@ -16,15 +13,12 @@ from vaultlab.research.next_topic import (
     render_topics_from_response,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixture helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_kb_with_decisions_log(
-    tmp_path: Path, project_slug: str, log_text: str
-) -> Path:
+def _make_kb_with_decisions_log(tmp_path: Path, project_slug: str, log_text: str) -> Path:
     """Create a KB structure + write decisions-log.md for a project."""
     kb = tmp_path / "kb"
     project_dir = kb / "Wiki" / "Projects" / project_slug
@@ -167,9 +161,7 @@ def test_prepare_task_includes_prior_topics_in_prompt(tmp_path: Path):
 - **Run ID:** r1
 """
     kb = _make_kb_with_decisions_log(tmp_path, "test-proj", log)
-    task = prepare_next_topic_task(
-        kb_root=kb, project_slug="test-proj", target_n=5
-    )
+    task = prepare_next_topic_task(kb_root=kb, project_slug="test-proj", target_n=5)
     assert "CODEX imaging" in task.prompt
     assert task.target_n == 5
     assert task.prior_topics[0].topic == "CODEX imaging"
@@ -177,17 +169,13 @@ def test_prepare_task_includes_prior_topics_in_prompt(tmp_path: Path):
 
 def test_prepare_task_signals_no_prior_runs_when_log_missing(tmp_path: Path):
     """When no decisions log exists, prompt clearly says 'this would be first run'."""
-    task = prepare_next_topic_task(
-        kb_root=tmp_path / "kb", project_slug="fresh", target_n=3
-    )
+    task = prepare_next_topic_task(kb_root=tmp_path / "kb", project_slug="fresh", target_n=3)
     assert "first lit-arc" in task.prompt
     assert task.prior_topics == []
 
 
 def test_prepare_task_target_n_caps_proposals_in_schema(tmp_path: Path):
-    task = prepare_next_topic_task(
-        kb_root=tmp_path / "kb", project_slug="p", target_n=3
-    )
+    task = prepare_next_topic_task(kb_root=tmp_path / "kb", project_slug="p", target_n=3)
     schema = task.response_schema
     assert schema["properties"]["proposals"]["maxItems"] == 3
 
@@ -198,9 +186,7 @@ def test_prepare_task_target_n_caps_proposals_in_schema(tmp_path: Path):
 
 
 def _minimal_task(tmp_path: Path) -> NextTopicTask:
-    return prepare_next_topic_task(
-        kb_root=tmp_path / "kb", project_slug="p", target_n=5
-    )
+    return prepare_next_topic_task(kb_root=tmp_path / "kb", project_slug="p", target_n=5)
 
 
 def test_render_returns_proposals_in_response_order(tmp_path: Path):
@@ -253,14 +239,8 @@ def test_render_returns_empty_for_malformed_response(tmp_path: Path):
 
 
 def test_render_caps_at_target_n(tmp_path: Path):
-    task = prepare_next_topic_task(
-        kb_root=tmp_path / "kb", project_slug="p", target_n=2
-    )
-    response = {
-        "proposals": [
-            {"topic": f"Topic {i}", "rationale": "r"} for i in range(10)
-        ]
-    }
+    task = prepare_next_topic_task(kb_root=tmp_path / "kb", project_slug="p", target_n=2)
+    response = {"proposals": [{"topic": f"Topic {i}", "rationale": "r"} for i in range(10)]}
     out = render_topics_from_response(response, task)
     assert len(out) == 2
 
@@ -288,9 +268,7 @@ def test_render_extracts_builds_on_and_addresses_question(tmp_path: Path):
 
 
 def test_propose_returns_empty_when_no_callback(tmp_path: Path):
-    out = propose_next_topics(
-        kb_root=tmp_path / "kb", project_slug="p", callback=None
-    )
+    out = propose_next_topics(kb_root=tmp_path / "kb", project_slug="p", callback=None)
     assert out == []
 
 
@@ -319,7 +297,5 @@ def test_propose_callback_exception_returns_empty(tmp_path: Path):
     def cb(task):
         raise RuntimeError("oops")
 
-    out = propose_next_topics(
-        kb_root=tmp_path / "kb", project_slug="p", callback=cb
-    )
+    out = propose_next_topics(kb_root=tmp_path / "kb", project_slug="p", callback=cb)
     assert out == []

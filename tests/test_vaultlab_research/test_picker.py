@@ -48,7 +48,6 @@ from vaultlab.research.picker import (
     write_picker_decision,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -144,9 +143,7 @@ def test_prepare_picker_task_makes_no_http_calls(tmp_path, monkeypatch):
 
     class _Guard:
         def __getattr__(self, name):
-            raise AssertionError(
-                f"prepare_picker_task touched anthropic.{name}"
-            )
+            raise AssertionError(f"prepare_picker_task touched anthropic.{name}")
 
     monkeypatch.setitem(sys.modules, "anthropic", _Guard())
 
@@ -210,9 +207,7 @@ def test_prepare_picker_task_falls_back_to_no_abstract(tmp_path):
     for s in seeds:
         corpus.papers[s.doi.lower()] = s
     compute_metrics(corpus)
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path)
     jinek = next(c for c in task.candidates if c.doi == seeds[0].doi.lower())
     assert jinek.abstract == "[no abstract]"
 
@@ -220,9 +215,7 @@ def test_prepare_picker_task_falls_back_to_no_abstract(tmp_path):
 def test_prepare_picker_task_respects_coarse_n_cutoff(tmp_path):
     """``coarse_n`` truncates the candidate list."""
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=2, coarse_n=2, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=2, coarse_n=2, kb_root=tmp_path)
     assert len(task.candidates) == 2
 
 
@@ -235,9 +228,7 @@ def test_prepare_picker_task_default_reads_all_corpus_papers(tmp_path):
     # but our fixture has all seeds in corpus.papers, so the count matches).
     assert len(task.candidates) == n_corpus
     # And explicit None gets the same answer.
-    task_none = prepare_picker_task(
-        "t", corpus=corpus, target_n=2, coarse_n=None, kb_root=tmp_path
-    )
+    task_none = prepare_picker_task("t", corpus=corpus, target_n=2, coarse_n=None, kb_root=tmp_path)
     assert len(task_none.candidates) == n_corpus
 
 
@@ -262,9 +253,7 @@ def test_prepare_picker_task_auto_caps_huge_corpus(tmp_path):
         big_corpus.papers[s.doi] = s
     compute_metrics(big_corpus)
 
-    task = prepare_picker_task(
-        "t", corpus=big_corpus, target_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=big_corpus, target_n=10, kb_root=tmp_path)
     # Auto-cap engages: candidate count should be 200, not 600+
     assert len(task.candidates) == 200
 
@@ -289,9 +278,7 @@ def test_prepare_picker_task_explicit_coarse_n_overrides_auto_cap(tmp_path):
     compute_metrics(big_corpus)
 
     # Explicit cap of 50 — bypasses auto-cap, gives exactly 50
-    task = prepare_picker_task(
-        "t", corpus=big_corpus, target_n=10, coarse_n=50, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=big_corpus, target_n=10, coarse_n=50, kb_root=tmp_path)
     assert len(task.candidates) == 50
 
 
@@ -306,9 +293,7 @@ def test_load_abstract_from_kb_returns_empty_when_missing(tmp_path):
 
 def test_render_picks_from_response_returns_ordered_dois(tmp_path):
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path)
     response = {
         "picks": [
             {
@@ -339,9 +324,7 @@ def test_render_picks_from_response_returns_ordered_dois(tmp_path):
 def test_render_picks_from_response_drops_unknown_dois(tmp_path):
     """Picks for DOIs that aren't in the candidate pool are silently dropped."""
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path)
     response = {
         "picks": [
             {
@@ -363,9 +346,7 @@ def test_render_picks_from_response_drops_unknown_dois(tmp_path):
 def test_render_picks_from_response_handles_missing_fields(tmp_path):
     """Missing rank / rationale / picks key are tolerated."""
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=3, coarse_n=10, kb_root=tmp_path)
     # Empty / None response.
     assert render_picks_from_response(task, {}) == []
     assert render_picks_from_response(task, None) == []
@@ -390,9 +371,7 @@ def test_render_picks_from_response_handles_missing_fields(tmp_path):
 
 def test_render_picks_caps_at_target_n(tmp_path):
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=2, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=2, coarse_n=10, kb_root=tmp_path)
     response = {
         "picks": [
             {"doi": d, "rank": i + 1, "rationale": "x"}
@@ -618,9 +597,7 @@ def test_picker_records_rationale_in_run_dir_fallback(tmp_path):
 def test_write_picker_decision_returns_none_without_destination(tmp_path):
     """No project + no fallback_dir -> returns None (no file written)."""
     corpus = _make_corpus_with_metrics()
-    task = prepare_picker_task(
-        "t", corpus=corpus, target_n=1, coarse_n=10, kb_root=tmp_path
-    )
+    task = prepare_picker_task("t", corpus=corpus, target_n=1, coarse_n=10, kb_root=tmp_path)
     out = write_picker_decision(
         kb_root=tmp_path,
         project=None,
@@ -664,9 +641,7 @@ def test_build_picker_prompt_lists_candidates_with_metadata():
             has_pdf=False,
         ),
     ]
-    prompt = build_picker_prompt(
-        topic="my topic", candidates=candidates, target_n=2
-    )
+    prompt = build_picker_prompt(topic="my topic", candidates=candidates, target_n=2)
     assert "TOPIC: my topic" in prompt
     assert "Pick the 2 BEST papers" in prompt
     assert "Alpha paper" in prompt
@@ -737,9 +712,7 @@ def test_run_lit_arc_uses_picker_callback(tmp_path, monkeypatch):
     The callback's picks become the Tier-A set.
     """
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     seeds = _make_seeds()
@@ -792,14 +765,10 @@ def test_run_lit_arc_uses_picker_callback(tmp_path, monkeypatch):
     assert result.arc_path.exists()
 
 
-def test_run_lit_arc_without_picker_callback_uses_citation_graph(
-    tmp_path, monkeypatch
-):
+def test_run_lit_arc_without_picker_callback_uses_citation_graph(tmp_path, monkeypatch):
     """No ``picker_callback`` -> previous mechanical behaviour preserved."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     seeds = _make_seeds()
@@ -916,6 +885,4 @@ def test_seed_doi_with_zero_og_score_survives_coarse_n_cutoff(tmp_path):
         f"Seed DOI with og_score=0 was dropped by coarse_n=5 cutoff. "
         f"Got candidates: {candidate_dois}"
     )
-    assert citing_seed.doi.lower() in candidate_dois, (
-        "Citing seed should also survive."
-    )
+    assert citing_seed.doi.lower() in candidate_dois, "Citing seed should also survive."

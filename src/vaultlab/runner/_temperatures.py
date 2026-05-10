@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from vaultlab.runner.models import MeetingMode
 
-
 CONSISTENT_TEMPERATURE = 0.2
 BALANCED_TEMPERATURE = 0.5
 CREATIVE_TEMPERATURE = 0.8
@@ -37,16 +36,16 @@ TEMPERATURE_BY_MEETING_MODE: dict[MeetingMode, float] = {
 # Per-role overrides. Synthesizers always want low T; ideation roles want
 # high T. This overrides the meeting-mode default when the role is present.
 TEMPERATURE_BY_ROLE: dict[str, float] = {
-    "synthesizer":          CONSISTENT_TEMPERATURE,
-    "team_lead":            CONSISTENT_TEMPERATURE,
-    "narrator":             CONSISTENT_TEMPERATURE,
-    "methods_critic":       BALANCED_TEMPERATURE,
-    "literature_critic":    BALANCED_TEMPERATURE,
-    "data_analyst":         CONSISTENT_TEMPERATURE,  # analysis is deterministic
-    "domain_expert":        BALANCED_TEMPERATURE,
-    "literature_surveyor":  BALANCED_TEMPERATURE,
-    "figure_lead":          CREATIVE_TEMPERATURE,    # ideation
-    "figure_reader":        CONSISTENT_TEMPERATURE,  # observation
+    "synthesizer": CONSISTENT_TEMPERATURE,
+    "team_lead": CONSISTENT_TEMPERATURE,
+    "narrator": CONSISTENT_TEMPERATURE,
+    "methods_critic": BALANCED_TEMPERATURE,
+    "literature_critic": BALANCED_TEMPERATURE,
+    "data_analyst": CONSISTENT_TEMPERATURE,  # analysis is deterministic
+    "domain_expert": BALANCED_TEMPERATURE,
+    "literature_surveyor": BALANCED_TEMPERATURE,
+    "figure_lead": CREATIVE_TEMPERATURE,  # ideation
+    "figure_reader": CONSISTENT_TEMPERATURE,  # observation
 }
 
 

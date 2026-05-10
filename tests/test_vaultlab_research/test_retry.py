@@ -10,15 +10,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pytest
-
 from vaultlab.research.retry import (
-    RetryAttempt,
-    RetryResult,
     retry_with_feedback,
     truncate_feedback,
 )
-
 
 # ---------------------------------------------------------------------------
 # truncate_feedback
@@ -90,9 +85,7 @@ def test_exception_triggers_retry_with_feedback():
             raise RuntimeError("connection died")
         return {"recovered": True}
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="initial"), max_retries=1
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="initial"), max_retries=1)
     assert result.succeeded
     assert len(seen_prompts) == 2
     # Second attempt's prompt includes the error context
@@ -110,9 +103,7 @@ def test_exhausts_retries_returns_unsuccessful_result():
     def cb(task):
         raise RuntimeError("persistent failure")
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=2
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=2)
     assert not result.succeeded
     assert result.response is None
     # 1 initial + 2 retries = 3 attempts, all failed
@@ -132,9 +123,7 @@ def test_none_response_treated_as_failure():
         seen.append(task.prompt)
         return None if len(seen) == 1 else {"ok": True}
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=1
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=1)
     assert result.succeeded
     assert result.attempts[0].failure_mode == "empty"
 
@@ -146,9 +135,7 @@ def test_empty_dict_treated_as_failure():
         seen.append(task.prompt)
         return {} if len(seen) == 1 else {"ok": True}
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=1
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=1)
     assert result.succeeded
     assert result.attempts[0].failure_mode == "empty"
 
@@ -159,9 +146,7 @@ def test_non_dict_response_treated_as_failure():
     def cb(task):
         return ["not", "a", "dict"]
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=0
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=0)
     assert not result.succeeded
     assert result.attempts[0].failure_mode == "empty"
 
@@ -206,9 +191,7 @@ def test_validator_returning_empty_string_is_success():
     def validator(response):
         return ""  # all good
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), validate=validator
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), validate=validator)
     assert result.succeeded
     assert len(result.attempts) == 1
 
@@ -260,9 +243,7 @@ def test_max_retries_zero_means_no_retry():
         call_count[0] += 1
         return {}  # always fails
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=0
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=0)
     assert call_count[0] == 1
     assert not result.succeeded
     assert len(result.attempts) == 1
@@ -275,9 +256,7 @@ def test_negative_max_retries_treated_as_zero():
         call_count[0] += 1
         return {}
 
-    result = retry_with_feedback(
-        cb, _FakeTask(prompt="t"), max_retries=-5
-    )
+    result = retry_with_feedback(cb, _FakeTask(prompt="t"), max_retries=-5)
     assert call_count[0] == 1
 
 
@@ -325,9 +304,7 @@ def test_non_dataclass_task_retries_without_feedback_application():
         return {"ok": True}
 
     plain = _PlainTask()
-    result = retry_with_feedback(
-        cb, plain, max_retries=1
-    )
+    result = retry_with_feedback(cb, plain, max_retries=1)
     # Retry happened (count went up)
     assert call_count[0] == 2
     # Final attempt succeeded even though feedback couldn't be woven in

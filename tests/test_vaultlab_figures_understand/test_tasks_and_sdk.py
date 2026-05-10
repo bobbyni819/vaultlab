@@ -24,9 +24,9 @@ np = pytest.importorskip("numpy")
 pytest.importorskip("PIL")
 pytest.importorskip("skimage")
 
-from PIL import Image  # noqa: E402
+from PIL import Image
 
-from vaultlab.figures.understand import (  # noqa: E402
+from vaultlab.figures.understand import (
     ColorMotif,
     Region,
     VerificationIteration,
@@ -37,13 +37,12 @@ from vaultlab.figures.understand import (  # noqa: E402
     render_match_from_response,
     render_verify_from_response,
 )
-from vaultlab.figures.understand._sdk import (  # noqa: E402
+from vaultlab.figures.understand._sdk import (
     describe_via_sdk,
     match_via_sdk,
     understand_figure_via_sdk,
     verify_via_sdk,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -123,7 +122,12 @@ def test_prepare_describe_task_includes_paper_tldr_in_prompt(tmp_path: Path) -> 
 def test_prepare_match_task_lists_region_ids_and_motifs(tmp_path: Path) -> None:
     fig = _synthetic_figure(tmp_path)
     regions = [
-        Region(motif_name="neon-green", bbox_px=(100, 100, 160, 160), area_px=3600, centroid_px=(130, 130)),
+        Region(
+            motif_name="neon-green",
+            bbox_px=(100, 100, 160, 160),
+            area_px=3600,
+            centroid_px=(130, 130),
+        ),
         Region(motif_name="orange", bbox_px=(50, 200, 80, 230), area_px=900, centroid_px=(65, 215)),
     ]
     task = prepare_match_task(
@@ -177,13 +181,16 @@ def test_render_match_drops_invalid_region_ids(tmp_path: Path) -> None:
         Region("green", (10, 10, 30, 30), 400, (20, 20)),
         Region("orange", (50, 50, 70, 70), 400, (60, 60)),
     ]
-    task = prepare_match_task(
-        fig, description="d", described_elements=["a", "b"], regions=regions
-    )
+    task = prepare_match_task(fig, description="d", described_elements=["a", "b"], regions=regions)
     response = {
         "matches": [
             {"element_name": "a", "matched_region_id": "r0", "rationale": "ok", "confidence": 0.9},
-            {"element_name": "b", "matched_region_id": "r99", "rationale": "wrong", "confidence": 0.5},
+            {
+                "element_name": "b",
+                "matched_region_id": "r99",
+                "rationale": "wrong",
+                "confidence": 0.5,
+            },
             {"element_name": "c", "matched_region_id": "rZ", "rationale": "fab", "confidence": 0.1},
         ]
     }
@@ -219,8 +226,7 @@ def test_describe_via_sdk_returns_text_for_real_image(tmp_path: Path) -> None:
     fig = _synthetic_figure(tmp_path)
     task = prepare_describe_task(fig, paper_doi="10/x", paper_tldr="ctx")
     client = _StubAnthropicClient(
-        '{"description": "single green square in the upper-left", '
-        '"elements": ["green square"]}'
+        '{"description": "single green square in the upper-left", "elements": ["green square"]}'
     )
     out = describe_via_sdk(task, client=client)
     assert isinstance(out, str)
@@ -235,9 +241,7 @@ def test_describe_via_sdk_returns_text_for_real_image(tmp_path: Path) -> None:
 
 def test_match_via_sdk_handles_empty_regions(tmp_path: Path) -> None:
     fig = _synthetic_figure(tmp_path)
-    task = prepare_match_task(
-        fig, description="nothing visible", described_elements=[], regions=[]
-    )
+    task = prepare_match_task(fig, description="nothing visible", described_elements=[], regions=[])
     client = _StubAnthropicClient('{"matches": []}')
     out = match_via_sdk(task, client=client)
     assert out == []
@@ -248,8 +252,7 @@ def test_verify_via_sdk_returns_verification_iteration(tmp_path: Path) -> None:
     fig = _synthetic_figure(tmp_path)
     task = prepare_verify_task(fig, iteration=1, expected_elements=["green square"])
     client = _StubAnthropicClient(
-        '{"annotated_image_read": "box on green square", "issues_found": [], '
-        '"decision": "ACCEPT"}'
+        '{"annotated_image_read": "box on green square", "issues_found": [], "decision": "ACCEPT"}'
     )
     out = verify_via_sdk(task, client=client)
     assert isinstance(out, VerificationIteration)
@@ -269,8 +272,7 @@ def test_understand_figure_via_sdk_smoke_with_stubbed_client(tmp_path: Path) -> 
 
     replies = [
         # Step 1 (describe)
-        '{"description": "single neon-green square upper-left", '
-        '"elements": ["neon-green square"]}',
+        '{"description": "single neon-green square upper-left", "elements": ["neon-green square"]}',
         # Step 3 (match)
         '{"matches": [{"element_name": "neon-green square", '
         '"matched_region_id": "r0", "rationale": "only green region", '

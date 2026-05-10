@@ -18,12 +18,10 @@ behaviourally identical.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
-from vaultlab.runner.models import Meeting
-
-from vaultlab.workflows._provenance import Provenance
 from vaultlab.runner._claude_code import RunPlan
+from vaultlab.runner.models import Meeting
+from vaultlab.workflows._provenance import Provenance
 
 
 @dataclass
@@ -37,7 +35,7 @@ class WorkflowPlan:
     meeting: Meeting
     plan: RunPlan
     provenance: Provenance
-    canonical_output_path: Optional[str] = None  # e.g. synthesis-{date}.md
+    canonical_output_path: str | None = None  # e.g. synthesis-{date}.md
     notes: list[str] = field(default_factory=list)
 
 
@@ -71,4 +69,4 @@ class DeepThinkEnsembleBundle:
         return [self.pre_critic, *self.critic_plans, self.meta_review, self.synthesis]
 
 
-__all__ = ["WorkflowPlan", "DeepThinkEnsembleBundle"]
+__all__ = ["DeepThinkEnsembleBundle", "WorkflowPlan"]

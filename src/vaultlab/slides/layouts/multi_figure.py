@@ -46,9 +46,7 @@ def add_multi_figure_slide(
     sizes_d = sizes()
 
     if title:
-        tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-        )
+        tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
@@ -87,9 +85,12 @@ def add_multi_figure_slide(
         group: list[Any] = []
         img_path = Path(fig["path"])
         pic = add_picture_fit(
-            slide, str(img_path),
-            Inches(cell_left_in), Inches(cell_top_in),
-            Inches(cell_w_inner), Inches(cell_h_inner),
+            slide,
+            str(img_path),
+            Inches(cell_left_in),
+            Inches(cell_top_in),
+            Inches(cell_w_inner),
+            Inches(cell_h_inner),
         )
         if pic is not None:
             group.append(pic)
@@ -97,8 +98,10 @@ def add_multi_figure_slide(
         label = fig.get("label", "")
         if label:
             lbl = slide.shapes.add_textbox(
-                Inches(cell_left_in - 0.1), Inches(cell_top_in - 0.1),
-                Inches(0.5), Inches(0.4),
+                Inches(cell_left_in - 0.1),
+                Inches(cell_top_in - 0.1),
+                Inches(0.5),
+                Inches(0.4),
             )
             lbl.text_frame.text = label
             apply_font(lbl.text_frame, size=24, bold=True, pres=pres)
@@ -107,8 +110,10 @@ def add_multi_figure_slide(
         cap = fig.get("caption", "")
         if cap:
             cx = slide.shapes.add_textbox(
-                Inches(cell_left_in), Inches(cell_top_in + cell_h_inner),
-                Inches(cell_w_inner), Inches(0.5),
+                Inches(cell_left_in),
+                Inches(cell_top_in + cell_h_inner),
+                Inches(cell_w_inner),
+                Inches(0.5),
             )
             cx.text_frame.text = cap
             cx.text_frame.word_wrap = True
@@ -125,8 +130,10 @@ def add_multi_figure_slide(
     if sources:
         joined = " | ".join(dict.fromkeys(sources))  # dedupe, preserve order
         cit = slide.shapes.add_textbox(
-            Inches(0.3), Inches(sh_in - 0.4),
-            Inches(sw_in - 0.6), Inches(0.3),
+            Inches(0.3),
+            Inches(sh_in - 0.4),
+            Inches(sw_in - 0.6),
+            Inches(0.3),
         )
         cit.text_frame.text = joined
         apply_font(cit.text_frame, size=9, pres=pres)

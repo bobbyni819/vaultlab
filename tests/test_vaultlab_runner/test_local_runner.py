@@ -71,9 +71,7 @@ def test_local_runner_with_fake_client_calls_messages_create() -> None:
     class FakeClient:
         messages = FakeMessages()
 
-    runner = LocalRunner(
-        kb_path="/tmp", command_name="c", client=FakeClient()
-    )
+    runner = LocalRunner(kb_path="/tmp", command_name="c", client=FakeClient())
     assert not runner.is_dry_run
     m = build_meeting(topic="t", meeting_type="narrate", session_context="ctx")
     plan = runner.plan(m, task="x")

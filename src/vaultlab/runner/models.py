@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class Mode(str, Enum):
@@ -44,12 +43,14 @@ class InvestigationMode(str, Enum):
 class MeetingMode(str, Enum):
     """How roles in a meeting relate to each other's outputs."""
 
-    ROUND_TABLE = "round_table"       # parallel, blind; used for broad surveys
-    ADVERSARIAL = "adversarial"       # sequential, each sees prior outputs
-    SYNTHESIS = "synthesis"           # single role integrates across all inputs
-    INDIVIDUAL = "individual"         # one-on-one with a specific role
-    TEAM = "team"                     # lead opens, members respond, lead synthesizes
-    CRITIQUED = "critiqued"           # role + always-on critic (adopted from virtual-lab individual meetings)
+    ROUND_TABLE = "round_table"  # parallel, blind; used for broad surveys
+    ADVERSARIAL = "adversarial"  # sequential, each sees prior outputs
+    SYNTHESIS = "synthesis"  # single role integrates across all inputs
+    INDIVIDUAL = "individual"  # one-on-one with a specific role
+    TEAM = "team"  # lead opens, members respond, lead synthesizes
+    CRITIQUED = (
+        "critiqued"  # role + always-on critic (adopted from virtual-lab individual meetings)
+    )
 
 
 @dataclass
@@ -116,7 +117,7 @@ class Role:
     communication_style: str = ""
     mode: Mode = Mode.DATA_ANALYSIS
     output_format: str = ""
-    icon: Optional[str] = None
+    icon: str | None = None
     tools_allowed: tuple[str, ...] = field(default_factory=tuple)
 
     def prompt_for(
@@ -159,7 +160,7 @@ class Meeting:
     session_context: str
     round_num: int = 1
     prior_summary: str = ""
-    agenda: Optional[Agenda] = None
+    agenda: Agenda | None = None
 
 
 @dataclass

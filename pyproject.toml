@@ -32,7 +32,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    # Core (required for all subpackages)
+    # Core (required for all subpackages) — kept small on purpose so a fresh
+    # `pip install vaultlab` is fast (<60s) and small (<200MB). Heavier deps
+    # live in optional extras below.
     "anthropic>=0.40",
     "pydantic>=2.6",
     "click>=8.1",
@@ -41,11 +43,12 @@ dependencies = [
     "platformdirs>=4.0",
     "httpx>=0.27",
     "tenacity>=8.2",
+    "requests>=2.31",
     # Markdown loading + frontmatter
     "python-frontmatter>=1.1",
     "markdown-it-py>=3.0",
-    # Embeddings / semantic search (citations + KB)
-    "sentence-transformers>=3.0",
+    # Light data deps — pandas/numpy are needed by most primitives + are
+    # already cached in most data-science Python envs
     "numpy>=1.26",
     "pandas>=2.2",
 ]
@@ -57,6 +60,15 @@ research = [
     "semanticscholar>=0.7",
     "pdfplumber>=0.11",
     "pymupdf>=1.24",
+]
+semantic = [
+    # Heavy: pulls in torch (~hundreds of MB). Only needed if you want
+    # embeddings-based semantic search in the KB (vaultlab.kb.semantic_search).
+    # The KB also supports keyword search without these — the recommendation
+    # is to skip this extra unless you're at >500 KB docs and want fuzzy
+    # search across them.
+    "sentence-transformers>=3.0",
+    "scikit-learn>=1.4",
 ]
 citations = [
     "scikit-learn>=1.4",        # for cosine similarity helpers
@@ -126,7 +138,7 @@ outlook-windows = [
     "pywin32>=306; sys_platform == 'win32'",
 ]
 all = [
-    "vaultlab[research,citations,kb,figures,slides,stats,manuscript,meetings]",
+    "vaultlab[research,citations,kb,figures,slides,stats,manuscript,meetings,semantic]",
     "vaultlab[data-scrnaseq,data-spatial,data-imaging,data-maldi,data-flow]",
     "vaultlab[google,outlook-windows]",
 ]
@@ -195,7 +207,23 @@ select = [
     "RUF",  # ruff-specific
 ]
 ignore = [
-    "E501",  # line too long (handled by formatter)
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module-import-not-at-top — lazy / circular-dep-avoiding imports are intentional
+    "RUF001", # ambiguous-unicode-character-string — em-dashes / curly quotes are stylistic, intentional
+    "RUF002", # ambiguous-unicode-character-docstring — same; pretty docstrings use em-dashes
+    "RUF003", # ambiguous-unicode-character-comment
+    "RUF005", # collection-literal-concatenation — tuple/list concat is sometimes clearer
+    "RUF012", # mutable-class-default — false-positive on dataclass field(default_factory=) cases
+    "RUF015", # unnecessary-iterable-allocation-for-first-element — minor; not worth churn
+    "RUF022", # unsorted-dunder-all — order is often deliberate (logical grouping)
+    "UP038",  # non-pep604-isinstance — pre-3.10 tuple form is fine
+    "F841",   # unused-variable — sometimes intentional (debugging / future use)
+    "B007",   # unused-loop-control-variable
+    "F401",   # unused-import — barrel modules and lazy re-exports trip this
+    "C408",   # unnecessary-collection-call — dict() vs {} is reader preference
+    "C416",   # unnecessary-comprehension — sometimes the comprehension is clearer
+    "RUF007", # zip-instead-of-pairwise — pairwise is 3.10+; zip works
+    "UP046",  # non-pep695-generic-class — PEP 695 syntax not universal yet
 ]
 
 [tool.ruff.format]

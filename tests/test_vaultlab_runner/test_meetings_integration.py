@@ -87,9 +87,7 @@ class TestBuildMeetingFromLoadedRoles:
         # build_meeting with no explicit roles delegates to roles_for(),
         # which now reads vaultlab.roles. The resulting role objects must
         # carry prompt_for and produce a usable prompt.
-        meeting = build_meeting(
-            topic="t", meeting_type="reasoning", session_context="ctx"
-        )
+        meeting = build_meeting(topic="t", meeting_type="reasoning", session_context="ctx")
         assert [r.id for r in meeting.roles] == [
             "data_analyst",
             "domain_expert",
@@ -102,16 +100,12 @@ class TestBuildMeetingFromLoadedRoles:
     def test_team_meeting_resolves_team_lead(self) -> None:
         # team_lead/figure_reader were NOT in vaultlab.roles before the
         # reconciliation; this test guards their presence.
-        meeting = build_meeting(
-            topic="t", meeting_type="team_meeting", session_context="ctx"
-        )
+        meeting = build_meeting(topic="t", meeting_type="team_meeting", session_context="ctx")
         assert meeting.roles[0].id == "team_lead"
         assert meeting.mode == MeetingMode.TEAM
 
     def test_figure_read_resolves_figure_reader(self) -> None:
-        meeting = build_meeting(
-            topic="t", meeting_type="figure_read", session_context="ctx"
-        )
+        meeting = build_meeting(topic="t", meeting_type="figure_read", session_context="ctx")
         assert meeting.roles[0].id == "figure_reader"
         assert meeting.mode == MeetingMode.INDIVIDUAL
 
@@ -120,8 +114,9 @@ class TestNoBobbyAilabInRunner:
     """Static guard — vaultlab.runner.meetings must not import bobby_ailab."""
 
     def test_meetings_module_has_no_bobby_ailab_imports(self) -> None:
-        import vaultlab.runner.meetings as meetings_mod
         from pathlib import Path
+
+        import vaultlab.runner.meetings as meetings_mod
 
         source = Path(meetings_mod.__file__).read_text(encoding="utf-8")
         # Allow doc references in module docstrings if any survive, but

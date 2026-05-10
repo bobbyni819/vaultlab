@@ -11,7 +11,6 @@ from vaultlab.parsers import (
     summarize_tests,
 )
 
-
 METABOLISM_CRITIC_SAMPLE = """
 ## Overall Round Verdict
 
@@ -50,7 +49,7 @@ def test_descriptions_are_captured() -> None:
 def test_positions_are_line_numbers() -> None:
     records = parse_next_round_tests(METABOLISM_CRITIC_SAMPLE)
     assert records[0]["position"] > 0
-    for prev, curr in zip(records, records[1:]):
+    for prev, curr in zip(records, records[1:], strict=False):
         assert curr["position"] > prev["position"]
 
 

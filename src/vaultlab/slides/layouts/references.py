@@ -11,7 +11,8 @@ For the typed Vancouver-style two-column references slide (used by the
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from vaultlab.slides.layouts._helpers import (
     Inches,
@@ -41,17 +42,17 @@ def add_references_slide(
     sh_in = pres.slide_height / 914400
     sizes_d = sizes()
 
-    tx = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-    )
+    tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
     tx.text_frame.text = title
     apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
     refs_list = list(references)
     if refs_list:
         bx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(1.4),
-            Inches(sw_in - 1.0), Inches(sh_in - 2.0),
+            Inches(0.5),
+            Inches(1.4),
+            Inches(sw_in - 1.0),
+            Inches(sh_in - 2.0),
         )
         tf = bx.text_frame
         tf.word_wrap = True

@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from vaultlab.research.policy_skip import (
     fetch_list_paywalled,
     is_policy_refusal_error,
@@ -19,8 +17,8 @@ from vaultlab.research.policy_skip import (
     mark_skipped,
 )
 
-
 # ---- is_policy_refusal_error -------------------------------------------
+
 
 def test_detects_aup_refusal():
     msg = (
@@ -37,9 +35,7 @@ def test_detects_aup_url():
 
 def test_does_not_match_internal_server_error():
     """Internal-server-error 500s have many causes; don't auto-classify."""
-    assert not is_policy_refusal_error(
-        "API Error: Internal server error"
-    )
+    assert not is_policy_refusal_error("API Error: Internal server error")
 
 
 def test_handles_none_and_empty():
@@ -52,6 +48,7 @@ def test_case_insensitive():
 
 
 # ---- mark_skipped + list_skipped + is_skipped --------------------------
+
 
 def test_mark_skipped_writes_log(tmp_path: Path):
     project = tmp_path / "proj"
@@ -141,6 +138,7 @@ def test_list_skipped_corrupted_json_returns_empty(tmp_path: Path):
 
 
 # ---- fetch_list_paywalled ----------------------------------------------
+
 
 def test_fetch_list_filters_failed_paywalled():
     log = {

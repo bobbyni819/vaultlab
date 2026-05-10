@@ -21,8 +21,9 @@ Lifted from ``bobby_ailab._local_runner``. Behaviourally identical.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Protocol
+from typing import Any, Protocol
 
 from vaultlab.runner._claude_code import AgentSpec, ClaudeCodeRunner, RunPlan
 
@@ -71,13 +72,11 @@ class LocalRunner(ClaudeCodeRunner):
         self,
         kb_path: str,
         command_name: str,
-        client: Optional[_AnthropicClient] = None,
-        config: Optional[LocalRunnerConfig] = None,
+        client: _AnthropicClient | None = None,
+        config: LocalRunnerConfig | None = None,
         **runner_kwargs: Any,
     ) -> None:
-        super().__init__(
-            kb_path=kb_path, command_name=command_name, **runner_kwargs
-        )
+        super().__init__(kb_path=kb_path, command_name=command_name, **runner_kwargs)
         self._client = client
         self._config = config or LocalRunnerConfig()
 

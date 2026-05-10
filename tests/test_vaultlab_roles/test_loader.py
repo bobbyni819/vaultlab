@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 
-
 EXPECTED_ROLE_IDS = {
     "data_analyst",
     "literature_surveyor",

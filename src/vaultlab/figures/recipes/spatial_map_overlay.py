@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -20,7 +19,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -37,10 +36,12 @@ def _default_palette(variant: str) -> str:
 
 
 def render(
-    cells_df: "pd.DataFrame",
+    cells_df: pd.DataFrame,
     *,
     background_image: Path | str | None = None,
-    variant: Literal["tissue_bg_with_cells", "niche_overlay", "signaling_density"] = "tissue_bg_with_cells",
+    variant: Literal[
+        "tissue_bg_with_cells", "niche_overlay", "signaling_density"
+    ] = "tissue_bg_with_cells",
     color_col: str = "cell_type",
     palette: str | None = None,
     output_path: Path | str,
@@ -54,7 +55,6 @@ def render(
 
     Anchor: Pentimalli 2025 Figs 3D-F + 4C-E (see spatial_map_overlay.md).
     """
-    import pandas as pd
 
     if "x" not in cells_df.columns or "y" not in cells_df.columns:
         raise ValueError(

@@ -14,7 +14,6 @@ from vaultlab.research.corpus import (
 )
 from vaultlab.research.paper import Paper
 
-
 # ---------------------------------------------------------------------------
 # Fixture: synthetic 5-paper graph
 # ---------------------------------------------------------------------------
@@ -346,9 +345,7 @@ def test_backfill_chain_falls_through_to_openalex():
 
     assert visited == ["crossref", "s2", "openalex"]
     assert corpus.papers["10.1/sparse"].authors == ["Smith J", "Doe A"]
-    assert result == {
-        "10.1/sparse": {"authors": ["Smith J", "Doe A"], "source": "openalex"}
-    }
+    assert result == {"10.1/sparse": {"authors": ["Smith J", "Doe A"], "source": "openalex"}}
 
 
 def test_backfill_chain_first_hit_short_circuits():
@@ -356,9 +353,7 @@ def test_backfill_chain_first_hit_short_circuits():
     skipped for that DOI — no wasted API calls."""
     from vaultlab.research.corpus import backfill_authors_via_chain
 
-    sparse = Paper(
-        title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[]
-    )
+    sparse = Paper(title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[])
     corpus = Corpus(topic="t", seeds=[])
     corpus.papers["10.1/sparse"] = sparse
 
@@ -390,9 +385,7 @@ def test_backfill_chain_handles_all_sources_failing():
         has_anonymous_author,
     )
 
-    p = Paper(
-        title="Truly anon", doi="10.1/anon", year=2020, source_api="ref", authors=[]
-    )
+    p = Paper(title="Truly anon", doi="10.1/anon", year=2020, source_api="ref", authors=[])
     corpus = Corpus(topic="t", seeds=[])
     corpus.papers["10.1/anon"] = p
 
@@ -414,9 +407,7 @@ def test_backfill_chain_swallows_fetcher_exceptions():
     going to the next source rather than crash the whole backfill."""
     from vaultlab.research.corpus import backfill_authors_via_chain
 
-    p = Paper(
-        title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[]
-    )
+    p = Paper(title="Sparse", doi="10.1/sparse", year=2020, source_api="ref", authors=[])
     corpus = Corpus(topic="t", seeds=[])
     corpus.papers["10.1/sparse"] = p
 

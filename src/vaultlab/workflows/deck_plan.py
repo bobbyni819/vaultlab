@@ -51,8 +51,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from datetime import date as _date
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -77,13 +76,15 @@ __all__ = [
 
 # Slide types the response schema supports. ``references`` is excluded —
 # the renderer auto-appends a references slide from cited DOIs.
-SUPPORTED_LLM_SLIDE_TYPES: frozenset[str] = frozenset({
-    "title",
-    "section_divider",
-    "figure",
-    "multi_figure",
-    "text",
-})
+SUPPORTED_LLM_SLIDE_TYPES: frozenset[str] = frozenset(
+    {
+        "title",
+        "section_divider",
+        "figure",
+        "multi_figure",
+        "text",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -273,9 +274,7 @@ def _render_figure_assignments(
         s = summaries_by_doi.get(doi.lower()) or summaries_by_doi.get(doi)
         slug = slugify_doi(doi) if doi else ""
         label = _author_year_label_from_dict(s) if s else doi
-        lines.append(
-            f"- doi=[[{slug}|{label}]] image_path={Path(path).as_posix()}"
-        )
+        lines.append(f"- doi=[[{slug}|{label}]] image_path={Path(path).as_posix()}")
     return "\n".join(lines) + "\n"
 
 
@@ -292,8 +291,7 @@ def _render_co_citation_block(
         la = _author_year_label_from_dict(sa) if sa else a
         lb = _author_year_label_from_dict(sb) if sb else b
         lines.append(
-            f"- [[{slugify_doi(a)}|{la}]] + [[{slugify_doi(b)}|{lb}]] "
-            f"— co-cited by {n} papers"
+            f"- [[{slugify_doi(a)}|{la}]] + [[{slugify_doi(b)}|{lb}]] — co-cited by {n} papers"
         )
     return "\n".join(lines)
 
@@ -332,9 +330,7 @@ def _build_deck_plan_prompt(
 
     buckets = _bucket_summaries_for_prompt(corpus_summaries)
     history_block = _render_summary_block("history", buckets.get("history", []))
-    development_block = _render_summary_block(
-        "development", buckets.get("development", [])
-    )
+    development_block = _render_summary_block("development", buckets.get("development", []))
     sota_block = _render_summary_block("sota", buckets.get("sota", []))
 
     fig_block = _render_figure_assignments(figure_assignments, summaries_by_doi)
@@ -594,8 +590,7 @@ def prepare_deck_plan_task(
     # Restrict to Tier-A papers — Tier-C stubs without TL;DR/findings
     # would leak generic phrasing into slide bullets.
     tier_a_summaries: list[PaperSummary] = [
-        s for s in summaries.values()
-        if (s.tier or "").upper() == "A" or s.tldr or s.key_findings
+        s for s in summaries.values() if (s.tier or "").upper() == "A" or s.tldr or s.key_findings
     ]
     corpus_summaries = [_summary_to_prompt_dict(s) for s in tier_a_summaries]
 
@@ -846,12 +841,14 @@ def _normalize_multi_figure_slide(
                     path,
                 )
                 continue
-        figs.append({
-            "path": path,
-            "label": f.get("label", ""),
-            "caption": f.get("caption", ""),
-            "citation_source": f.get("citation_source", ""),
-        })
+        figs.append(
+            {
+                "path": path,
+                "label": f.get("label", ""),
+                "caption": f.get("caption", ""),
+                "citation_source": f.get("citation_source", ""),
+            }
+        )
         for k in ("claim_paper_doi", "figure_paper_doi"):
             v = (f.get(k) or "").strip()
             if v:
@@ -917,9 +914,7 @@ def render_plan_from_response(
             continue
         stype = raw.get("type")
         if stype not in SUPPORTED_LLM_SLIDE_TYPES:
-            logger.warning(
-                "deck plan: dropping slide with unsupported type %r", stype
-            )
+            logger.warning("deck plan: dropping slide with unsupported type %r", stype)
             continue
         if stype == "title":
             out_slides.append(_normalize_title_slide(raw, task))
@@ -1046,8 +1041,7 @@ def generate_deck_plan(
 
     if not fallback_to_mechanical:
         raise ValueError(
-            "generate_deck_plan called without plan_callback and "
-            "fallback_to_mechanical=False"
+            "generate_deck_plan called without plan_callback and fallback_to_mechanical=False"
         )
 
     return _mechanical_fallback_plan(
@@ -1111,16 +1105,16 @@ def _mechanical_fallback_plan(
             slug = s.get("doi_slug") or ""
             label = _author_year_label_from_dict(s)
             tldr = (s.get("tldr") or "").strip().split("\n")[0][:200]
-            bullets.append(
-                f"[[{slug}|{label}]]: {tldr}" if tldr else f"[[{slug}|{label}]]"
-            )
+            bullets.append(f"[[{slug}|{label}]]: {tldr}" if tldr else f"[[{slug}|{label}]]")
             if s.get("doi"):
                 cited_dois.append(s["doi"])
-        slides.append({
-            "type": "text",
-            "title": "Foundational findings",
-            "bullets": bullets,
-        })
+        slides.append(
+            {
+                "type": "text",
+                "title": "Foundational findings",
+                "bullets": bullets,
+            }
+        )
 
     slides.append({"type": "section_divider", "title": "Development"})
 
@@ -1131,16 +1125,16 @@ def _mechanical_fallback_plan(
             slug = s.get("doi_slug") or ""
             label = _author_year_label_from_dict(s)
             tldr = (s.get("tldr") or "").strip().split("\n")[0][:200]
-            bullets.append(
-                f"[[{slug}|{label}]]: {tldr}" if tldr else f"[[{slug}|{label}]]"
-            )
+            bullets.append(f"[[{slug}|{label}]]: {tldr}" if tldr else f"[[{slug}|{label}]]")
             if s.get("doi"):
                 cited_dois.append(s["doi"])
-        slides.append({
-            "type": "text",
-            "title": "How the field evolved",
-            "bullets": bullets,
-        })
+        slides.append(
+            {
+                "type": "text",
+                "title": "How the field evolved",
+                "bullets": bullets,
+            }
+        )
 
     sota = buckets.get("sota", [])[:5]
     if sota:
@@ -1149,25 +1143,27 @@ def _mechanical_fallback_plan(
             slug = s.get("doi_slug") or ""
             label = _author_year_label_from_dict(s)
             findings = s.get("key_findings") or []
-            first = (findings[0] if findings else (s.get("tldr") or ""))
-            bullets.append(
-                f"[[{slug}|{label}]]: {str(first)[:200]}"
-            )
+            first = findings[0] if findings else (s.get("tldr") or "")
+            bullets.append(f"[[{slug}|{label}]]: {str(first)[:200]}")
             if s.get("doi"):
                 cited_dois.append(s["doi"])
-        slides.append({
-            "type": "text",
-            "title": "State of the art",
-            "bullets": bullets,
-        })
+        slides.append(
+            {
+                "type": "text",
+                "title": "State of the art",
+                "bullets": bullets,
+            }
+        )
 
     refs = _build_references_from_cited_dois(cited_dois, summaries_by_doi)
     if refs:
-        slides.append({
-            "type": "references",
-            "title": "References",
-            "references": refs,
-        })
+        slides.append(
+            {
+                "type": "references",
+                "title": "References",
+                "references": refs,
+            }
+        )
 
     del figure_assignments  # Mechanical fallback skips figures (text-only).
     del affiliation  # Carried in DeckPlan but unused by build_from_plan.
@@ -1177,9 +1173,6 @@ def _mechanical_fallback_plan(
         "subtitle": "Journal-club deck",
         "author": speaker,
         "topic": topic,
-        "story_arc_summary": (
-            "Mechanical bucket-leader synthesis "
-            "(no plan_callback supplied)."
-        ),
+        "story_arc_summary": ("Mechanical bucket-leader synthesis (no plan_callback supplied)."),
         "slides": slides,
     }

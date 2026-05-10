@@ -15,7 +15,6 @@ from typing import Any
 from ._record import ProvenanceRecord
 from ._writer import PROVENANCE_INDEX
 
-
 # ---------------------------------------------------------------------------
 # Single-receipt reads
 # ---------------------------------------------------------------------------
@@ -94,10 +93,7 @@ def filter_index(
     if finding_id:
         out = [r for r in out if finding_id in (r.get("finding_ids") or [])]
     if tags:
-        out = [
-            r for r in out
-            if all(t in (r.get("tags") or []) for t in tags)
-        ]
+        out = [r for r in out if all(t in (r.get("tags") or []) for t in tags)]
     return out
 
 

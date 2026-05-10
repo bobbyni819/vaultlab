@@ -38,9 +38,7 @@ def _resolve_current_year(current_year: int | None) -> int:
     return datetime.now().year
 
 
-def citations_per_year(
-    paper: Paper, *, current_year: int | None = None
-) -> float:
+def citations_per_year(paper: Paper, *, current_year: int | None = None) -> float:
     """Citations divided by the number of completed years since publication.
 
     A paper published in the current year gets ``citation_count / 1`` (we
@@ -98,6 +96,6 @@ def blended_paper_score(
 
 __all__ = [
     "DEFAULT_RECENCY_WEIGHT",
-    "citations_per_year",
     "blended_paper_score",
+    "citations_per_year",
 ]

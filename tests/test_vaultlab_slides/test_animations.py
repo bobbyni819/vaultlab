@@ -2,6 +2,7 @@
 
 Ported from ``bobby-tools/tests/test_bobby_slides/test_animation.py``.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -138,6 +139,7 @@ class TestPanelBuildup:
         Image.new("RGB", (100, 100), "blue").save(img)
         slide = add_figure_slide(pres, img, title="Panel A")
         from pptx.util import Inches
+
         s2 = slide.shapes.add_picture(str(img), Inches(2), Inches(2), Inches(1), Inches(1))
         s3 = slide.shapes.add_picture(str(img), Inches(4), Inches(2), Inches(1), Inches(1))
         panel_buildup(slide, [slide.shapes[1], s2, s3])
@@ -149,6 +151,7 @@ class TestPanelBuildup:
         Image.new("RGB", (100, 100), "blue").save(img)
         slide = add_figure_slide(pres, img, title="P")
         from pptx.util import Inches
+
         s2 = slide.shapes.add_picture(str(img), Inches(2), Inches(2), Inches(1), Inches(1))
         panel_buildup(slide, [slide.shapes[1], s2])
         reloaded = _save_and_reload(pres, tmp_path, "buildup.pptx")

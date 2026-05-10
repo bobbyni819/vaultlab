@@ -45,10 +45,9 @@ import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import yaml
-
 
 PROVENANCE_INDEX = ".vaultlab-workflow-provenance.jsonl"
 
@@ -57,16 +56,16 @@ PROVENANCE_INDEX = ".vaultlab-workflow-provenance.jsonl"
 class Provenance:
     """Structured provenance for a workflow output (frontmatter form)."""
 
-    generated_by: str           # command or tool that produced the file, e.g. "deep-think"
-    generated_at: str = ""      # ISO8601 timestamp; filled by post_init if empty
+    generated_by: str  # command or tool that produced the file, e.g. "deep-think"
+    generated_at: str = ""  # ISO8601 timestamp; filled by post_init if empty
     project: str = ""
     meeting_mode: str = ""
     investigation_mode: str = ""
     topic: str = ""
-    round: Optional[int] = None
+    round: int | None = None
     inputs: list[str] = field(default_factory=list)
     related_outputs: list[str] = field(default_factory=list)
-    kind: str = ""              # e.g. "synthesizer_output", "figure_plan", "narration"
+    kind: str = ""  # e.g. "synthesizer_output", "figure_plan", "narration"
     tags: list[str] = field(default_factory=list)
     finding_ids: list[str] = field(default_factory=list)
     notes: str = ""
@@ -81,9 +80,17 @@ class Provenance:
             "generated_at": self.generated_at,
         }
         for field_name in (
-            "project", "meeting_mode", "investigation_mode", "topic",
-            "round", "inputs", "related_outputs", "kind", "tags",
-            "finding_ids", "notes",
+            "project",
+            "meeting_mode",
+            "investigation_mode",
+            "topic",
+            "round",
+            "inputs",
+            "related_outputs",
+            "kind",
+            "tags",
+            "finding_ids",
+            "notes",
         ):
             value = getattr(self, field_name)
             if value or value == 0:
@@ -111,7 +118,9 @@ class Provenance:
     def render_frontmatter(self) -> str:
         """Render as markdown frontmatter — the YAML block that prefixes a file."""
         body = yaml.safe_dump(
-            self.to_dict(), sort_keys=False, default_flow_style=False,
+            self.to_dict(),
+            sort_keys=False,
+            default_flow_style=False,
             allow_unicode=True,
         ).rstrip()
         return f"---\n{body}\n---\n"
@@ -121,7 +130,7 @@ def write_with_provenance(
     path: str,
     body: str,
     provenance: Provenance,
-    index_dir: Optional[str] = None,
+    index_dir: str | None = None,
     *,
     emit_sidecars: bool = True,
 ) -> str:
@@ -177,7 +186,9 @@ def write_with_provenance(
 
 
 def _append_to_index(
-    path: str, provenance: Provenance, index_dir: Optional[str],
+    path: str,
+    provenance: Provenance,
+    index_dir: str | None,
 ) -> None:
     directory = index_dir or os.path.dirname(os.path.abspath(path))
     os.makedirs(directory, exist_ok=True)
@@ -187,11 +198,11 @@ def _append_to_index(
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def read_provenance(path: str) -> Optional[Provenance]:
+def read_provenance(path: str) -> Provenance | None:
     """Extract provenance from a markdown file with a frontmatter block."""
     if not os.path.isfile(path):
         return None
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         content = f.read(8192)
     if not content.startswith("---"):
         return None
@@ -207,8 +218,8 @@ def read_provenance(path: str) -> Optional[Provenance]:
 
 
 __all__ = [
-    "Provenance",
     "PROVENANCE_INDEX",
+    "Provenance",
     "read_provenance",
     "write_with_provenance",
 ]

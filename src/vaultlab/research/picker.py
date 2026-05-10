@@ -40,17 +40,17 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from vaultlab.kb.paths import (
     article_stub_path,
     ensure_parent,
     project_decisions_path,
     slugify_doi,
-    slugify_topic,
 )
 
 if TYPE_CHECKING:
@@ -182,10 +182,7 @@ def picker_response_schema() -> dict[str, Any]:
                         },
                         "rationale": {
                             "type": "string",
-                            "description": (
-                                "1-3 sentence justification grounded in "
-                                "the abstract."
-                            ),
+                            "description": ("1-3 sentence justification grounded in the abstract."),
                         },
                     },
                 },
@@ -376,27 +373,24 @@ def _build_candidates(
         def _has_pdf(doi: str) -> bool:
             return cache_path_for(doi, pdf_cache_dir).exists()
     else:
+
         def _has_pdf(doi: str) -> bool:
             return False
 
     if metrics is None:
         # Without metrics we can't rank; emit seeds first then everything else.
-        ranked_dois = list(seed_dois) + [
-            d for d in corpus.papers.keys() if d not in seed_dois
-        ]
+        ranked_dois = list(seed_dois) + [d for d in corpus.papers.keys() if d not in seed_dois]
     else:
+
         def _full_score(doi: str) -> tuple[int, int, float]:
             return (
                 1 if doi in seed_dois else 0,
                 1 if _has_pdf(doi) else 0,
-                float(metrics.og_score.get(doi, 0.0)) + float(
-                    metrics.forward_influence.get(doi, 0)
-                ),
+                float(metrics.og_score.get(doi, 0.0))
+                + float(metrics.forward_influence.get(doi, 0)),
             )
 
-        ranked_dois = sorted(
-            corpus.papers.keys(), key=_full_score, reverse=True
-        )
+        ranked_dois = sorted(corpus.papers.keys(), key=_full_score, reverse=True)
         # Defensive: ensure any seed DOIs not present in corpus.papers are
         # ALSO included (they get appended to the end so they won't outrank
         # corpus papers, but they'll still be considered).
@@ -494,9 +488,7 @@ def prepare_picker_task(
         kb_root=Path(kb_root),
         pdf_cache_dir=pdf_cache_dir,
     )
-    prompt = build_picker_prompt(
-        topic=topic, candidates=candidates, target_n=target_n
-    )
+    prompt = build_picker_prompt(topic=topic, candidates=candidates, target_n=target_n)
     return PickerTask(
         topic=topic,
         candidates=candidates,
@@ -624,9 +616,7 @@ def _format_decision_block(
         slug = slugify_doi(doi)
         if cand is not None:
             label = author_year_label(cand.authors, cand.year)
-            stats = (
-                f"(og={cand.og_score:.2f}, fwd={cand.forward_influence})"
-            )
+            stats = f"(og={cand.og_score:.2f}, fwd={cand.forward_influence})"
         else:
             label = doi
             stats = ""
@@ -713,9 +703,7 @@ def write_picker_decision(
         out_path.write_text(header + block + "\n", encoding="utf-8")
         return out_path
 
-    logger.debug(
-        "write_picker_decision: no project log, no fallback_dir; skipping"
-    )
+    logger.debug("write_picker_decision: no project log, no fallback_dir; skipping")
     return None
 
 
@@ -746,15 +734,14 @@ def _citation_graph_pick(
         def _has_pdf(doi: str) -> bool:
             return cache_path_for(doi, pdf_cache_dir).exists()
     else:
+
         def _has_pdf(doi: str) -> bool:
             return False
 
     def _score(doi: str) -> tuple[int, float]:
         return (
             1 if _has_pdf(doi) else 0,
-            float(metrics.og_score.get(doi, 0.0)) + float(
-                metrics.forward_influence.get(doi, 0)
-            ),
+            float(metrics.og_score.get(doi, 0.0)) + float(metrics.forward_influence.get(doi, 0)),
         )
 
     ranked = sorted(corpus.papers.keys(), key=_score, reverse=True)
@@ -820,9 +807,7 @@ def pick_top_n_content_aware(
                 "pick_top_n_content_aware requires a picker_callback when "
                 "fallback_to_citation_graph=False"
             )
-        return _citation_graph_pick(
-            corpus, n=target_n, pdf_cache_dir=pdf_cache_dir
-        )
+        return _citation_graph_pick(corpus, n=target_n, pdf_cache_dir=pdf_cache_dir)
 
     task = prepare_picker_task(
         topic,
@@ -833,9 +818,7 @@ def pick_top_n_content_aware(
         pdf_cache_dir=pdf_cache_dir,
     )
     if not task.candidates:
-        logger.warning(
-            "pick_top_n_content_aware: empty candidate pool; nothing to pick"
-        )
+        logger.warning("pick_top_n_content_aware: empty candidate pool; nothing to pick")
         return []
 
     response: dict[str, Any] | None
@@ -843,14 +826,10 @@ def pick_top_n_content_aware(
     try:
         raw_response = picker_callback(task)
     except Exception as exc:
-        logger.warning(
-            "picker_callback raised: %s; falling back to citation graph", exc
-        )
+        logger.warning("picker_callback raised: %s; falling back to citation graph", exc)
         if not fallback_to_citation_graph:
             raise
-        return _citation_graph_pick(
-            corpus, n=target_n, pdf_cache_dir=pdf_cache_dir
-        )
+        return _citation_graph_pick(corpus, n=target_n, pdf_cache_dir=pdf_cache_dir)
 
     if isinstance(raw_response, dict):
         response = raw_response
@@ -863,13 +842,9 @@ def pick_top_n_content_aware(
 
     picks = render_picks_from_response(task, response)
     if not picks and fallback_to_citation_graph:
-        logger.warning(
-            "picker returned 0 valid picks; falling back to citation graph"
-        )
+        logger.warning("picker returned 0 valid picks; falling back to citation graph")
         method = "citation-graph fallback (picker returned no valid picks)"
-        picks = _citation_graph_pick(
-            corpus, n=target_n, pdf_cache_dir=pdf_cache_dir
-        )
+        picks = _citation_graph_pick(corpus, n=target_n, pdf_cache_dir=pdf_cache_dir)
 
     rationales = _rationales_by_doi(response)
 

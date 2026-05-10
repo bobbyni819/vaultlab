@@ -38,9 +38,7 @@ def test_forward_expansion_adds_citing_papers_to_corpus():
     seed = _seed("10.1/seed", year=2018)
 
     # Backward expansion off (no refs fetcher exercised in this test)
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
     initial_n_papers = corpus.n_papers
     assert "10.1/seed" in corpus.papers
 
@@ -56,9 +54,7 @@ def test_forward_expansion_adds_citing_papers_to_corpus():
             return citing_papers
         return []
 
-    expand_corpus_forward(
-        corpus, fetch_citations=fake_fetch, max_per_paper=10
-    )
+    expand_corpus_forward(corpus, fetch_citations=fake_fetch, max_per_paper=10)
 
     # All 3 new papers are now in corpus
     assert corpus.n_papers == initial_n_papers + 3
@@ -78,9 +74,7 @@ def test_forward_expansion_seed_only_skips_non_seeds_by_default():
     """``seed_only=True`` only fetches forward citations for seeds, not for
     every paper in the corpus."""
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
     # Add a non-seed paper directly
     extra = _citing("10.1/extra", year=2020)
     corpus.papers["10.1/extra"] = extra
@@ -99,9 +93,7 @@ def test_forward_expansion_seed_only_skips_non_seeds_by_default():
 
 def test_forward_expansion_seed_only_false_expands_all_papers():
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
     extra = _citing("10.1/extra", year=2020)
     corpus.papers["10.1/extra"] = extra
 
@@ -120,9 +112,7 @@ def test_forward_expansion_seed_only_false_expands_all_papers():
 def test_forward_expansion_handles_fetcher_exception_gracefully():
     """If the S2 fetcher raises, the seed gets an empty cited_by list, not crash."""
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
 
     def broken_fetch(doi: str, limit: int):
         raise RuntimeError("S2 down")
@@ -136,9 +126,7 @@ def test_forward_expansion_handles_fetcher_exception_gracefully():
 def test_forward_expansion_skips_already_processed_seeds():
     """Re-running expand_corpus_forward doesn't re-fetch already-processed DOIs."""
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
     fetch_count = [0]
 
     def fake_fetch(doi: str, limit: int):
@@ -155,9 +143,7 @@ def test_forward_expansion_skips_already_processed_seeds():
 def test_forward_expansion_drops_citing_papers_without_doi():
     """Papers without DOIs from S2 don't pollute the corpus."""
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
 
     citing = [
         Paper(title="no-doi", year=2024, doi=""),
@@ -179,7 +165,5 @@ def test_forward_expansion_drops_citing_papers_without_doi():
 def test_corpus_cited_by_is_default_empty():
     """Fresh corpus has empty cited_by dict (not None)."""
     seed = _seed("10.1/seed")
-    corpus = build_corpus_from_seeds(
-        [seed], topic="t", fetch_refs=lambda _doi: None
-    )
+    corpus = build_corpus_from_seeds([seed], topic="t", fetch_refs=lambda _doi: None)
     assert corpus.cited_by == {}

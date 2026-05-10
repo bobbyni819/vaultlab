@@ -14,7 +14,6 @@ from vaultlab.research.graph_metrics import (
 )
 from vaultlab.research.paper import Paper
 
-
 # ---------------------------------------------------------------------------
 # Synthetic corpus (matches the test_corpus.py fixture)
 # ---------------------------------------------------------------------------

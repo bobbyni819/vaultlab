@@ -10,8 +10,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from vaultlab.research.acquisition import AcquisitionResult
 from vaultlab.research.read_paper import (
     list_paper_figures,
@@ -20,8 +18,9 @@ from vaultlab.research.read_paper import (
 )
 
 
-def _result(*, source: str, pdf_path: Path | None = None,
-            tier_errors: dict[str, str] | None = None) -> AcquisitionResult:
+def _result(
+    *, source: str, pdf_path: Path | None = None, tier_errors: dict[str, str] | None = None
+) -> AcquisitionResult:
     return AcquisitionResult(
         doi="10.1/test",
         pdf_path=pdf_path,
@@ -32,6 +31,7 @@ def _result(*, source: str, pdf_path: Path | None = None,
 
 
 # ---- read_paper_text ----------------------------------------------------
+
 
 def test_paperclip_outcome_reads_from_client():
     pc = MagicMock()
@@ -97,15 +97,14 @@ def test_failed_outcome_returns_empty():
 
 # ---- read_paper_sections -----------------------------------------------
 
+
 def test_paperclip_sections_pulls_per_section():
     pc = MagicMock()
     pc.list_sections.return_value = ["Abstract", "Introduction", "Methods"]
     pc.get_section.side_effect = lambda pid, name: f"<{name} body>"
 
     r = _result(source="paperclip")
-    sections = read_paper_sections(
-        r, paperclip_client=pc, paperclip_paper_id="arx_xxx"
-    )
+    sections = read_paper_sections(r, paperclip_client=pc, paperclip_paper_id="arx_xxx")
     assert sections == {
         "Abstract": "<Abstract body>",
         "Introduction": "<Introduction body>",
@@ -116,14 +115,10 @@ def test_paperclip_sections_pulls_per_section():
 def test_paperclip_sections_skips_empty_sections():
     pc = MagicMock()
     pc.list_sections.return_value = ["Abstract", "References"]
-    pc.get_section.side_effect = lambda pid, name: (
-        "Abstract body" if name == "Abstract" else ""
-    )
+    pc.get_section.side_effect = lambda pid, name: ("Abstract body" if name == "Abstract" else "")
 
     r = _result(source="paperclip")
-    sections = read_paper_sections(
-        r, paperclip_client=pc, paperclip_paper_id="x"
-    )
+    sections = read_paper_sections(r, paperclip_client=pc, paperclip_paper_id="x")
     assert sections == {"Abstract": "Abstract body"}
 
 
@@ -153,13 +148,12 @@ def test_metadata_only_sections_empty_fallback_returns_empty_dict():
 
 # ---- list_paper_figures ------------------------------------------------
 
+
 def test_paperclip_figures_lists_from_client():
     pc = MagicMock()
     pc.list_figures.return_value = ["figure_1.jpg", "figure_2.jpg"]
     r = _result(source="paperclip")
-    figs = list_paper_figures(
-        r, paperclip_client=pc, paperclip_paper_id="x"
-    )
+    figs = list_paper_figures(r, paperclip_client=pc, paperclip_paper_id="x")
     assert figs == ["figure_1.jpg", "figure_2.jpg"]
 
 

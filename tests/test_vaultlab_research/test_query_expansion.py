@@ -11,7 +11,6 @@ from vaultlab.research.query_expansion import (
 )
 from vaultlab.research.search import unified_search
 
-
 # ---------------------------------------------------------------------------
 # Deterministic expansion
 # ---------------------------------------------------------------------------
@@ -51,21 +50,15 @@ def test_render_queries_from_response_prepends_original_topic():
             "another phrasing",
         ]
     }
-    out = render_queries_from_response(
-        response, topic="my topic", target_n=5
-    )
+    out = render_queries_from_response(response, topic="my topic", target_n=5)
     assert out[0] == "my topic"
     assert "different phrasing" in out
     assert "another phrasing" in out
 
 
 def test_render_queries_dedupes_case_insensitively():
-    response = {
-        "variants": ["MY topic", "MY TOPIC", "actually different"]
-    }
-    out = render_queries_from_response(
-        response, topic="my topic", target_n=10
-    )
+    response = {"variants": ["MY topic", "MY TOPIC", "actually different"]}
+    out = render_queries_from_response(response, topic="my topic", target_n=10)
     # All three case variants of "my topic" collapse to one entry.
     assert len([x for x in out if x.lower() == "my topic"]) == 1
     assert "actually different" in out
@@ -85,9 +78,7 @@ def test_render_queries_handles_malformed_response():
 
 
 def test_render_queries_handles_json_string_response():
-    out = render_queries_from_response(
-        '{"variants": ["a", "b"]}', topic="t", target_n=5
-    )
+    out = render_queries_from_response('{"variants": ["a", "b"]}', topic="t", target_n=5)
     assert "a" in out
     assert "b" in out
 
@@ -209,9 +200,7 @@ def test_unified_search_multi_query_trace_records_all_variants():
 
 def test_unified_search_single_query_path_unchanged():
     """When ``queries`` is None, the legacy single-query path runs once."""
-    fake = _FakeNcbi(
-        {"my topic": [_paper(doi="10.1/X", year=2024, citations=1)]}
-    )
+    fake = _FakeNcbi({"my topic": [_paper(doi="10.1/X", year=2024, citations=1)]})
     papers = unified_search(
         query="my topic",
         sources=["pubmed"],

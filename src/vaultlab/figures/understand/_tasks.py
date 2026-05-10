@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -41,21 +41,21 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
+    "DESCRIBE_SYSTEM_PROMPT",
+    "MATCH_SYSTEM_PROMPT",
+    "VERIFY_SYSTEM_PROMPT",
     "DescribeFigureTask",
     "MatchElementsTask",
     "VerifyAnnotationTask",
     "describe_response_schema",
     "match_response_schema",
-    "verify_response_schema",
     "prepare_describe_task",
     "prepare_match_task",
     "prepare_verify_task",
     "render_describe_from_response",
     "render_match_from_response",
     "render_verify_from_response",
-    "DESCRIBE_SYSTEM_PROMPT",
-    "MATCH_SYSTEM_PROMPT",
-    "VERIFY_SYSTEM_PROMPT",
+    "verify_response_schema",
 ]
 
 
@@ -137,11 +137,11 @@ def _load_role_prompt(role_id: str, fallback: str) -> str:
     """
     try:
         from vaultlab.roles._loader import load_role  # local import to avoid PyYAML at module load
-    except Exception:  # noqa: BLE001
+    except Exception:
         return fallback
     try:
         role = load_role(role_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return fallback
     text = (role.system_prompt or "").strip()
     return text if text else fallback
@@ -239,17 +239,13 @@ def verify_response_schema() -> dict[str, Any]:
             "annotated_image_read": {
                 "type": "string",
                 "description": (
-                    "Free-text summary of what the verifier saw on the "
-                    "annotated image."
+                    "Free-text summary of what the verifier saw on the annotated image."
                 ),
             },
             "issues_found": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": (
-                    "Empty list = no issues. Otherwise, one short string "
-                    "per issue."
-                ),
+                "description": ("Empty list = no issues. Otherwise, one short string per issue."),
             },
             "decision": {
                 "type": "string",
@@ -446,9 +442,7 @@ def _build_verify_prompt(
     iteration: int,
     expected_elements: Iterable[str],
 ) -> str:
-    elements_block = "\n".join(f"  - {e}" for e in expected_elements) or (
-        "  (none provided)"
-    )
+    elements_block = "\n".join(f"  - {e}" for e in expected_elements) or ("  (none provided)")
     return (
         f"VERIFY ITERATION: {iteration}\n\n"
         "TASK:\n"
@@ -514,9 +508,7 @@ def prepare_match_task(
         described_elements=elements_list,
         description=str(description or ""),
         regions=region_list,
-        annotated_preview_path=(
-            Path(annotated_preview_path) if annotated_preview_path else None
-        ),
+        annotated_preview_path=(Path(annotated_preview_path) if annotated_preview_path else None),
         system=MATCH_SYSTEM_PROMPT,
         prompt=_build_match_prompt(
             description=description,
@@ -540,9 +532,7 @@ def prepare_verify_task(
         iteration=int(iteration),
         expected_elements=expected,
         system=VERIFY_SYSTEM_PROMPT,
-        prompt=_build_verify_prompt(
-            iteration=int(iteration), expected_elements=expected
-        ),
+        prompt=_build_verify_prompt(iteration=int(iteration), expected_elements=expected),
         response_schema=verify_response_schema(),
     )
 
@@ -667,9 +657,7 @@ def render_verify_from_response(
             if isinstance(item, str) and item.strip():
                 issues.append(item.strip())
     if not isinstance(decision, str) or decision not in _ALLOWED_DECISIONS:
-        logger.warning(
-            "render_verify: invalid decision %r; coercing to GIVE_UP", decision
-        )
+        logger.warning("render_verify: invalid decision %r; coercing to GIVE_UP", decision)
         decision = "GIVE_UP"
     return VerificationIteration(
         iteration=task.iteration,

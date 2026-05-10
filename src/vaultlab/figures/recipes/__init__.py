@@ -56,4 +56,3 @@ __all__ = [
     "spatial_neighborhood",
     "stacked_bar",
 ]
-

@@ -12,13 +12,11 @@ import tempfile
 import pytest
 
 from vaultlab.config import ProjectConfig
-
 from vaultlab.runner.models import (
     Agenda,
     InvestigationMode,
     MeetingMode,
 )
-
 from vaultlab.workflows import (
     DeepThinkEnsembleBundle,
     WorkflowPlan,
@@ -62,7 +60,10 @@ def test_plan_deep_think_round_returns_workflow_plan(cfg):
     assert wp.meeting.mode == MeetingMode.ADVERSARIAL
     assert len(wp.plan.steps) == 4
     assert [s.role_id for s in wp.plan.steps] == [
-        "data_analyst", "domain_expert", "methods_critic", "synthesizer",
+        "data_analyst",
+        "domain_expert",
+        "methods_critic",
+        "synthesizer",
     ]
     assert wp.provenance.generated_by == "deep-think"
     assert wp.provenance.round == 1
@@ -70,7 +71,8 @@ def test_plan_deep_think_round_returns_workflow_plan(cfg):
 
 def test_plan_deep_think_round_respects_investigation_mode(cfg):
     wp = plan_deep_think_round(
-        cfg, topic="x",
+        cfg,
+        topic="x",
         investigation_mode=InvestigationMode.EXPLORATORY,
     )
     assert wp.meeting.agenda.investigation_mode == InvestigationMode.EXPLORATORY
@@ -105,16 +107,29 @@ def test_plan_synthesis_returns_canonical_output(cfg):
 def test_plan_synthesis_picks_up_existing_session_state(cfg):
     # write a minimal session file so session_summary_for_prompt has something
     session = {
-        "project_name": "test", "kb_dir": cfg.kb_path, "domain": "metabolomics",
-        "current_round": 1, "max_rounds": 4, "started": "2026-04-20", "next_id": 2,
+        "project_name": "test",
+        "kb_dir": cfg.kb_path,
+        "domain": "metabolomics",
+        "current_round": 1,
+        "max_rounds": 4,
+        "started": "2026-04-20",
+        "next_id": 2,
         "findings": {
             "F001": {
-                "id": "F001", "claim": "test claim", "status": "robust",
-                "category": "novel", "confidence": 0.9,
-                "data_source": "", "exact_value": "rho=0.5", "null_baseline": "",
-                "mechanism": "", "literature": [], "chain": [], "branch_dir": "",
+                "id": "F001",
+                "claim": "test claim",
+                "status": "robust",
+                "category": "novel",
+                "confidence": 0.9,
+                "data_source": "",
+                "exact_value": "rho=0.5",
+                "null_baseline": "",
+                "mechanism": "",
+                "literature": [],
+                "chain": [],
+                "branch_dir": "",
             }
-        }
+        },
     }
     with open(os.path.join(cfg.kb_path, "Output", "research-session.json"), "w") as f:
         json.dump(session, f)
@@ -147,7 +162,8 @@ def test_plan_brainstorm_figures_uses_latest_synthesis(cfg):
 
 def test_plan_narrate_finding_output_path_uses_slug(cfg):
     wp = plan_narrate_finding(
-        cfg, finding_id="F001",
+        cfg,
+        finding_id="F001",
         claim="LPI enriches in epithelium",
         exact_value="rho=0.78",
         data_source="corrs.csv",
@@ -204,7 +220,10 @@ def test_plan_round_from_critic_tests_parses_priority_lines(cfg):
 3. [MEDIUM] Cross-check the literature claim with paperclip
 """
     wp = plan_round_from_critic_tests(
-        cfg, critic_output=critic, topic="LPI", round_num=2,
+        cfg,
+        critic_output=critic,
+        topic="LPI",
+        round_num=2,
     )
     # Each agenda question should carry the priority tag
     questions = wp.meeting.agenda.questions
@@ -221,7 +240,9 @@ def test_plan_round_from_critic_tests_priority_filter(cfg):
 2. [LOW] Test B
 """
     wp = plan_round_from_critic_tests(
-        cfg, critic_output=critic, topic="t",
+        cfg,
+        critic_output=critic,
+        topic="t",
         priority_filter=["CRITICAL"],
     )
     questions = wp.meeting.agenda.questions
@@ -232,7 +253,9 @@ def test_plan_round_from_critic_tests_priority_filter(cfg):
 def test_plan_round_from_critic_tests_raises_when_no_priorities(cfg):
     with pytest.raises(ValueError, match="No priority-tagged tests"):
         plan_round_from_critic_tests(
-            cfg, critic_output="just some prose, no priority tags", topic="t",
+            cfg,
+            critic_output="just some prose, no priority tags",
+            topic="t",
         )
 
 
@@ -267,7 +290,10 @@ def test_plan_parallel_runs_requires_min_two(cfg):
 
 def test_plan_ensemble_critic_returns_critics_plus_meta(cfg):
     critics, meta = plan_ensemble_critic(
-        cfg, topic="t", prior_outputs="some prior", n_critics=3,
+        cfg,
+        topic="t",
+        prior_outputs="some prior",
+        n_critics=3,
     )
     assert len(critics) == 3
     for i, wp in enumerate(critics):
@@ -294,12 +320,16 @@ def test_plan_ensemble_critic_requires_min_two_critics(cfg):
 
 def test_plan_deep_think_with_ensemble_critic_structure(cfg):
     bundle = plan_deep_think_with_ensemble_critic(
-        cfg, topic="t", n_critics=3, round_num=1,
+        cfg,
+        topic="t",
+        n_critics=3,
+        round_num=1,
     )
     assert isinstance(bundle, DeepThinkEnsembleBundle)
     # Phase 1: pre-critic — Analyst + Expert
     assert [s.role_id for s in bundle.pre_critic.plan.steps] == [
-        "data_analyst", "domain_expert",
+        "data_analyst",
+        "domain_expert",
     ]
     # Phase 2: 3 critic plans
     assert len(bundle.critic_plans) == 3
@@ -328,7 +358,8 @@ def test_plan_deep_think_with_ensemble_critic_requires_min_two_critics(cfg):
 
 def test_provenance_tags_include_investigation_mode(cfg):
     wp = plan_deep_think_round(
-        cfg, topic="x",
+        cfg,
+        topic="x",
         investigation_mode=InvestigationMode.EXPLORATORY,
     )
     assert "exploratory" in wp.provenance.tags

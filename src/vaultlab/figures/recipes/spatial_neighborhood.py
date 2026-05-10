@@ -27,7 +27,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -39,7 +39,7 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    z_matrix: "np.ndarray | pd.DataFrame",
+    z_matrix: np.ndarray | pd.DataFrame,
     *,
     output_path: Path | str,
     title: str = "",
@@ -103,8 +103,9 @@ def render(
 
     if cluster_axes:
         try:
-            from scipy.cluster.hierarchy import linkage, leaves_list
+            from scipy.cluster.hierarchy import leaves_list, linkage
             from scipy.spatial.distance import squareform
+
             # Cluster on the absolute z-score distance for symmetry
             dist = 1.0 / (1.0 + np.abs(m))
             np.fill_diagonal(dist, 0.0)
@@ -157,9 +158,11 @@ def render(
                     continue
                 if abs(val) >= significance_threshold:
                     ax.text(
-                        j, i,
+                        j,
+                        i,
                         "*",
-                        ha="center", va="center",
+                        ha="center",
+                        va="center",
                         fontsize=12,
                         fontweight="bold",
                         color="black",

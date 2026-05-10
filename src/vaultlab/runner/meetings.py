@@ -25,7 +25,7 @@ directly with no adapter layer.
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from vaultlab.runner.models import (
     Agenda,
@@ -49,12 +49,14 @@ def _catalog():
     ``ROLE_TEMPLATES`` as a module-level dict.
     """
     from vaultlab.roles import ROLE_TEMPLATES as _RT
+
     return _RT
 
 
 def _roles_for(meeting_type: str, mode: Mode = Mode.DATA_ANALYSIS) -> list[Role]:
     """Lazy passthrough to :func:`vaultlab.roles.roles_for`. See :func:`_catalog`."""
     from vaultlab.roles import roles_for as _rf
+
     return _rf(meeting_type, mode)
 
 
@@ -108,8 +110,8 @@ def build_meeting(
     mode: Mode = Mode.DATA_ANALYSIS,
     round_num: int = 1,
     prior_summary: str = "",
-    roles: Optional[Iterable[Role]] = None,
-    agenda: Optional[Agenda] = None,
+    roles: Iterable[Role] | None = None,
+    agenda: Agenda | None = None,
 ) -> Meeting:
     """Build a meeting from a named type or an explicit role list.
 
@@ -133,15 +135,15 @@ def _infer_mode_map(meeting_type: str) -> MeetingMode:
     if meeting_type.startswith("critiqued_"):
         return MeetingMode.CRITIQUED
     return {
-        "reasoning":         MeetingMode.ADVERSARIAL,
-        "deep_think":        MeetingMode.ADVERSARIAL,
-        "synthesis":         MeetingMode.SYNTHESIS,
-        "brainstorm":        MeetingMode.ADVERSARIAL,
-        "narrate":           MeetingMode.INDIVIDUAL,
-        "round_table":       MeetingMode.ROUND_TABLE,
-        "team_meeting":      MeetingMode.TEAM,
-        "critique":          MeetingMode.ADVERSARIAL,
-        "figure_read":       MeetingMode.INDIVIDUAL,
+        "reasoning": MeetingMode.ADVERSARIAL,
+        "deep_think": MeetingMode.ADVERSARIAL,
+        "synthesis": MeetingMode.SYNTHESIS,
+        "brainstorm": MeetingMode.ADVERSARIAL,
+        "narrate": MeetingMode.INDIVIDUAL,
+        "round_table": MeetingMode.ROUND_TABLE,
+        "team_meeting": MeetingMode.TEAM,
+        "critique": MeetingMode.ADVERSARIAL,
+        "figure_read": MeetingMode.INDIVIDUAL,
         "visual_deep_think": MeetingMode.ADVERSARIAL,
     }.get(meeting_type, MeetingMode.ADVERSARIAL)
 
@@ -161,9 +163,7 @@ def compose_turns(meeting: Meeting, task: str | Agenda) -> list[MeetingTurn]:
     ``task`` argument. This keeps backwards compat while preferring structured
     agendas.
     """
-    effective_task: str | Agenda = (
-        meeting.agenda if meeting.agenda is not None else task
-    )
+    effective_task: str | Agenda = meeting.agenda if meeting.agenda is not None else task
     ctx = _with_round_header(meeting)
     turns: list[MeetingTurn] = []
     if meeting.mode == MeetingMode.ROUND_TABLE:
@@ -216,70 +216,85 @@ def compose_turns(meeting: Meeting, task: str | Agenda) -> list[MeetingTurn]:
         lead = meeting.roles[0]
         members = meeting.roles[1:]
         # turn 0: lead initial framing
-        turns.append(MeetingTurn(
-            role_id=lead.id,
-            prompt=lead.prompt_for(
-                session_context=ctx,
-                task=effective_task,
-                prior_outputs="[role: LEAD_INITIAL — frame the meeting, name decision criteria, "
-                              "and invite each team member in turn]",
-            ),
-        ))
+        turns.append(
+            MeetingTurn(
+                role_id=lead.id,
+                prompt=lead.prompt_for(
+                    session_context=ctx,
+                    task=effective_task,
+                    prior_outputs="[role: LEAD_INITIAL — frame the meeting, name decision criteria, "
+                    "and invite each team member in turn]",
+                ),
+            )
+        )
         # turns 1..N: each member responds
         for i, member in enumerate(members):
             prior = _prior_placeholder([lead, *members[:i]]) if i else _prior_placeholder([lead])
-            turns.append(MeetingTurn(
-                role_id=member.id,
-                prompt=member.prompt_for(
-                    session_context=ctx,
-                    task=effective_task,
-                    prior_outputs=prior + (
-                        '\n\nNote: if you have nothing new or relevant to add, you may say "pass".'
+            turns.append(
+                MeetingTurn(
+                    role_id=member.id,
+                    prompt=member.prompt_for(
+                        session_context=ctx,
+                        task=effective_task,
+                        prior_outputs=prior
+                        + (
+                            '\n\nNote: if you have nothing new or relevant to add, you may say "pass".'
+                        ),
                     ),
-                ),
-            ))
+                )
+            )
         # final turn: lead closes with structured summary
         all_prior = _prior_placeholder([lead, *members])
-        turns.append(MeetingTurn(
-            role_id=lead.id,
-            prompt=lead.prompt_for(
-                session_context=ctx,
-                task=effective_task,
-                prior_outputs=all_prior + (
-                    "\n\n[role: LEAD_FINAL — produce the structured summary with "
-                    "Agenda / Team Member Input / Recommendation / Answers / Next Steps]"
+        turns.append(
+            MeetingTurn(
+                role_id=lead.id,
+                prompt=lead.prompt_for(
+                    session_context=ctx,
+                    task=effective_task,
+                    prior_outputs=all_prior
+                    + (
+                        "\n\n[role: LEAD_FINAL — produce the structured summary with "
+                        "Agenda / Team Member Input / Recommendation / Answers / Next Steps]"
+                    ),
                 ),
-            ),
-        ))
+            )
+        )
     elif meeting.mode == MeetingMode.CRITIQUED:
         # virtual-lab individual meeting: role + always-on critic, iterating
         if len(meeting.roles) != 2:
             raise ValueError("critiqued meetings need exactly [role, critic]")
         role, critic = meeting.roles
-        turns.append(MeetingTurn(
-            role_id=role.id,
-            prompt=role.prompt_for(session_context=ctx, task=effective_task),
-        ))
-        turns.append(MeetingTurn(
-            role_id=critic.id,
-            prompt=critic.prompt_for(
-                session_context=ctx,
-                task=effective_task,
-                prior_outputs=_prior_placeholder([role]),
-            ),
-        ))
-        # a second pass: role responds to critique
-        turns.append(MeetingTurn(
-            role_id=role.id,
-            prompt=role.prompt_for(
-                session_context=ctx,
-                task=effective_task,
-                prior_outputs=_prior_placeholder([role, critic]) + (
-                    "\n\n[Respond to the critic: address each challenge, concede where warranted, "
-                    "defend with evidence where not.]"
+        turns.append(
+            MeetingTurn(
+                role_id=role.id,
+                prompt=role.prompt_for(session_context=ctx, task=effective_task),
+            )
+        )
+        turns.append(
+            MeetingTurn(
+                role_id=critic.id,
+                prompt=critic.prompt_for(
+                    session_context=ctx,
+                    task=effective_task,
+                    prior_outputs=_prior_placeholder([role]),
                 ),
-            ),
-        ))
+            )
+        )
+        # a second pass: role responds to critique
+        turns.append(
+            MeetingTurn(
+                role_id=role.id,
+                prompt=role.prompt_for(
+                    session_context=ctx,
+                    task=effective_task,
+                    prior_outputs=_prior_placeholder([role, critic])
+                    + (
+                        "\n\n[Respond to the critic: address each challenge, concede where warranted, "
+                        "defend with evidence where not.]"
+                    ),
+                ),
+            )
+        )
     else:
         raise ValueError(f"unhandled meeting mode: {meeting.mode}")
     return turns
@@ -326,9 +341,7 @@ def build_merge_meeting(
             for t in result.turns
             if t.output.strip()
         )
-        blocks.append(
-            f"[begin run {i}]\n\n{concatenated}\n\n[end run {i}]"
-        )
+        blocks.append(f"[begin run {i}]\n\n{concatenated}\n\n[end run {i}]")
     merge_summary = "\n\n".join(blocks)
 
     merge_rules = list(agenda.rules)
@@ -368,9 +381,7 @@ def merge_outputs(meeting: Meeting, turns: list[MeetingTurn]) -> MeetingResult:
     expected_ids = [r.id for r in meeting.roles]
     got_ids = [t.role_id for t in turns]
     if expected_ids != got_ids:
-        raise ValueError(
-            f"turn role_ids {got_ids} do not match meeting.roles {expected_ids}"
-        )
+        raise ValueError(f"turn role_ids {got_ids} do not match meeting.roles {expected_ids}")
     return MeetingResult(
         topic=meeting.topic,
         mode=meeting.mode,
@@ -393,7 +404,9 @@ def adversarial_inject(turns: list[MeetingTurn]) -> list[MeetingTurn]:
             new_prompt = _swap_prior(turn.prompt, prior)
             rewritten.append(
                 MeetingTurn(
-                    role_id=turn.role_id, prompt=new_prompt, output="",
+                    role_id=turn.role_id,
+                    prompt=new_prompt,
+                    output="",
                     output_path=turn.output_path,
                 )
             )
@@ -405,9 +418,7 @@ def adversarial_inject(turns: list[MeetingTurn]) -> list[MeetingTurn]:
                 if turn.role_id in ROLE_TEMPLATES
                 else turn.role_id
             )
-            prior_blocks.append(
-                f"### {display_name}\n{turn.output.strip()}"
-            )
+            prior_blocks.append(f"### {display_name}\n{turn.output.strip()}")
     return rewritten
 
 
@@ -429,10 +440,7 @@ def wrap_contexts(label: str, blocks: list[str]) -> str:
     positions don't matter, only disambiguation between surviving blocks.
     """
     kept = [b for b in blocks if b.strip()]
-    return "\n\n".join(
-        wrap_context(label, block, index=i + 1)
-        for i, block in enumerate(kept)
-    )
+    return "\n\n".join(wrap_context(label, block, index=i + 1) for i, block in enumerate(kept))
 
 
 def save_meeting(result: MeetingResult, out_dir: str, slug: str = "meeting") -> str:
@@ -443,21 +451,17 @@ def save_meeting(result: MeetingResult, out_dir: str, slug: str = "meeting") -> 
     """
     import os
     from datetime import datetime
+
     os.makedirs(out_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     path = os.path.join(out_dir, f"{slug}-{timestamp}.md")
     lines = [
         f"# Meeting: {result.topic}",
-        f"Mode: {result.mode.value}  |  Round: {result.round_num}  |  "
-        f"Turns: {len(result.turns)}",
+        f"Mode: {result.mode.value}  |  Round: {result.round_num}  |  Turns: {len(result.turns)}",
         "",
     ]
     for i, turn in enumerate(result.turns, start=1):
-        name = (
-            ROLE_TEMPLATES[turn.role_id].name
-            if turn.role_id in ROLE_TEMPLATES
-            else turn.role_id
-        )
+        name = ROLE_TEMPLATES[turn.role_id].name if turn.role_id in ROLE_TEMPLATES else turn.role_id
         lines += [
             f"## Turn {i}: {name} ({turn.role_id})",
             "",
@@ -486,13 +490,13 @@ def _swap_prior(prompt: str, new_prior: str) -> str:
     # find the earliest position of any next-section header
     candidates = ["\n\nINVESTIGATION MODE:", "\n\nAGENDA:", "\n\nTASK:", "\n\nOUTPUT FORMAT:"]
     positions = [rest.find(c) for c in candidates]
-    valid = [(p, c) for p, c in zip(positions, candidates) if p != -1]
+    valid = [(p, c) for p, c in zip(positions, candidates, strict=False) if p != -1]
     if not valid:
         # No known section header — safer to leave untouched
         return prompt
     next_start, next_marker = min(valid, key=lambda x: x[0])
     # `next_marker` begins with "\n\n"; keep one newline-pair of separation
-    after_prior = rest[next_start + 2:]  # strip leading "\n\n"
+    after_prior = rest[next_start + 2 :]  # strip leading "\n\n"
     return f"{before}{marker}\n{new_prior}\n\n{after_prior}"
 
 

@@ -24,7 +24,8 @@ References:
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 # OOXML namespace map — needed for lxml element creation
 _NSMAP: dict[str, str] = {
@@ -128,10 +129,7 @@ def appear_together_on_click(
     main_seq = _ensure_main_seq(timing)
     next_id = _next_id(_max_id(timing))
 
-    targets = [
-        (_shape_id(s._element if hasattr(s, "_element") else s), None)
-        for s in shape_list
-    ]
+    targets = [(_shape_id(s._element if hasattr(s, "_element") else s), None) for s in shape_list]
     click_xml = _build_grouped_click_effect_xml(
         shape_targets=targets,
         preset=_PRESET_APPEAR,
@@ -239,6 +237,7 @@ def _ensure_main_seq(timing: Any) -> Any:
     child_list = main_seq_ctn.find(f"{_P}childTnLst")
     if child_list is None:
         from lxml import etree
+
         child_list = etree.SubElement(main_seq_ctn, f"{_P}childTnLst")
     return child_list
 
@@ -286,9 +285,7 @@ def _build_grouped_click_effect_xml(
     inner_pars = []
     for i, (shape_id, paragraph_index) in enumerate(shape_targets):
         node_type = "clickEffect" if i == 0 else "withEffect"
-        inner_pars.append(
-            _build_effect_par(shape_id, paragraph_index, preset, node_type, next_id)
-        )
+        inner_pars.append(_build_effect_par(shape_id, paragraph_index, preset, node_type, next_id))
 
     return f"""
 <p:par xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -327,7 +324,7 @@ def _build_effect_par(
         target_xml = (
             f'<p:tgtEl><p:spTgt spid="{shape_id}">'
             f'<p:txEl><p:pRg st="{paragraph_index}" end="{paragraph_index}"/></p:txEl>'
-            f'</p:spTgt></p:tgtEl>'
+            f"</p:spTgt></p:tgtEl>"
         )
 
     return f"""<p:par>

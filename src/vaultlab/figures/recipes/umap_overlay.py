@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -19,7 +18,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -36,7 +35,7 @@ def _default_palette(variant: str) -> str:
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
     variant: Literal["by_cluster", "by_marker", "by_metadata_continuous"] = "by_cluster",
     color_col: str | None = None,
@@ -55,20 +54,16 @@ def render(
 
     Anchor: Pentimalli & Rajewsky 2025 Fig 1C (see umap_overlay.md).
     """
-    import pandas as pd
 
     if "UMAP_1" not in df.columns or "UMAP_2" not in df.columns:
         raise ValueError(
-            "umap_overlay expects 'UMAP_1' and 'UMAP_2' columns; got "
-            f"{list(df.columns)}"
+            f"umap_overlay expects 'UMAP_1' and 'UMAP_2' columns; got {list(df.columns)}"
         )
 
     if color_col is None:
         color_col = "cluster" if variant == "by_cluster" else None
     if color_col is None:
-        raise ValueError(
-            f"variant={variant!r} requires color_col to be specified"
-        )
+        raise ValueError(f"variant={variant!r} requires color_col to be specified")
     if color_col not in df.columns:
         raise ValueError(f"color_col {color_col!r} not in DataFrame columns")
 

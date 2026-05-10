@@ -89,7 +89,7 @@ def add_annotations(
             continue
 
     if with_animations and created:
-        _animate_annotations(slide, list(zip(created, annotations)))
+        _animate_annotations(slide, list(zip(created, annotations, strict=False)))
 
     return created
 
@@ -102,6 +102,7 @@ def add_annotations(
 def _add_circle(slide, spec, fig_left, fig_top, fig_width, fig_height):
     """Round circle at (x, y) with radius r in figure units (smaller dim)."""
     from pptx.enum.shapes import MSO_SHAPE
+
     x = float(spec.get("x", 0.5))
     y = float(spec.get("y", 0.5))
     r = float(spec.get("r", 0.05))
@@ -118,6 +119,7 @@ def _add_circle(slide, spec, fig_left, fig_top, fig_width, fig_height):
 def _add_oval(slide, spec, fig_left, fig_top, fig_width, fig_height):
     """Ellipse covering a normalized bbox. Use for non-square round shapes."""
     from pptx.enum.shapes import MSO_SHAPE
+
     bbox = spec.get("bbox", [0.1, 0.1, 0.3, 0.3])
     x0, y0, x1, y1 = (float(v) for v in bbox)
     left = fig_left + int(x0 * fig_width)
@@ -131,6 +133,7 @@ def _add_oval(slide, spec, fig_left, fig_top, fig_width, fig_height):
 
 def _add_rect(slide, spec, fig_left, fig_top, fig_width, fig_height):
     from pptx.enum.shapes import MSO_SHAPE
+
     bbox = spec.get("bbox", [0.1, 0.1, 0.3, 0.3])
     x0, y0, x1, y1 = (float(v) for v in bbox)
     left = fig_left + int(x0 * fig_width)
@@ -144,6 +147,7 @@ def _add_rect(slide, spec, fig_left, fig_top, fig_width, fig_height):
 
 def _add_arrow(slide, spec, fig_left, fig_top, fig_width, fig_height):
     from pptx.enum.shapes import MSO_CONNECTOR
+
     src = spec.get("from", [0.2, 0.2])
     dst = spec.get("to", [0.4, 0.4])
     x0 = fig_left + int(float(src[0]) * fig_width)
@@ -167,6 +171,7 @@ def _add_label(slide, spec, fig_left, fig_top, fig_width, fig_height):
     """
     from pptx.dml.color import RGBColor
     from pptx.util import Pt
+
     text = str(spec.get("text", ""))
     if not text:
         return None
@@ -222,6 +227,7 @@ def _add_label(slide, spec, fig_left, fig_top, fig_width, fig_height):
         if placement in ("above", "below"):
             try:
                 from pptx.enum.text import PP_ALIGN
+
                 para.alignment = PP_ALIGN.CENTER
             except Exception:
                 pass
@@ -237,6 +243,7 @@ def _style_outline_shape(shape, spec):
     """Apply outline-only styling (no fill, colored stroke)."""
     from pptx.dml.color import RGBColor
     from pptx.util import Pt
+
     color_hex = spec.get("color", _DEFAULT_COLOR)
     weight_pt = float(spec.get("weight_pt", _DEFAULT_LINE_WEIGHT_PT))
     try:
@@ -270,12 +277,9 @@ def _style_arrow(connector, spec):
             f'<a:headEnd xmlns:a="{a_ns}" type="none"/>'
             f'<a:tailEnd xmlns:a="{a_ns}" type="triangle" w="med" len="med"/>'
         )
-        for elem in (
-            ln.findall(f"{{{a_ns}}}headEnd")
-            + ln.findall(f"{{{a_ns}}}tailEnd")
-        ):
+        for elem in ln.findall(f"{{{a_ns}}}headEnd") + ln.findall(f"{{{a_ns}}}tailEnd"):
             ln.remove(elem)
-        for elem in etree.fromstring(f"<root xmlns:a=\"{a_ns}\">{head_xml}</root>"):
+        for elem in etree.fromstring(f'<root xmlns:a="{a_ns}">{head_xml}</root>'):
             ln.append(elem)
     except Exception:
         pass

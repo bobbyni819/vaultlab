@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,6 @@ from vaultlab.onboarding.project_init import (
     init_project_from_intake,
     scan_project_folder,
 )
-
 
 # ---------------------------------------------------------------------------
 # scan_project_folder
@@ -148,9 +146,7 @@ class TestInitProjectFromIntake:
 
     def test_explicit_slug_override(self, tmp_path: Path) -> None:
         project_path, kb_root, intake_p = self._setup(tmp_path)
-        result = init_project_from_intake(
-            intake_p, kb_root, project_path, slug="custom-slug"
-        )
+        result = init_project_from_intake(intake_p, kb_root, project_path, slug="custom-slug")
         assert result.slug == "custom-slug"
 
     def test_writes_start_here(self, tmp_path: Path) -> None:
@@ -263,9 +259,7 @@ class TestFollowUpHeuristics:
         result = init_project_from_intake(intake_p, kb, project_path)
         assert any("PI" in q for q in result.follow_up_questions)
 
-    def test_asks_for_data_path_when_wet_lab_ticked_but_no_data_files(
-        self, tmp_path: Path
-    ) -> None:
+    def test_asks_for_data_path_when_wet_lab_ticked_but_no_data_files(self, tmp_path: Path) -> None:
         project_path = tmp_path / "p"
         project_path.mkdir()
         kb = tmp_path / "kb"
@@ -279,7 +273,4 @@ class TestFollowUpHeuristics:
         intake_p = project_path / "project_intake.md"
         intake_p.write_text(form.to_markdown(), encoding="utf-8")
         result = init_project_from_intake(intake_p, kb, project_path)
-        assert any(
-            "Wet-lab" in q or "data" in q.lower()
-            for q in result.follow_up_questions
-        )
+        assert any("Wet-lab" in q or "data" in q.lower() for q in result.follow_up_questions)

@@ -264,7 +264,7 @@ def understand_figure(
     if describe_fn is not None:
         try:
             description = describe_fn(image_path) or ""
-        except Exception as e:  # noqa: BLE001 — record failure, don't crash
+        except Exception as e:
             description = f"[describe_fn raised: {e!r}]"
     log.step1_description = description
 
@@ -286,8 +286,15 @@ def understand_figure(
     if match_fn is not None and merged_regions:
         try:
             matches = list(match_fn(description, list(merged_regions)) or [])
-        except Exception as e:  # noqa: BLE001
-            matches = [{"element_name": "<error>", "matched_region_id": "", "rationale": f"match_fn raised: {e!r}", "confidence": 0.0}]
+        except Exception as e:
+            matches = [
+                {
+                    "element_name": "<error>",
+                    "matched_region_id": "",
+                    "rationale": f"match_fn raised: {e!r}",
+                    "confidence": 0.0,
+                }
+            ]
     log.step3_matches = matches
 
     # Build initial annotations from the matches (region id -> Region).
@@ -314,7 +321,7 @@ def understand_figure(
         for i in range(1, max_iterations + 1):
             try:
                 vit = verify_fn(png_arg, annotations, i)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 vit = VerificationIteration(
                     iteration=i,
                     annotated_image_read=f"[verify_fn raised: {e!r}]",

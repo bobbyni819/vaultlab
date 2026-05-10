@@ -13,14 +13,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from vaultlab.research.acquisition import AcquisitionResult
 
 
-def _result(*, source: str, pdf_path: Path | None = None,
-            tier_errors: dict[str, str] | None = None,
-            license: str | None = None) -> AcquisitionResult:
+def _result(
+    *,
+    source: str,
+    pdf_path: Path | None = None,
+    tier_errors: dict[str, str] | None = None,
+    license: str | None = None,
+) -> AcquisitionResult:
     return AcquisitionResult(
         doi="10.1/test",
         pdf_path=pdf_path,
@@ -31,6 +33,7 @@ def _result(*, source: str, pdf_path: Path | None = None,
 
 
 # ---- Successful-acquisition outcomes ------------------------------------
+
 
 def test_cache_hit():
     r = _result(source="cache", pdf_path=Path("/tmp/x.pdf"))
@@ -90,6 +93,7 @@ def test_elsevier_gated_pdf_via_key():
 
 
 # ---- Failure-mode outcomes ----------------------------------------------
+
 
 def test_failed_paywalled_via_403_signal():
     """tier_errors with '403' surfaces as paywalled."""
@@ -160,6 +164,7 @@ def test_unknown_source_falls_back_to_failed():
 
 # ---- Property cross-validation ------------------------------------------
 
+
 def test_full_text_states_are_disjoint_from_paywalled():
     """is_full_text and needs_manual_fetch must never both be True."""
     states = [
@@ -197,11 +202,11 @@ def test_paperclip_outcome_does_not_require_pdf_path():
 
 # ---- Backward compatibility ---------------------------------------------
 
+
 def test_existing_callers_unchanged():
     """Adding outcome property must not break code that reads the
     legacy ``source`` field directly."""
-    r = _result(source="unpaywall", pdf_path=Path("/tmp/x.pdf"),
-                license="cc-by")
+    r = _result(source="unpaywall", pdf_path=Path("/tmp/x.pdf"), license="cc-by")
     # Legacy access patterns still work
     assert r.source == "unpaywall"
     assert r.license == "cc-by"

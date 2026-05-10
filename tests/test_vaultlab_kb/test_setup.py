@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 import pytest
@@ -10,7 +9,6 @@ import pytest
 from vaultlab.kb.setup import (
     CANONICAL_FOLDERS,
     DOMAIN_EXTENSIONS,
-    LintFinding,
     LintReport,
     ScaffoldError,
     lint_kb,
@@ -74,13 +72,12 @@ def test_scaffold_force_fills_missing_pieces(tmp_path: Path) -> None:
     proj_dir = tmp_path / "test-project"
     # Delete one canonical folder
     import shutil
+
     shutil.rmtree(proj_dir / "Wiki" / "Concepts")
     assert not (proj_dir / "Wiki" / "Concepts").exists()
 
     # Modify START_HERE so we can verify it's preserved
-    (proj_dir / "START_HERE.md").write_text(
-        "MY CUSTOM CONTENT", encoding="utf-8"
-    )
+    (proj_dir / "START_HERE.md").write_text("MY CUSTOM CONTENT", encoding="utf-8")
 
     scaffold_kb(tmp_path, "test-project", force=True)
     assert (proj_dir / "Wiki" / "Concepts").is_dir()  # filled in
@@ -90,9 +87,7 @@ def test_scaffold_force_fills_missing_pieces(tmp_path: Path) -> None:
 
 def test_scaffold_with_domain_extension(tmp_path: Path) -> None:
     """Domain extensions add their declared folders."""
-    proj_dir = scaffold_kb(
-        tmp_path, "stocks", domain_extensions=["equities"]
-    )
+    proj_dir = scaffold_kb(tmp_path, "stocks", domain_extensions=["equities"])
     for folder in DOMAIN_EXTENSIONS["equities"]:
         assert (proj_dir / folder).is_dir(), f"missing extension folder {folder}"
 
@@ -100,9 +95,7 @@ def test_scaffold_with_domain_extension(tmp_path: Path) -> None:
 def test_scaffold_unknown_domain_extension_raises(tmp_path: Path) -> None:
     """Unknown extension key raises ScaffoldError."""
     with pytest.raises(ScaffoldError, match="Unknown domain_extension"):
-        scaffold_kb(
-            tmp_path, "test", domain_extensions=["nonexistent-extension"]
-        )
+        scaffold_kb(tmp_path, "test", domain_extensions=["nonexistent-extension"])
 
 
 def test_lint_clean_scaffold_reports_no_findings(tmp_path: Path) -> None:
@@ -120,13 +113,12 @@ def test_lint_detects_missing_folder(tmp_path: Path) -> None:
     proj_dir = scaffold_kb(tmp_path, "test-project")
     # Delete a folder
     import shutil
+
     shutil.rmtree(proj_dir / "Wiki" / "Methodology")
 
     report = lint_kb(tmp_path, "test-project")
     assert not report.passed
-    missing_folder_findings = [
-        f for f in report.findings if f.kind == "missing_folder"
-    ]
+    missing_folder_findings = [f for f in report.findings if f.kind == "missing_folder"]
     assert len(missing_folder_findings) >= 1
 
 
@@ -150,9 +142,7 @@ def test_lint_detects_naming_violation(tmp_path: Path) -> None:
     )
 
     report = lint_kb(tmp_path, "test-project")
-    naming_findings = [
-        f for f in report.findings if f.kind == "naming_violation"
-    ]
+    naming_findings = [f for f in report.findings if f.kind == "naming_violation"]
     assert len(naming_findings) >= 1
     assert all(f.severity == "info" for f in naming_findings)
 
@@ -165,9 +155,7 @@ def test_lint_accepts_canonical_naming(tmp_path: Path) -> None:
     )
 
     report = lint_kb(tmp_path, "test-project")
-    naming_findings = [
-        f for f in report.findings if f.kind == "naming_violation"
-    ]
+    naming_findings = [f for f in report.findings if f.kind == "naming_violation"]
     assert len(naming_findings) == 0
 
 
@@ -197,8 +185,11 @@ def test_lint_summary_counts_severities(tmp_path: Path) -> None:
     # Trigger multiple findings
     (proj_dir / "START_HERE.md").unlink()  # fail
     import shutil
+
     shutil.rmtree(proj_dir / "Sources" / "Notes")  # warn
-    (proj_dir / "Sources" / "Articles" / "bad_name.md").write_text("# x\n", encoding="utf-8")  # info
+    (proj_dir / "Sources" / "Articles" / "bad_name.md").write_text(
+        "# x\n", encoding="utf-8"
+    )  # info
 
     report = lint_kb(tmp_path, "test-project")
     summary = report.summary

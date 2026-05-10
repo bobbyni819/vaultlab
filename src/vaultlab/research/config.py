@@ -64,7 +64,7 @@ def _kb_relative_config_path() -> Path | None:
         from vaultlab.context import resolve_kb_root
 
         kb_root = resolve_kb_root(interactive=False)
-    except Exception:  # noqa: BLE001 — never block on resolver failure
+    except Exception:
         return None
     vault_root = kb_root.parent
     return vault_root / "tools" / ".config" / "research_apis.json"

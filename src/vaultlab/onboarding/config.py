@@ -82,7 +82,7 @@ class VaultLabProjectConfig:
         return json.dumps(self.to_dict(), indent=indent, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "VaultLabProjectConfig":
+    def from_dict(cls, data: dict[str, object]) -> VaultLabProjectConfig:
         """Build a config from a plain dict, ignoring unknown keys.
 
         Tolerant of older / future schema versions: fields the current

@@ -401,9 +401,7 @@ class _PoliteSession:
                     continue
                 return None
             if resp.status_code >= 500 and attempt == 1:
-                logger.debug(
-                    "%s GET %s -> %d (retrying once)", source, url, resp.status_code
-                )
+                logger.debug("%s GET %s -> %d (retrying once)", source, url, resp.status_code)
                 time.sleep(2.0)
                 continue
             return resp
@@ -496,9 +494,7 @@ def _try_unpaywall(
         u = loc.get("url") or ""
         pmcid = _extract_pmcid(u)
         if pmcid is not None:
-            license_str = (
-                (loc.get("license") or "").strip().lower() or "pmc-oa"
-            )
+            license_str = (loc.get("license") or "").strip().lower() or "pmc-oa"
             return PMC_PDF_FMT.format(pmcid=pmcid), license_str
 
     return None
@@ -786,7 +782,7 @@ def acquire_pdf(
         tried.append("paperclip")
         try:
             pc_paper = paperclip_client.lookup_doi(doi)
-        except Exception as exc:  # noqa: BLE001 — Q5 graceful degrade
+        except Exception as exc:
             tier_errors["paperclip"] = f"lookup error: {exc}"
             pc_paper = None
         if pc_paper is not None:
@@ -881,9 +877,7 @@ def acquire_pdf(
         content = _download_pdf("biorxiv", pdf_url, session=session)
         if content is None:
             # Try medRxiv as a sibling.
-            content = _download_pdf(
-                "biorxiv", MEDRXIV_PDF_FMT.format(doi=doi), session=session
-            )
+            content = _download_pdf("biorxiv", MEDRXIV_PDF_FMT.format(doi=doi), session=session)
         if content is not None:
             _save_pdf(content, target)
             return AcquisitionResult(
@@ -948,9 +942,7 @@ def acquire_pdf(
     el = _try_elsevier(doi, elsevier_key)
     if el is not None:
         pdf_url, headers, license_str = el
-        content = _download_pdf(
-            "elsevier", pdf_url, session=session, headers=headers
-        )
+        content = _download_pdf("elsevier", pdf_url, session=session, headers=headers)
         if content is not None:
             _save_pdf(content, target)
             return AcquisitionResult(
@@ -988,7 +980,7 @@ def acquire_pdf(
 def render_manual_fetch_instructions(
     results: dict[str, AcquisitionResult],
     *,
-    corpus_papers: dict[str, "Paper"] | None = None,
+    corpus_papers: dict[str, Paper] | None = None,
     title: str = "Papers needing manual download",
 ) -> str:
     """Render a markdown block telling the user which papers to fetch manually.
@@ -1054,9 +1046,7 @@ def render_manual_fetch_instructions(
         lines.append(f"- **Drop the PDF at:** `{r.cache_target_path}`")
         lines.append(f"- **Tried sources:** {tried}")
         if r.tier_errors:
-            err_summary = "; ".join(
-                f"{k}={v[:60]}" for k, v in r.tier_errors.items()
-            )
+            err_summary = "; ".join(f"{k}={v[:60]}" for k, v in r.tier_errors.items())
             lines.append(f"- **Why each failed:** {err_summary}")
         lines.append("")
 
@@ -1135,9 +1125,7 @@ def acquire_pdfs_for_corpus(
             cache_dir=cache_dir,
             apis=apis,
             skip_paywalled=(
-                force_skip_paywalled
-                if force_skip_paywalled is not None
-                else skip_paywalled
+                force_skip_paywalled if force_skip_paywalled is not None else skip_paywalled
             ),
             timeout=timeout,
         )
@@ -1173,10 +1161,7 @@ def acquire_pdfs_for_corpus(
     # enabled) for any DOI whose first pass failed. This matches the
     # ``depth="complete"`` contract — read every PDF we can possibly get.
     if aggressive_retry:
-        retry_dois = [
-            d for d, r in results.items()
-            if r.pdf_path is None and r.source == "failed"
-        ]
+        retry_dois = [d for d, r in results.items() if r.pdf_path is None and r.source == "failed"]
         if retry_dois:
             logger.info(
                 "acquire_pdfs_for_corpus: aggressive_retry on %d paywalled papers",
@@ -1213,5 +1198,3 @@ __test_exports__ = [
     "_try_springer",
     "_try_unpaywall",
 ]
-
-

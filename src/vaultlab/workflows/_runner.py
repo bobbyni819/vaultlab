@@ -16,7 +16,6 @@ Lifted from ``bobby_ailab.workflows`` (``run_workflow``,
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance, write_with_provenance
@@ -27,7 +26,7 @@ def run_workflow(
     agent_fn,
     write_canonical: bool = True,
     resume: bool = False,
-    force_steps: Optional[list[int]] = None,
+    force_steps: list[int] | None = None,
 ) -> WorkflowPlan:
     """Execute a ``WorkflowPlan`` end-to-end.
 
@@ -61,11 +60,7 @@ def run_workflow(
     for i in range(n_steps):
         # Re-read each iteration because inject_prior_outputs rebuilds the plan.
         step = wp.plan.steps[i]
-        existing = (
-            _read_existing_output(step.output_path)
-            if resume and i not in force
-            else None
-        )
+        existing = _read_existing_output(step.output_path) if resume and i not in force else None
         if existing is not None:
             response = existing
             wp.plan.turns[i].output = response
@@ -95,9 +90,9 @@ def run_workflow_with_reflection(
     wp: WorkflowPlan,
     agent_fn,
     max_reflections: int = 2,
-    reflect_role_ids: Optional[list[str]] = None,
+    reflect_role_ids: list[str] | None = None,
     resume: bool = False,
-    force_steps: Optional[list[int]] = None,
+    force_steps: list[int] | None = None,
 ) -> WorkflowPlan:
     """Run a workflow, wrapping the final (or selected) step in a reflection loop.
 
@@ -118,7 +113,10 @@ def run_workflow_with_reflection(
 
     if max_reflections <= 0:
         return run_workflow(
-            wp, agent_fn=agent_fn, resume=resume, force_steps=force_steps,
+            wp,
+            agent_fn=agent_fn,
+            resume=resume,
+            force_steps=force_steps,
         )
 
     # Which steps get the reflection treatment
@@ -127,19 +125,14 @@ def run_workflow_with_reflection(
         reflect_indices = {n_steps - 1}  # last step only
     else:
         reflect_indices = {
-            i for i, step in enumerate(wp.plan.steps)
-            if step.role_id in reflect_role_ids
+            i for i, step in enumerate(wp.plan.steps) if step.role_id in reflect_role_ids
         }
 
     force = set(force_steps or [])
 
     for i in range(n_steps):
         step = wp.plan.steps[i]
-        existing = (
-            _read_existing_output(step.output_path)
-            if resume and i not in force
-            else None
-        )
+        existing = _read_existing_output(step.output_path) if resume and i not in force else None
         if existing is not None:
             wp.plan.turns[i].output = existing
             wp.notes.append(
@@ -194,7 +187,7 @@ def _step_provenance(wp: WorkflowPlan, step) -> Provenance:
     )
 
 
-def _read_existing_output(path: str) -> Optional[str]:
+def _read_existing_output(path: str) -> str | None:
     """Read a previously-written output file, stripping provenance frontmatter.
 
     Returns ``None`` if the file doesn't exist, is empty, or has only
@@ -205,14 +198,14 @@ def _read_existing_output(path: str) -> Optional[str]:
     if not os.path.isfile(path):
         return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
     except OSError:
         return None
     if content.startswith("---"):
         end = content.find("\n---", 3)
         if end != -1:
-            body = content[end + 4:].lstrip("\n")
+            body = content[end + 4 :].lstrip("\n")
             return body if body.strip() else None
     return content if content.strip() else None
 

@@ -616,9 +616,7 @@ def _add_annotations(
             pad_top, pad_right, pad_bottom, pad_left = _resolve_padding(
                 ann.bbox_padding_px, layout.bbox_padding_px
             )
-            box_shape_kind = (
-                MSO_SHAPE.OVAL if ann.bbox_shape == "circle" else MSO_SHAPE.RECTANGLE
-            )
+            box_shape_kind = MSO_SHAPE.OVAL if ann.bbox_shape == "circle" else MSO_SHAPE.RECTANGLE
             box = s.shapes.add_shape(
                 box_shape_kind,
                 Inches(x_in - pad_left * sx),

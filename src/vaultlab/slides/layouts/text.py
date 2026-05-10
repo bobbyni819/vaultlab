@@ -5,7 +5,8 @@ Lifted from ``bobby_slides._layout.add_text_slide`` (bobby-tools, 2026-04).
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from vaultlab.slides.layouts._helpers import (
     Inches,
@@ -35,17 +36,17 @@ def add_text_slide(
     sh_in = pres.slide_height / 914400
     sizes_d = sizes()
 
-    tx = slide.shapes.add_textbox(
-        Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-    )
+    tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
     tx.text_frame.text = title
     apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
     bullets_list = list(bullets)
     if bullets_list:
         bx = slide.shapes.add_textbox(
-            Inches(0.7), Inches(1.4),
-            Inches(sw_in - 1.4), Inches(sh_in - 2.0),
+            Inches(0.7),
+            Inches(1.4),
+            Inches(sw_in - 1.4),
+            Inches(sh_in - 2.0),
         )
         tf = bx.text_frame
         tf.word_wrap = True

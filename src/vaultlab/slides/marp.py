@@ -29,15 +29,17 @@ def deck_plan_to_marp(plan: dict[str, Any]) -> str:
     """
     lines: list[str] = []
 
-    lines.extend([
-        "---",
-        "marp: true",
-        "theme: default",
-        "paginate: true",
-        "size: 16:9",
-        "---",
-        "",
-    ])
+    lines.extend(
+        [
+            "---",
+            "marp: true",
+            "theme: default",
+            "paginate: true",
+            "size: 16:9",
+            "---",
+            "",
+        ]
+    )
 
     slides = plan.get("slides", [])
     for i, slide in enumerate(slides):

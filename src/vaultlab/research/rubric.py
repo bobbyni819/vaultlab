@@ -47,7 +47,6 @@ import statistics
 from dataclasses import dataclass, field
 from typing import Any
 
-
 __all__ = [
     "DEFAULT_METHODS_RUBRIC",
     "RubricEnsembleScore",
@@ -296,8 +295,7 @@ def rubric_section_for_prompt(
     ]
     for item in rubric:
         lines.append(
-            f"- **{item.id}** ({item.title}, "
-            f"{item.min_score}-{item.max_score}): {item.description}"
+            f"- **{item.id}** ({item.title}, {item.min_score}-{item.max_score}): {item.description}"
         )
     lines.extend(
         [

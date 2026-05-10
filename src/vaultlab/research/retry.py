@@ -37,8 +37,9 @@ Design
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ def retry_with_feedback(
     for i in range(1, total + 1):
         try:
             raw = callback(current_task)
-        except Exception as exc:  # noqa: BLE001 — we want to capture any failure
+        except Exception as exc:
             err = truncate_feedback(
                 f"PRIOR ATTEMPT RAISED: {type(exc).__name__}: {exc}",
                 max_chars=max_feedback_chars,
@@ -244,9 +245,7 @@ def retry_with_feedback(
         # Success
         attempts.append(RetryAttempt(attempt=i, succeeded=True))
         last_response = raw
-        return RetryResult(
-            response=last_response, attempts=attempts, succeeded=True
-        )
+        return RetryResult(response=last_response, attempts=attempts, succeeded=True)
 
     return RetryResult(response=None, attempts=attempts, succeeded=False)
 
@@ -256,9 +255,7 @@ def retry_with_feedback(
 # ---------------------------------------------------------------------------
 
 
-def _next_task(
-    task: Any, feedback: str, apply_feedback: Callable[[Any, str], Any] | None
-) -> Any:
+def _next_task(task: Any, feedback: str, apply_feedback: Callable[[Any, str], Any] | None) -> Any:
     """Return a new task with the feedback appended.
 
     Strategy:
@@ -273,9 +270,7 @@ def _next_task(
         try:
             return apply_feedback(task, feedback)
         except Exception:  # pragma: no cover — defensive
-            logger.warning(
-                "apply_feedback raised; reusing original task on retry"
-            )
+            logger.warning("apply_feedback raised; reusing original task on retry")
             return task
 
     # Try dataclass-replace if the task has a prompt field
@@ -283,7 +278,7 @@ def _next_task(
         from dataclasses import is_dataclass, replace
 
         if is_dataclass(task) and hasattr(task, "prompt"):
-            old_prompt = getattr(task, "prompt") or ""
+            old_prompt = task.prompt or ""
             new_prompt = (
                 old_prompt
                 + "\n\n---\n\nRETRY FEEDBACK FROM PRIOR ATTEMPT:\n"

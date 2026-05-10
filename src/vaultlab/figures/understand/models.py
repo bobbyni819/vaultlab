@@ -205,7 +205,9 @@ class FigureUnderstandLog:
             for raw_line in self.step1_description.strip().splitlines():
                 lines.append(f"> {raw_line}")
         else:
-            lines.append("_(no description captured — describe step was skipped or returned empty)_")
+            lines.append(
+                "_(no description captured — describe step was skipped or returned empty)_"
+            )
         lines.append("")
 
         # ---- Step 2 ------------------------------------------------------
@@ -243,7 +245,9 @@ class FigureUnderstandLog:
                 conf_str = f"{conf:.2f}" if isinstance(conf, (int, float)) else str(conf)
                 lines.append(f"| {name} | {rid} | {rationale} | {conf_str} |")
         else:
-            lines.append("_(no matches recorded — match step was skipped or no elements were paired)_")
+            lines.append(
+                "_(no matches recorded — match step was skipped or no elements were paired)_"
+            )
         lines.append("")
 
         # ---- Step 4 ------------------------------------------------------

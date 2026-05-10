@@ -10,18 +10,13 @@ Covers:
 
 from __future__ import annotations
 
-import io
 import json
-import sys
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from vaultlab.cli import main
 
-
 # ---- list-policy-skipped -----------------------------------------------
+
 
 def test_list_policy_skipped_no_log(tmp_path, capsys):
     """No log file → exit 0 with empty-state message."""
@@ -34,15 +29,20 @@ def test_list_policy_skipped_no_log(tmp_path, capsys):
 def test_list_policy_skipped_prints_records(tmp_path, capsys):
     project = tmp_path / "proj"
     project.mkdir()
-    (project / "policy_skipped.json").write_text(json.dumps([
-        {
-            "doi": "10.1/x",
-            "reason": "AUP refusal",
-            "batch": "B5-test",
-            "skipped_at": "2026-05-02T12:00:00Z",
-            "needs_human_review": True,
-        }
-    ]), encoding="utf-8")
+    (project / "policy_skipped.json").write_text(
+        json.dumps(
+            [
+                {
+                    "doi": "10.1/x",
+                    "reason": "AUP refusal",
+                    "batch": "B5-test",
+                    "skipped_at": "2026-05-02T12:00:00Z",
+                    "needs_human_review": True,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     rc = main(["list-policy-skipped", str(project)])
     out = capsys.readouterr().out
@@ -60,6 +60,7 @@ def test_list_policy_skipped_help(capsys):
 
 
 # ---- fetch-list paywalled ----------------------------------------------
+
 
 def test_fetch_list_paywalled_no_args(capsys):
     rc = main(["fetch-list"])
@@ -87,16 +88,21 @@ def test_fetch_list_paywalled_empty_log(tmp_path, capsys):
 
 def test_fetch_list_paywalled_renders_shopping_list(tmp_path, capsys):
     log = tmp_path / "log.json"
-    log.write_text(json.dumps({
-        "10.1038/s41586-2024-x": {
-            "outcome": "failed_paywalled",
-            "title": "A Nature paper",
-            "journal": "Nature",
-            "year": 2024,
-            "publisher_url": "https://doi.org/10.1038/s41586-2024-x",
-            "tier_errors": {"elsevier": "403"},
-        },
-    }), encoding="utf-8")
+    log.write_text(
+        json.dumps(
+            {
+                "10.1038/s41586-2024-x": {
+                    "outcome": "failed_paywalled",
+                    "title": "A Nature paper",
+                    "journal": "Nature",
+                    "year": 2024,
+                    "publisher_url": "https://doi.org/10.1038/s41586-2024-x",
+                    "tier_errors": {"elsevier": "403"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     rc = main(["fetch-list", "paywalled", str(log)])
     out = capsys.readouterr().out
@@ -116,6 +122,7 @@ def test_fetch_list_unknown_subcommand(capsys):
 
 
 # ---- paperclip-grep / paperclip-sql passthrough ------------------------
+
 
 def test_paperclip_grep_help(capsys):
     rc = main(["paperclip-grep"])
@@ -149,8 +156,7 @@ def test_paperclip_sql_calls_subprocess():
 
 def test_paperclip_grep_handles_missing_binary(capsys):
     """When paperclip CLI not installed, surface a helpful message."""
-    with patch("subprocess.call",
-               side_effect=FileNotFoundError("paperclip not found")):
+    with patch("subprocess.call", side_effect=FileNotFoundError("paperclip not found")):
         rc = main(["paperclip-grep", "x", "/papers/"])
         assert rc == 1
         err = capsys.readouterr().err
@@ -159,6 +165,7 @@ def test_paperclip_grep_handles_missing_binary(capsys):
 
 
 # ---- main dispatcher ---------------------------------------------------
+
 
 def test_main_help_lists_new_subcommands(capsys):
     rc = main(["--help"])

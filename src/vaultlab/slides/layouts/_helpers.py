@@ -27,16 +27,19 @@ _SIZES = min_sizes()
 def Pt(n: int) -> Any:
     """Lazy import of ``pptx.util.Pt`` to avoid module-level ImportError."""
     from pptx.util import Pt as _Pt
+
     return _Pt(n)
 
 
 def Inches(n: float) -> Any:
     from pptx.util import Inches as _Inches
+
     return _Inches(n)
 
 
 def Emu(n: int) -> Any:
     from pptx.util import Emu as _Emu
+
     return _Emu(n)
 
 
@@ -78,9 +81,11 @@ def apply_font(
         plain_theme = getattr(pres, "_vaultlab_plain_theme", None)
         if plain_theme == "dark":
             from pptx.dml.color import RGBColor
+
             auto_color = RGBColor(0xFF, 0xFF, 0xFF)
         elif plain_theme == "light":
             from pptx.dml.color import RGBColor
+
             auto_color = RGBColor(0x00, 0x00, 0x00)
     final_color = color if color is not None else auto_color
 
@@ -113,6 +118,7 @@ def add_picture_fit(
         return None
     try:
         from PIL import Image as _Image
+
         with _Image.open(p) as im:
             iw, ih = im.size
         if iw <= 0 or ih <= 0:
@@ -130,9 +136,7 @@ def add_picture_fit(
         target_h = max_height
         target_w = int(max_height * img_aspect)
         offset_left = left + (max_width - target_w) // 2
-        return slide.shapes.add_picture(
-            str(p), offset_left, top, width=target_w, height=target_h
-        )
+        return slide.shapes.add_picture(str(p), offset_left, top, width=target_w, height=target_h)
     except Exception:
         return None
 

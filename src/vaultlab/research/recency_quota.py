@@ -36,11 +36,9 @@ Public API
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
-from typing import Iterable
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -146,14 +144,8 @@ def apply_recency_quotas(
     quota_24mo = max(quota_24mo, quota_12mo)
 
     # Count current recent-window membership in picks
-    in_picks_24mo = [
-        p for p in picks
-        if _is_within_window(p.get("year", 0), current_year, 24)
-    ]
-    in_picks_12mo = [
-        p for p in picks
-        if _is_within_window(p.get("year", 0), current_year, 12)
-    ]
+    in_picks_24mo = [p for p in picks if _is_within_window(p.get("year", 0), current_year, 24)]
+    in_picks_12mo = [p for p in picks if _is_within_window(p.get("year", 0), current_year, 12)]
 
     need_24mo = max(0, quota_24mo - len(in_picks_24mo))
     need_12mo = max(0, quota_12mo - len(in_picks_12mo))
@@ -187,19 +179,17 @@ def apply_recency_quotas(
             continue
         cand_year = cand.get("year", 0)
         if _is_within_window(cand_year, current_year, 12):
-            candidates_12mo.append(
-                {"doi": doi, "year": cand_year, **cand}
-            )
+            candidates_12mo.append({"doi": doi, "year": cand_year, **cand})
         elif _is_within_window(cand_year, current_year, 24):
-            candidates_24mo_only.append(
-                {"doi": doi, "year": cand_year, **cand}
-            )
+            candidates_24mo_only.append({"doi": doi, "year": cand_year, **cand})
 
     candidates_12mo.sort(
-        key=lambda c: c.get("composite_score", 0.0), reverse=True,
+        key=lambda c: c.get("composite_score", 0.0),
+        reverse=True,
     )
     candidates_24mo_only.sort(
-        key=lambda c: c.get("composite_score", 0.0), reverse=True,
+        key=lambda c: c.get("composite_score", 0.0),
+        reverse=True,
     )
 
     # Swap-in plan: prioritize meeting 12mo quota first (it's stricter).
@@ -214,9 +204,7 @@ def apply_recency_quotas(
     # (which also satisfy the 24mo quota since 12mo ⊂ 24mo)
     extra_24mo_still_needed = remaining_24mo_need - len(swaps_24mo)
     if extra_24mo_still_needed > 0:
-        extras_from_12mo = candidates_12mo[
-            need_12mo:need_12mo + extra_24mo_still_needed
-        ]
+        extras_from_12mo = candidates_12mo[need_12mo : need_12mo + extra_24mo_still_needed]
         swaps_24mo.extend(extras_from_12mo)
 
     swap_ins = swaps_12mo + swaps_24mo
@@ -234,22 +222,15 @@ def apply_recency_quotas(
     # not in either recency window. Sort picks by their original rank
     # descending so we displace the worst-ranked first.
     old_picks_descending = sorted(
-        [p for p in picks
-         if not _is_within_window(p.get("year", 0), current_year, 24)],
+        [p for p in picks if not _is_within_window(p.get("year", 0), current_year, 24)],
         key=lambda p: p.get("rank", 9999),
         reverse=True,
     )
     n_to_displace = min(n_swaps, len(old_picks_descending))
-    to_displace_dois = {
-        (p.get("doi") or "").lower()
-        for p in old_picks_descending[:n_to_displace]
-    }
+    to_displace_dois = {(p.get("doi") or "").lower() for p in old_picks_descending[:n_to_displace]}
 
     # Build new picks: keep originals not in displace set + add swap-ins
-    new_picks = [
-        p for p in picks
-        if (p.get("doi") or "").lower() not in to_displace_dois
-    ]
+    new_picks = [p for p in picks if (p.get("doi") or "").lower() not in to_displace_dois]
     # Mark the swap-ins with provenance
     for s in swap_ins[:n_to_displace]:
         s["from_recency_quota"] = True
@@ -262,14 +243,8 @@ def apply_recency_quotas(
         entry["rank"] = i
 
     # Final unmet diagnostics: did we still fall short?
-    final_24mo = sum(
-        1 for p in new_picks
-        if _is_within_window(p.get("year", 0), current_year, 24)
-    )
-    final_12mo = sum(
-        1 for p in new_picks
-        if _is_within_window(p.get("year", 0), current_year, 12)
-    )
+    final_24mo = sum(1 for p in new_picks if _is_within_window(p.get("year", 0), current_year, 24))
+    final_12mo = sum(1 for p in new_picks if _is_within_window(p.get("year", 0), current_year, 12))
 
     return QuotaApplicationResult(
         picks=new_picks,
@@ -284,10 +259,10 @@ __all__ = [
     "DEFAULT_QUOTA_24MO",
     "REVIEW_QUOTA_12MO",
     "REVIEW_QUOTA_24MO",
-    "STANDARD_QUOTA_12MO",
-    "STANDARD_QUOTA_24MO",
     "SHORT_QUOTA_12MO",
     "SHORT_QUOTA_24MO",
+    "STANDARD_QUOTA_12MO",
+    "STANDARD_QUOTA_24MO",
     "QuotaApplicationResult",
     "apply_recency_quotas",
 ]

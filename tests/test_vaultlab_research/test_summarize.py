@@ -18,15 +18,12 @@ Coverage
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 
 from vaultlab.kb.paths import slugify_doi, summary_path
-from vaultlab.research import summarize as summ
 from vaultlab.research.corpus import Corpus
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.paper import Paper
@@ -45,7 +42,6 @@ from vaultlab.research.summarize import (
     summary_response_schema,
     write_summary_to_kb,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -231,8 +227,7 @@ def test_summarize_paper_tier_c_when_no_pdf(tmp_path):
     assert summary.year_bucket in ("history", "development", "sota", "unknown")
     # Connections still computed for Tier C.
     assert all(
-        "/" not in s
-        for s in summary.connections_cited_by_in_set + summary.connections_references
+        "/" not in s for s in summary.connections_cited_by_in_set + summary.connections_references
     )
 
 
@@ -310,13 +305,17 @@ def test_summarize_paper_passes_refs_missing_flag_to_prompt(tmp_path):
 
     def _capture(*, pdf_bytes, prompt, api_key, model, **_):
         seen_prompts.append(prompt)
-        return {
-            "tldr": "x. y. z.",
-            "why_it_matters": [],
-            "methods_summary": "",
-            "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
-            "extracted_references": ["10.1/aa", "10.1/bb"],
-        }, 1, 1
+        return (
+            {
+                "tldr": "x. y. z.",
+                "why_it_matters": [],
+                "methods_summary": "",
+                "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+                "extracted_references": ["10.1/aa", "10.1/bb"],
+            },
+            1,
+            1,
+        )
 
     summary = summarize_paper(
         doi="10.1/foo",
@@ -564,9 +563,7 @@ def test_prepare_summary_task_makes_no_http_calls(tmp_path, monkeypatch):
         # Replace with a guard module that raises on attribute access.
         class _Guard:
             def __getattr__(self, name):
-                raise AssertionError(
-                    f"prepare_summary_task touched anthropic.{name}"
-                )
+                raise AssertionError(f"prepare_summary_task touched anthropic.{name}")
 
         monkeypatch.setitem(sys.modules, "anthropic", _Guard())
 
@@ -796,9 +793,7 @@ def test_summarize_corpus_reader_mode_does_not_use_anthropic(tmp_path, monkeypat
 
     class _Guard:
         def __getattr__(self, name):
-            raise AssertionError(
-                f"summarize_corpus(reader=...) touched anthropic.{name}"
-            )
+            raise AssertionError(f"summarize_corpus(reader=...) touched anthropic.{name}")
 
     monkeypatch.setitem(sys.modules, "anthropic", _Guard())
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)

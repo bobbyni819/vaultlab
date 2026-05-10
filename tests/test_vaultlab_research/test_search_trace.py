@@ -177,15 +177,11 @@ class TestSearchTraceSidecar:
             topic=topic,
             queried_at="2026-04-30T22:01:14Z",
             per_source={
-                "ncbi": SourceTrace(
-                    queries=[topic], hits=8, wall_time_ms=120
-                ),
+                "ncbi": SourceTrace(queries=[topic], hits=8, wall_time_ms=120),
                 "semantic_scholar": SourceTrace(
                     queries=[topic], hits=4, errors=["403"], wall_time_ms=80
                 ),
-                "biorxiv": SourceTrace(
-                    queries=[topic], hits=0, wall_time_ms=30
-                ),
+                "biorxiv": SourceTrace(queries=[topic], hits=0, wall_time_ms=30),
             },
             deduped_seeds=10,
             by_source_after_dedup={"ncbi": 7, "semantic_scholar": 3},
@@ -211,9 +207,7 @@ class TestSearchTraceSidecar:
         assert data["per_source"]["semantic_scholar"]["errors"] == ["403"]
         assert data["by_source_after_dedup"]["ncbi"] == 7
 
-    def test_search_trace_sidecar_no_trace_returns_none(
-        self, tmp_path: Path
-    ) -> None:
+    def test_search_trace_sidecar_no_trace_returns_none(self, tmp_path: Path) -> None:
         """Trace=None path is silent (legacy clients without
         ``search_with_trace`` shouldn't crash the run)."""
         from vaultlab.research import lineage

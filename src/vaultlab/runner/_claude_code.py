@@ -18,27 +18,25 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from datetime import date as _date
-from typing import Optional
 
 from vaultlab.runner._temperatures import temperature_for
 from vaultlab.runner.meetings import adversarial_inject, compose_turns
 from vaultlab.runner.models import Agenda, Meeting, MeetingMode, MeetingTurn
 
-
 # Per-role tool allow-lists. Conservative defaults — a role gets Bash only if
 # its work genuinely requires running code. This mirrors the CLAUDE.md rule
 # "don't add capabilities beyond what the task requires."
 DEFAULT_TOOLS_BY_ROLE: dict[str, tuple[str, ...]] = {
-    "data_analyst":        ("Bash", "Read", "Glob", "Grep"),
+    "data_analyst": ("Bash", "Read", "Glob", "Grep"),
     "literature_surveyor": ("Bash", "Read", "Glob", "Grep"),
-    "domain_expert":       ("Bash", "Read", "Glob", "Grep"),
-    "methods_critic":      ("Read", "Glob", "Grep"),
-    "literature_critic":   ("Read", "Glob", "Grep"),
-    "synthesizer":         ("Read", "Glob", "Grep"),
-    "narrator":            ("Read",),
-    "figure_lead":         ("Read", "Glob", "Grep"),
-    "team_lead":           ("Read",),
-    "figure_reader":       ("Read", "Glob", "Grep"),
+    "domain_expert": ("Bash", "Read", "Glob", "Grep"),
+    "methods_critic": ("Read", "Glob", "Grep"),
+    "literature_critic": ("Read", "Glob", "Grep"),
+    "synthesizer": ("Read", "Glob", "Grep"),
+    "narrator": ("Read",),
+    "figure_lead": ("Read", "Glob", "Grep"),
+    "team_lead": ("Read",),
+    "figure_reader": ("Read", "Glob", "Grep"),
 }
 
 
@@ -90,9 +88,7 @@ class RunPlan:
     kb_path: str
     session_updates: list[str] = field(default_factory=list)
 
-    def inject_prior_outputs(
-        self, completed_turns: list[MeetingTurn]
-    ) -> "RunPlan":
+    def inject_prior_outputs(self, completed_turns: list[MeetingTurn]) -> RunPlan:
         """Re-render the plan after some turns have completed.
 
         For adversarial / team / critiqued modes, later steps' prompts
@@ -145,8 +141,8 @@ class ClaudeCodeRunner:
         self,
         kb_path: str,
         command_name: str,
-        date_str: Optional[str] = None,
-        tools_by_role: Optional[dict[str, tuple[str, ...]]] = None,
+        date_str: str | None = None,
+        tools_by_role: dict[str, tuple[str, ...]] | None = None,
     ):
         self.kb_path = kb_path
         self.command_name = command_name
@@ -163,15 +159,15 @@ class ClaudeCodeRunner:
         steps = [
             AgentSpec(
                 role_id=turn.role_id,
-                role_name=meeting.roles[
-                    [r.id for r in meeting.roles].index(turn.role_id)
-                ].name,
+                role_name=meeting.roles[[r.id for r in meeting.roles].index(turn.role_id)].name,
                 prompt=turn.prompt,
                 tools=self.tools_for(turn.role_id),
                 output_path=self._output_path(turn.role_id, i, meeting),
                 step_index=i,
                 temperature=temperature_for(
-                    meeting.mode, role_id=turn.role_id, ensemble=ensemble,
+                    meeting.mode,
+                    role_id=turn.role_id,
+                    ensemble=ensemble,
                 ),
             )
             for i, turn in enumerate(turns)
@@ -194,10 +190,7 @@ class ClaudeCodeRunner:
         # Disambiguate when the same role appears twice (team meetings have the
         # lead at both start and end; critiqued meetings loop back to the role).
         suffix = ""
-        repeat_count = sum(
-            1 for r in meeting.roles[:step_index + 1]
-            if r.id == role_id
-        )
+        repeat_count = sum(1 for r in meeting.roles[: step_index + 1] if r.id == role_id)
         if meeting.mode == MeetingMode.TEAM and role_id == "team_lead":
             suffix = "-initial" if step_index == 0 else "-final"
         elif meeting.mode == MeetingMode.CRITIQUED and role_id != "methods_critic":
@@ -205,9 +198,7 @@ class ClaudeCodeRunner:
         elif repeat_count > 1:
             suffix = f"-{repeat_count}"
         filename = (
-            f"{self.command_name}-{self.date_str}"
-            f"-round{meeting.round_num}"
-            f"-{role_id}{suffix}.md"
+            f"{self.command_name}-{self.date_str}-round{meeting.round_num}-{role_id}{suffix}.md"
         )
         return os.path.join(self.kb_path, "Output", filename)
 
@@ -248,9 +239,7 @@ def render_plan_as_instructions(plan: RunPlan) -> str:
         "",
     ]
     for step in plan.steps:
-        lines.append(
-            f"### Step {step.step_index + 1}: {step.role_name} (`{step.role_id}`)"
-        )
+        lines.append(f"### Step {step.step_index + 1}: {step.role_name} (`{step.role_id}`)")
         lines.append(f"- **Tools:** {', '.join(step.tools) or '(none)'}")
         lines.append(f"- **Output:** `{step.output_path}`")
         lines.append(f"- **Prompt length:** {len(step.prompt)} chars")
@@ -262,9 +251,9 @@ def render_plan_as_instructions(plan: RunPlan) -> str:
 
 
 __all__ = [
+    "DEFAULT_TOOLS_BY_ROLE",
     "AgentSpec",
     "ClaudeCodeRunner",
-    "DEFAULT_TOOLS_BY_ROLE",
     "RunPlan",
     "render_plan_as_instructions",
 ]

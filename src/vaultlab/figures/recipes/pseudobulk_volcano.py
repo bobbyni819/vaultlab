@@ -27,7 +27,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -39,7 +39,7 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
     log2fc_col: str = "log2_fc",
     pvalue_col: str = "pvalue",
@@ -80,7 +80,6 @@ def render(
     Anchored: Pentimalli 2025 Fig 4 layout + scanpy + decoupler-py gallery
     convention.
     """
-    import pandas as pd
 
     required = {log2fc_col, pvalue_col, feature_col}
     missing = required - set(df.columns)

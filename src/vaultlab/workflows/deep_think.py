@@ -27,12 +27,10 @@ Public surface
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 
 from vaultlab.roles import load_role
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
-
 from vaultlab.workflows._models import DeepThinkEnsembleBundle, WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows._runner import run_workflow
@@ -65,8 +63,8 @@ def plan_deep_think_round(
     round_num: int = 1,
     mode: Mode = Mode.DATA_ANALYSIS,
     investigation_mode: InvestigationMode = InvestigationMode.DIRECTED,
-    agenda: Optional[Agenda] = None,
-    date_str: Optional[str] = None,
+    agenda: Agenda | None = None,
+    date_str: str | None = None,
 ) -> WorkflowPlan:
     """Build a single round of the deep-think workflow.
 
@@ -108,7 +106,9 @@ def plan_deep_think_round(
         agenda=agenda,
     )
     runner = ClaudeCodeRunner(
-        kb_path=cfg.kb_path, command_name="deep-think", date_str=date_str,
+        kb_path=cfg.kb_path,
+        command_name="deep-think",
+        date_str=date_str,
     )
     plan = runner.plan(meeting, task=agenda)
     prov = Provenance(
@@ -130,7 +130,7 @@ def plan_round_from_critic_tests(
     topic: str,
     round_num: int = 2,
     mode: Mode = Mode.DATA_ANALYSIS,
-    priority_filter: Optional[list[str]] = None,
+    priority_filter: list[str] | None = None,
 ) -> WorkflowPlan:
     """Build a Round N deep-think plan from the prior round's Critic tests.
 
@@ -175,15 +175,17 @@ def plan_round_from_critic_tests(
         investigation_mode=InvestigationMode.DIRECTED,
     )
     wp = plan_deep_think_round(
-        cfg=cfg, topic=topic, round_num=round_num, mode=mode,
+        cfg=cfg,
+        topic=topic,
+        round_num=round_num,
+        mode=mode,
         investigation_mode=InvestigationMode.DIRECTED,
         agenda=agenda,
     )
     # Record in provenance that this round was auto-seeded from prior Critic
     wp.provenance.tags = list(wp.provenance.tags) + ["round-from-critic"]
     wp.provenance.notes = (
-        f"Auto-seeded from Round {round_num - 1} Critic output: "
-        f"{len(tests)} priority tests"
+        f"Auto-seeded from Round {round_num - 1} Critic output: {len(tests)} priority tests"
     )
     return wp
 
@@ -200,8 +202,8 @@ def plan_deep_think_with_ensemble_critic(
     round_num: int = 1,
     mode: Mode = Mode.DATA_ANALYSIS,
     investigation_mode: InvestigationMode = InvestigationMode.DIRECTED,
-    agenda: Optional[Agenda] = None,
-    date_str: Optional[str] = None,
+    agenda: Agenda | None = None,
+    date_str: str | None = None,
 ) -> DeepThinkEnsembleBundle:
     """Deep-think where the Critic phase is replaced by N critics + meta-review.
 
@@ -249,12 +251,17 @@ def plan_deep_think_with_ensemble_critic(
     # Build a reasoning meeting (Analyst + Expert + Critic) but drop the Critic
     # role to isolate the pre-critic outputs as a self-contained phase
     pre_meeting = build_meeting(
-        topic=topic, meeting_type="reasoning", session_context=ctx,
-        mode=mode, round_num=round_num, agenda=pre_agenda,
+        topic=topic,
+        meeting_type="reasoning",
+        session_context=ctx,
+        mode=mode,
+        round_num=round_num,
+        agenda=pre_agenda,
     )
     pre_meeting.roles = [_get_role(analyst_id), _get_role("domain_expert")]
     pre_runner = ClaudeCodeRunner(
-        kb_path=cfg.kb_path, command_name="deep-think-ensemble",
+        kb_path=cfg.kb_path,
+        command_name="deep-think-ensemble",
         date_str=f"{base_date}-precritic",
     )
     pre_plan = pre_runner.plan(pre_meeting, task=pre_agenda)
@@ -263,7 +270,9 @@ def plan_deep_think_with_ensemble_critic(
         project=cfg.name,
         meeting_mode=pre_meeting.mode.value,
         investigation_mode=investigation_mode.value,
-        topic=topic, round=round_num, kind="deep_think_pre_critic",
+        topic=topic,
+        round=round_num,
+        kind="deep_think_pre_critic",
         tags=["deep-think", "ensemble", "pre-critic"],
     )
     pre_wp = WorkflowPlan(meeting=pre_meeting, plan=pre_plan, provenance=pre_prov)
@@ -272,8 +281,11 @@ def plan_deep_think_with_ensemble_critic(
     # prior_outputs is empty here because pre-critic hasn't run yet; the
     # runner helper fills it in before dispatching critics.
     critic_wps, meta_wp = plan_ensemble_critic(
-        cfg, topic=topic, prior_outputs="(pre-critic outputs go here)",
-        n_critics=n_critics, round_num=round_num,
+        cfg,
+        topic=topic,
+        prior_outputs="(pre-critic outputs go here)",
+        n_critics=n_critics,
+        round_num=round_num,
         date_str=f"{base_date}-ensemble",
     )
 
@@ -285,24 +297,29 @@ def plan_deep_think_with_ensemble_critic(
             f"narrative for {topic}. Name the disagreements the critics "
             f"surfaced and say how they were resolved."
         ),
-        questions=pre_agenda_questions + [
+        questions=pre_agenda_questions
+        + [
             "What concerns did the critic ensemble raise, and how were they resolved?",
             "Which findings are robust, needing-validation, or contested?",
         ],
-        rules=pre_agenda_rules + [
+        rules=pre_agenda_rules
+        + [
             "Every integrated claim traces to a specific pre-critic or meta-review source",
             "Preserve minority objections — do not average them away",
         ],
         investigation_mode=investigation_mode,
     )
     synth_wp = plan_synthesis(
-        cfg, topic=topic, investigation_mode=investigation_mode,
+        cfg,
+        topic=topic,
+        investigation_mode=investigation_mode,
         agenda=synth_agenda,
         date_str=f"{base_date}-ensemble-synth",
         canonical_suffix="ensemble",
     )
     synth_wp.provenance.tags = list(synth_wp.provenance.tags) + [
-        "ensemble-synthesis", f"n_critics={n_critics}",
+        "ensemble-synthesis",
+        f"n_critics={n_critics}",
     ]
     synth_wp.provenance.kind = "deep_think_ensemble_synthesis"
 
@@ -341,7 +358,9 @@ def run_deep_think_with_ensemble_critic(
     run_workflow(bundle.pre_critic, agent_fn=agent_fn, resume=resume)
     pre_critic_outputs = "\n\n".join(
         f"### {step.role_name}\n{turn.output.strip()}"
-        for step, turn in zip(bundle.pre_critic.plan.steps, bundle.pre_critic.plan.turns)
+        for step, turn in zip(
+            bundle.pre_critic.plan.steps, bundle.pre_critic.plan.turns, strict=False
+        )
         if turn.output.strip()
     )
 
@@ -349,26 +368,18 @@ def run_deep_think_with_ensemble_critic(
     for critic_wp in bundle.critic_plans:
         _inject_prior_context(critic_wp, pre_critic_outputs)
         run_workflow(critic_wp, agent_fn=agent_fn, resume=resume)
-    critic_outputs = [
-        critic_wp.plan.turns[-1].output for critic_wp in bundle.critic_plans
-    ]
+    critic_outputs = [critic_wp.plan.turns[-1].output for critic_wp in bundle.critic_plans]
 
     # Phase 3 — meta-reviewer sees all N critic outputs
     meta_prior = "\n\n".join(
-        f"### Review {i + 1}\n{out.strip()}"
-        for i, out in enumerate(critic_outputs)
-        if out.strip()
+        f"### Review {i + 1}\n{out.strip()}" for i, out in enumerate(critic_outputs) if out.strip()
     )
     _inject_prior_context(bundle.meta_review, meta_prior)
     run_workflow(bundle.meta_review, agent_fn=agent_fn, resume=resume)
     meta_output = bundle.meta_review.plan.turns[-1].output
 
     # Phase 4 — synthesizer sees pre-critic + meta-review
-    synth_prior = (
-        pre_critic_outputs
-        + "\n\n### Meta-review\n"
-        + meta_output.strip()
-    )
+    synth_prior = pre_critic_outputs + "\n\n### Meta-review\n" + meta_output.strip()
     _inject_prior_context(bundle.synthesis, synth_prior)
     run_workflow(bundle.synthesis, agent_fn=agent_fn, resume=resume)
 
@@ -377,7 +388,7 @@ def run_deep_think_with_ensemble_critic(
 
 __all__ = [
     "plan_deep_think_round",
-    "plan_round_from_critic_tests",
     "plan_deep_think_with_ensemble_critic",
+    "plan_round_from_critic_tests",
     "run_deep_think_with_ensemble_critic",
 ]

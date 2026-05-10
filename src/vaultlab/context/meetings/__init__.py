@@ -80,7 +80,7 @@ def is_available() -> bool:
     if platform.system() != "Windows":
         return False
     try:
-        import meeting_recorder  # noqa: F401
+        import meeting_recorder
 
         return True
     except ImportError:
@@ -96,7 +96,7 @@ def _check_available() -> None:
             "macOS/Linux support is planned via a different recording backend."
         )
     try:
-        import meeting_recorder  # noqa: F401
+        import meeting_recorder
     except ImportError as e:
         raise RuntimeError(
             "vaultlab.context.meetings requires the meeting_recorder package. "
@@ -239,7 +239,7 @@ def _build_frontmatter(
     """Build the YAML frontmatter block for a meeting transcript."""
     lines = [
         "---",
-        f"kind: meeting-transcript",
+        "kind: meeting-transcript",
         f"date: {date_str}",
         f"slug: {slug}",
     ]
@@ -333,9 +333,9 @@ def ingest_transcript(
             body = parts[2].lstrip("\n")
 
     # Resolve date — prefer existing frontmatter, then file mtime.
-    date_str = existing_fm.get("date") or datetime.fromtimestamp(
-        src.stat().st_mtime
-    ).strftime("%Y-%m-%d")
+    date_str = existing_fm.get("date") or datetime.fromtimestamp(src.stat().st_mtime).strftime(
+        "%Y-%m-%d"
+    )
 
     # Resolve slug — explicit label > source stem.
     raw_label = label if label is not None else src.stem

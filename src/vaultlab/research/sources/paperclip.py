@@ -34,7 +34,7 @@ import os
 import re
 import shutil
 import subprocess
-from typing import Iterable
+from collections.abc import Iterable
 
 from vaultlab.research.paper import Paper
 
@@ -69,7 +69,8 @@ _ID_LINE_RE = re.compile(
     r"^\s*([A-Za-z0-9_.]+)\s+[^\s\w]\s+([^\d]+?)\s+[^\s\w]\s+(\d{4}(?:-\d{2}-\d{2})?)\s*$"
 )
 _DOI_LINE_RE = re.compile(
-    r"^\s*https?://(?:dx\.)?doi\.org/(.+?)\s*$", re.IGNORECASE,
+    r"^\s*https?://(?:dx\.)?doi\.org/(.+?)\s*$",
+    re.IGNORECASE,
 )
 _URL_LINE_RE = re.compile(r"^\s*https?://", re.IGNORECASE)
 _ABSTRACT_LINE_RE = re.compile(r'^\s*"(.+)"\s*$')
@@ -99,7 +100,10 @@ class PaperclipClient:
         self._timeout = timeout
 
     def _run_paperclip(
-        self, cmd: list[str], *, timeout: int | None = None,
+        self,
+        cmd: list[str],
+        *,
+        timeout: int | None = None,
     ) -> subprocess.CompletedProcess:
         """Invoke the paperclip CLI with Windows-friendly env + decoding.
 
@@ -121,6 +125,7 @@ class PaperclipClient:
            UnicodeDecodeError so all bytes are recoverable.
         """
         import os as _os
+
         env = _os.environ.copy()
         env.setdefault("MSYS_NO_PATHCONV", "1")
         # Force paperclip's own Python stdout to UTF-8. Default on
@@ -152,7 +157,10 @@ class PaperclipClient:
             stdout = proc.stdout.decode("latin-1", errors="replace")
             stderr = proc.stderr.decode("latin-1", errors="replace")
         return subprocess.CompletedProcess(
-            proc.args, proc.returncode, stdout, stderr,
+            proc.args,
+            proc.returncode,
+            stdout,
+            stderr,
         )
 
     @property
@@ -407,8 +415,7 @@ class PaperclipClient:
             )
         if not self.is_authenticated():
             raise PaperclipUnavailable(
-                "paperclip is unauthenticated; run `paperclip login` "
-                "or set PAPERCLIP_API_KEY"
+                "paperclip is unauthenticated; run `paperclip login` or set PAPERCLIP_API_KEY"
             )
 
         cmd: list[str] = [self._binary, "search", "-n", str(int(max_results))]
@@ -485,7 +492,12 @@ def _parse_search_output(text: str) -> list[Paper]:
                 break
             # If indented heavily and looks more like a continuation
             # (no commas, no URL), treat as title continuation.
-            if nxt.startswith(("       ", "\t")) and "·" not in nxt and not _URL_LINE_RE.match(nxt) and not _ABSTRACT_LINE_RE.match(nxt):
+            if (
+                nxt.startswith(("       ", "\t"))
+                and "·" not in nxt
+                and not _URL_LINE_RE.match(nxt)
+                and not _ABSTRACT_LINE_RE.match(nxt)
+            ):
                 continuation_lines.append(nxt.strip())
                 i += 1
                 continue
@@ -554,16 +566,18 @@ def _parse_search_output(text: str) -> list[Paper]:
         except ValueError:
             year = 0
 
-        papers.append(Paper(
-            title=title,
-            authors=authors,
-            year=year,
-            journal=source_label,
-            doi=doi,
-            abstract=abstract,
-            url=url or (f"https://doi.org/{doi}" if doi else ""),
-            source_api="paperclip",
-        ))
+        papers.append(
+            Paper(
+                title=title,
+                authors=authors,
+                year=year,
+                journal=source_label,
+                doi=doi,
+                abstract=abstract,
+                url=url or (f"https://doi.org/{doi}" if doi else ""),
+                source_api="paperclip",
+            )
+        )
 
     return papers
 

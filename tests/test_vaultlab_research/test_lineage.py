@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -41,11 +40,11 @@ from vaultlab.kb.paths import (
     project_papers_path,
     project_state_path,
     search_log_path,
-    slugify_doi,
     slugify_topic,
     summary_path,
 )
 from vaultlab.research.acquisition import AcquisitionResult
+from vaultlab.research.corpus import Corpus
 from vaultlab.research.lineage import (
     ArcTask,
     LineageRunResult,
@@ -58,10 +57,8 @@ from vaultlab.research.lineage import (
     render_arc_markdown,
     run_lit_arc,
 )
-from vaultlab.research.corpus import Corpus
 from vaultlab.research.paper import Paper
 from vaultlab.research.summarize import PaperSummary
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -204,9 +201,7 @@ def _fake_llm_arc(prompts_seen: list[str]):
                 "Foundational work [[10.1126_science.1225829|Jinek 2012]] "
                 "defined programmable cleavage."
             ),
-            "development": (
-                "Base editing emerged with [[10.1038_nature17946|Komor 2016]]."
-            ),
+            "development": ("Base editing emerged with [[10.1038_nature17946|Komor 2016]]."),
             "sota": (
                 "Adenine base editing [[10.1038_nature24644|Gaudelli 2017]] "
                 "extended the editing window."
@@ -377,9 +372,7 @@ def test_render_arc_with_narrative_paragraphs_present():
     assert "Kessler 1963 bibliographic coupling" in md
     assert "fraction of seed papers that cite" in md
     # Bug 6: og_score_methodology key in frontmatter.
-    assert fm.get("og_score_methodology"), (
-        "frontmatter should carry og_score_methodology one-liner"
-    )
+    assert fm.get("og_score_methodology"), "frontmatter should carry og_score_methodology one-liner"
 
 
 def test_no_pdf_extension_in_arc_wikilinks():
@@ -666,9 +659,7 @@ def test_prepare_arc_task_makes_no_http_calls(tmp_path, monkeypatch):
 
     class _Guard:
         def __getattr__(self, name):
-            raise AssertionError(
-                f"prepare_arc_task touched anthropic.{name}"
-            )
+            raise AssertionError(f"prepare_arc_task touched anthropic.{name}")
 
     monkeypatch.setitem(sys.modules, "anthropic", _Guard())
 
@@ -932,8 +923,7 @@ def test_write_project_view_uses_explicit_pdfs_acquired(tmp_path: Path) -> None:
     # Tier-A is 1, but pdfs_acquired should be 7 in the log.
     assert "**Tier-A picks:** 1" in log_md
     assert "**PDFs acquired:** 7" in log_md, (
-        f"decisions-log should report 7 PDFs acquired, not the Tier-A count.\n"
-        f"Got:\n{log_md}"
+        f"decisions-log should report 7 PDFs acquired, not the Tier-A count.\nGot:\n{log_md}"
     )
 
 
@@ -1423,14 +1413,10 @@ def test_derive_max_papers_rejects_unknown_depth() -> None:
 # ---- run_lit_arc end-to-end (depth flag wiring) --------------------------
 
 
-def test_run_lit_arc_depth_fast_caps_at_20(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_lit_arc_depth_fast_caps_at_20(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Synthetic 100-paper corpus, depth=fast → 20-paper Tier-A budget."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(100)
     client = _FakeClient(seeds)
     events: list[tuple[str, dict]] = []
@@ -1451,16 +1437,12 @@ def test_run_lit_arc_depth_fast_caps_at_20(
         _today="2026-04-30",
     )
     # The orchestrator emitted the depth_budget event with budget=20.
-    budget_events = [
-        kw for tag, kw in events if tag == "depth_budget"
-    ]
+    budget_events = [kw for tag, kw in events if tag == "depth_budget"]
     assert budget_events, "depth_budget event was not emitted"
     assert budget_events[0]["depth"] == "fast"
     assert budget_events[0]["budget"] == 20
     # Provenance reflects the resolved budget.
-    json_p = result.arc_path.with_name(
-        result.arc_path.name + ".provenance.json"
-    )
+    json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["params"]["depth"] == "fast"
     assert rec["params"]["max_papers_to_summarize"] == 20
@@ -1472,9 +1454,7 @@ def test_run_lit_arc_depth_balanced_caps_at_50(
 ) -> None:
     """Synthetic 100-paper corpus, depth=balanced → 50-paper Tier-A budget."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(100)
     client = _FakeClient(seeds)
     events: list[tuple[str, dict]] = []
@@ -1498,9 +1478,7 @@ def test_run_lit_arc_depth_balanced_caps_at_50(
     assert budget_events
     assert budget_events[0]["depth"] == "balanced"
     assert budget_events[0]["budget"] == 50
-    json_p = result.arc_path.with_name(
-        result.arc_path.name + ".provenance.json"
-    )
+    json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["params"]["max_papers_to_summarize"] == 50
 
@@ -1510,9 +1488,7 @@ def test_run_lit_arc_depth_thorough_uses_all_cached_pdfs(
 ) -> None:
     """30-paper corpus with 25 PDFs cached, depth=thorough → budget=25."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(30)
     client = _FakeClient(seeds)
     events: list[tuple[str, dict]] = []
@@ -1545,9 +1521,7 @@ def test_run_lit_arc_explicit_max_papers_overrides_depth(
 ) -> None:
     """depth=fast + explicit max_papers_to_summarize=100 → uses 100, not 20."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(100)
     client = _FakeClient(seeds)
     events: list[tuple[str, dict]] = []
@@ -1570,9 +1544,7 @@ def test_run_lit_arc_explicit_max_papers_overrides_depth(
     )
     # Explicit override -> no depth_budget event (we skip the derivation).
     assert not any(tag == "depth_budget" for tag, _ in events)
-    json_p = result.arc_path.with_name(
-        result.arc_path.name + ".provenance.json"
-    )
+    json_p = result.arc_path.with_name(result.arc_path.name + ".provenance.json")
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["params"]["max_papers_to_summarize"] == 100
     assert rec["params"]["max_papers_to_summarize_explicit"] == 100
@@ -1583,9 +1555,7 @@ def test_run_lit_arc_complete_passes_aggressive_retry(
 ) -> None:
     """depth=complete forwards aggressive_retry=True to acquisition."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(10)
     client = _FakeClient(seeds)
     captured: dict = {}
@@ -1612,9 +1582,7 @@ def test_run_lit_arc_balanced_does_not_set_aggressive_retry(
 ) -> None:
     """Default depth keeps the OA-only fast path (aggressive_retry=False)."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     seeds = _synthetic_seeds(5)
     client = _FakeClient(seeds)
     captured: dict = {}
@@ -1634,14 +1602,10 @@ def test_run_lit_arc_balanced_does_not_set_aggressive_retry(
     assert captured.get("skip_paywalled") is True
 
 
-def test_run_lit_arc_rejects_unknown_depth(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_lit_arc_rejects_unknown_depth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Bad depth string fails fast with a clear error."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     client = _FakeClient(_make_seeds())
     with pytest.raises(ValueError, match="unknown depth"):
         run_lit_arc(
@@ -1662,9 +1626,7 @@ def test_run_lit_arc_thorough_warns_on_large_corpus(
 ) -> None:
     """thorough on a >200 paper corpus emits a wall-time warning + progress event."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     # 250-paper synthetic corpus crosses the 200-paper threshold.
     seeds = _synthetic_seeds(250)
     client = _FakeClient(seeds)
@@ -1687,10 +1649,7 @@ def test_run_lit_arc_thorough_warns_on_large_corpus(
             _today="2026-04-30",
         )
     # Warning logged + event emitted.
-    assert any(
-        "depth=thorough" in r.message and "250-paper" in r.message
-        for r in caplog.records
-    )
+    assert any("depth=thorough" in r.message and "250-paper" in r.message for r in caplog.records)
     assert any(tag == "large_corpus_warning" for tag, _ in events)
 
 
@@ -1878,9 +1837,7 @@ def test_run_lit_arc_without_binner_callback_keeps_deterministic(tmp_path, monke
     assert captured_buckets["10.1038/nature24644"] == "sota"
 
 
-def test_run_lit_arc_adversarial_picker_fallback_writes_decision_log(
-    tmp_path, monkeypatch
-):
+def test_run_lit_arc_adversarial_picker_fallback_writes_decision_log(tmp_path, monkeypatch):
     """Bug #5: when the adversarial picker meeting yields no usable picks,
     the mechanical fallback now ALSO records the decision in decisions-log.md
     (or the per-run picker-decision.md fallback) so the audit trail isn't lost.
@@ -2136,9 +2093,7 @@ def test_lineage_run_result_carries_corpus(tmp_path, monkeypatch):
     # walk gave us at least the original seed DOIs).
     seed_dois = {s.doi.lower() for s in seeds if s.doi}
     corpus_dois = {d.lower() for d in result.corpus.papers}
-    assert seed_dois <= corpus_dois, (
-        f"corpus.papers missing seed DOIs: {seed_dois - corpus_dois}"
-    )
+    assert seed_dois <= corpus_dois, f"corpus.papers missing seed DOIs: {seed_dois - corpus_dois}"
     # corpus_size on the result must agree with corpus.n_papers.
     assert result.corpus_size == result.corpus.n_papers
 
@@ -2198,8 +2153,7 @@ def test_run_lit_arc_auto_discovers_project_slug(
     # The topic-derived slug should NOT have been used.
     other_dir = tmp_path / "Wiki" / "Projects" / "codex-cellular-neighborhoods"
     assert not other_dir.exists(), (
-        f"unexpected parallel project dir at {other_dir}; auto-discovery "
-        "fallback failed"
+        f"unexpected parallel project dir at {other_dir}; auto-discovery fallback failed"
     )
 
 
@@ -2265,9 +2219,7 @@ class _FakeFigureResult:
         self.source = "fake"
 
 
-def test_run_lit_arc_with_acquire_figures_triggers_figure_acquisition(
-    tmp_path, monkeypatch
-):
+def test_run_lit_arc_with_acquire_figures_triggers_figure_acquisition(tmp_path, monkeypatch):
     """``run_lit_arc(..., acquire_figures=True)`` runs Phase 5b and
     populates ``LineageRunResult.figure_assignments``."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
@@ -2291,9 +2243,7 @@ def test_run_lit_arc_with_acquire_figures_triggers_figure_acquisition(
             small.write_bytes(b"\x89PNG\r\n" + b"x" * 50)
             big = doi_dir / "fig2-big.png"
             big.write_bytes(b"\x89PNG\r\n" + b"x" * 5000)
-            out[doi] = _FakeFigureResult(
-                [_FakeFigure(small), _FakeFigure(big)]
-            )
+            out[doi] = _FakeFigureResult([_FakeFigure(small), _FakeFigure(big)])
         return out
 
     result = run_lit_arc(
@@ -2326,9 +2276,7 @@ def test_run_lit_arc_with_acquire_figures_triggers_figure_acquisition(
     assert result.figures_acquired == len(result.figure_assignments)
 
 
-def test_run_lit_arc_without_acquire_figures_skips_figure_phase(
-    tmp_path, monkeypatch
-):
+def test_run_lit_arc_without_acquire_figures_skips_figure_phase(tmp_path, monkeypatch):
     """When ``acquire_figures=False`` (the default), no figure fetcher is
     called and ``LineageRunResult.figure_assignments`` stays empty."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
@@ -2395,9 +2343,7 @@ def test_run_lit_arc_acquire_figures_custom_cache_dir(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_arc_collision_writes_rerun_suffix_when_content_differs(
-    tmp_path, monkeypatch
-):
+def test_arc_collision_writes_rerun_suffix_when_content_differs(tmp_path, monkeypatch):
     """Second same-day run with different content writes ``-rerun-1.md``."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
@@ -2432,6 +2378,7 @@ def test_arc_collision_writes_rerun_suffix_when_content_differs(
                 "development": "DIFFERENT development paragraph.",
                 "sota": "DIFFERENT sota paragraph.",
             }
+
         return _caller
 
     prompts2: list[str] = []
@@ -2514,9 +2461,7 @@ def test_arc_collision_idempotent_rerun_keeps_base_path(tmp_path, monkeypatch):
     assert "rerun-1" not in result2.arc_path.name
 
 
-def test_arc_collision_walks_through_multiple_rerun_suffixes(
-    tmp_path, monkeypatch
-):
+def test_arc_collision_walks_through_multiple_rerun_suffixes(tmp_path, monkeypatch):
     """Third same-day run with new content gets ``-rerun-2.md``."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
@@ -2530,13 +2475,9 @@ def test_arc_collision_walks_through_multiple_rerun_suffixes(
     rerun1.write_text("v2 content", encoding="utf-8")
 
     # Third run with newer content must walk to rerun-2.
-    resolved = _resolve_arc_path_with_collision(
-        base, expected_content="v3 content"
-    )
+    resolved = _resolve_arc_path_with_collision(base, expected_content="v3 content")
     assert resolved.name == "topic-lineage-2026-04-30-rerun-2.md"
 
     # Idempotent: matching v2 content returns rerun-1 unchanged.
-    resolved2 = _resolve_arc_path_with_collision(
-        rerun1, expected_content="v2 content"
-    )
+    resolved2 = _resolve_arc_path_with_collision(rerun1, expected_content="v2 content")
     assert resolved2 == rerun1

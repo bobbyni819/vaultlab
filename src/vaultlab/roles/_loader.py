@@ -92,7 +92,9 @@ def load_role(role_id: str) -> Role:
         meta = yaml.safe_load(f) or {}
 
     if not isinstance(meta, dict):
-        raise ValueError(f"metadata.yaml for {role_id!r} must be a mapping, got {type(meta).__name__}")
+        raise ValueError(
+            f"metadata.yaml for {role_id!r} must be a mapping, got {type(meta).__name__}"
+        )
 
     # Allow metadata to override the directory name as id, but warn-via-mismatch.
     declared_id = str(meta.get("id", role_id))

@@ -31,7 +31,6 @@ from vaultlab.workflows.deck_plan import (
     render_plan_from_response,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -187,9 +186,7 @@ class TestPrepareDeckPlanTask:
         assert task.target_slide_count == 7  # default
         assert task.audience == "journal-club"  # default
 
-    def test_corpus_summaries_only_tier_a(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_corpus_summaries_only_tier_a(self, synth_corpus, synth_summaries, tmp_path):
         # Mark one as Tier-C — should be dropped from prompt content
         synth_summaries["10.1/sota-2024"].tier = "C"
         synth_summaries["10.1/sota-2024"].tldr = ""
@@ -204,9 +201,7 @@ class TestPrepareDeckPlanTask:
         assert "10.1/sota-2024" not in dois
         assert "10.1/foundations-1990" in dois
 
-    def test_corpus_metrics_populated(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_corpus_metrics_populated(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="trial topic",
             corpus=synth_corpus,
@@ -241,9 +236,7 @@ class TestPrepareDeckPlanTask:
         # Each Tier-A summary's TL;DR should appear
         assert "Foundational discovery" in prompt or "foundational discovery" in prompt
 
-    def test_no_figures_uses_text_only_instruction(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_no_figures_uses_text_only_instruction(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="trial topic",
             corpus=synth_corpus,
@@ -254,9 +247,7 @@ class TestPrepareDeckPlanTask:
         assert "no figures available" in task.prompt
         assert task.figure_assignments == {}
 
-    def test_response_schema_validates_basic_shape(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_response_schema_validates_basic_shape(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="trial topic",
             corpus=synth_corpus,
@@ -325,9 +316,7 @@ class TestRenderPlanFromResponse:
         assert plan["slides"][-1]["type"] == "references"
         assert plan["story_arc_summary"] == "History -> SOTA arc."
 
-    def test_drops_unknown_slide_type(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_drops_unknown_slide_type(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="trial topic",
             corpus=synth_corpus,
@@ -369,14 +358,10 @@ class TestRenderPlanFromResponse:
             ],
         }
         plan = render_plan_from_response(task, response)
-        figure_titles = [
-            s.get("title") for s in plan["slides"] if s.get("type") == "figure"
-        ]
+        figure_titles = [s.get("title") for s in plan["slides"] if s.get("type") == "figure"]
         assert "Bogus figure" not in figure_titles
 
-    def test_inserts_title_slide_if_missing(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_inserts_title_slide_if_missing(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="my topic",
             corpus=synth_corpus,
@@ -510,6 +495,7 @@ class TestRenderPlanFromResponse:
         # The wikilink slug must come from slugify_doi (so it resolves to
         # the actual Wiki/Summaries/<slug>.md file).
         from vaultlab.kb.paths import slugify_doi
+
         expected_slug = slugify_doi("10.1/breakthrough-2014")
         assert f"[[{expected_slug}|" in cap, (
             f"caption is missing wikilink to figure source: {cap!r}"
@@ -518,14 +504,10 @@ class TestRenderPlanFromResponse:
         assert "Original caption text" in cap
 
         # Non-substituted figure (claim == figure) must NOT get the prefix.
-        non_sub_slide = next(
-            s for s in figure_slides if s["title"] == "Non-substituted figure"
-        )
+        non_sub_slide = next(s for s in figure_slides if s["title"] == "Non-substituted figure")
         assert "Substituted figure from" not in non_sub_slide["caption"]
 
-    def test_speaker_notes_dual_format_preserved(
-        self, synth_corpus, synth_summaries, tmp_path
-    ):
+    def test_speaker_notes_dual_format_preserved(self, synth_corpus, synth_summaries, tmp_path):
         task = prepare_deck_plan_task(
             topic="trial",
             corpus=synth_corpus,
@@ -652,9 +634,7 @@ class TestGenerateDeckPlan:
 
 
 class TestEndToEnd:
-    def test_stub_callback_to_pptx(
-        self, synth_corpus, synth_summaries, fig_assignments, tmp_path
-    ):
+    def test_stub_callback_to_pptx(self, synth_corpus, synth_summaries, fig_assignments, tmp_path):
         """Synthetic corpus + stub plan_callback -> build_from_plan -> .pptx."""
         pytest.importorskip("PIL")
         pptx = pytest.importorskip("pptx")
@@ -680,9 +660,7 @@ class TestEndToEnd:
                     {
                         "type": "figure",
                         "title": "Foundational",
-                        "image_path": str(
-                            fig_assignments["10.1/foundations-1990"]
-                        ),
+                        "image_path": str(fig_assignments["10.1/foundations-1990"]),
                         "claim_paper_doi": "10.1/foundations-1990",
                         "figure_paper_doi": "10.1/foundations-1990",
                         "caption": "The 1990 foundation.",
@@ -692,9 +670,7 @@ class TestEndToEnd:
                     {
                         "type": "figure",
                         "title": "Modern system",
-                        "image_path": str(
-                            fig_assignments["10.1/sota-2024"]
-                        ),
+                        "image_path": str(fig_assignments["10.1/sota-2024"]),
                         "claim_paper_doi": "10.1/sota-2024",
                         "figure_paper_doi": "10.1/sota-2024",
                         "caption": "The 2024 SOTA.",
@@ -728,6 +704,7 @@ class TestEndToEnd:
 
         # Render to .pptx
         from vaultlab.slides.template import lab_template_path
+
         if lab_template_path() is None:
             pytest.skip("Hickey Lab template not bundled")
 

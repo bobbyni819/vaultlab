@@ -23,10 +23,12 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-
 _RATING_WORDS_DATA = ("ROBUST", "NEEDS_VALIDATION", "WEAK", "UNSUPPORTED", "NEEDS_FOLLOWUP")
 _RATING_WORDS_LIT = (
-    "STRONG_CONSENSUS", "EMERGING_EVIDENCE", "SINGLE_STUDY", "CONTESTED",
+    "STRONG_CONSENSUS",
+    "EMERGING_EVIDENCE",
+    "SINGLE_STUDY",
+    "CONTESTED",
 )
 ALL_RATINGS = _RATING_WORDS_DATA + _RATING_WORDS_LIT
 
@@ -35,9 +37,7 @@ ALL_RATINGS = _RATING_WORDS_DATA + _RATING_WORDS_LIT
 _FINDING_ID_RE = re.compile(r"\bF\d{3,4}\b")
 
 # Matches "Rating: ROBUST" or "**Rating:** ROBUST" or similar, on a single line
-_RATING_LINE_RE = re.compile(
-    r"(?i)\*{0,2}\s*rating\s*:?\s*\*{0,2}\s*([A-Z_]+)"
-)
+_RATING_LINE_RE = re.compile(r"(?i)\*{0,2}\s*rating\s*:?\s*\*{0,2}\s*([A-Z_]+)")
 
 
 def parse_critic_ratings(text: str) -> dict[str, str]:
@@ -130,7 +130,7 @@ def _looks_like_finding_heading(heading: str) -> bool:
     return lowered.startswith("finding ") or lowered.startswith("finding:")
 
 
-def _find_rating_in(body: str) -> Optional[str]:
+def _find_rating_in(body: str) -> str | None:
     for match in _RATING_LINE_RE.finditer(body):
         candidate = match.group(1).upper().strip()
         if candidate in ALL_RATINGS:
@@ -143,7 +143,7 @@ def _find_rating_in(body: str) -> Optional[str]:
     return None
 
 
-def _extract_finding_id(heading: str) -> Optional[str]:
+def _extract_finding_id(heading: str) -> str | None:
     m = _FINDING_ID_RE.search(heading)
     return m.group(0) if m else None
 
@@ -190,7 +190,7 @@ def parse_next_round_tests(text: str) -> list[dict]:
     """
     lines = text.splitlines()
     records: list[dict] = []
-    current: Optional[dict] = None
+    current: dict | None = None
     for i, line in enumerate(lines, start=1):
         match = _PRIORITY_ITEM_RE.match(line)
         if match:
@@ -214,9 +214,8 @@ def parse_next_round_tests(text: str) -> list[dict]:
             # indented or continued text
             if line.startswith((" ", "\t")):
                 current["detail"] = (
-                    (current["detail"] + "\n" if current["detail"] else "")
-                    + line.strip()
-                )
+                    current["detail"] + "\n" if current["detail"] else ""
+                ) + line.strip()
                 continue
             # non-blank, non-indented line ends the current record
             records.append(current)

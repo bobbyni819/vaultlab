@@ -291,9 +291,9 @@ def render_annotated_figure_v3(
 
         # White halo behind the colored box outline -> visible regardless of bg
         draw.rectangle(
-            [(x0 - halo_offset, y0 - halo_offset),
-             (x1 + halo_offset, y1 + halo_offset)],
-            outline=(255, 255, 255), width=halo_offset * 2 + 2,
+            [(x0 - halo_offset, y0 - halo_offset), (x1 + halo_offset, y1 + halo_offset)],
+            outline=(255, 255, 255),
+            width=halo_offset * 2 + 2,
         )
         draw.rectangle([(x0, y0), (x1, y1)], outline=color, width=6)
 
@@ -307,8 +307,13 @@ def render_annotated_figure_v3(
         marker_xy = (x0, marker_top)
         # Halo behind marker
         draw.rectangle(
-            [(marker_xy[0] - halo_offset, marker_xy[1] - halo_offset),
-             (marker_xy[0] + marker_size + halo_offset, marker_xy[1] + marker_size + halo_offset)],
+            [
+                (marker_xy[0] - halo_offset, marker_xy[1] - halo_offset),
+                (
+                    marker_xy[0] + marker_size + halo_offset,
+                    marker_xy[1] + marker_size + halo_offset,
+                ),
+            ],
             fill=(255, 255, 255),
         )
         draw.rectangle(
@@ -316,23 +321,27 @@ def render_annotated_figure_v3(
             fill=color,
         )
         draw.text(
-            (marker_xy[0] + (marker_size - tw) / 2,
-             marker_xy[1] + (marker_size - th) / 2 - 2),
-            num, fill=(255, 255, 255), font=label_font,
+            (marker_xy[0] + (marker_size - tw) / 2, marker_xy[1] + (marker_size - th) / 2 - 2),
+            num,
+            fill=(255, 255, 255),
+            font=label_font,
         )
 
         # Right-gutter callout - marker (matches on-figure) + big label text
         callout_y = int(callout_top + spacing * slot)
         side_marker_xy = (W + 16, callout_y)
         draw.rectangle(
-            [side_marker_xy,
-             (side_marker_xy[0] + marker_size, side_marker_xy[1] + marker_size)],
+            [side_marker_xy, (side_marker_xy[0] + marker_size, side_marker_xy[1] + marker_size)],
             fill=color,
         )
         draw.text(
-            (side_marker_xy[0] + (marker_size - tw) / 2,
-             side_marker_xy[1] + (marker_size - th) / 2 - 2),
-            num, fill=(255, 255, 255), font=label_font,
+            (
+                side_marker_xy[0] + (marker_size - tw) / 2,
+                side_marker_xy[1] + (marker_size - th) / 2 - 2,
+            ),
+            num,
+            fill=(255, 255, 255),
+            font=label_font,
         )
 
         if show_leader_lines:
@@ -343,7 +352,9 @@ def render_annotated_figure_v3(
         for j, line in enumerate(_wrap(ann.label, max_chars=label_max_chars)):
             draw.text(
                 (gutter_text_x, callout_y + j * (body_pt + 4)),
-                line, fill=text_color, font=body_font,
+                line,
+                fill=text_color,
+                font=body_font,
             )
 
     out = Path(output_path)

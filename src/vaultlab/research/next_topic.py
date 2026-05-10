@@ -39,9 +39,10 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +206,7 @@ def _extract_field(block: str, label: str) -> str:
     """Pull a ``- **<label>:** value`` line value out of a block."""
     pat = re.compile(_FIELD_RE_TEMPLATE.format(label=re.escape(label)), re.MULTILINE)
     m = pat.search(block)
-    return (m.group("v").strip() if m else "")
+    return m.group("v").strip() if m else ""
 
 
 def _extract_int(block: str, label: str) -> int:
@@ -309,15 +310,13 @@ def next_topic_response_schema(target_n: int) -> dict[str, Any]:
                         "topic": {
                             "type": "string",
                             "description": (
-                                "Proposed topic — must be passable to "
-                                "/lit-arc as a topic argument."
+                                "Proposed topic — must be passable to /lit-arc as a topic argument."
                             ),
                         },
                         "rationale": {
                             "type": "string",
                             "description": (
-                                "1-3 sentences grounded in the prior "
-                                "topics or open questions."
+                                "1-3 sentences grounded in the prior topics or open questions."
                             ),
                         },
                         "builds_on": {

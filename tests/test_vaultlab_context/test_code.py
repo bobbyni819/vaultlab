@@ -16,7 +16,6 @@ from vaultlab.context.code import (
     set_linked_repo,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -149,6 +148,7 @@ def test_get_linked_repo_returns_none_when_repo_deleted(tmp_path: Path):
 
     # Delete the repo
     import shutil
+
     shutil.rmtree(repo)
 
     assert get_linked_repo(project) is None
@@ -248,9 +248,7 @@ def test_read_file_truncates_at_max_bytes(tmp_path: Path):
 
 def _has_git() -> bool:
     try:
-        subprocess.run(
-            ["git", "--version"], capture_output=True, check=False
-        )
+        subprocess.run(["git", "--version"], capture_output=True, check=False)
         return True
     except FileNotFoundError:
         return False

@@ -176,9 +176,8 @@ def format_author_lastname(author: str) -> str:
     #    or 1-3 chars with periods).
     last_tok = tokens[-1]
     last_clean = last_tok.replace(".", "")
-    last_looks_initial = (
-        (1 <= len(last_clean) <= 2 and last_clean.isalpha())
-        or (last_tok.endswith(".") and len(last_clean) <= 3)
+    last_looks_initial = (1 <= len(last_clean) <= 2 and last_clean.isalpha()) or (
+        last_tok.endswith(".") and len(last_clean) <= 3
     )
     if last_looks_initial:
         return tokens[0]
@@ -186,9 +185,8 @@ def format_author_lastname(author: str) -> str:
     # 2. OpenAlex / CrossRef "F. Last" — first token is initials.
     first_tok = tokens[0]
     first_clean = first_tok.replace(".", "")
-    first_looks_initial = (
-        first_tok.endswith(".")
-        or (1 <= len(first_clean) <= 2 and first_clean.isalpha())
+    first_looks_initial = first_tok.endswith(".") or (
+        1 <= len(first_clean) <= 2 and first_clean.isalpha()
     )
     if first_looks_initial:
         return tokens[-1]
@@ -253,7 +251,7 @@ def slugify_doi(doi: str) -> str:
     # Strip optional URL prefixes (`https://doi.org/...` etc).
     for prefix in ("https://doi.org/", "http://doi.org/", "doi:"):
         if s.lower().startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
             break
     # Strip a trailing file extension (case-insensitive) if one slipped in
     # from `Path.name`-style callers. Only strip extensions we'd realistically
@@ -361,34 +359,17 @@ def concept_path(
     when = date_str or _today_str()
     topic_slug = slugify_topic(topic)
     kind_slug = slugify_topic(kind)
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Concepts"
-        / f"{topic_slug}-{kind_slug}-{when}.md"
-    )
+    return Path(kb_root) / "Wiki" / "Concepts" / f"{topic_slug}-{kind_slug}-{when}.md"
 
 
 def project_state_path(kb_root: Path, project: str) -> Path:
     """``Wiki/Projects/<project-slug>/START_HERE.md``."""
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project)
-        / "START_HERE.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project) / "START_HERE.md"
 
 
 def project_decisions_path(kb_root: Path, project: str) -> Path:
     """``Wiki/Projects/<project-slug>/decisions-log.md``."""
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project)
-        / "decisions-log.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project) / "decisions-log.md"
 
 
 def project_intake_path(kb_root: Path, project: str) -> Path:
@@ -400,13 +381,7 @@ def project_intake_path(kb_root: Path, project: str) -> Path:
     without going back to the project folder. Both copies stay in sync
     when the user re-runs ``/onboard-project``.
     """
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project)
-        / "intake.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project) / "intake.md"
 
 
 def project_papers_path(kb_root: Path, project: str) -> Path:
@@ -417,13 +392,7 @@ def project_papers_path(kb_root: Path, project: str) -> Path:
     files. Includes an "Also in" column showing which other projects also
     surfaced each paper. Overwritten on every run — reflects current state.
     """
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project)
-        / "papers.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project) / "papers.md"
 
 
 def project_lineage_pointer_path(kb_root: Path, project: str) -> Path:
@@ -434,13 +403,7 @@ def project_lineage_pointer_path(kb_root: Path, project: str) -> Path:
     folder so Obsidian users can jump to the full arc with one click.
     Overwritten on every run.
     """
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project)
-        / "lineage.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project) / "lineage.md"
 
 
 # ---------------------------------------------------------------------------

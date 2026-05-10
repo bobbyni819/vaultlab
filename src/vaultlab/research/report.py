@@ -67,13 +67,13 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from vaultlab.kb.paths import (
-    article_stub_path,
     concept_path,
     ensure_parent,
     slugify_doi,
@@ -100,13 +100,15 @@ from vaultlab.research.summarize import (
 )
 
 if TYPE_CHECKING:
-    from vaultlab.research.corpus import Corpus
     from vaultlab.research.graph_metrics import CorpusMetrics
     from vaultlab.workflows.crosstalk import RunnerCallback
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "SECTION_ORDER",
+    "SECTION_ROLES",
+    "SECTION_WORD_TARGETS",
     "ReportRunResult",
     "ReportTask",
     "Section",
@@ -115,9 +117,6 @@ __all__ = [
     "render_section_from_response",
     "run_lit_report",
     "section_response_schema",
-    "SECTION_ORDER",
-    "SECTION_ROLES",
-    "SECTION_WORD_TARGETS",
 ]
 
 
@@ -220,7 +219,7 @@ class ReportTask:
     topic: str
     section: Section
     summaries: dict[str, PaperSummary]
-    metrics: "CorpusMetrics | None"
+    metrics: CorpusMetrics | None
     prior_sections: dict[str, str]
     target_word_count: int
     audience: str
@@ -387,9 +386,7 @@ def _bucketed_summaries_md(summaries: dict[str, PaperSummary]) -> str:
         slug = slugify_doi(s.doi) if s.doi else ""
         from vaultlab.kb.paths import format_author_lastname
 
-        first_author = (
-            format_author_lastname(s.authors[0]) if s.authors else ""
-        ) or "Anon"
+        first_author = (format_author_lastname(s.authors[0]) if s.authors else "") or "Anon"
         label = f"{first_author} {s.year}" if s.year else first_author
         tldr = (s.tldr or "_(Tier-C stub — no TL;DR)_").strip()[:280]
         findings_preview = "; ".join((s.key_findings or [])[:2]) or "_(no findings)_"
@@ -497,7 +494,7 @@ def prepare_report_task(
     topic: str,
     section: Section,
     summaries: dict[str, PaperSummary],
-    metrics: "CorpusMetrics | None",
+    metrics: CorpusMetrics | None,
     prior_sections: dict[str, str],
     audience: str = "graduate-student",
     target_word_count: int | None = None,
@@ -526,14 +523,8 @@ def prepare_report_task(
         :class:`ReportTask` ready for the crosstalk runner.
     """
     if section not in SECTION_ORDER:
-        raise ValueError(
-            f"unknown section: {section!r} (expected one of {SECTION_ORDER})"
-        )
-    target = (
-        target_word_count
-        if target_word_count is not None
-        else SECTION_WORD_TARGETS[section]
-    )
+        raise ValueError(f"unknown section: {section!r} (expected one of {SECTION_ORDER})")
+    target = target_word_count if target_word_count is not None else SECTION_WORD_TARGETS[section]
     del kb_root  # accepted for symmetry; not used today
     prompt = build_section_prompt(
         topic=topic,
@@ -616,9 +607,7 @@ def render_section_from_response(
     if missing:
         for claim in missing[:5]:
             preview = claim[:140] + ("..." if len(claim) > 140 else "")
-            flag_lines.append(
-                f"> **[NEEDS EVIDENCE]** {preview}"
-            )
+            flag_lines.append(f"> **[NEEDS EVIDENCE]** {preview}")
     if not has_wikilinks:
         flag_lines.append(
             "> **[NEEDS EVIDENCE]** No [[wikilinks]] detected in this "
@@ -684,9 +673,8 @@ def _references_from_summaries(
         title = s.title or "(untitled)"
         journal = s.journal or ""
         sort_key = (last_name.lower(), year)
-        line = (
-            f"- [[{slug}|{last_name} {year}]] — *{title}*"
-            + (f" ({journal}, {year})" if journal else "")
+        line = f"- [[{slug}|{last_name} {year}]] — *{title}*" + (
+            f" ({journal}, {year})" if journal else ""
         )
         rows.append((f"{sort_key[0]}_{sort_key[1]:04d}", line))
     rows.sort(key=lambda r: r[0])
@@ -722,9 +710,7 @@ def _render_audit_section(audit: dict[str, Any]) -> str:
         lines.append("Status: **passed** — no issues found.")
         return "\n".join(lines) + "\n"
     if passed:
-        lines.append(
-            f"Status: **passed_with_warnings** ({len(issues)} minor issues)."
-        )
+        lines.append(f"Status: **passed_with_warnings** ({len(issues)} minor issues).")
     else:
         lines.append(f"Status: **failed** ({len(issues)} issues — see below).")
     lines.append("")
@@ -859,7 +845,7 @@ def _build_section_meeting(
     task: ReportTask,
     *,
     n_rounds: int,
-    runner_callback: "RunnerCallback | None",
+    runner_callback: RunnerCallback | None,
     timeout_seconds: int,
 ) -> tuple[dict[str, Any], Any]:
     """Run an ADVERSARIAL section meeting and return (JSON, CrosstalkResult).
@@ -885,8 +871,7 @@ def _build_section_meeting(
     for rid in task.roles:
         if rid not in ROLE_TEMPLATES:
             raise ValueError(
-                f"role '{rid}' not loaded — section {task.section} "
-                f"requires {task.roles}"
+                f"role '{rid}' not loaded — section {task.section} requires {task.roles}"
             )
         role_objs.append(ROLE_TEMPLATES[rid])
 
@@ -973,7 +958,7 @@ def run_lit_report(
     reader: SummaryReader | None = None,
     # Phase 7 (per-section) callbacks:
     section_writer: SectionWriter | None = None,
-    crosstalk_runner: "RunnerCallback | None" = None,
+    crosstalk_runner: RunnerCallback | None = None,
     crosstalk_n_rounds: int = 3,
     section_timeout_seconds: int = 600,
     # Phase 8 (rigor audit):
@@ -1062,6 +1047,7 @@ def run_lit_report(
     if project_slug is None:
         try:
             from vaultlab.onboarding import load_project_config_from_cwd
+
             _cfg = load_project_config_from_cwd()
         except Exception:  # pragma: no cover — never break a run
             logger.exception("load_project_config_from_cwd failed")
@@ -1069,8 +1055,7 @@ def run_lit_report(
         if _cfg is not None and getattr(_cfg, "slug", ""):
             project_slug = _cfg.slug
             logger.info(
-                "auto-discovered project_slug=%s from "
-                ".vaultlab-project.json (cwd=%s)",
+                "auto-discovered project_slug=%s from .vaultlab-project.json (cwd=%s)",
                 project_slug,
                 Path.cwd(),
             )
@@ -1096,6 +1081,7 @@ def run_lit_report(
     _emit(progress, "phase", "search", topic=topic, max_seeds=max_seeds)
     if _client is None:
         from vaultlab.research import ResearchClient
+
         client = ResearchClient()
     else:
         client = _client
@@ -1106,9 +1092,7 @@ def run_lit_report(
     # ------------------------------------------------------------------
     # Phase 2: search log
     # ------------------------------------------------------------------
-    log_path = _write_search_log(
-        kb_root=kb_root, topic=topic, seeds=seeds, date_str=date_str
-    )
+    log_path = _write_search_log(kb_root=kb_root, topic=topic, seeds=seeds, date_str=date_str)
     _emit(progress, "search_log", path=str(log_path))
 
     # ------------------------------------------------------------------
@@ -1156,14 +1140,14 @@ def run_lit_report(
     except TypeError:
         try:
             acq_results = acq(
-                corpus, pdf_cache_dir, apis=apis,
+                corpus,
+                pdf_cache_dir,
+                apis=apis,
                 skip_paywalled=skip_paywalled_arg,
             )
         except TypeError:
             acq_results = acq(corpus, pdf_cache_dir)
-    pdfs_acquired = sum(
-        1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None
-    )
+    pdfs_acquired = sum(1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None)
     _emit(progress, "pdfs_acquired", n=pdfs_acquired)
 
     # ------------------------------------------------------------------
@@ -1209,11 +1193,7 @@ def run_lit_report(
             )
         tier_a_dois = set(keep_list)
 
-    summarize_fn = (
-        _summarize_corpus_fn
-        if _summarize_corpus_fn is not None
-        else summarize_corpus
-    )
+    summarize_fn = _summarize_corpus_fn if _summarize_corpus_fn is not None else summarize_corpus
     if reader is not None:
         summaries = summarize_fn(
             corpus,
@@ -1255,15 +1235,12 @@ def run_lit_report(
     # ``run_lit_arc`` (Phase 9). When ``project_slug`` is ``None``, we
     # fall back to ``slugify_topic(topic)`` — i.e. the previous behaviour.
     resolved_slug = (
-        project_slug.strip() if project_slug and project_slug.strip()
-        else slugify_topic(topic)
+        project_slug.strip() if project_slug and project_slug.strip() else slugify_topic(topic)
     )
     # ``concept_path`` slugifies its topic argument, so feeding the
     # already-resolved slug is idempotent and produces the same path
     # regardless of whether the user passed a raw topic or a slug.
-    report_path = ensure_parent(
-        concept_path(kb_root, resolved_slug, "report", date_str)
-    )
+    report_path = ensure_parent(concept_path(kb_root, resolved_slug, "report", date_str))
     report_drafts_dir = report_path.with_suffix("")  # strip .md
     report_drafts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1273,6 +1250,7 @@ def run_lit_report(
     # section's transcripts can be dropped under
     # ``Output/<slug>/runs/<run_id>/`` via write_crosstalk_artifacts.
     from vaultlab.kb.paths import run_dir as _run_dir_path
+
     section_run_dir = _run_dir_path(kb_root, resolved_slug)
     section_run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1304,9 +1282,7 @@ def run_lit_report(
                     timeout_seconds=section_timeout_seconds,
                 )
             except Exception as exc:
-                logger.exception(
-                    "section meeting failed for %s: %s", section, exc
-                )
+                logger.exception("section meeting failed for %s: %s", section, exc)
                 response_json = {}
                 section_ct_result = None
 
@@ -1320,9 +1296,8 @@ def run_lit_report(
                     from vaultlab.workflows.crosstalk import (
                         write_crosstalk_artifacts,
                     )
-                    write_crosstalk_artifacts(
-                        section_ct_result, run_dir=section_run_dir
-                    )
+
+                    write_crosstalk_artifacts(section_ct_result, run_dir=section_run_dir)
                 except Exception:
                     logger.exception(
                         "write_crosstalk_artifacts (section=%s) failed",
@@ -1334,9 +1309,7 @@ def run_lit_report(
             try:
                 response_json = section_writer(task) or {}
             except Exception as exc:
-                logger.exception(
-                    "section_writer raised on %s: %s", section, exc
-                )
+                logger.exception("section_writer raised on %s: %s", section, exc)
                 response_json = {}
 
         section_md = render_section_from_response(task, response_json)
@@ -1374,6 +1347,7 @@ def run_lit_report(
     if crosstalk_runner is not None:
         try:
             from vaultlab.workflows.crosstalk import rigor_audit
+
             audit_dict = rigor_audit(
                 document=audit_body,
                 summaries=summaries,
@@ -1396,8 +1370,7 @@ def run_lit_report(
             }
 
     audit_status = _audit_status_label(audit_dict)
-    _emit(progress, "audit_done", status=audit_status,
-          n_issues=len(audit_dict.get("issues") or []))
+    _emit(progress, "audit_done", status=audit_status, n_issues=len(audit_dict.get("issues") or []))
 
     # Strict mode: refuse to write a flagged report.
     if audit_strict and audit_status == "failed":
@@ -1467,11 +1440,7 @@ def run_lit_report(
             str(audit_path),
             *[str(p) for p in article_stubs],
         ],
-        notes=(
-            f"Speaker: {speaker}; Affiliation: {affiliation}"
-            if speaker or affiliation
-            else ""
-        ),
+        notes=(f"Speaker: {speaker}; Affiliation: {affiliation}" if speaker or affiliation else ""),
     )
     write_receipts(report_path, record)
     _emit(progress, "provenance_written")

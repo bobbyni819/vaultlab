@@ -28,7 +28,6 @@ Lineage:
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -292,7 +291,11 @@ def _check_aspect_ratio(img, recipe_metadata: dict[str, Any] | None) -> AuditChe
             name="aspect_ratio",
             severity="warn",
             detail=f"rendered aspect {actual:.2f} differs from expected {expected_f:.2f} by {delta * 100:.1f}%",
-            evidence={"actual": round(actual, 3), "expected": expected_f, "delta_pct": round(delta * 100, 1)},
+            evidence={
+                "actual": round(actual, 3),
+                "expected": expected_f,
+                "delta_pct": round(delta * 100, 1),
+            },
         )
     return AuditCheck(
         name="aspect_ratio",
@@ -390,7 +393,7 @@ def _check_recipe_conformance(img, recipe_metadata: dict[str, Any] | None) -> Au
 
         panels = detect_panels(img)
         actual_panels = len(panels)
-    except (ImportError, Exception) as exc:  # noqa: BLE001
+    except (ImportError, Exception) as exc:
         return AuditCheck(
             name="recipe_conformance",
             severity="warn",

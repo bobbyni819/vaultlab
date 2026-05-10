@@ -8,22 +8,18 @@ from vaultlab.research.arc_structure import (
     REVIEW_PAPER,
     SHORT,
     STANDARD,
-    ArcSection,
-    ArcStructure,
     get_named_structure,
     make_custom_structure,
     resolve_structure,
 )
 from vaultlab.research.binning import (
     binning_response_schema,
-    build_binning_prompt,
     prepare_binning_task,
     render_binning_from_response,
 )
 from vaultlab.research.corpus import Corpus
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.paper import Paper
-
 
 # ---------------------------------------------------------------------------
 # ArcStructure module
@@ -61,9 +57,7 @@ def test_resolve_structure_string_looks_up_template():
 def test_resolve_structure_passes_through_arc_structure():
     custom = make_custom_structure(
         "custom",
-        sections=[
-            {"id": "intro", "title": "Intro", "criterion": "preamble"}
-        ],
+        sections=[{"id": "intro", "title": "Intro", "criterion": "preamble"}],
     )
     assert resolve_structure(custom) is custom
 
@@ -132,9 +126,7 @@ def _seeds() -> list[Paper]:
 
 def _corpus() -> Corpus:
     seeds = _seeds()
-    corpus = Corpus(
-        topic="CODEX", seeds=seeds, papers={s.doi: s for s in seeds}
-    )
+    corpus = Corpus(topic="CODEX", seeds=seeds, papers={s.doi: s for s in seeds})
     compute_metrics(corpus)
     return corpus
 
@@ -147,9 +139,7 @@ def test_prepare_binning_task_default_uses_short_structure():
 
 def test_prepare_binning_task_with_standard_structure():
     """STANDARD structure produces 6 valid section IDs."""
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=STANDARD
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=STANDARD)
     assert len(task.valid_section_ids) == 6
     assert "foundations" in task.valid_section_ids
     assert "open_questions" in task.valid_section_ids
@@ -157,9 +147,7 @@ def test_prepare_binning_task_with_standard_structure():
 
 def test_prepare_binning_task_with_review_paper_structure():
     """REVIEW_PAPER structure produces 10 valid section IDs."""
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=REVIEW_PAPER
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=REVIEW_PAPER)
     assert len(task.valid_section_ids) == 10
     assert "introduction" in task.valid_section_ids
     assert "limitations_and_future" in task.valid_section_ids
@@ -167,9 +155,7 @@ def test_prepare_binning_task_with_review_paper_structure():
 
 def test_binning_prompt_embeds_section_criteria():
     """The prompt body lists each section's criterion."""
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=STANDARD
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=STANDARD)
     # Each section's criterion must appear in the prompt
     for section in STANDARD.sections:
         # Criterion is the LLM hint — the prompt embeds it verbatim
@@ -181,26 +167,20 @@ def test_binning_prompt_embeds_section_criteria():
 def test_binning_response_schema_enum_matches_structure():
     """Schema enum lists the structure's section IDs."""
     schema = binning_response_schema(STANDARD.section_ids)
-    bucket_enum = schema["properties"]["assignments"]["items"][
-        "properties"
-    ]["bucket"]["enum"]
+    bucket_enum = schema["properties"]["assignments"]["items"]["properties"]["bucket"]["enum"]
     assert sorted(bucket_enum) == sorted(STANDARD.section_ids)
 
 
 def test_binning_response_schema_default_is_legacy_three_buckets():
     """No structure passed → legacy enum (back-compat)."""
     schema = binning_response_schema()
-    bucket_enum = schema["properties"]["assignments"]["items"][
-        "properties"
-    ]["bucket"]["enum"]
+    bucket_enum = schema["properties"]["assignments"]["items"]["properties"]["bucket"]["enum"]
     assert sorted(bucket_enum) == ["development", "history", "sota"]
 
 
 def test_render_binning_accepts_standard_structure_buckets():
     """LLM responses with STANDARD section IDs are accepted, not dropped."""
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=STANDARD
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=STANDARD)
     response = {
         "assignments": [
             {
@@ -229,9 +209,7 @@ def test_render_binning_drops_invalid_section_id():
     the LLM gives nothing usable. The validation here is that the LLM's
     INVALID assignment didn't make it into the result with rationale.
     """
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=STANDARD
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=STANDARD)
     response = {
         "assignments": [
             {
@@ -250,9 +228,7 @@ def test_render_binning_drops_invalid_section_id():
 
 def test_render_binning_coverage_includes_all_structure_sections():
     """Coverage summary pre-seeds every structure section, even if 0."""
-    task = prepare_binning_task(
-        _corpus(), "CODEX", arc_structure=STANDARD
-    )
+    task = prepare_binning_task(_corpus(), "CODEX", arc_structure=STANDARD)
     # Empty response → all DOIs fall back to deterministic
     result = render_binning_from_response({"assignments": []}, task)
     # Every STANDARD section must appear in coverage_summary

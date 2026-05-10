@@ -59,16 +59,17 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
+from vaultlab.research._polite_pool import get_polite_pool_email as _get_polite_pool_email_lazy
 from vaultlab.research.acquisition import (
     PMC_IDCONV_BASE,
     USER_AGENT,
     _PoliteSession,
     doi_slug,
 )
-from vaultlab.research._polite_pool import get_polite_pool_email as _get_polite_pool_email_lazy
 from vaultlab.research.corpus import Corpus
 
 logger = logging.getLogger(__name__)
@@ -201,10 +202,10 @@ def _save_manifest(result: FigureAcquisitionResult, paper_dir: Path) -> None:
     so older readers (and :func:`_load_manifest` itself) keep working
     without a migration.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     paper_dir.mkdir(parents=True, exist_ok=True)
-    fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fetched_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     figures_payload = []
     for f in result.figures:
         try:
@@ -600,7 +601,7 @@ def _parse_elsevier_figures(xml_bytes: bytes) -> tuple[str, list[dict[str, str]]
         # dc:identifier has the form "PII:S0..."
         for el in root.iter(f"{{{_ELS_NS['dc']}}}identifier"):
             if el.text and el.text.startswith("PII:"):
-                pii = el.text[len("PII:"):].strip()
+                pii = el.text[len("PII:") :].strip()
                 break
 
     figures: list[dict[str, str]] = []
@@ -1034,11 +1035,11 @@ def acquire_figures_for_corpus(
 __all__ = [
     "ELSEVIER_ARTICLE_BASE",
     "ELSEVIER_OBJECT_BASE",
-    "Figure",
-    "FigureAcquisitionResult",
     "PMC_OA_BASE",
     "SPRINGER_OA_BASE",
     "USER_AGENT",
+    "Figure",
+    "FigureAcquisitionResult",
     "acquire_figures",
     "acquire_figures_for_corpus",
     "figure_cache_dir",

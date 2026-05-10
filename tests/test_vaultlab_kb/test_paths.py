@@ -14,7 +14,6 @@ import pytest
 
 from vaultlab.kb import paths
 
-
 # ---------------------------------------------------------------------------
 # Slugifiers
 # ---------------------------------------------------------------------------
@@ -25,10 +24,7 @@ class TestSlugifyDoi:
         assert paths.slugify_doi("10.1126/science.1225829") == "10.1126_science.1225829"
 
     def test_handles_complex_doi(self) -> None:
-        assert (
-            paths.slugify_doi("10.1038/s41586-023-05915-x")
-            == "10.1038_s41586-023-05915-x"
-        )
+        assert paths.slugify_doi("10.1038/s41586-023-05915-x") == "10.1038_s41586-023-05915-x"
 
     def test_strips_doi_url_prefix(self) -> None:
         assert (
@@ -37,10 +33,7 @@ class TestSlugifyDoi:
         )
 
     def test_strips_doi_colon_prefix(self) -> None:
-        assert (
-            paths.slugify_doi("doi:10.1126/science.1225829")
-            == "10.1126_science.1225829"
-        )
+        assert paths.slugify_doi("doi:10.1126/science.1225829") == "10.1126_science.1225829"
 
     def test_replaces_colon_with_underscore(self) -> None:
         # DOI with colon (rare but valid)
@@ -161,10 +154,7 @@ class TestSourcesPaths:
     def test_search_log_path_with_explicit_date(self, tmp_path: Path) -> None:
         p = paths.search_log_path(tmp_path, "CRISPR base editing", date_str="2026-04-29")
         assert p == (
-            tmp_path
-            / "Sources"
-            / "Notes"
-            / "lit-search-crispr-base-editing-2026-04-29.md"
+            tmp_path / "Sources" / "Notes" / "lit-search-crispr-base-editing-2026-04-29.md"
         )
 
     def test_search_log_path_defaults_to_today(self, tmp_path: Path) -> None:
@@ -189,12 +179,7 @@ class TestWikiPaths:
 
     def test_concept_path_default_kind_is_lineage(self, tmp_path: Path) -> None:
         p = paths.concept_path(tmp_path, "CRISPR base editing", date_str="2026-04-29")
-        assert p == (
-            tmp_path
-            / "Wiki"
-            / "Concepts"
-            / "crispr-base-editing-lineage-2026-04-29.md"
-        )
+        assert p == (tmp_path / "Wiki" / "Concepts" / "crispr-base-editing-lineage-2026-04-29.md")
 
     def test_concept_path_with_custom_kind(self, tmp_path: Path) -> None:
         p = paths.concept_path(
@@ -217,9 +202,7 @@ class TestWikiPaths:
 
     def test_project_decisions_path(self, tmp_path: Path) -> None:
         p = paths.project_decisions_path(tmp_path, "Codex CN test")
-        assert (
-            p == tmp_path / "Wiki" / "Projects" / "codex-cn-test" / "decisions-log.md"
-        )
+        assert p == tmp_path / "Wiki" / "Projects" / "codex-cn-test" / "decisions-log.md"
 
 
 # ---------------------------------------------------------------------------
@@ -267,11 +250,7 @@ class TestOutputPaths:
     def test_evidence_path_appends_suffix(self, tmp_path: Path) -> None:
         p = paths.evidence_path(tmp_path, "codex-cn-test", "manuscript-v2")
         assert p == (
-            tmp_path
-            / "Output"
-            / "codex-cn-test"
-            / "citations"
-            / "manuscript-v2.evidence.json"
+            tmp_path / "Output" / "codex-cn-test" / "citations" / "manuscript-v2.evidence.json"
         )
 
     def test_evidence_path_keeps_existing_suffix(self, tmp_path: Path) -> None:
@@ -284,13 +263,7 @@ class TestOutputPaths:
 
     def test_run_dir_with_explicit_id(self, tmp_path: Path) -> None:
         p = paths.run_dir(tmp_path, "codex-cn-test", run_id="2026-04-29T10-15-00")
-        assert p == (
-            tmp_path
-            / "Output"
-            / "codex-cn-test"
-            / "runs"
-            / "2026-04-29T10-15-00"
-        )
+        assert p == (tmp_path / "Output" / "codex-cn-test" / "runs" / "2026-04-29T10-15-00")
 
     def test_run_dir_auto_generates_id(self, tmp_path: Path) -> None:
         p = paths.run_dir(tmp_path, "codex-cn-test")

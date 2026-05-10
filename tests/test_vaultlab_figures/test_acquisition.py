@@ -17,17 +17,11 @@ from __future__ import annotations
 import io
 import json
 import tarfile
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import pytest
-
-from vaultlab.figures import acquisition as acq
 from vaultlab.figures.acquisition import (
-    Figure,
-    FigureAcquisitionResult,
     _extract_panels_from_caption,
     _extract_tar_to_dir,
     _parse_elsevier_figures,
@@ -35,7 +29,6 @@ from vaultlab.figures.acquisition import (
     acquire_figures,
     figure_cache_dir,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -262,9 +255,7 @@ class TestTarExtraction:
 
 
 class TestAcquireFiguresPmcPath:
-    def test_full_pipeline_returns_figures_with_captions(
-        self, tmp_path: Path
-    ) -> None:
+    def test_full_pipeline_returns_figures_with_captions(self, tmp_path: Path) -> None:
         tar_bytes = _make_tar_gz(
             figures={
                 "fig1.png": _PNG_BYTES,
@@ -372,9 +363,7 @@ class TestAcquireFiguresPmcPath:
 
 
 class TestAcquireFiguresUnavailable:
-    def test_no_pmcid_and_no_springer_returns_unavailable(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_pmcid_and_no_springer_returns_unavailable(self, tmp_path: Path) -> None:
         session = _FakeSession(
             [
                 # idconv: no PMCID
@@ -399,9 +388,7 @@ class TestAcquireFiguresUnavailable:
         paper_dir = figure_cache_dir("10.9999/missing", tmp_path)
         assert (paper_dir / ".figures.json").exists()
 
-    def test_paper_outside_oa_subset_returns_unavailable(
-        self, tmp_path: Path
-    ) -> None:
+    def test_paper_outside_oa_subset_returns_unavailable(self, tmp_path: Path) -> None:
         session = _FakeSession(
             [
                 (
@@ -774,9 +761,7 @@ class TestFigureManifestShape:
                 }
             ],
         }
-        (paper_dir / ".figures.json").write_text(
-            json.dumps(legacy_manifest), encoding="utf-8"
-        )
+        (paper_dir / ".figures.json").write_text(json.dumps(legacy_manifest), encoding="utf-8")
         session = _FakeSession([])
         result = acquire_figures(
             "10.1/legacy",

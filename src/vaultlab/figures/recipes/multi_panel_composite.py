@@ -19,13 +19,11 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
-ANCHOR_PAPERS = (
-    "Pentimalli TM et al., Cell Systems 2025;16:101261 (main figures)",
-)
+ANCHOR_PAPERS = ("Pentimalli TM et al., Cell Systems 2025;16:101261 (main figures)",)
 
 
 _GRID_BY_VARIANT: dict[str, tuple[int, int]] = {
@@ -73,7 +71,10 @@ def render(
         rows = (n_panels + cols - 1) // cols
         logger.warning(
             "variant %s grid too small for %d panels; auto-expanded to %dx%d",
-            variant, n_panels, rows, cols,
+            variant,
+            n_panels,
+            rows,
+            cols,
         )
 
     figsize = (cols * figsize_per_panel[0], rows * figsize_per_panel[1])

@@ -9,7 +9,7 @@ any platform.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -21,7 +21,6 @@ from vaultlab.context.meetings import (
     is_available,
     list_recent_transcripts,
 )
-
 
 # ---------------------------------------------------------------------------
 # is_available
@@ -76,9 +75,7 @@ def test_ingest_transcript_uses_explicit_label(tmp_path: Path):
     """Explicit ``label`` controls the slug, not the source filename."""
     src = tmp_path / "raw_blah.md"
     src.write_text("body")
-    out = ingest_transcript(
-        src, kb_root=tmp_path / "kb", label="Q3 Planning Meeting!"
-    )
+    out = ingest_transcript(src, kb_root=tmp_path / "kb", label="Q3 Planning Meeting!")
     # Slug is lower-case + dash-separated, special chars stripped
     assert out.name.endswith("-q3-planning-meeting.md")
 
@@ -109,9 +106,7 @@ def test_ingest_transcript_explicit_project_overrides_source(tmp_path: Path):
     """Explicit ``project=`` argument wins over the source's frontmatter project."""
     src = tmp_path / "src.md"
     src.write_text("---\nproject: old-project\n---\n\nbody")
-    out = ingest_transcript(
-        src, kb_root=tmp_path / "kb", project="new-project"
-    )
+    out = ingest_transcript(src, kb_root=tmp_path / "kb", project="new-project")
     text = out.read_text(encoding="utf-8")
     assert "project: new-project" in text
     assert "project: old-project" not in text
@@ -137,18 +132,14 @@ def test_ingest_transcript_default_leaves_source(tmp_path: Path):
 
 def test_ingest_transcript_missing_source_raises(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
-        ingest_transcript(
-            tmp_path / "does-not-exist.md", kb_root=tmp_path / "kb"
-        )
+        ingest_transcript(tmp_path / "does-not-exist.md", kb_root=tmp_path / "kb")
 
 
 def test_ingest_transcript_strips_existing_frontmatter_block(tmp_path: Path):
     """Source frontmatter block is parsed, then the BODY (sans frontmatter)
     is recombined with vaultlab's frontmatter — no double frontmatter."""
     src = tmp_path / "src.md"
-    src.write_text(
-        "---\nproject: foo\n---\n\nFirst body line.\nSecond body line.\n"
-    )
+    src.write_text("---\nproject: foo\n---\n\nFirst body line.\nSecond body line.\n")
     out = ingest_transcript(src, kb_root=tmp_path / "kb")
     text = out.read_text(encoding="utf-8")
     # Exactly one frontmatter block (the new one)
@@ -172,15 +163,9 @@ def test_list_recent_sorts_newest_first(tmp_path: Path):
     meetings = kb / "Sources" / "Meetings"
     meetings.mkdir(parents=True)
     # Create three transcripts on different dates
-    (meetings / "2026-04-15-old.md").write_text(
-        "---\nkind: meeting-transcript\n---\n\nbody"
-    )
-    (meetings / "2026-05-01-newest.md").write_text(
-        "---\nkind: meeting-transcript\n---\n\nbody"
-    )
-    (meetings / "2026-04-22-mid.md").write_text(
-        "---\nkind: meeting-transcript\n---\n\nbody"
-    )
+    (meetings / "2026-04-15-old.md").write_text("---\nkind: meeting-transcript\n---\n\nbody")
+    (meetings / "2026-05-01-newest.md").write_text("---\nkind: meeting-transcript\n---\n\nbody")
+    (meetings / "2026-04-22-mid.md").write_text("---\nkind: meeting-transcript\n---\n\nbody")
 
     out = list_recent_transcripts(kb, limit=10)
     assert [t.slug for t in out] == ["newest", "mid", "old"]

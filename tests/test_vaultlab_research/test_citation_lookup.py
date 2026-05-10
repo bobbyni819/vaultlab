@@ -23,7 +23,6 @@ from vaultlab.research.citation_lookup import (
     get_references_via_crossref,
 )
 
-
 # ---------------------------------------------------------------------------
 # Reference parsing
 # ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -40,7 +40,7 @@ def _autoselect_palette(variant: str) -> str:
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
     variant: Literal["cell_by_feature", "cluster_by_marker", "co_occurrence"] = "cluster_by_marker",
     palette: str | None = None,
@@ -48,7 +48,7 @@ def render(
     col_order: list[str] | None = None,
     cluster_rows: bool = False,
     cluster_cols: bool = False,
-    significance_mask: "pd.DataFrame | None" = None,
+    significance_mask: pd.DataFrame | None = None,
     output_path: Path | str,
     title: str = "",
 ) -> Path:
@@ -78,12 +78,9 @@ def render(
 
     Anchor: Schurch 2020 Fig 5 + Pentimalli 2025 Fig 4B (see heatmap.md).
     """
-    import pandas as pd  # local import
 
     if variant == "co_occurrence" and df.shape[0] != df.shape[1]:
-        raise ValueError(
-            f"co_occurrence variant requires square matrix; got {df.shape}"
-        )
+        raise ValueError(f"co_occurrence variant requires square matrix; got {df.shape}")
 
     matrix = df.copy()
 

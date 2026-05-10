@@ -173,12 +173,7 @@ def _parse_crossref_reference(raw: dict[str, Any]) -> Reference:
     doi = (raw.get("DOI") or "").strip().lower()
     # CrossRef sometimes uses 'article-title', 'volume-title', or
     # 'series-title' — fall through in priority order.
-    title = (
-        raw.get("article-title")
-        or raw.get("volume-title")
-        or raw.get("series-title")
-        or ""
-    )
+    title = raw.get("article-title") or raw.get("volume-title") or raw.get("series-title") or ""
     year_str = raw.get("year") or ""
     try:
         year = int(year_str) if year_str else 0
@@ -354,11 +349,11 @@ def back_off(error: RateLimitError, *, default: float = 2.0, cap: float = 30.0) 
 
 __all__ = [
     "CROSSREF_BASE",
+    "S2_BASE",
+    "USER_AGENT",
     "CitationLookupError",
     "RateLimitError",
     "Reference",
-    "S2_BASE",
-    "USER_AGENT",
     "back_off",
     "get_citations_via_s2",
     "get_influential_count_via_s2",

@@ -69,7 +69,11 @@ def _session_summary_for_prompt(session: object) -> str:
     lines = [f"Current findings (round {current_round}):"]
     for finding in sorted(findings.values(), key=lambda f: f.id):
         value = f" ({finding.exact_value})" if getattr(finding, "exact_value", "") else ""
-        status = finding.status.value.upper() if hasattr(finding.status, "value") else str(finding.status).upper()
+        status = (
+            finding.status.value.upper()
+            if hasattr(finding.status, "value")
+            else str(finding.status).upper()
+        )
         lines.append(f"- {finding.id}: {finding.claim} [{status}]{value}")
     return "\n".join(lines)
 
@@ -117,9 +121,9 @@ def _inject_prior_context(wp: WorkflowPlan, prior_context: str) -> None:
 
 
 __all__ = [
-    "_slug",
-    "_session_summary_if_exists",
     "_branch_summaries",
-    "_latest_synthesis_text",
     "_inject_prior_context",
+    "_latest_synthesis_text",
+    "_session_summary_if_exists",
+    "_slug",
 ]

@@ -125,7 +125,7 @@ def _bootstrap_registry() -> None:
     """
     if _REGISTRY:
         return
-    from vaultlab.kb.ingest import bibtex, folder, markdown, pdf, ris, stubs  # noqa: F401
+    from vaultlab.kb.ingest import bibtex, folder, markdown, pdf, ris, stubs
 
 
 # Trigger registration on first ingest call instead of at import. This keeps

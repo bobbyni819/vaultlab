@@ -33,7 +33,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compose_preamble", "KbContextBundle", "KbStateUnreadable"]
+__all__ = ["KbContextBundle", "KbStateUnreadable", "compose_preamble"]
 
 
 _TOKEN_CHARS_RATIO = 4  # approx — 4 chars per token for English
@@ -102,8 +102,7 @@ def _truncate_to_budget(
     if last_para > keep_chars * 0.7:  # only break on paragraph if reasonable
         truncated = truncated[:last_para]
     return (
-        truncated.rstrip()
-        + f"\n\n[{label} truncated — {est - max_tokens} tokens dropped]\n",
+        truncated.rstrip() + f"\n\n[{label} truncated — {est - max_tokens} tokens dropped]\n",
         True,
     )
 
@@ -119,9 +118,7 @@ def _read_start_here(project_dir: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except OSError as exc:
-        raise KbStateUnreadable(
-            f"START_HERE.md unreadable at {path}: {exc}"
-        ) from exc
+        raise KbStateUnreadable(f"START_HERE.md unreadable at {path}: {exc}") from exc
 
 
 def _read_decisions_log(
@@ -134,7 +131,7 @@ def _read_decisions_log(
         return ""
     try:
         full_text = path.read_text(encoding="utf-8")
-    except OSError as exc:  # noqa: BLE001
+    except OSError as exc:
         logger.warning("decisions-log.md unreadable at %s: %s", path, exc)
         return ""
     cutoff = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
@@ -168,7 +165,7 @@ def _list_recent_outputs(
     for path in md_files[:n]:
         try:
             content = path.read_text(encoding="utf-8")[:300]
-        except OSError:  # noqa: BLE001
+        except OSError:
             continue
         out.append((path.name, content))
     return out
@@ -211,7 +208,7 @@ def _list_tier_a_summaries(
     for path in md_files[:n]:
         try:
             content = path.read_text(encoding="utf-8")[:400]
-        except OSError:  # noqa: BLE001
+        except OSError:
             continue
         out.append((path.stem, content))
     return out
@@ -316,13 +313,14 @@ def compose_preamble(
     output_budget = max_tokens - sh_budget - dec_budget - tier_a_budget
 
     sh_text, sh_trunc = _truncate_to_budget(start_here, max_tokens=sh_budget, label="START_HERE")
-    dec_text, dec_trunc = _truncate_to_budget(decisions, max_tokens=dec_budget, label="decisions-log")
+    dec_text, dec_trunc = _truncate_to_budget(
+        decisions, max_tokens=dec_budget, label="decisions-log"
+    )
     truncated_any = sh_trunc or dec_trunc
 
     sections: list[str] = []
     sections.append(
-        f"## Project context preamble — {project_slug}"
-        + (f" (role: {role})" if role else "")
+        f"## Project context preamble — {project_slug}" + (f" (role: {role})" if role else "")
     )
     sections.append(
         "You are operating inside a vaultlab project. The KB excerpts below "
@@ -347,7 +345,9 @@ def compose_preamble(
 
     if recent_outputs:
         sections.append("### Recent project Output/*.md (most-recent first)")
-        per_output_chars = max(150, (output_budget * _TOKEN_CHARS_RATIO) // max(len(recent_outputs), 1))
+        per_output_chars = max(
+            150, (output_budget * _TOKEN_CHARS_RATIO) // max(len(recent_outputs), 1)
+        )
         for fname, body in recent_outputs:
             sections.append(f"#### {fname}")
             sections.append(body[:per_output_chars])

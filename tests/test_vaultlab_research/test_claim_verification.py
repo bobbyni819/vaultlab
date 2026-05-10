@@ -4,18 +4,14 @@ verify pattern, applied to text claims in arc paragraphs)."""
 from __future__ import annotations
 
 from vaultlab.research.claim_verification import (
-    Claim,
-    ClaimVerificationResult,
-    ClaimVerificationTask,
     VALID_VERDICTS,
-    build_claim_verification_prompt,
+    ClaimVerificationTask,
     claim_verification_response_schema,
     extract_claims_from_paragraph,
     prepare_claim_verification_task,
     render_verifications_from_response,
     verify_paragraph_claims,
 )
-
 
 # ---------------------------------------------------------------------------
 # extract_claims_from_paragraph
@@ -28,9 +24,7 @@ def test_extract_claims_handles_empty_paragraph():
 
 
 def test_extract_claims_splits_on_sentence_boundaries():
-    text = (
-        "First claim. Second claim. Third claim."
-    )
+    text = "First claim. Second claim. Third claim."
     out = extract_claims_from_paragraph(text)
     # Three sentences, three claims
     assert len(out) == 3
@@ -145,8 +139,7 @@ def test_response_schema_requires_position_and_verdict():
 def _task_with_two_claims() -> ClaimVerificationTask:
     return prepare_claim_verification_task(
         paragraph=(
-            "[[10.1_X|Smith 2020]] showed 85:1 SNR. "
-            "[[10.1_Y|Jones 2021]] reproduced this finding."
+            "[[10.1_X|Smith 2020]] showed 85:1 SNR. [[10.1_Y|Jones 2021]] reproduced this finding."
         ),
         section_id="history",
         cited_summaries={
@@ -243,9 +236,7 @@ def test_render_handles_none_response():
 def test_render_handles_malformed_response():
     task = _task_with_two_claims()
     # Wrong shape — missing 'verifications' key
-    result = render_verifications_from_response(
-        {"unexpected": "shape"}, task
-    )
+    result = render_verifications_from_response({"unexpected": "shape"}, task)
     assert all(v.verdict == "unverifiable" for v in result.verifications)
 
 
@@ -301,6 +292,7 @@ def test_verify_paragraph_claims_uses_callback_when_supplied():
 
 def test_verify_paragraph_claims_callback_exception_falls_back_unverifiable():
     """If the callback raises, the result is still well-formed (all unverifiable)."""
+
     def cb(task):
         raise RuntimeError("LLM down")
 

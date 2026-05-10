@@ -27,7 +27,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -39,7 +39,7 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    matrix: "np.ndarray | pd.DataFrame",
+    matrix: np.ndarray | pd.DataFrame,
     *,
     output_path: Path | str,
     title: str = "",
@@ -137,9 +137,11 @@ def render(
                 rel = (val - finite_min) / (finite_max - finite_min + 1e-9)
                 text_color = "white" if rel > 0.5 else "black"
                 ax.text(
-                    j, i,
+                    j,
+                    i,
                     format(val, annot_fmt),
-                    ha="center", va="center",
+                    ha="center",
+                    va="center",
                     fontsize=7,
                     color=text_color,
                 )

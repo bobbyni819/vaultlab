@@ -30,9 +30,8 @@ draft is returned via :class:`ReflectionResult` so callers can audit.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
-
 
 DONE_SIGNAL_DEFAULT = "I am done"
 
@@ -89,7 +88,7 @@ def run_with_reflection(
     agent_fn: Callable[[str, list[str]], str],
     initial_prompt: str,
     max_reflections: int = 3,
-    tools: Optional[list[str]] = None,
+    tools: list[str] | None = None,
     reflection_prompt_template: str = REFLECTION_PROMPT_TEMPLATE,
     done_signal: str = DONE_SIGNAL_DEFAULT,
 ) -> ReflectionResult:

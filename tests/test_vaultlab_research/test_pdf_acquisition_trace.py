@@ -16,22 +16,14 @@ from vaultlab.research.acquisition import AcquisitionResult
 
 
 class TestPdfTraceSidecar:
-    def test_writes_full_per_doi_breakdown_to_run_dir(
-        self, tmp_path: Path
-    ) -> None:
+    def test_writes_full_per_doi_breakdown_to_run_dir(self, tmp_path: Path) -> None:
         """When ``run_dir`` is supplied, the sidecar lands inside it
         (matching the spec ``Output/<slug>/runs/<run_id>/`` convention)."""
         from vaultlab.research import lineage
 
         kb_root = tmp_path / "kb"
         kb_root.mkdir()
-        run_dir = (
-            kb_root
-            / "Output"
-            / "codex-cn"
-            / "runs"
-            / "2026-04-30T23-00-00"
-        )
+        run_dir = kb_root / "Output" / "codex-cn" / "runs" / "2026-04-30T23-00-00"
 
         # Simulated acquisition results: one PMC win, one paywalled fail.
         ok_pdf = run_dir.parent.parent.parent / "Sources" / "Papers" / "10-1_a.pdf"
@@ -98,9 +90,7 @@ class TestPdfTraceSidecar:
         assert b["tried"][0] == "unpaywall"
         assert "elsevier" in b["errors"]
 
-    def test_falls_back_to_sources_notes_without_run_dir(
-        self, tmp_path: Path
-    ) -> None:
+    def test_falls_back_to_sources_notes_without_run_dir(self, tmp_path: Path) -> None:
         """No ``run_dir`` → sidecar lands under
         ``Sources/Notes/pdf-acquisition-trace-<slug>-<date>.json`` so
         ad-hoc ``run_lit_arc`` calls still emit the trace."""

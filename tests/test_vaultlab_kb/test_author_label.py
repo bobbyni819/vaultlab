@@ -13,8 +13,6 @@ fix sticks.
 
 from __future__ import annotations
 
-import pytest
-
 from vaultlab.kb.paths import author_year_label, format_author_lastname
 
 
@@ -149,7 +147,5 @@ class TestEndToEndCallsites:
     def test_deck_plan_summary_label(self) -> None:
         from vaultlab.workflows.deck_plan import _author_year_label_from_dict
 
-        out = _author_year_label_from_dict(
-            {"authors": ["J. Kennedy-Darling"], "year": 2020}
-        )
+        out = _author_year_label_from_dict({"authors": ["J. Kennedy-Darling"], "year": 2020})
         assert out == "Kennedy-Darling 2020"

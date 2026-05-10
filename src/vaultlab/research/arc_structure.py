@@ -346,10 +346,7 @@ def get_named_structure(name: str) -> ArcStructure:
     """
     key = name.strip().lower()
     if key not in _TEMPLATES:
-        raise KeyError(
-            f"Unknown arc structure {name!r}. "
-            f"Known: {sorted(set(_TEMPLATES.keys()))}"
-        )
+        raise KeyError(f"Unknown arc structure {name!r}. Known: {sorted(set(_TEMPLATES.keys()))}")
     return _TEMPLATES[key]
 
 
@@ -380,10 +377,7 @@ def make_custom_structure(
         title = sd.get("title")
         criterion = sd.get("criterion")
         if not sid or not title or not criterion:
-            raise ValueError(
-                f"section dict missing required field "
-                f"(id/title/criterion): {sd!r}"
-            )
+            raise ValueError(f"section dict missing required field (id/title/criterion): {sd!r}")
         if sid in seen_ids:
             raise ValueError(f"duplicate section id {sid!r}")
         seen_ids.add(sid)
@@ -397,9 +391,7 @@ def make_custom_structure(
         )
     if not arc_sections:
         raise ValueError("custom structure must have at least one section")
-    return ArcStructure(
-        name=str(name), sections=arc_sections, audience=audience
-    )
+    return ArcStructure(name=str(name), sections=arc_sections, audience=audience)
 
 
 def resolve_structure(
@@ -419,17 +411,15 @@ def resolve_structure(
         return structure
     if isinstance(structure, str):
         return get_named_structure(structure)
-    raise TypeError(
-        f"Expected None, str, or ArcStructure; got {type(structure).__name__}"
-    )
+    raise TypeError(f"Expected None, str, or ArcStructure; got {type(structure).__name__}")
 
 
 __all__ = [
-    "ArcSection",
-    "ArcStructure",
+    "REVIEW_PAPER",
     "SHORT",
     "STANDARD",
-    "REVIEW_PAPER",
+    "ArcSection",
+    "ArcStructure",
     "get_named_structure",
     "make_custom_structure",
     "resolve_structure",

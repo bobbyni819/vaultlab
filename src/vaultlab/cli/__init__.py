@@ -136,8 +136,10 @@ def _cmd_fetch_list(argv: list[str]) -> int:
     print(f"vaultlab: {len(entries)} paywalled paper(s) need manual fetch\n")
     print("# Manual-fetch shopping list")
     print(f"\nGenerated from {log_path.name}.")
-    print("Sorted by publisher cluster (Nature → Cell → Science → Wiley → "
-          "Springer → other Elsevier → other).\n")
+    print(
+        "Sorted by publisher cluster (Nature → Cell → Science → Wiley → "
+        "Springer → other Elsevier → other).\n"
+    )
     for i, entry in enumerate(entries, 1):
         print(f"## {i}. {entry.get('title') or '(no title)'}")
         print(f"- DOI: `{entry.get('doi')}`")
@@ -157,6 +159,7 @@ def _cmd_paperclip_grep(argv: list[str]) -> int:
     Usage: ``vaultlab paperclip-grep <pattern> [<path>] [opts]``
     """
     import subprocess
+
     if not argv or argv[0] in {"-h", "--help"}:
         print(
             "Usage: vaultlab paperclip-grep <pattern> [<path>] [opts]\n"
@@ -184,9 +187,10 @@ def _cmd_paperclip_sql(argv: list[str]) -> int:
     Usage: ``vaultlab paperclip-sql "<query>"``
     """
     import subprocess
+
     if not argv or argv[0] in {"-h", "--help"}:
         print(
-            "Usage: vaultlab paperclip-sql \"<query>\"\n"
+            'Usage: vaultlab paperclip-sql "<query>"\n'
             "\n"
             "Thin passthrough to `paperclip sql`. The corpus exposes a\n"
             "`documents` table with title/doi/authors/journal/etc.\n"
@@ -216,7 +220,9 @@ def _find_vaultlab_repo_root() -> Path | None:
     """
     import vaultlab
 
-    pkg_path = Path(vaultlab.__file__).resolve().parent  # .../site-packages/vaultlab/ OR .../src/vaultlab/
+    pkg_path = (
+        Path(vaultlab.__file__).resolve().parent
+    )  # .../site-packages/vaultlab/ OR .../src/vaultlab/
     for candidate in [pkg_path, *pkg_path.parents]:
         if (candidate / "READ_FIRST.md").exists() and (candidate / ".claude" / "commands").is_dir():
             return candidate
@@ -295,7 +301,9 @@ def _cmd_claude_setup(argv: list[str]) -> int:
     if repo_root is not None:
         read_first_path = repo_root / "READ_FIRST.md"
     else:
-        read_first_path = Path("(see https://github.com/bobbyni819/vaultlab/blob/main/READ_FIRST.md)")
+        read_first_path = Path(
+            "(see https://github.com/bobbyni819/vaultlab/blob/main/READ_FIRST.md)"
+        )
     block = (
         f"\n{block_marker}\n\n"
         f"Installed at: `{repo_marker}`\n\n"
@@ -314,7 +322,9 @@ def _cmd_claude_setup(argv: list[str]) -> int:
         existing = user_claude_md.read_text(encoding="utf-8")
         if block_marker in existing:
             if dry_run:
-                print(f"vaultlab: [dry-run] {user_claude_md} already has vaultlab block (would skip)")
+                print(
+                    f"vaultlab: [dry-run] {user_claude_md} already has vaultlab block (would skip)"
+                )
             else:
                 print(f"vaultlab: {user_claude_md} already has vaultlab block (skipping append)")
         else:
@@ -376,7 +386,7 @@ def _print_usage(stream: object = None) -> None:
     if stream is None:
         stream = sys.stdout
     msg = (
-        "vaultlab v0.0.2 — alpha\n"
+        "vaultlab v0.0.3 — alpha\n"
         "\n"
         "Usage:\n"
         "  vaultlab init [<kb-root-path>]            Configure KB root (one-time)\n"
@@ -384,7 +394,7 @@ def _print_usage(stream: object = None) -> None:
         "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
         "  vaultlab fetch-list paywalled <log>       Manual-fetch shopping list\n"
         "  vaultlab paperclip-grep <pat> [path]      Regex over paperclip corpus\n"
-        "  vaultlab paperclip-sql \"<query>\"          SQL over paperclip corpus\n"
+        '  vaultlab paperclip-sql "<query>"          SQL over paperclip corpus\n'
         "\n"
         "First-time setup (recommended order):\n"
         "  pip install vaultlab\n"

@@ -151,8 +151,13 @@ def _render_method_markdown(output: Path, record: ProvenanceRecord) -> str:
         lines.append(f"- Seed: {record.seed}")
     lines.append("")
 
-    if record.project or record.topic or record.investigation_mode or record.meeting_mode \
-            or record.round is not None:
+    if (
+        record.project
+        or record.topic
+        or record.investigation_mode
+        or record.meeting_mode
+        or record.round is not None
+    ):
         lines.append("## Context")
         lines.append("")
         if record.project:

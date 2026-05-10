@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 from vaultlab.research.sources.crossref import CrossRefClient
 
-
 # ---------------------------------------------------------------------------
 # Author parsing — covers the literal/name fallthrough fix
 # ---------------------------------------------------------------------------
@@ -55,17 +54,13 @@ def test_parse_authors_skips_empty_dicts():
 def test_parse_authors_handles_non_dict_entries():
     """Defensive: malformed entries shouldn't crash."""
     client = CrossRefClient()
-    out = client._parse_authors(
-        ["bogus string", None, {"family": "Smith", "given": "Jane"}]
-    )
+    out = client._parse_authors(["bogus string", None, {"family": "Smith", "given": "Jane"}])
     assert out == ["Smith J"]
 
 
 def test_parse_authors_family_only_or_given_only():
     client = CrossRefClient()
-    out = client._parse_authors(
-        [{"family": "Smith"}, {"given": "Jane"}]
-    )
+    out = client._parse_authors([{"family": "Smith"}, {"given": "Jane"}])
     assert out == ["Smith", "Jane"]
 
 

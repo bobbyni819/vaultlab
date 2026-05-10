@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import FancyBboxPatch
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -32,7 +31,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -45,9 +44,9 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    nodes: "pd.DataFrame",
+    nodes: pd.DataFrame,
     *,
-    edges: "list[tuple[str, str]] | None" = None,
+    edges: list[tuple[str, str]] | None = None,
     abundance_col: str = "abundance",
     name_col: str = "name",
     output_path: Path | str,
@@ -96,7 +95,6 @@ def render(
     Anchored: Pentimalli 2025 + decoupler-py + MetaboAnalyst pathway
     abundance convention.
     """
-    import pandas as pd
 
     required = {name_col, abundance_col}
     missing = required - set(nodes.columns)
@@ -170,7 +168,7 @@ def render(
             )
 
     # Draw nodes
-    for i, (x, y, val, nm) in enumerate(zip(xs, ys, values, names)):
+    for i, (x, y, val, nm) in enumerate(zip(xs, ys, values, names, strict=False)):
         color = cmap_obj(norm(val)) if np.isfinite(val) else "lightgray"
         circle = plt.Circle(
             (x, y),
@@ -186,7 +184,8 @@ def render(
             x,
             y - node_size - 0.12,
             nm,
-            ha="center", va="top",
+            ha="center",
+            va="top",
             fontsize=8,
             zorder=4,
         )
@@ -194,9 +193,11 @@ def render(
         if np.isfinite(val) and node_size >= 0.15:
             text_color = "white" if abs(norm(val) - 0.5) > 0.2 else "black"
             ax.text(
-                x, y,
+                x,
+                y,
                 format(val, ".2f"),
-                ha="center", va="center",
+                ha="center",
+                va="center",
                 fontsize=7,
                 color=text_color,
                 zorder=5,

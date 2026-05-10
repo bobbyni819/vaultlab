@@ -43,24 +43,28 @@ def test_paperclip_in_trace_key_map():
 def test_paperclip_results_merge_with_other_sources():
     """Papers from paperclip dedupe by DOI alongside other sources."""
     paperclip = MagicMock()
-    paperclip.search = MagicMock(return_value=[
-        Paper(
-            doi="10.1/x",
-            title="Paper X",
-            year=2024,
-            source_api="paperclip",
-        ),
-    ])
+    paperclip.search = MagicMock(
+        return_value=[
+            Paper(
+                doi="10.1/x",
+                title="Paper X",
+                year=2024,
+                source_api="paperclip",
+            ),
+        ]
+    )
 
     pubmed = MagicMock()
-    pubmed.search = MagicMock(return_value=[
-        Paper(
-            doi="10.1/y",
-            title="Paper Y",
-            year=2024,
-            source_api="ncbi",
-        ),
-    ])
+    pubmed.search = MagicMock(
+        return_value=[
+            Paper(
+                doi="10.1/y",
+                title="Paper Y",
+                year=2024,
+                source_api="ncbi",
+            ),
+        ]
+    )
 
     papers = unified_search(
         query="test",
@@ -77,13 +81,17 @@ def test_paperclip_dedupes_with_overlapping_doi():
     paper appears once after dedup."""
     same_doi = "10.1/shared"
     paperclip = MagicMock()
-    paperclip.search = MagicMock(return_value=[
-        Paper(doi=same_doi, title="Paper", year=2024, source_api="paperclip"),
-    ])
+    paperclip.search = MagicMock(
+        return_value=[
+            Paper(doi=same_doi, title="Paper", year=2024, source_api="paperclip"),
+        ]
+    )
     biorxiv = MagicMock()
-    biorxiv.search = MagicMock(return_value=[
-        Paper(doi=same_doi, title="Paper", year=2024, source_api="biorxiv"),
-    ])
+    biorxiv.search = MagicMock(
+        return_value=[
+            Paper(doi=same_doi, title="Paper", year=2024, source_api="biorxiv"),
+        ]
+    )
 
     papers = unified_search(
         query="test",
@@ -99,14 +107,14 @@ def test_paperclip_unauthenticated_does_not_break_other_sources():
     """Per Q5, PaperclipUnavailable from .search() is absorbed and the
     rest of the parallel fan-out continues uninterrupted."""
     paperclip = MagicMock()
-    paperclip.search = MagicMock(side_effect=PaperclipUnavailable(
-        "paperclip is unauthenticated"
-    ))
+    paperclip.search = MagicMock(side_effect=PaperclipUnavailable("paperclip is unauthenticated"))
 
     pubmed = MagicMock()
-    pubmed.search = MagicMock(return_value=[
-        Paper(doi="10.1/y", title="Paper Y", year=2024, source_api="ncbi"),
-    ])
+    pubmed.search = MagicMock(
+        return_value=[
+            Paper(doi="10.1/y", title="Paper Y", year=2024, source_api="ncbi"),
+        ]
+    )
 
     papers = unified_search(
         query="test",
@@ -123,9 +131,11 @@ def test_paperclip_skipped_when_client_is_none():
     """Per Q5, when paperclip_client is None, the paperclip source is
     silently skipped (no error)."""
     pubmed = MagicMock()
-    pubmed.search = MagicMock(return_value=[
-        Paper(doi="10.1/y", title="Paper Y", year=2024, source_api="ncbi"),
-    ])
+    pubmed.search = MagicMock(
+        return_value=[
+            Paper(doi="10.1/y", title="Paper Y", year=2024, source_api="ncbi"),
+        ]
+    )
 
     _, trace = unified_search(
         query="test",
@@ -164,9 +174,11 @@ def test_paperclip_runs_in_parallel_with_six_other_sources():
     """All 7 sources run when paperclip_client is given alongside
     pubmed/springer/semantic/crossref/biorxiv/scopus."""
     paperclip = MagicMock()
-    paperclip.search = MagicMock(return_value=[
-        Paper(doi="10.1/x", title="X", year=2024, source_api="paperclip"),
-    ])
+    paperclip.search = MagicMock(
+        return_value=[
+            Paper(doi="10.1/x", title="X", year=2024, source_api="paperclip"),
+        ]
+    )
     other = MagicMock()
     other.search = MagicMock(return_value=[])
 
@@ -182,8 +194,15 @@ def test_paperclip_runs_in_parallel_with_six_other_sources():
         return_trace=True,
     )
     # All 7 sources should have a per-source trace entry
-    expected = {"ncbi", "springer", "semantic_scholar", "crossref",
-                "biorxiv", "scopus", "paperclip"}
+    expected = {
+        "ncbi",
+        "springer",
+        "semantic_scholar",
+        "crossref",
+        "biorxiv",
+        "scopus",
+        "paperclip",
+    }
     actual = set(trace.per_source.keys())
     assert expected.issubset(actual)
 
@@ -193,14 +212,16 @@ def test_paperclip_results_are_marked_with_source_api():
     downstream consumers (composite_score, recency_quota, etc.) can
     weight or filter accordingly."""
     paperclip = MagicMock()
-    paperclip.search = MagicMock(return_value=[
-        Paper(
-            doi="10.1/x",
-            title="From paperclip",
-            year=2024,
-            source_api="paperclip",
-        ),
-    ])
+    paperclip.search = MagicMock(
+        return_value=[
+            Paper(
+                doi="10.1/x",
+                title="From paperclip",
+                year=2024,
+                source_api="paperclip",
+            ),
+        ]
+    )
     papers = unified_search(
         query="test",
         sources=["paperclip"],

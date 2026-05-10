@@ -6,14 +6,12 @@ of prior dossiers, and per-section source extraction.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from vaultlab.kb.dossier import (
     Dossier,
-    DossierSection,
     DossierStateUnreadable,
     compile_dossier,
     dossier_age_hours,

@@ -70,6 +70,15 @@ from vaultlab.research.lineage import (
     render_arc_from_response,
     run_lit_arc,
 )
+from vaultlab.research.picker import (
+    CandidatePaper,
+    PickerCallback,
+    PickerTask,
+    pick_top_n_content_aware,
+    picker_response_schema,
+    prepare_picker_task,
+    render_picks_from_response,
+)
 from vaultlab.research.report import (
     SECTION_ORDER,
     SECTION_ROLES,
@@ -82,15 +91,6 @@ from vaultlab.research.report import (
     render_section_from_response,
     run_lit_report,
     section_response_schema,
-)
-from vaultlab.research.picker import (
-    CandidatePaper,
-    PickerCallback,
-    PickerTask,
-    pick_top_n_content_aware,
-    picker_response_schema,
-    prepare_picker_task,
-    render_picks_from_response,
 )
 
 if TYPE_CHECKING:

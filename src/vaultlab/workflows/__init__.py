@@ -62,9 +62,9 @@ from vaultlab.workflows._runner import (
 # Public builders
 from vaultlab.workflows.brainstorm import plan_brainstorm_figures
 from vaultlab.workflows.crosstalk import (
-    CrosstalkResult,
     MAX_N_ROUNDS,
     MEETING_TIMEOUT_SECONDS,
+    CrosstalkResult,
     RunnerCallback,
     adversarial_arc_meeting,
     adversarial_deck_plan_meeting,
@@ -92,7 +92,6 @@ from vaultlab.workflows.lit import plan_lit_dive
 from vaultlab.workflows.narrative import plan_narrate_finding
 from vaultlab.workflows.parallel import plan_parallel_runs
 from vaultlab.workflows.synthesis import plan_synthesis
-
 
 __all__ = [
     # Data classes

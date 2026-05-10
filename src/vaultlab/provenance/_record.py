@@ -29,30 +29,30 @@ class ProvenanceRecord:
     """
 
     # Required: who/when produced this output
-    generated_by: str           # tool / command, e.g. "deep-think", "figure-gen"
-    generated_at: str = ""      # ISO8601 timestamp; auto-filled if empty
+    generated_by: str  # tool / command, e.g. "deep-think", "figure-gen"
+    generated_at: str = ""  # ISO8601 timestamp; auto-filled if empty
 
     # Project / investigation context
     project: str = ""
-    meeting_mode: str = ""           # adversarial / round_table
-    investigation_mode: str = ""     # directed / exploratory
+    meeting_mode: str = ""  # adversarial / round_table
+    investigation_mode: str = ""  # directed / exploratory
     topic: str = ""
     round: int | None = None
 
     # Reproducibility receipts
-    inputs: list[str] = field(default_factory=list)         # input file paths / IDs
+    inputs: list[str] = field(default_factory=list)  # input file paths / IDs
     input_hashes: dict[str, str] = field(default_factory=dict)  # path -> sha256
-    code_version: str = ""           # git sha / package version
-    params: dict[str, Any] = field(default_factory=dict)    # hyperparameters
+    code_version: str = ""  # git sha / package version
+    params: dict[str, Any] = field(default_factory=dict)  # hyperparameters
     seed: int | None = None
-    model: str = ""                  # LLM / model identifier when relevant
+    model: str = ""  # LLM / model identifier when relevant
 
     # Linking
     related_outputs: list[str] = field(default_factory=list)
     finding_ids: list[str] = field(default_factory=list)
 
     # Classification
-    kind: str = ""                   # "figure", "manuscript_section", "slide_deck", ...
+    kind: str = ""  # "figure", "manuscript_section", "slide_deck", ...
     tags: list[str] = field(default_factory=list)
 
     # Free-form
@@ -71,10 +71,22 @@ class ProvenanceRecord:
             "generated_at": self.generated_at,
         }
         for field_name in (
-            "project", "meeting_mode", "investigation_mode", "topic",
-            "round", "inputs", "input_hashes", "code_version", "params",
-            "seed", "model", "related_outputs", "finding_ids", "kind",
-            "tags", "notes",
+            "project",
+            "meeting_mode",
+            "investigation_mode",
+            "topic",
+            "round",
+            "inputs",
+            "input_hashes",
+            "code_version",
+            "params",
+            "seed",
+            "model",
+            "related_outputs",
+            "finding_ids",
+            "kind",
+            "tags",
+            "notes",
         ):
             value = getattr(self, field_name)
             # Keep falsy ints (0) and explicit zero round; omit empty containers / strings

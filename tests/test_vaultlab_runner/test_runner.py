@@ -43,25 +43,15 @@ def test_runner_narrator_gets_read_only() -> None:
 
 
 def test_runner_output_path_structure() -> None:
-    runner = ClaudeCodeRunner(
-        kb_path="/tmp/kb", command_name="deep-think", date_str="2026-04-20"
-    )
-    m = build_meeting(
-        topic="t", meeting_type="reasoning", session_context="ctx", round_num=2
-    )
+    runner = ClaudeCodeRunner(kb_path="/tmp/kb", command_name="deep-think", date_str="2026-04-20")
+    m = build_meeting(topic="t", meeting_type="reasoning", session_context="ctx", round_num=2)
     plan = runner.plan(m, task="x")
-    assert plan.steps[0].output_path.endswith(
-        "deep-think-2026-04-20-round2-data_analyst.md"
-    )
+    assert plan.steps[0].output_path.endswith("deep-think-2026-04-20-round2-data_analyst.md")
 
 
 def test_runner_team_meeting_disambiguates_lead_initial_final() -> None:
-    runner = ClaudeCodeRunner(
-        kb_path="/kb", command_name="team", date_str="2026-04-20"
-    )
-    m = build_meeting(
-        topic="t", meeting_type="team_meeting", session_context="ctx"
-    )
+    runner = ClaudeCodeRunner(kb_path="/kb", command_name="team", date_str="2026-04-20")
+    m = build_meeting(topic="t", meeting_type="team_meeting", session_context="ctx")
     plan = runner.plan(m, task="x")
     lead_paths = [s.output_path for s in plan.steps if s.role_id == "team_lead"]
     assert len(lead_paths) == 2
@@ -71,9 +61,7 @@ def test_runner_team_meeting_disambiguates_lead_initial_final() -> None:
 
 def test_runner_critiqued_meeting_disambiguates_role_open_response() -> None:
     runner = ClaudeCodeRunner(kb_path="/kb", command_name="c")
-    m = build_meeting(
-        topic="t", meeting_type="critiqued_domain_expert", session_context="ctx"
-    )
+    m = build_meeting(topic="t", meeting_type="critiqued_domain_expert", session_context="ctx")
     plan = runner.plan(m, task="x")
     expert_paths = [s.output_path for s in plan.steps if s.role_id == "domain_expert"]
     assert any("open" in p for p in expert_paths)
@@ -101,9 +89,7 @@ def test_runner_session_updates_include_critic_rating_hint() -> None:
 
 def test_runner_respects_agenda() -> None:
     runner = ClaudeCodeRunner(kb_path="/kb", command_name="c")
-    agenda = Agenda(
-        topic="LPI", statement="assess", questions=["Q1?", "Q2?"]
-    )
+    agenda = Agenda(topic="LPI", statement="assess", questions=["Q1?", "Q2?"])
     m = build_meeting(
         topic="LPI",
         meeting_type="reasoning",

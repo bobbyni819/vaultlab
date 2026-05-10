@@ -14,16 +14,13 @@ Public surface
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 
 from vaultlab.roles import ROLE_TEMPLATES
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
 from vaultlab.runner.models import Agenda, Mode
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows.synthesis import plan_synthesis
-
 
 # ---------------------------------------------------------------------------
 # Meta-reviewer system prompt
@@ -75,7 +72,7 @@ def plan_ensemble_critic(
     prior_outputs: str,
     n_critics: int = 3,
     round_num: int = 1,
-    date_str: Optional[str] = None,
+    date_str: str | None = None,
 ) -> tuple[list[WorkflowPlan], WorkflowPlan]:
     """N independent Methods Critic runs + 1 meta-reviewer — AI-Scientist pattern.
 
@@ -122,7 +119,9 @@ def plan_ensemble_critic(
         )
         meeting.roles = [ROLE_TEMPLATES["methods_critic"]]
         runner = ClaudeCodeRunner(
-            kb_path=cfg.kb_path, command_name="ensemble-critic", date_str=per_date,
+            kb_path=cfg.kb_path,
+            command_name="ensemble-critic",
+            date_str=per_date,
         )
         plan = runner.plan(meeting, task=critic_agenda, ensemble=True)
         for step in plan.steps:
@@ -155,13 +154,15 @@ def plan_ensemble_critic(
         ],
     )
     meta_plan = plan_synthesis(
-        cfg, topic=f"meta-review of {n_critics} critics",
+        cfg,
+        topic=f"meta-review of {n_critics} critics",
         agenda=meta_agenda,
         date_str=f"{date_str or date.today().isoformat()}-meta",
         canonical_suffix="meta-review",
     )
     meta_plan.provenance.tags = list(meta_plan.provenance.tags) + [
-        "meta-review", f"n_critics={n_critics}",
+        "meta-review",
+        f"n_critics={n_critics}",
     ]
     meta_plan.provenance.kind = "ensemble_meta_review"
     return critic_plans, meta_plan

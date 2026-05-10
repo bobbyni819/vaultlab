@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import UTC
 from typing import Any
 
 from vaultlab.research.paper import Paper
@@ -78,9 +79,7 @@ class SearchTrace:
         return {
             "topic": self.topic,
             "queried_at": self.queried_at,
-            "per_source": {
-                k: v.to_dict() for k, v in self.per_source.items()
-            },
+            "per_source": {k: v.to_dict() for k, v in self.per_source.items()},
             "deduped_seeds": int(self.deduped_seeds),
             "by_source_after_dedup": dict(self.by_source_after_dedup),
         }
@@ -156,9 +155,7 @@ def unified_search(
     # FIRST query so the sidecar still labels the run with something
     # readable.
     # ------------------------------------------------------------------
-    query_list: list[str] = (
-        list(queries) if queries else [query]
-    )
+    query_list: list[str] = list(queries) if queries else [query]
     if not query_list:
         query_list = [query]
     primary_query = query_list[0]
@@ -230,19 +227,12 @@ def unified_search(
             pre_dedup_source_by_paper.extend(["biorxiv"] * len(papers))
 
         if (
-            (
-                "scopus" in sources
-                or "sciencedirect" in sources
-                or "elsevier" in sources
-            )
-            and sciencedirect_client is not None
-        ):
+            "scopus" in sources or "sciencedirect" in sources or "elsevier" in sources
+        ) and sciencedirect_client is not None:
             papers = _run_source(
                 "scopus",
                 trace,
-                lambda c=sciencedirect_client, qq=q: c.search(
-                    qq, max_results=max_results
-                ),
+                lambda c=sciencedirect_client, qq=q: c.search(qq, max_results=max_results),
                 accumulate=True,
             )
             all_papers.extend(papers)
@@ -278,11 +268,7 @@ def unified_search(
         blended_paper_score,
     )
 
-    rw = (
-        DEFAULT_RECENCY_WEIGHT
-        if recency_weight is None
-        else float(recency_weight)
-    )
+    rw = DEFAULT_RECENCY_WEIGHT if recency_weight is None else float(recency_weight)
     deduped.sort(
         key=lambda p: (blended_paper_score(p, recency_weight=rw), p.year),
         reverse=True,
@@ -303,9 +289,7 @@ def unified_search(
     trace.deduped_seeds = len(deduped)
     trace.by_source_after_dedup = by_source
 
-    logger.info(
-        "Unified search: %d total -> %d after dedup", len(all_papers), len(deduped)
-    )
+    logger.info("Unified search: %d total -> %d after dedup", len(all_papers), len(deduped))
     if return_trace:
         return deduped, trace
     return deduped
@@ -343,7 +327,7 @@ def _run_source(
             slot.wall_time_ms = elapsed_ms
         logger.info("%s returned %d results", canonical_key, len(papers))
         return papers
-    except Exception as e:  # noqa: BLE001 — we want to record any failure
+    except Exception as e:
         elapsed_ms = int((time.time() - started) * 1000)
         slot = trace.per_source.setdefault(canonical_key, SourceTrace())
         slot.errors.append(repr(e))
@@ -357,9 +341,9 @@ def _run_source(
 
 def _iso_utc_now() -> str:
     """Return an ISO-8601 UTC timestamp ('Z' suffix) — kept tight for sidecars."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _deduplicate(papers: list[Paper]) -> list[Paper]:

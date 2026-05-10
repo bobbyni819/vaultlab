@@ -46,9 +46,8 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Iterable
 
 from vaultlab.kb.paths import (
     ensure_parent,
@@ -179,9 +178,7 @@ class Dossier:
             body_parts.append(section.body.rstrip() + "\n")
 
         if all_sources:
-            sources_str = "\n".join(
-                f"- `{p}`" for p in sorted(all_sources, key=str)
-            )
+            sources_str = "\n".join(f"- `{p}`" for p in sorted(all_sources, key=str))
             body_parts.append(
                 "\n---\n\n## Sources\n\nFiles consulted during compilation:\n\n"
                 + sources_str
@@ -199,13 +196,7 @@ def dossier_path(kb_root: Path, project_slug: str) -> Path:
 
     Returns ``<kb_root>/Wiki/Projects/<slug>/Project-Dossier.md``.
     """
-    return (
-        Path(kb_root)
-        / "Wiki"
-        / "Projects"
-        / slugify_topic(project_slug)
-        / "Project-Dossier.md"
-    )
+    return Path(kb_root) / "Wiki" / "Projects" / slugify_topic(project_slug) / "Project-Dossier.md"
 
 
 def dossier_archive_dir(kb_root: Path, project_slug: str) -> Path:
@@ -282,9 +273,7 @@ def compile_dossier(
         Project folder doesn't exist (run /onboard-project first).
     """
     kb = Path(kb_root)
-    proj_dir = (
-        kb / "Wiki" / "Projects" / slugify_topic(project_slug)
-    )
+    proj_dir = kb / "Wiki" / "Projects" / slugify_topic(project_slug)
     if not proj_dir.exists():
         raise DossierStateUnreadable(
             f"Project folder missing at {proj_dir} — run /onboard-project "
@@ -299,7 +288,9 @@ def compile_dossier(
             logger.info(
                 "Dossier for %s is %.1f hours old (< %s hours threshold); "
                 "loading instead of recompiling. Pass force=True to override.",
-                project_slug, age, freshness_hours,
+                project_slug,
+                age,
+                freshness_hours,
             )
             return _load_existing_as_dossier(kb, project_slug)
 
@@ -319,7 +310,7 @@ def compile_dossier(
         project_slug=project_slug,
         kb_root=kb,
         sections=sections,
-        compiled_at=datetime.now(timezone.utc),
+        compiled_at=datetime.now(UTC),
     )
 
     if archive_existing and target.exists():
@@ -348,14 +339,16 @@ def _section_origin(kb: Path, slug: str) -> DossierSection:
     sources = []
     body_parts = []
 
-    intake = (kb / "Wiki" / "Projects" / slugify_topic(slug) / "intake.md")
+    intake = kb / "Wiki" / "Projects" / slugify_topic(slug) / "intake.md"
     if intake.exists():
         sources.append(intake)
         # Pull the first ~800 chars of the intake (the goal section)
         intake_text = intake.read_text(encoding="utf-8")
-        excerpt = _excerpt_section(intake_text, "Goal") or _excerpt_section(
-            intake_text, "Topic"
-        ) or intake_text[:800]
+        excerpt = (
+            _excerpt_section(intake_text, "Goal")
+            or _excerpt_section(intake_text, "Topic")
+            or intake_text[:800]
+        )
         body_parts.append("From intake form:\n\n" + excerpt.strip())
 
     if not body_parts:
@@ -389,14 +382,10 @@ def _section_current_state(kb: Path, slug: str) -> DossierSection:
         recent = sh_text[:3000].strip()
         body_parts.append(recent)
         if len(sh_text) > 3000:
-            body_parts.append(
-                f"_…truncated; see `{sh}` for full daily brief._"
-            )
+            body_parts.append(f"_…truncated; see `{sh}` for full daily brief._")
 
     if not body_parts:
-        body_parts.append(
-            "_No START_HERE.md found. Run `/onboard-project` to scaffold._"
-        )
+        body_parts.append("_No START_HERE.md found. Run `/onboard-project` to scaffold._")
 
     return DossierSection(
         slug="current_state",
@@ -452,13 +441,9 @@ def _section_established(kb: Path, slug: str) -> DossierSection:
         if recent:
             sources.extend(recent)
             entries = [
-                f"- [[{p.stem}]] — {_excerpt_first_paragraph(p, max_chars=200)}"
-                for p in recent
+                f"- [[{p.stem}]] — {_excerpt_first_paragraph(p, max_chars=200)}" for p in recent
             ]
-            body_parts.append(
-                "Top concept docs (most-recently-updated):\n\n"
-                + "\n".join(entries)
-            )
+            body_parts.append("Top concept docs (most-recently-updated):\n\n" + "\n".join(entries))
 
     reports_dir = kb / "Output" / slugify_topic(slug) / "Reports"
     if reports_dir.exists():
@@ -470,10 +455,7 @@ def _section_established(kb: Path, slug: str) -> DossierSection:
         if recent_reports:
             sources.extend(recent_reports)
             entries = [f"- `{p.name}`" for p in recent_reports]
-            body_parts.append(
-                "Recent audit reports for this project:\n\n"
-                + "\n".join(entries)
-            )
+            body_parts.append("Recent audit reports for this project:\n\n" + "\n".join(entries))
 
     if not body_parts:
         body_parts.append(
@@ -502,13 +484,13 @@ def _section_frontier(kb: Path, slug: str) -> DossierSection:
         )
         if open_items:
             sources.append(sh)
-            body_parts.append(
-                "Open items from START_HERE:\n\n" + open_items.strip()
-            )
+            body_parts.append("Open items from START_HERE:\n\n" + open_items.strip())
 
-    grills = list(
-        (kb / "Sources" / "Notes").glob("grill-*.md")
-    ) if (kb / "Sources" / "Notes").exists() else []
+    grills = (
+        list((kb / "Sources" / "Notes").glob("grill-*.md"))
+        if (kb / "Sources" / "Notes").exists()
+        else []
+    )
     grills.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     recent_grills = grills[:5]
     if recent_grills:
@@ -517,8 +499,10 @@ def _section_frontier(kb: Path, slug: str) -> DossierSection:
         body_parts.append("Recent grill docs (open design questions):\n\n" + "\n".join(entries))
 
     if not body_parts:
-        body_parts.append("_No frontier questions found. Add `## Open items` "
-                          "to START_HERE or write a `Sources/Notes/grill-*.md`._")
+        body_parts.append(
+            "_No frontier questions found. Add `## Open items` "
+            "to START_HERE or write a `Sources/Notes/grill-*.md`._"
+        )
 
     return DossierSection(
         slug="frontier",
@@ -572,9 +556,7 @@ def _section_cross_project(kb: Path, slug: str) -> DossierSection:
 
     # Look for find-analogs cache
     output_dir = kb / "Output" / slugify_topic(slug)
-    cache_files = (
-        list(output_dir.glob("find-analogs-*.md")) if output_dir.exists() else []
-    )
+    cache_files = list(output_dir.glob("find-analogs-*.md")) if output_dir.exists() else []
     if cache_files:
         recent = sorted(cache_files, key=lambda p: p.stat().st_mtime, reverse=True)[:3]
         sources.extend(recent)
@@ -585,20 +567,19 @@ def _section_cross_project(kb: Path, slug: str) -> DossierSection:
     projects_dir = kb / "Wiki" / "Projects"
     if projects_dir.exists():
         sibling_dirs = [
-            p for p in projects_dir.iterdir()
-            if p.is_dir() and p.name != slugify_topic(slug)
+            p for p in projects_dir.iterdir() if p.is_dir() and p.name != slugify_topic(slug)
         ]
         if sibling_dirs:
             sib_names = sorted(p.name for p in sibling_dirs)[:10]
             entries = [f"- `{name}`" for name in sib_names]
             body_parts.append(
-                "Sibling projects in this KB (potential analog sources):\n\n"
-                + "\n".join(entries)
+                "Sibling projects in this KB (potential analog sources):\n\n" + "\n".join(entries)
             )
 
     if not body_parts:
-        body_parts.append("_No cross-project connections cached yet. "
-                          "Run `/find-analogs <concept>` to discover._")
+        body_parts.append(
+            "_No cross-project connections cached yet. Run `/find-analogs <concept>` to discover._"
+        )
 
     return DossierSection(
         slug="cross_project",
@@ -634,9 +615,7 @@ def _section_anticipated(kb: Path, slug: str) -> DossierSection:
 
         if questions:
             entries = [f"- {q}" for q in questions[:8]]  # cap at 8
-            body_parts.append(
-                "From prior expert-reviewer audits:\n\n" + "\n".join(entries)
-            )
+            body_parts.append("From prior expert-reviewer audits:\n\n" + "\n".join(entries))
 
     if not body_parts:
         body_parts.append(
@@ -661,7 +640,8 @@ def _section_recent_tail(kb: Path, slug: str) -> DossierSection:
     output_dir = kb / "Output" / slugify_topic(slug)
     if output_dir.exists():
         recent = [
-            p for p in output_dir.rglob("*.md")
+            p
+            for p in output_dir.rglob("*.md")
             if datetime.fromtimestamp(p.stat().st_mtime) > cutoff
         ]
         recent.sort(key=lambda p: p.stat().st_mtime, reverse=True)
@@ -671,9 +651,7 @@ def _section_recent_tail(kb: Path, slug: str) -> DossierSection:
             entries = []
             for p in recent:
                 rel = p.relative_to(output_dir)
-                date_str = datetime.fromtimestamp(p.stat().st_mtime).strftime(
-                    "%Y-%m-%d"
-                )
+                date_str = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d")
                 entries.append(f"- {date_str} — `{rel}`")
             body_parts.append(
                 f"Outputs touched in last {_DEFAULT_ROLLING_TAIL_DAYS} days:\n\n"
@@ -681,9 +659,7 @@ def _section_recent_tail(kb: Path, slug: str) -> DossierSection:
             )
 
     if not body_parts:
-        body_parts.append(
-            "_No recent outputs in the rolling window._"
-        )
+        body_parts.append("_No recent outputs in the rolling window._")
 
     return DossierSection(
         slug="recent_tail",
@@ -733,7 +709,7 @@ def _excerpt_first_paragraph(path: Path, max_chars: int = 200) -> str:
     if text.startswith("---\n"):
         end = text.find("\n---\n", 4)
         if end != -1:
-            text = text[end + 5:]
+            text = text[end + 5 :]
 
     # Skip leading whitespace + headings, find first paragraph
     for paragraph in text.split("\n\n"):
@@ -770,9 +746,7 @@ def _extract_expert_questions(text: str) -> list[str]:
                 try:
                     parsed = json.loads(blob)
                     if isinstance(parsed, dict):
-                        eq = parsed.get("expert_questions") or parsed.get(
-                            "expected_questions"
-                        )
+                        eq = parsed.get("expert_questions") or parsed.get("expected_questions")
                         if isinstance(eq, list):
                             questions.extend(str(q) for q in eq)
                 except json.JSONDecodeError:

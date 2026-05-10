@@ -2,6 +2,7 @@
 
 Ported from ``bobby-tools/tests/test_bobby_slides/test_speaker.py``.
 """
+
 from __future__ import annotations
 
 import pytest

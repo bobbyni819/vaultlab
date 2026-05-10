@@ -28,7 +28,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -40,7 +40,7 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
     group_col: str,
     category_col: str,
@@ -88,7 +88,6 @@ def render(
 
     Anchored: Hickey 2021 + Schurch 2020 layout — see stacked_bar.md.
     """
-    import pandas as pd
 
     required = {group_col, category_col}
     missing = required - set(df.columns)
@@ -99,15 +98,9 @@ def render(
 
     if value_col is None:
         # Count rows per (group, category)
-        pivot = (
-            df.groupby([group_col, category_col]).size().unstack(fill_value=0)
-        )
+        pivot = df.groupby([group_col, category_col]).size().unstack(fill_value=0)
     else:
-        pivot = (
-            df.groupby([group_col, category_col])[value_col]
-            .sum()
-            .unstack(fill_value=0)
-        )
+        pivot = df.groupby([group_col, category_col])[value_col].sum().unstack(fill_value=0)
 
     if normalize_to_100:
         row_sums = pivot.sum(axis=1).replace(0, np.nan)

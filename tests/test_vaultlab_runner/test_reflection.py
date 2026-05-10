@@ -16,7 +16,6 @@ from vaultlab.runner.reflection import (
     run_with_reflection,
 )
 
-
 # ---------------------------------------------------------------------------
 # contains_done_signal
 # ---------------------------------------------------------------------------
@@ -98,12 +97,14 @@ def test_run_with_reflection_stops_on_done_signal_in_initial() -> None:
 
 
 def test_run_with_reflection_stops_on_done_signal_mid_loop() -> None:
-    responses = iter([
-        "draft 1",
-        "draft 2",
-        "I am done. Stopping.",
-        "draft 4 (should never run)",
-    ])
+    responses = iter(
+        [
+            "draft 1",
+            "draft 2",
+            "I am done. Stopping.",
+            "draft 4 (should never run)",
+        ]
+    )
 
     def agent(prompt: str, tools: list[str]) -> str:
         return next(responses)

@@ -5,6 +5,7 @@ The mandatory ``test_synthetic_plan_all_types`` test covers all six slide
 types (title / section_divider / figure / multi_figure / text /
 references) called out in the lift spec.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,7 +20,6 @@ from pptx import Presentation as PptxPresentation
 
 from vaultlab.slides import KBReader, build_from_plan
 from vaultlab.slides.template import lab_template_path
-
 
 pytestmark = pytest.mark.skipif(
     lab_template_path() is None,
@@ -134,22 +134,39 @@ class TestSyntheticPlanAllTypes:
             "author": "Test Author",
             "topic": "synthetic-coverage",
             "slides": [
-                {"type": "title", "title": "Synthetic L4 Deck",
-                 "subtitle": "All six types", "author": "Test Author"},
+                {
+                    "type": "title",
+                    "title": "Synthetic L4 Deck",
+                    "subtitle": "All six types",
+                    "author": "Test Author",
+                },
                 {"type": "section_divider", "title": "Section 1"},
-                {"type": "figure", "title": "Single Figure",
-                 "image_path": str(fig), "caption": "Solo",
-                 "bullets": ["Bullet A", "Bullet B"],
-                 "citation_source": "Cite 2024"},
-                {"type": "multi_figure", "title": "Two Panels",
-                 "figures": [
-                     {"path": str(fig), "label": "A", "caption": "Panel A"},
-                     {"path": str(fig), "label": "B", "caption": "Panel B"},
-                 ]},
-                {"type": "text", "title": "Conclusions",
-                 "bullets": ["Conclusion one", "Conclusion two"]},
-                {"type": "references", "title": "References",
-                 "references": ["Smith 2024", "Jones 2023"]},
+                {
+                    "type": "figure",
+                    "title": "Single Figure",
+                    "image_path": str(fig),
+                    "caption": "Solo",
+                    "bullets": ["Bullet A", "Bullet B"],
+                    "citation_source": "Cite 2024",
+                },
+                {
+                    "type": "multi_figure",
+                    "title": "Two Panels",
+                    "figures": [
+                        {"path": str(fig), "label": "A", "caption": "Panel A"},
+                        {"path": str(fig), "label": "B", "caption": "Panel B"},
+                    ],
+                },
+                {
+                    "type": "text",
+                    "title": "Conclusions",
+                    "bullets": ["Conclusion one", "Conclusion two"],
+                },
+                {
+                    "type": "references",
+                    "title": "References",
+                    "references": ["Smith 2024", "Jones 2023"],
+                },
             ],
         }
 
@@ -174,9 +191,7 @@ class TestSyntheticPlanAllTypes:
         assert "Synthetic L4 Deck" in title_text
 
         # Section divider (index 1) — should contain the section name
-        divider_texts = [
-            sh.text_frame.text for sh in prs.slides[1].shapes if sh.has_text_frame
-        ]
+        divider_texts = [sh.text_frame.text for sh in prs.slides[1].shapes if sh.has_text_frame]
         assert any("Section 1" in t for t in divider_texts)
 
         # Figure slide (index 2) — has a picture (shape_type 13) and text
@@ -185,25 +200,19 @@ class TestSyntheticPlanAllTypes:
         assert has_picture, "Figure slide should contain a picture"
 
         # Multi-figure slide (index 3) — has 2 pictures
-        multi_pictures = [
-            sh for sh in prs.slides[3].shapes if sh.shape_type == 13
-        ]
+        multi_pictures = [sh for sh in prs.slides[3].shapes if sh.shape_type == 13]
         assert len(multi_pictures) == 2, (
             f"multi_figure slide should have 2 pictures, got {len(multi_pictures)}"
         )
 
         # Text slide (index 4) — title + bullets
-        text_texts = [
-            sh.text_frame.text for sh in prs.slides[4].shapes if sh.has_text_frame
-        ]
+        text_texts = [sh.text_frame.text for sh in prs.slides[4].shapes if sh.has_text_frame]
         joined = "\n".join(text_texts)
         assert "Conclusions" in joined
         assert "Conclusion one" in joined
 
         # References slide (index 5)
-        refs_texts = [
-            sh.text_frame.text for sh in prs.slides[5].shapes if sh.has_text_frame
-        ]
+        refs_texts = [sh.text_frame.text for sh in prs.slides[5].shapes if sh.has_text_frame]
         joined_refs = "\n".join(refs_texts)
         assert "References" in joined_refs
         assert "Smith 2024" in joined_refs

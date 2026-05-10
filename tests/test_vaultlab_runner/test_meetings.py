@@ -18,7 +18,6 @@ from vaultlab.runner import (
     merge_outputs,
 )
 
-
 # --- ADVERSARIAL --------------------------------------------------------------
 
 
@@ -46,8 +45,8 @@ def test_compose_turns_adversarial_later_roles_see_placeholders() -> None:
     m = build_meeting(topic="t", meeting_type="reasoning", session_context="ctx")
     turns = compose_turns(m, task="investigate")
     assert "PRIOR AGENT OUTPUTS" not in turns[0].prompt  # analyst has no prior
-    assert "PRIOR AGENT OUTPUTS" in turns[1].prompt      # expert sees analyst
-    assert "PRIOR AGENT OUTPUTS" in turns[2].prompt      # critic sees both
+    assert "PRIOR AGENT OUTPUTS" in turns[1].prompt  # expert sees analyst
+    assert "PRIOR AGENT OUTPUTS" in turns[2].prompt  # critic sees both
     assert "Data Analyst output will be inserted" in turns[1].prompt
 
 
@@ -115,9 +114,7 @@ def test_compose_turns_individual_requires_exactly_one_role() -> None:
 
 
 def test_compose_turns_round_includes_round_header() -> None:
-    m = build_meeting(
-        topic="t", meeting_type="reasoning", session_context="ctx", round_num=3
-    )
+    m = build_meeting(topic="t", meeting_type="reasoning", session_context="ctx", round_num=3)
     turns = compose_turns(m, task="x")
     assert "ROUND: 3" in turns[0].prompt
 

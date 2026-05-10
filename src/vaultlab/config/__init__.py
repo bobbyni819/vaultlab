@@ -26,7 +26,7 @@ class SignificanceThresholds:
     effect_size_min: float = 0.1
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "SignificanceThresholds":
+    def from_dict(cls, d: dict[str, Any]) -> SignificanceThresholds:
         return cls(
             correlation_rho=float(d.get("correlation_rho", 0.2)),
             fdr_alpha=float(d.get("fdr_alpha", 0.05)),
@@ -52,7 +52,7 @@ class ProjectConfig:
     source_path: str = ""
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any], source_path: str = "") -> "ProjectConfig":
+    def from_dict(cls, d: dict[str, Any], source_path: str = "") -> ProjectConfig:
         return cls(
             name=d["name"],
             kb_path=d["kb_path"],
@@ -94,6 +94,7 @@ class ProjectConfig:
         summary = "\n".join(p for p in parts if p)
         if len(summary) > 2000:
             import warnings
+
             warnings.warn(
                 f"context_summary is {len(summary)} chars (~{len(summary) // 4} tokens); "
                 f"budget is ~500 tokens. Consider shortening domain_context or hypotheses.",
@@ -125,13 +126,11 @@ class ProjectConfig:
                 "domain_context is empty — no project-specific vocabulary will be injected"
             )
         if not self.data_dirs:
-            warnings.append(
-                "data_dirs is empty — pipeline will default to LITERATURE_REVIEW mode"
-            )
+            warnings.append("data_dirs is empty — pipeline will default to LITERATURE_REVIEW mode")
         return warnings
 
 
-def load_project_config(repo_root: Optional[str] = None) -> ProjectConfig:
+def load_project_config(repo_root: str | None = None) -> ProjectConfig:
     """Load ``.bobby-project.json`` from ``repo_root`` (cwd if ``None``).
 
     Raises :class:`FileNotFoundError` if the config is missing. Callers
@@ -145,7 +144,7 @@ def load_project_config(repo_root: Optional[str] = None) -> ProjectConfig:
             f".bobby-project.json not found at {path}. "
             "Create one with at least name + kb_path fields."
         )
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
     return ProjectConfig.from_dict(data, source_path=path)
 

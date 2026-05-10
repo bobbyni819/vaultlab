@@ -133,8 +133,7 @@ class KBReader:
         if not assets.is_dir():
             return []
         return sorted(
-            p for p in assets.rglob("*")
-            if p.is_file() and p.suffix.lower() in _IMAGE_EXTS
+            p for p in assets.rglob("*") if p.is_file() and p.suffix.lower() in _IMAGE_EXTS
         )
 
     # ------------------------------------------------------------------
@@ -207,6 +206,7 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         return {}, text
     try:
         import yaml  # type: ignore[import-not-found]
+
         fm = yaml.safe_load(match.group(1)) or {}
     except ImportError:
         # Fallback: simple key: value parser, no nested types

@@ -71,6 +71,7 @@ def read_paper_text(
         if result.pdf_path is None:
             return ""
         from vaultlab.research.pdf import extract_text
+
         return extract_text(str(result.pdf_path))
 
     if outcome == "gated_metadata_only":
@@ -121,6 +122,7 @@ def read_paper_sections(
         if result.pdf_path is None:
             return {}
         from vaultlab.research.pdf import extract_text
+
         text = extract_text(str(result.pdf_path))
         return {"all": text} if text else {}
 
@@ -169,7 +171,8 @@ def list_paper_figures(
         if pdf_extract_dir is None or not pdf_extract_dir.exists():
             return []
         return [
-            p.name for p in pdf_extract_dir.iterdir()
+            p.name
+            for p in pdf_extract_dir.iterdir()
             if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg")
         ]
 
@@ -177,7 +180,7 @@ def list_paper_figures(
 
 
 __all__ = [
-    "read_paper_text",
-    "read_paper_sections",
     "list_paper_figures",
+    "read_paper_sections",
+    "read_paper_text",
 ]

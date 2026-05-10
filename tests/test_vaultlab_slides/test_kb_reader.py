@@ -2,6 +2,7 @@
 
 Ported from ``bobby-tools/tests/test_bobby_slides/test_content.py``.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -114,6 +115,7 @@ class TestFigures:
     def test_find_figures(self, kb_root):
         PIL = pytest.importorskip("PIL")
         from PIL import Image
+
         Image.new("RGB", (100, 100), "red").save(kb_root / "Sources" / "Assets" / "fig1.png")
         Image.new("RGB", (100, 100), "blue").save(kb_root / "Sources" / "Assets" / "fig2.jpg")
         (kb_root / "Sources" / "Assets" / "notes.txt").write_text("not an image")

@@ -15,11 +15,9 @@ from __future__ import annotations
 
 import os
 from datetime import date
-from typing import Optional
 
 from vaultlab.runner import ClaudeCodeRunner, build_meeting, wrap_contexts
 from vaultlab.runner.models import Agenda, InvestigationMode
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows._utils import (
@@ -30,10 +28,10 @@ from vaultlab.workflows._utils import (
 
 def plan_synthesis(
     cfg,
-    topic: Optional[str] = None,
+    topic: str | None = None,
     investigation_mode: InvestigationMode = InvestigationMode.DIRECTED,
-    agenda: Optional[Agenda] = None,
-    date_str: Optional[str] = None,
+    agenda: Agenda | None = None,
+    date_str: str | None = None,
     canonical_suffix: str = "",
 ) -> WorkflowPlan:
     """Run the Synthesizer alone over existing session findings.
@@ -73,12 +71,15 @@ def plan_synthesis(
         agenda=agenda,
     )
     runner = ClaudeCodeRunner(
-        kb_path=cfg.kb_path, command_name="synthesize", date_str=date_str,
+        kb_path=cfg.kb_path,
+        command_name="synthesize",
+        date_str=date_str,
     )
     plan = runner.plan(meeting, task=agenda)
     suffix = f"-{canonical_suffix}" if canonical_suffix else ""
     canonical = os.path.join(
-        cfg.kb_path, "Output",
+        cfg.kb_path,
+        "Output",
         f"synthesis-{date_str or date.today().isoformat()}{suffix}.md",
     )
     prov = Provenance(
@@ -91,7 +92,9 @@ def plan_synthesis(
         tags=["synthesis", agenda.investigation_mode.value],
     )
     return WorkflowPlan(
-        meeting=meeting, plan=plan, provenance=prov,
+        meeting=meeting,
+        plan=plan,
+        provenance=prov,
         canonical_output_path=canonical,
     )
 

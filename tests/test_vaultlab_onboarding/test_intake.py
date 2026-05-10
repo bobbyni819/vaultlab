@@ -22,7 +22,6 @@ from vaultlab.onboarding.intake import (
     render_intake_template,
 )
 
-
 # ---------------------------------------------------------------------------
 # Render
 # ---------------------------------------------------------------------------
@@ -74,9 +73,7 @@ class TestParseRequired:
         with pytest.raises(IntakeValidationError, match="goals"):
             parse_intake_md(intake_p)
 
-    def test_topic_and_goal_still_fails_for_audience(
-        self, tmp_path: Path
-    ) -> None:
+    def test_topic_and_goal_still_fails_for_audience(self, tmp_path: Path) -> None:
         intake_p = tmp_path / "project_intake.md"
         intake_p.write_text(
             _minimal_filled(topic="X", goal_checked=True),
@@ -152,8 +149,7 @@ class TestCheckboxParsing:
             _build_md(
                 topic="T",
                 goals_block=(
-                    "- [x] Understand a literature field\n"
-                    "- [ ] Write a journal-club deck\n"
+                    "- [x] Understand a literature field\n- [ ] Write a journal-club deck\n"
                 ),
                 audiences_block="- [x] Yourself (personal notes)\n",
             ),

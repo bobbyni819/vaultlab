@@ -55,10 +55,11 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -81,9 +82,9 @@ __all__ = [
     "prepare_summary_task",
     "render_summary_from_response",
     "render_summary_markdown",
-    "summary_response_schema",
     "summarize_corpus",
     "summarize_paper",
+    "summary_response_schema",
     "write_summary_to_kb",
 ]
 
@@ -352,14 +353,10 @@ def build_summary_prompt(
         "section) and return DOIs in the `extracted_references` array."
         if crossref_refs_missing
         else "CrossRef already provided this paper's reference list. "
-             "Return an empty array for `extracted_references` (we don't need them again)."
+        "Return an empty array for `extracted_references` (we don't need them again)."
     )
 
-    role_clause = (
-        f"Role in the corpus (informational): {role_hint}\n"
-        if role_hint
-        else ""
-    )
+    role_clause = f"Role in the corpus (informational): {role_hint}\n" if role_hint else ""
 
     example_block = """\
 Example of the expected JSON shape (DO NOT copy these contents — produce
@@ -421,7 +418,7 @@ def _extract_json(text: str) -> dict[str, Any]:
         if first_newline != -1:
             s = s[first_newline + 1 :]
         if s.endswith("```"):
-            s = s[: -3].rstrip()
+            s = s[:-3].rstrip()
     # Locate the first balanced { ... } block.
     start = s.find("{")
     if start == -1:
@@ -519,8 +516,8 @@ def _populate_citation_stats(
     summary: PaperSummary,
     *,
     doi: str,
-    corpus_metrics: "CorpusMetrics | None",
-    corpus_papers: "dict[str, Paper] | None" = None,
+    corpus_metrics: CorpusMetrics | None,
+    corpus_papers: dict[str, Paper] | None = None,
     seed_dois: list[str] | None = None,
 ) -> None:
     """Fill the citation-stat fields on ``summary`` from corpus state.
@@ -545,9 +542,7 @@ def _populate_citation_stats(
 
     if corpus_metrics is not None:
         summary.og_score = float(corpus_metrics.og_score.get(key, 0.0))
-        summary.forward_influence = int(
-            corpus_metrics.forward_influence.get(key, 0)
-        )
+        summary.forward_influence = int(corpus_metrics.forward_influence.get(key, 0))
         summary.year_bucket = corpus_metrics.year_buckets.get(key, "unknown")
 
     if not summary.role_in_set:
@@ -592,7 +587,7 @@ def _build_connections(
     summary: PaperSummary,
     *,
     doi: str,
-    corpus: "Corpus | None",
+    corpus: Corpus | None,
     max_per_section: int = 5,
 ) -> None:
     """Populate ``connections_references`` and ``connections_cited_by_in_set``.
@@ -618,9 +613,7 @@ def _build_connections(
             key=lambda d: corpus.metrics.og_score.get(d, 0.0),  # type: ignore[union-attr]
             reverse=True,
         )
-    summary.connections_references = [
-        slugify_doi(d) for d in refs_in_corpus[:max_per_section]
-    ]
+    summary.connections_references = [slugify_doi(d) for d in refs_in_corpus[:max_per_section]]
 
     # Connections -> Cited by in our set: papers IN the corpus whose
     # reference lists include this DOI.
@@ -638,9 +631,7 @@ def _build_connections(
             key=lambda d: corpus.metrics.forward_influence.get(d, 0),  # type: ignore[union-attr]
             reverse=True,
         )
-    summary.connections_cited_by_in_set = [
-        slugify_doi(d) for d in citers[:max_per_section]
-    ]
+    summary.connections_cited_by_in_set = [slugify_doi(d) for d in citers[:max_per_section]]
 
 
 # ---------------------------------------------------------------------------
@@ -716,8 +707,8 @@ def _build_base_summary(
     *,
     doi: str,
     paper_metadata: dict[str, Any],
-    corpus_metrics: "CorpusMetrics | None",
-    corpus: "Corpus | None",
+    corpus_metrics: CorpusMetrics | None,
+    corpus: Corpus | None,
     acquisition_source: str,
     acquisition_license: str,
 ) -> PaperSummary:
@@ -759,8 +750,8 @@ def prepare_summary_task(
     doi: str,
     pdf_path: Path,
     paper_metadata: dict[str, Any],
-    corpus_metrics: "CorpusMetrics | None" = None,
-    corpus: "Corpus | None" = None,
+    corpus_metrics: CorpusMetrics | None = None,
+    corpus: Corpus | None = None,
     crossref_refs_missing: bool = False,
     kb_root: Path,
     acquisition_source: str = "",
@@ -842,9 +833,7 @@ def prepare_summary_task(
         text_path = elsevier_text
         # Append a hint to the prompt so the reader knows to use it.
         prompt = (
-            prompt
-            + "\n\n---\n\n"
-            + "**A clean machine-extracted plain-text version of this "
+            prompt + "\n\n---\n\n" + "**A clean machine-extracted plain-text version of this "
             "article is available at:**\n\n"
             + f"    `{elsevier_text}`\n\n"
             + "Prefer reading this file instead of the PDF when both are "
@@ -882,8 +871,8 @@ def render_summary_from_response(
     task: SummarizationTask,
     response_json: dict[str, Any],
     *,
-    corpus_metrics: "CorpusMetrics | None" = None,
-    corpus: "Corpus | None" = None,
+    corpus_metrics: CorpusMetrics | None = None,
+    corpus: Corpus | None = None,
     tokens_input: int = 0,
     tokens_output: int = 0,
 ) -> PaperSummary:
@@ -927,9 +916,7 @@ def render_summary_from_response(
     summary.why_it_matters = list(response_json.get("why_it_matters") or [])
     summary.methods_summary = (response_json.get("methods_summary") or "").strip()
     summary.key_findings = list(response_json.get("key_findings") or [])
-    summary.extracted_references = list(
-        response_json.get("extracted_references") or []
-    )
+    summary.extracted_references = list(response_json.get("extracted_references") or [])
     summary.tokens_input = int(tokens_input or 0)
     summary.tokens_output = int(tokens_output or 0)
     return summary
@@ -945,8 +932,8 @@ def summarize_paper(
     doi: str,
     pdf_path: Path | None,
     paper_metadata: dict[str, Any],
-    corpus_metrics: "CorpusMetrics | None" = None,
-    corpus: "Corpus | None" = None,
+    corpus_metrics: CorpusMetrics | None = None,
+    corpus: Corpus | None = None,
     crossref_refs_missing: bool = False,
     api_key: str | None = None,
     model: str = DEFAULT_MODEL,
@@ -1079,13 +1066,19 @@ def _frontmatter(summary: PaperSummary) -> str:
     # the body of the markdown holds the prose / lists.
     fm = {k: v for k, v in data.items() if k not in _INVISIBLE_FRONTMATTER_KEYS}
     # Drop empty strings so the YAML is tidy.
-    fm = {k: v for k, v in fm.items() if v not in ("", 0, 0.0) or k in (
-        "year",
-        "citation_count",
-        "influential_citations",
-        "og_score",
-        "forward_influence",
-    )}
+    fm = {
+        k: v
+        for k, v in fm.items()
+        if v not in ("", 0, 0.0)
+        or k
+        in (
+            "year",
+            "citation_count",
+            "influential_citations",
+            "og_score",
+            "forward_influence",
+        )
+    }
     # yaml.safe_dump preserves insertion order in pyyaml >=6 only when
     # sort_keys=False. We keep our canonical order.
     return yaml.safe_dump(fm, sort_keys=False, allow_unicode=True).strip()
@@ -1116,19 +1109,13 @@ def render_summary_markdown(summary: PaperSummary) -> str:
     else:
         body_intro = f"\n## TL;DR\n{summary.tldr or '_(empty)_'}\n"
 
-    why = (
-        "\n## Why it matters in this lineage\n"
-        + _bullet_list(summary.why_it_matters)
-    )
+    why = "\n## Why it matters in this lineage\n" + _bullet_list(summary.why_it_matters)
     methods = (
         "\n## Methods (extracted summary)\n"
         + (summary.methods_summary or "_(not extracted)_")
         + "\n"
     )
-    findings = (
-        "\n## Key findings (with [page] provenance)\n"
-        + _bullet_list(summary.key_findings)
-    )
+    findings = "\n## Key findings (with [page] provenance)\n" + _bullet_list(summary.key_findings)
 
     refs_line = ""
     if summary.connections_references or summary.connections_cited_by_in_set:
@@ -1142,14 +1129,12 @@ def render_summary_markdown(summary: PaperSummary) -> str:
 
     extra_refs_block = ""
     if summary.extracted_references:
-        extra_refs_block = (
-            "\n## Extracted references (from PDF)\n"
-            + _bullet_list(summary.extracted_references)
+        extra_refs_block = "\n## Extracted references (from PDF)\n" + _bullet_list(
+            summary.extracted_references
         )
 
     provenance = (
-        "\n## Reading provenance\n"
-        f"- PDF acquired via: {summary.acquisition_source or 'n/a'}"
+        f"\n## Reading provenance\n- PDF acquired via: {summary.acquisition_source or 'n/a'}"
     )
     if summary.acquisition_license:
         provenance += f" ({summary.acquisition_license})"
@@ -1157,21 +1142,13 @@ def render_summary_markdown(summary: PaperSummary) -> str:
     provenance += f"- Read at: {summary.extracted_at or 'n/a'}\n"
     if summary.tokens_input or summary.tokens_output:
         provenance += (
-            f"- Tokens used: ~{summary.tokens_input} input, "
-            f"~{summary.tokens_output} output\n"
+            f"- Tokens used: ~{summary.tokens_input} input, ~{summary.tokens_output} output\n"
         )
 
     return (
         "---\n"
         f"{fm}\n"
-        "---\n"
-        + body_intro
-        + why
-        + methods
-        + findings
-        + refs_line
-        + extra_refs_block
-        + provenance
+        "---\n" + body_intro + why + methods + findings + refs_line + extra_refs_block + provenance
     )
 
 
@@ -1180,9 +1157,7 @@ def render_summary_markdown(summary: PaperSummary) -> str:
 # ---------------------------------------------------------------------------
 
 
-_REGEN_FOOTER_RE = re.compile(
-    r"\n<!-- vaultlab regen attempt: [^>]+ -->\n*\Z", re.DOTALL
-)
+_REGEN_FOOTER_RE = re.compile(r"\n<!-- vaultlab regen attempt: [^>]+ -->\n*\Z", re.DOTALL)
 
 
 def write_summary_to_kb(
@@ -1206,7 +1181,9 @@ def write_summary_to_kb(
         # Append a regen-attempt marker so the user can see we visited.
         existing = path.read_text(encoding="utf-8")
         existing = _REGEN_FOOTER_RE.sub("", existing)  # drop prior marker
-        marker = f"\n<!-- vaultlab regen attempt: {datetime.now().isoformat(timespec='seconds')} -->\n"
+        marker = (
+            f"\n<!-- vaultlab regen attempt: {datetime.now().isoformat(timespec='seconds')} -->\n"
+        )
         path.write_text(existing + marker, encoding="utf-8")
         logger.info("write_summary_to_kb: kept existing %s (overwrite=False)", path)
         return path
@@ -1223,7 +1200,7 @@ def write_summary_to_kb(
 
 
 def summarize_corpus(
-    corpus: "Corpus",
+    corpus: Corpus,
     *,
     pdf_cache_dir: Path,
     kb_root: Path,

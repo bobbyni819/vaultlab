@@ -46,8 +46,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-VALID_VERDICTS: frozenset[str] = frozenset(
-    {"supported", "partial", "unsupported", "unverifiable"}
-)
+VALID_VERDICTS: frozenset[str] = frozenset({"supported", "partial", "unsupported", "unverifiable"})
 
 
 @dataclass(frozen=True)
@@ -268,16 +267,12 @@ def claim_verification_response_schema() -> dict[str, Any]:
                         },
                         "evidence_doi": {
                             "type": "string",
-                            "description": (
-                                "DOI of the paper the evidence quote "
-                                "comes from."
-                            ),
+                            "description": ("DOI of the paper the evidence quote comes from."),
                         },
                         "revision_suggestion": {
                             "type": "string",
                             "description": (
-                                "Optional rewording for partial / "
-                                "unsupported verdicts."
+                                "Optional rewording for partial / unsupported verdicts."
                             ),
                         },
                     },
@@ -321,11 +316,7 @@ def build_claim_verification_prompt(
         ]
     )
     for claim in claims:
-        cite_block = (
-            f" cites: [{', '.join(claim.cited_dois)}]"
-            if claim.cited_dois
-            else ""
-        )
+        cite_block = f" cites: [{', '.join(claim.cited_dois)}]" if claim.cited_dois else ""
         lines.append(f"[{claim.position}]{cite_block}  {claim.text}")
     lines.append("")
 
@@ -446,13 +437,11 @@ def render_verifications_from_response(
             "verdict": verdict,
             "evidence": str(item.get("evidence") or "").strip(),
             "evidence_doi": str(item.get("evidence_doi") or "").strip().lower(),
-            "revision_suggestion": str(
-                item.get("revision_suggestion") or ""
-            ).strip(),
+            "revision_suggestion": str(item.get("revision_suggestion") or "").strip(),
         }
 
     verifications: list[ClaimVerification] = []
-    counts: dict[str, int] = {v: 0 for v in sorted(VALID_VERDICTS)}
+    counts: dict[str, int] = dict.fromkeys(sorted(VALID_VERDICTS), 0)
     any_rev = False
     for claim in task.claims:
         entry = by_position.get(claim.position)
@@ -544,8 +533,8 @@ __all__ = [
     "VALID_VERDICTS",
     "Claim",
     "ClaimVerification",
-    "ClaimVerificationTask",
     "ClaimVerificationResult",
+    "ClaimVerificationTask",
     "ClaimVerifier",
     "build_claim_verification_prompt",
     "claim_verification_response_schema",

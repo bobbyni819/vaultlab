@@ -20,7 +20,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -63,9 +63,11 @@ def _run_test(test: str, group_a, group_b):
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
-    variant: Literal["bar_with_significance", "box_grouped", "violin_split"] = "bar_with_significance",
+    variant: Literal[
+        "bar_with_significance", "box_grouped", "violin_split"
+    ] = "bar_with_significance",
     x_col: str,
     y_col: str,
     hue_col: str | None = None,
@@ -81,7 +83,6 @@ def render(
 
     Anchor: Sorin 2023 Fig 4 + Pentimalli 2025 Fig 5F (see stat_test_panel.md).
     """
-    import pandas as pd
 
     if x_col not in df.columns or y_col not in df.columns:
         raise ValueError(f"x_col / y_col not in DataFrame: {x_col!r} / {y_col!r}")
@@ -97,7 +98,9 @@ def render(
 
     if variant == "bar_with_significance":
         means = [float(np.nanmean(d)) if len(d) else 0.0 for d in group_data]
-        sems = [float(np.nanstd(d, ddof=1) / np.sqrt(len(d))) if len(d) > 1 else 0.0 for d in group_data]
+        sems = [
+            float(np.nanstd(d, ddof=1) / np.sqrt(len(d))) if len(d) > 1 else 0.0 for d in group_data
+        ]
         bars = ax.bar(
             positions,
             means,
@@ -146,7 +149,9 @@ def render(
                 )
 
     elif variant == "violin_split":
-        parts = ax.violinplot(group_data, positions=positions, widths=0.7, showmeans=False, showmedians=True)
+        parts = ax.violinplot(
+            group_data, positions=positions, widths=0.7, showmeans=False, showmedians=True
+        )
         for i, body in enumerate(parts["bodies"]):
             body.set_facecolor(cmap(i))
             body.set_edgecolor("black")

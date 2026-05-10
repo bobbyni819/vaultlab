@@ -31,11 +31,10 @@ Lineage
 
 from __future__ import annotations
 
-import json
 import logging
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Mapping, Optional
 
 import yaml
 
@@ -45,11 +44,11 @@ from vaultlab.runner.models import Role
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "JOURNAL_TARGET_DEFAULTS",
+    "META_AGENT_ROLES",
     "AggregatedAudit",
     "AuditPreparationError",
     "AuditPrompt",
-    "JOURNAL_TARGET_DEFAULTS",
-    "META_AGENT_ROLES",
     "aggregate_audits",
     "available_journal_yaml",
     "load_journal_guideline_md",
@@ -182,10 +181,7 @@ class AuditPrompt:
                 + yaml.safe_dump(self.common_yaml, sort_keys=False)
             )
 
-        parts.append(
-            f"# Artifact under audit ({self.artifact_path.name})\n\n"
-            + self.artifact_text
-        )
+        parts.append(f"# Artifact under audit ({self.artifact_path.name})\n\n" + self.artifact_text)
 
         parts.append(
             "# Your task\n\n"
@@ -275,9 +271,7 @@ def prepare_audit(
     """
     artifact = Path(artifact_path)
     if not artifact.exists():
-        raise AuditPreparationError(
-            f"Artifact not found: {artifact_path}"
-        )
+        raise AuditPreparationError(f"Artifact not found: {artifact_path}")
 
     try:
         role = load_role(role_id)
@@ -287,21 +281,15 @@ def prepare_audit(
     artifact_text = _read_artifact(artifact)
 
     resolved_journal = (
-        target_journal
-        or _resolve_target_journal(project_slug)
-        or _DEFAULT_TARGET_JOURNAL
+        target_journal or _resolve_target_journal(project_slug) or _DEFAULT_TARGET_JOURNAL
     )
-    yaml_basename = JOURNAL_TARGET_DEFAULTS.get(
-        resolved_journal, resolved_journal
-    )
+    yaml_basename = JOURNAL_TARGET_DEFAULTS.get(resolved_journal, resolved_journal)
 
     journal_yaml = load_journal_guideline_yaml(yaml_basename)
     common_yaml = load_journal_guideline_yaml("_common")
 
     # KB-side prose is keyed by display name (cell-press, nature, elife)
-    prose_basename = (
-        "cell-press" if yaml_basename == "cell" else yaml_basename
-    )
+    prose_basename = "cell-press" if yaml_basename == "cell" else yaml_basename
     journal_prose = ""
     resolved_kb_root = _resolve_kb_root(kb_root)
     if resolved_kb_root is not None:
@@ -315,6 +303,7 @@ def prepare_audit(
     if load_kb_context and resolved_slug and resolved_kb_root is not None:
         try:
             from vaultlab.runner.kb_context import compose_preamble
+
             kb_ctx = compose_preamble(
                 resolved_slug,
                 kb_root=resolved_kb_root,
@@ -371,27 +360,18 @@ def aggregate_audits(reports: Iterable[Mapping]) -> AggregatedAudit:
     if not reports_list:
         raise AuditPreparationError("aggregate_audits requires ≥1 report")
 
-    artifact_paths = {
-        Path(r["figure_path"]) for r in reports_list if "figure_path" in r
-    }
+    artifact_paths = {Path(r["figure_path"]) for r in reports_list if "figure_path" in r}
     artifact_paths.update(
         Path(r["target_artifact"]) for r in reports_list if "target_artifact" in r
     )
-    artifact_path = (
-        next(iter(artifact_paths)) if artifact_paths else Path("<unknown>")
-    )
+    artifact_path = next(iter(artifact_paths)) if artifact_paths else Path("<unknown>")
 
     per_role: dict[str, str] = {}
     issue_count: dict[str, int] = {"fail": 0, "major": 0, "minor": 0, "style": 0}
     evidence_axes: list[str] = []
 
     for r in reports_list:
-        role_label = (
-            r.get("_role")
-            or r.get("role")
-            or r.get("verdict_source")
-            or "unknown"
-        )
+        role_label = r.get("_role") or r.get("role") or r.get("verdict_source") or "unknown"
 
         # Verdict can come from any of these keys depending on the role
         verdict = (
@@ -424,9 +404,7 @@ def aggregate_audits(reports: Iterable[Mapping]) -> AggregatedAudit:
             evidence_axes.append(str(r["evidence_axis"]).lower())
 
     aggregated_verdict = _worst_case_verdict(per_role.values(), issue_count)
-    aggregated_evidence = (
-        _worst_case_evidence(evidence_axes) if evidence_axes else "n/a"
-    )
+    aggregated_evidence = _worst_case_evidence(evidence_axes) if evidence_axes else "n/a"
 
     return AggregatedAudit(
         artifact_path=artifact_path,

@@ -19,7 +19,6 @@ from datetime import date
 from vaultlab.roles import ROLE_TEMPLATES
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows._utils import _slug
@@ -79,7 +78,9 @@ def plan_lit_dive(
         tags=["literature", "paperclip", slug],
     )
     return WorkflowPlan(
-        meeting=meeting, plan=plan, provenance=prov,
+        meeting=meeting,
+        plan=plan,
+        provenance=prov,
         canonical_output_path=canonical,
     )
 

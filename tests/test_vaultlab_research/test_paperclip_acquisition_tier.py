@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vaultlab.research.acquisition import AcquisitionResult, acquire_pdf
+from vaultlab.research.acquisition import acquire_pdf
 from vaultlab.research.paper import Paper
 from vaultlab.research.sources.paperclip import PaperclipUnavailable
 
@@ -60,11 +60,13 @@ def test_paperclip_miss_falls_through_to_waterfall(cache_dir: Path):
 
     # Mock all the HTTP tiers as failing too — the goal is to verify
     # control flow falls through, not that any specific later tier wins.
-    with patch("vaultlab.research.acquisition._try_unpaywall", return_value=None), \
-         patch("vaultlab.research.acquisition._try_pmc", return_value=None), \
-         patch("vaultlab.research.acquisition._try_biorxiv", return_value=None), \
-         patch("vaultlab.research.acquisition._try_springer", return_value=None), \
-         patch("vaultlab.research.acquisition._try_elsevier", return_value=None):
+    with (
+        patch("vaultlab.research.acquisition._try_unpaywall", return_value=None),
+        patch("vaultlab.research.acquisition._try_pmc", return_value=None),
+        patch("vaultlab.research.acquisition._try_biorxiv", return_value=None),
+        patch("vaultlab.research.acquisition._try_springer", return_value=None),
+        patch("vaultlab.research.acquisition._try_elsevier", return_value=None),
+    ):
         result = acquire_pdf(
             doi="10.1/y",
             cache_dir=cache_dir,
@@ -87,11 +89,13 @@ def test_paperclip_lookup_error_does_not_break_waterfall(cache_dir: Path):
     pc = MagicMock()
     pc.lookup_doi.side_effect = PaperclipUnavailable("not authenticated")
 
-    with patch("vaultlab.research.acquisition._try_unpaywall", return_value=None), \
-         patch("vaultlab.research.acquisition._try_pmc", return_value=None), \
-         patch("vaultlab.research.acquisition._try_biorxiv", return_value=None), \
-         patch("vaultlab.research.acquisition._try_springer", return_value=None), \
-         patch("vaultlab.research.acquisition._try_elsevier", return_value=None):
+    with (
+        patch("vaultlab.research.acquisition._try_unpaywall", return_value=None),
+        patch("vaultlab.research.acquisition._try_pmc", return_value=None),
+        patch("vaultlab.research.acquisition._try_biorxiv", return_value=None),
+        patch("vaultlab.research.acquisition._try_springer", return_value=None),
+        patch("vaultlab.research.acquisition._try_elsevier", return_value=None),
+    ):
         result = acquire_pdf(
             doi="10.1/z",
             cache_dir=cache_dir,
@@ -108,11 +112,13 @@ def test_paperclip_lookup_error_does_not_break_waterfall(cache_dir: Path):
 
 def test_paperclip_client_none_skips_tier_silently(cache_dir: Path):
     """When paperclip_client is None, the tier doesn't appear in tried/errors."""
-    with patch("vaultlab.research.acquisition._try_unpaywall", return_value=None), \
-         patch("vaultlab.research.acquisition._try_pmc", return_value=None), \
-         patch("vaultlab.research.acquisition._try_biorxiv", return_value=None), \
-         patch("vaultlab.research.acquisition._try_springer", return_value=None), \
-         patch("vaultlab.research.acquisition._try_elsevier", return_value=None):
+    with (
+        patch("vaultlab.research.acquisition._try_unpaywall", return_value=None),
+        patch("vaultlab.research.acquisition._try_pmc", return_value=None),
+        patch("vaultlab.research.acquisition._try_biorxiv", return_value=None),
+        patch("vaultlab.research.acquisition._try_springer", return_value=None),
+        patch("vaultlab.research.acquisition._try_elsevier", return_value=None),
+    ):
         result = acquire_pdf(
             doi="10.1/n",
             cache_dir=cache_dir,
@@ -155,8 +161,7 @@ def test_cache_hit_takes_priority_over_paperclip(tmp_path: Path):
     cached.write_bytes(b"%PDF-1.4\n" + b"x" * 2000)
 
     # Patch doi_slug + cache_path_for to point to our fake cached file
-    with patch("vaultlab.research.acquisition.cache_path_for",
-               return_value=cached):
+    with patch("vaultlab.research.acquisition.cache_path_for", return_value=cached):
         pc = MagicMock()
         pc.lookup_doi = MagicMock()  # would be called if cache miss
         result = acquire_pdf(
@@ -185,13 +190,16 @@ def test_paperclip_miss_tier_errors_does_not_classify_as_paywalled(
     def make_404(name):
         def _f(*args, **kwargs):
             return None
+
         return _f
 
-    with patch("vaultlab.research.acquisition._try_unpaywall", return_value=None), \
-         patch("vaultlab.research.acquisition._try_pmc", return_value=None), \
-         patch("vaultlab.research.acquisition._try_biorxiv", return_value=None), \
-         patch("vaultlab.research.acquisition._try_springer", return_value=None), \
-         patch("vaultlab.research.acquisition._try_elsevier", return_value=None):
+    with (
+        patch("vaultlab.research.acquisition._try_unpaywall", return_value=None),
+        patch("vaultlab.research.acquisition._try_pmc", return_value=None),
+        patch("vaultlab.research.acquisition._try_biorxiv", return_value=None),
+        patch("vaultlab.research.acquisition._try_springer", return_value=None),
+        patch("vaultlab.research.acquisition._try_elsevier", return_value=None),
+    ):
         result = acquire_pdf(
             doi="10.1/notfound",
             cache_dir=cache_dir,
@@ -211,11 +219,13 @@ def test_paperclip_tier_runs_before_unpaywall(cache_dir: Path):
     pc = MagicMock()
     pc.lookup_doi.return_value = None
 
-    with patch("vaultlab.research.acquisition._try_unpaywall", return_value=None), \
-         patch("vaultlab.research.acquisition._try_pmc", return_value=None), \
-         patch("vaultlab.research.acquisition._try_biorxiv", return_value=None), \
-         patch("vaultlab.research.acquisition._try_springer", return_value=None), \
-         patch("vaultlab.research.acquisition._try_elsevier", return_value=None):
+    with (
+        patch("vaultlab.research.acquisition._try_unpaywall", return_value=None),
+        patch("vaultlab.research.acquisition._try_pmc", return_value=None),
+        patch("vaultlab.research.acquisition._try_biorxiv", return_value=None),
+        patch("vaultlab.research.acquisition._try_springer", return_value=None),
+        patch("vaultlab.research.acquisition._try_elsevier", return_value=None),
+    ):
         result = acquire_pdf(
             doi="10.1/order",
             cache_dir=cache_dir,

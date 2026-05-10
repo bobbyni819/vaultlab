@@ -14,7 +14,6 @@ from vaultlab.research.paper import Paper
 from vaultlab.research.search import unified_search
 from vaultlab.research.sources.elsevier import ElsevierClient
 
-
 # ---------------------------------------------------------------------------
 # ElsevierClient.search response parsing (Scopus shape)
 # ---------------------------------------------------------------------------

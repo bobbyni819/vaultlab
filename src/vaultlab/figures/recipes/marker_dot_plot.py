@@ -22,7 +22,7 @@ from vaultlab.figures.publication.save import save_fig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["render", "RECIPE_VERSION", "ANCHOR_PAPERS"]
+__all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
@@ -34,7 +34,7 @@ ANCHOR_PAPERS = (
 
 
 def render(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     *,
     cluster_order: list[str] | None = None,
     marker_order: list[str] | None = None,
@@ -95,9 +95,8 @@ def render(
         pivot_color = pivot_color[marker_order]
 
     if normalize == "z":
-        pivot_color = (
-            pivot_color.subtract(pivot_color.mean(axis=0), axis=1)
-            .divide(pivot_color.std(axis=0).replace(0, 1.0), axis=1)
+        pivot_color = pivot_color.subtract(pivot_color.mean(axis=0), axis=1).divide(
+            pivot_color.std(axis=0).replace(0, 1.0), axis=1
         )
     elif normalize == "minmax":
         col_min = pivot_color.min(axis=0)
@@ -137,7 +136,9 @@ def render(
 
     cbar = fig.colorbar(sc, ax=ax, fraction=0.025, pad=0.02)
     cbar.set_label(
-        {"z": "Z-score (per marker)", "minmax": "Min-max (per marker)", "none": "Mean expression"}[normalize],
+        {"z": "Z-score (per marker)", "minmax": "Min-max (per marker)", "none": "Mean expression"}[
+            normalize
+        ],
         fontsize=9,
     )
     cbar.ax.tick_params(labelsize=8)
@@ -145,7 +146,15 @@ def render(
     handles = []
     for frac in [0.25, 0.5, 0.75, 1.0]:
         handles.append(
-            plt.scatter([], [], s=frac * 200, c="lightgray", edgecolors="black", linewidths=0.4, label=f"{int(frac * 100)}%")
+            plt.scatter(
+                [],
+                [],
+                s=frac * 200,
+                c="lightgray",
+                edgecolors="black",
+                linewidths=0.4,
+                label=f"{int(frac * 100)}%",
+            )
         )
     ax.legend(
         handles=handles,

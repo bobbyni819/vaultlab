@@ -51,10 +51,9 @@ Limitations (v0.1.x)
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
-
 
 __all__ = [
     "CommitInfo",
@@ -132,9 +131,7 @@ def set_linked_repo(
     except FileNotFoundError:
         cfg = None
     if cfg is None:
-        cfg = VaultLabProjectConfig(
-            project_path=str(Path(project_path).resolve())
-        )
+        cfg = VaultLabProjectConfig(project_path=str(Path(project_path).resolve()))
     cfg.linked_repo = str(repo_resolved)
     save_config(cfg, project_path)
     return repo_resolved

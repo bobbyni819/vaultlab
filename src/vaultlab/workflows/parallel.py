@@ -14,10 +14,8 @@ Public surface
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows.deep_think import plan_deep_think_round
 from vaultlab.workflows.synthesis import plan_synthesis
@@ -30,8 +28,8 @@ def plan_parallel_runs(
     round_num: int = 1,
     mode: Mode = Mode.DATA_ANALYSIS,
     investigation_mode: InvestigationMode = InvestigationMode.DIRECTED,
-    agenda: Optional[Agenda] = None,
-    date_str: Optional[str] = None,
+    agenda: Agenda | None = None,
+    date_str: str | None = None,
 ) -> tuple[list[WorkflowPlan], WorkflowPlan]:
     """Build N parallel deep-think runs + one merge workflow — virtual-lab pattern.
 
@@ -93,11 +91,14 @@ def plan_parallel_runs(
         investigation_mode=investigation_mode,
     )
     merge_plan = plan_synthesis(
-        cfg, topic=f"merge {num_runs} runs on {topic}",
-        investigation_mode=investigation_mode, agenda=merge_agenda,
+        cfg,
+        topic=f"merge {num_runs} runs on {topic}",
+        investigation_mode=investigation_mode,
+        agenda=merge_agenda,
     )
     merge_plan.provenance.tags = list(merge_plan.provenance.tags) + [
-        "parallel-merge", f"num_runs={num_runs}",
+        "parallel-merge",
+        f"num_runs={num_runs}",
     ]
     merge_plan.provenance.kind = "parallel_merge"
     return parallel_plans, merge_plan

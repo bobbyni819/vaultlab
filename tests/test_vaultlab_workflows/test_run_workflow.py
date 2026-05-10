@@ -11,9 +11,7 @@ import tempfile
 import pytest
 
 from vaultlab.config import ProjectConfig
-
 from vaultlab.runner.models import InvestigationMode
-
 from vaultlab.workflows import (
     plan_deep_think_round,
     plan_lit_dive,
@@ -33,14 +31,17 @@ def cfg():
         os.makedirs(os.path.join(kb, "Sources", "Notes"))
         os.makedirs(os.path.join(kb, "Wiki", "Concepts"))
         yield ProjectConfig(
-            name="test", kb_path=kb,
-            domain="test", domain_context="ctx",
+            name="test",
+            kb_path=kb,
+            domain="test",
+            domain_context="ctx",
         )
 
 
 def _stub_agent(prefix: str = "STUB"):
     def fn(prompt: str, tools: list[str]) -> str:
         return f"{prefix}: {len(prompt)} chars, tools={tools}"
+
     return fn
 
 
@@ -117,7 +118,9 @@ def test_run_workflow_respects_investigation_mode(cfg):
         return "ok"
 
     wp = plan_deep_think_round(
-        cfg, topic="t", investigation_mode=InvestigationMode.EXPLORATORY,
+        cfg,
+        topic="t",
+        investigation_mode=InvestigationMode.EXPLORATORY,
     )
     run_workflow(wp, agent_fn=fn)
     for p in captured:
@@ -126,8 +129,10 @@ def test_run_workflow_respects_investigation_mode(cfg):
 
 def test_run_workflow_with_narrate_finding(cfg):
     wp = plan_narrate_finding(
-        cfg, finding_id="F001",
-        claim="test claim", exact_value="rho=0.5",
+        cfg,
+        finding_id="F001",
+        claim="test claim",
+        exact_value="rho=0.5",
     )
     result = run_workflow(wp, agent_fn=_stub_agent("NARR"))
     assert os.path.exists(result.plan.steps[0].output_path)
@@ -173,6 +178,8 @@ def test_run_workflow_with_reflection_zero_falls_back(cfg):
     """max_reflections=0 should behave like plain run_workflow."""
     wp = plan_synthesis(cfg)
     result = run_workflow_with_reflection(
-        wp, agent_fn=_stub_agent("REFL"), max_reflections=0,
+        wp,
+        agent_fn=_stub_agent("REFL"),
+        max_reflections=0,
     )
     assert result.plan.turns[0].output.startswith("REFL")

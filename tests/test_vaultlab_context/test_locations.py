@@ -101,13 +101,9 @@ class TestResolveKbRoot:
         """Vaultlab config beats bobby_kb compat (precedence #3 vs #4)."""
         from vaultlab.context.locations import resolve_kb_root
 
-        _write_vaultlab_locations(
-            isolated_env / "locations.toml", str(isolated_env / "from-toml")
-        )
+        _write_vaultlab_locations(isolated_env / "locations.toml", str(isolated_env / "from-toml"))
         # Also drop a bobby_kb config — vaultlab's should still win.
-        _write_bobby_kb_config(
-            isolated_env / "home", root=str(isolated_env / "from-bobby_kb")
-        )
+        _write_bobby_kb_config(isolated_env / "home", root=str(isolated_env / "from-bobby_kb"))
 
         result = resolve_kb_root(interactive=False)
         assert result == isolated_env / "from-toml"
@@ -131,9 +127,7 @@ class TestResolveKbRoot:
         result = resolve_kb_root(interactive=False)
         assert result == isolated_env / "kb-parent" / "vaultlab"
 
-    def test_resolve_kb_root_bobby_kb_root_only_no_default_kb(
-        self, isolated_env: Path
-    ) -> None:
+    def test_resolve_kb_root_bobby_kb_root_only_no_default_kb(self, isolated_env: Path) -> None:
         """When bobby_kb config has root but no default_kb, return root as-is."""
         from vaultlab.context.locations import resolve_kb_root
 
@@ -159,9 +153,7 @@ class TestResolveKbRoot:
 
         from vaultlab.context.locations import resolve_kb_root
 
-        _write_bobby_kb_config(
-            isolated_env / "home", root=str(isolated_env / "no-import-needed")
-        )
+        _write_bobby_kb_config(isolated_env / "home", root=str(isolated_env / "no-import-needed"))
         result = resolve_kb_root(interactive=False)
         assert result == isolated_env / "no-import-needed"
 
@@ -172,9 +164,7 @@ class TestResolveKbRoot:
 
 
 class TestResolveKbRootFirstRunPrompt:
-    def test_first_run_prompt_when_interactive(
-        self, isolated_env: Path
-    ) -> None:
+    def test_first_run_prompt_when_interactive(self, isolated_env: Path) -> None:
         """All sources absent + interactive → prompt + return user's choice."""
         from vaultlab.context.locations import resolve_kb_root
 
@@ -185,17 +175,13 @@ class TestResolveKbRootFirstRunPrompt:
             captured.append(prompt)
             return str(chosen)
 
-        result = resolve_kb_root(
-            interactive=True, input_fn=fake_input, persist_first_run=False
-        )
+        result = resolve_kb_root(interactive=True, input_fn=fake_input, persist_first_run=False)
         assert result == chosen
         assert len(captured) == 1
         # The prompt should mention the suggested default for clarity.
         assert "vaultlab-kb" in captured[0]
 
-    def test_first_run_default_is_home_vaultlab_kb(
-        self, isolated_env: Path
-    ) -> None:
+    def test_first_run_default_is_home_vaultlab_kb(self, isolated_env: Path) -> None:
         """Bare Enter at the prompt accepts the namespaced default."""
         from vaultlab.context.locations import resolve_kb_root
 
@@ -242,9 +228,7 @@ class TestResolveKbRootFirstRunPrompt:
 
 
 class TestResolveKbRootFailure:
-    def test_raises_when_non_interactive_and_unconfigured(
-        self, isolated_env: Path
-    ) -> None:
+    def test_raises_when_non_interactive_and_unconfigured(self, isolated_env: Path) -> None:
         """No env, no vaultlab config, no bobby_kb config, ``interactive=False``."""
         from vaultlab.context.locations import KbRootNotConfigured, resolve_kb_root
 

@@ -32,7 +32,6 @@ import yaml
 
 from vaultlab.kb.paths import concept_path, slugify_doi
 from vaultlab.research.acquisition import AcquisitionResult
-from vaultlab.research.corpus import Corpus
 from vaultlab.research.paper import Paper
 from vaultlab.research.report import (
     SECTION_ORDER,
@@ -47,7 +46,6 @@ from vaultlab.research.report import (
     section_response_schema,
 )
 from vaultlab.research.summarize import PaperSummary
-
 
 # ---------------------------------------------------------------------------
 # Synthetic 5-paper corpus (CODEX cellular neighborhoods, like the spec)
@@ -151,8 +149,11 @@ def _fake_acquire(corpus, cache_dir, **kwargs):
             )
         else:
             out[doi] = AcquisitionResult(
-                doi=doi, pdf_path=None, source="failed",
-                license=None, error="ref-only",
+                doi=doi,
+                pdf_path=None,
+                source="failed",
+                license=None,
+                error="ref-only",
             )
     return out
 
@@ -243,21 +244,20 @@ def test_section_order_and_roles_match_spec():
         assert sec in SECTION_ROLES
         assert SECTION_ROLES[sec][-1] == "synthesizer"
     # Per spec Section/role mix:
-    assert SECTION_ROLES["background"] == [
-        "literature_surveyor", "domain_expert", "synthesizer"
-    ]
+    assert SECTION_ROLES["background"] == ["literature_surveyor", "domain_expert", "synthesizer"]
     assert SECTION_ROLES["methods_landscape"] == [
-        "literature_surveyor", "methods_critic", "synthesizer"
+        "literature_surveyor",
+        "methods_critic",
+        "synthesizer",
     ]
     assert SECTION_ROLES["findings"] == [
-        "data_analyst", "methods_critic", "literature_critic", "synthesizer"
+        "data_analyst",
+        "methods_critic",
+        "literature_critic",
+        "synthesizer",
     ]
-    assert SECTION_ROLES["contradictions"] == [
-        "methods_critic", "literature_critic", "synthesizer"
-    ]
-    assert SECTION_ROLES["future_directions"] == [
-        "domain_expert", "synthesizer"
-    ]
+    assert SECTION_ROLES["contradictions"] == ["methods_critic", "literature_critic", "synthesizer"]
+    assert SECTION_ROLES["future_directions"] == ["domain_expert", "synthesizer"]
 
 
 def test_section_word_targets_in_spec_ranges():
@@ -333,8 +333,7 @@ def test_prepare_report_task_threads_prior_sections_into_prompt():
     """Section 2's prompt includes section 1's body for cohesion."""
     summaries = _three_summaries()
     section1_text = (
-        "The cellular-neighborhood concept emerged from "
-        "[[10.1038_nmeth.4391|Schapiro 2017]]."
+        "The cellular-neighborhood concept emerged from [[10.1038_nmeth.4391|Schapiro 2017]]."
     )
     task2 = prepare_report_task(
         topic="CODEX cellular neighborhoods",
@@ -432,9 +431,7 @@ def test_render_section_flags_claims_without_evidence():
         prior_sections={},
     )
     response = {
-        "section_text": (
-            "Research [[10.1038_nmeth.4391|Schapiro 2017]] established the area."
-        ),
+        "section_text": ("Research [[10.1038_nmeth.4391|Schapiro 2017]] established the area."),
         "claims_with_evidence": [
             {"claim": "Some unsupported claim with no evidence.", "doi_slugs": []},
         ],
@@ -490,11 +487,13 @@ def _make_crosstalk_runner(canned_section_text):
 
     We sniff via the agenda statement (matching test_run_lit_arc_with_adversarial pattern).
     """
+
     def _crosstalk(meeting, roles):
         outputs = []
         agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
-        is_audit = "Audit the report document" in agenda_text or \
-                   meeting.topic.startswith("rigor audit")
+        is_audit = "Audit the report document" in agenda_text or meeting.topic.startswith(
+            "rigor audit"
+        )
         for r in roles:
             if r.id == "synthesizer" and not is_audit:
                 # Section-meeting synthesizer.
@@ -514,12 +513,11 @@ def _make_crosstalk_runner(canned_section_text):
                 # Non-synth role just returns a placeholder.
                 outputs.append({"output": f"[{r.id}]"})
         return outputs
+
     return _crosstalk
 
 
-def test_run_lit_report_with_stub_callbacks_full_pipeline(
-    tmp_path, monkeypatch
-):
+def test_run_lit_report_with_stub_callbacks_full_pipeline(tmp_path, monkeypatch):
     """Synthetic 5-paper corpus + stub crosstalk runner — verify that the
     full pipeline writes the assembled review, all 5 section drafts, and
     the audit file with passed status, and that total word count is in
@@ -587,9 +585,7 @@ def test_run_lit_report_with_stub_callbacks_full_pipeline(
     assert result.duration_seconds >= 0.0
 
     # Path canonicalization.
-    expected_report = concept_path(
-        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
-    )
+    expected_report = concept_path(tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30")
     assert result.report_path == expected_report
 
     # All 5 sections written.
@@ -628,9 +624,7 @@ def test_run_lit_report_with_stub_callbacks_full_pipeline(
     assert "## Rigor audit" in md
 
     # Provenance receipts.
-    json_p = result.report_path.with_name(
-        result.report_path.name + ".provenance.json"
-    )
+    json_p = result.report_path.with_name(result.report_path.name + ".provenance.json")
     assert json_p.exists()
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["params"]["audit_status"] == result.audit_status
@@ -661,9 +655,7 @@ def test_run_lit_report_cohesion_threading(tmp_path, monkeypatch):
         for r in roles:
             if r.id == "synthesizer":
                 payload = {
-                    "section_text": (
-                        "Sample text [[10.1038_nmeth.4391|Schapiro 2017]] " * 50
-                    ),
+                    "section_text": ("Sample text [[10.1038_nmeth.4391|Schapiro 2017]] " * 50),
                     "claims_with_evidence": [
                         {"claim": "x", "doi_slugs": ["10.1038_nmeth.4391"]},
                     ],
@@ -719,9 +711,7 @@ def test_run_lit_report_audit_strict_blocks_on_blocker(tmp_path, monkeypatch):
             if r.id == "synthesizer":
                 payload = {
                     "section_text": "[[10.1038_nmeth.4391|Schapiro 2017]] said x. " * 50,
-                    "claims_with_evidence": [
-                        {"claim": "x", "doi_slugs": ["10.1038_nmeth.4391"]}
-                    ],
+                    "claims_with_evidence": [{"claim": "x", "doi_slugs": ["10.1038_nmeth.4391"]}],
                 }
                 outputs.append({"output": json.dumps(payload)})
             elif r.id == "rigor_auditor":
@@ -774,12 +764,8 @@ def test_run_lit_report_section_writer_fallback(tmp_path, monkeypatch):
     def _writer(task):
         seen_sections.append(task.section)
         return {
-            "section_text": (
-                "Goltsev [[10.1016_j.cell.2018.07.010|Goltsev 2018]] said. " * 80
-            ),
-            "claims_with_evidence": [
-                {"claim": "x", "doi_slugs": ["10.1016_j.cell.2018.07.010"]}
-            ],
+            "section_text": ("Goltsev [[10.1016_j.cell.2018.07.010|Goltsev 2018]] said. " * 80),
+            "claims_with_evidence": [{"claim": "x", "doi_slugs": ["10.1016_j.cell.2018.07.010"]}],
         }
 
     client = _FakeClient(_make_seeds())
@@ -813,12 +799,8 @@ def test_run_lit_report_provenance_records_word_counts(tmp_path, monkeypatch):
 
     def _writer(task):
         return {
-            "section_text": (
-                "[[10.1038_nmeth.4391|Schapiro 2017]] established. " * 60
-            ),
-            "claims_with_evidence": [
-                {"claim": "x", "doi_slugs": ["10.1038_nmeth.4391"]}
-            ],
+            "section_text": ("[[10.1038_nmeth.4391|Schapiro 2017]] established. " * 60),
+            "claims_with_evidence": [{"claim": "x", "doi_slugs": ["10.1038_nmeth.4391"]}],
         }
 
     client = _FakeClient(_make_seeds())
@@ -835,9 +817,7 @@ def test_run_lit_report_provenance_records_word_counts(tmp_path, monkeypatch):
         _today="2026-04-30",
     )
 
-    json_p = result.report_path.with_name(
-        result.report_path.name + ".provenance.json"
-    )
+    json_p = result.report_path.with_name(result.report_path.name + ".provenance.json")
     rec = json.loads(json_p.read_text(encoding="utf-8"))
     assert rec["generated_by"] == "vaultlab.research.report.run_lit_report"
     assert rec["params"]["actual_total_words"] == result.word_count
@@ -936,9 +916,8 @@ def test_run_lit_report_honors_project_slug(tmp_path, monkeypatch):
         def _crosstalk(meeting, roles):
             outputs = []
             agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
-            is_audit = (
-                "Audit the report document" in agenda_text
-                or meeting.topic.startswith("rigor audit")
+            is_audit = "Audit the report document" in agenda_text or meeting.topic.startswith(
+                "rigor audit"
             )
             for r in roles:
                 if r.id == "synthesizer" and not is_audit:
@@ -949,12 +928,11 @@ def test_run_lit_report_honors_project_slug(tmp_path, monkeypatch):
                             break
                     outputs.append({"output": json.dumps(_canned(section_id))})
                 elif r.id == "rigor_auditor":
-                    outputs.append({"output": json.dumps(
-                        {"passed": True, "issues": []}
-                    )})
+                    outputs.append({"output": json.dumps({"passed": True, "issues": []})})
                 else:
                     outputs.append({"output": f"[{r.id}]"})
             return outputs
+
         return _crosstalk
 
     client = _FakeClient(_make_seeds())
@@ -979,9 +957,7 @@ def test_run_lit_report_honors_project_slug(tmp_path, monkeypatch):
     # The report file must land at the SLUG-derived path, not the
     # topic-derived path.
     expected = concept_path(tmp_path, "codex-cn-test", "report", "2026-04-30")
-    topic_only = concept_path(
-        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
-    )
+    topic_only = concept_path(tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30")
     assert result.report_path == expected, (
         f"expected slug-derived path {expected}, got {result.report_path}"
     )
@@ -991,20 +967,14 @@ def test_run_lit_report_honors_project_slug(tmp_path, monkeypatch):
     assert expected != topic_only, (
         "test bug: slug and topic produced same path; pick a slug != topic"
     )
-    assert not topic_only.exists(), (
-        f"unexpected write at topic-derived path {topic_only}"
-    )
+    assert not topic_only.exists(), f"unexpected write at topic-derived path {topic_only}"
 
     # Provenance receipt should still land next to the new path.
-    json_p = result.report_path.with_name(
-        result.report_path.name + ".provenance.json"
-    )
+    json_p = result.report_path.with_name(result.report_path.name + ".provenance.json")
     assert json_p.exists()
 
 
-def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
-    tmp_path, monkeypatch
-):
+def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(tmp_path, monkeypatch):
     """When ``project_slug`` is None, fall back to ``slugify_topic(topic)``."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(
@@ -1013,10 +983,7 @@ def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
     )
 
     def _canned(_section_id):
-        text = (
-            "Background prose "
-            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]]. "
-        ) * 80
+        text = ("Background prose [[10.1016_j.cell.2018.07.010|Goltsev 2018]]. ") * 80
         return {
             "section_text": " ".join(text.split()[:600]),
             "claims_with_evidence": [
@@ -1030,9 +997,8 @@ def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
     def _crosstalk(meeting, roles):
         outputs = []
         agenda_text = (meeting.agenda.statement if meeting.agenda else "") or ""
-        is_audit = (
-            "Audit the report document" in agenda_text
-            or meeting.topic.startswith("rigor audit")
+        is_audit = "Audit the report document" in agenda_text or meeting.topic.startswith(
+            "rigor audit"
         )
         for r in roles:
             if r.id == "synthesizer" and not is_audit:
@@ -1043,9 +1009,7 @@ def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
                         break
                 outputs.append({"output": json.dumps(_canned(section_id))})
             elif r.id == "rigor_auditor":
-                outputs.append({"output": json.dumps(
-                    {"passed": True, "issues": []}
-                )})
+                outputs.append({"output": json.dumps({"passed": True, "issues": []})})
             else:
                 outputs.append({"output": f"[{r.id}]"})
         return outputs
@@ -1067,9 +1031,7 @@ def test_run_lit_report_falls_back_to_topic_slug_when_no_project_slug(
         _today="2026-04-30",
     )
 
-    expected = concept_path(
-        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
-    )
+    expected = concept_path(tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30")
     assert result.report_path == expected
     assert result.report_path.exists()
 
@@ -1104,10 +1066,7 @@ def test_run_lit_report_auto_discovers_project_slug(tmp_path, monkeypatch):
     monkeypatch.chdir(project_dir)
 
     def _canned(_section_id):
-        text = (
-            "Background prose "
-            "[[10.1016_j.cell.2018.07.010|Goltsev 2018]]. "
-        ) * 80
+        text = ("Background prose [[10.1016_j.cell.2018.07.010|Goltsev 2018]]. ") * 80
         return {
             "section_text": " ".join(text.split()[:600]),
             "claims_with_evidence": [
@@ -1138,9 +1097,7 @@ def test_run_lit_report_auto_discovers_project_slug(tmp_path, monkeypatch):
     # The orchestrator must have picked up the slug from the config file
     # and routed the report path through it.
     expected = concept_path(tmp_path, "auto-report-slug", "report", "2026-04-30")
-    topic_only = concept_path(
-        tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30"
-    )
+    topic_only = concept_path(tmp_path, "CODEX cellular neighborhoods", "report", "2026-04-30")
     assert result.report_path == expected, (
         f"expected slug-derived path {expected}, got {result.report_path}"
     )
@@ -1209,37 +1166,26 @@ def test_run_lit_report_persists_per_section_transcripts(tmp_path, monkeypatch):
     # Locate the run_dir: Output/<slug>/runs/<run_id>/.
     runs_root = tmp_path / "Output" / "codex-cn-test" / "runs"
     assert runs_root.exists(), (
-        f"runs dir was never created at {runs_root}; section transcripts "
-        "would have nowhere to land"
+        f"runs dir was never created at {runs_root}; section transcripts would have nowhere to land"
     )
     run_dirs = sorted(p for p in runs_root.iterdir() if p.is_dir())
-    assert len(run_dirs) == 1, (
-        f"expected exactly one run_dir under {runs_root}, got {run_dirs}"
-    )
+    assert len(run_dirs) == 1, f"expected exactly one run_dir under {runs_root}, got {run_dirs}"
     run_dir = run_dirs[0]
 
     # Every section must have a per-meeting transcript on disk.
     for section in SECTION_ORDER:
         transcript = run_dir / f"meeting-report-{section}-transcript.md"
-        assert transcript.exists(), (
-            f"missing transcript for section {section}: {transcript}"
-        )
+        assert transcript.exists(), f"missing transcript for section {section}: {transcript}"
         body = transcript.read_text(encoding="utf-8")
         # The header carries the meeting purpose; the body has one
         # ``## Turn <n>: <role-id>`` heading per role-turn.
         assert f"# Crosstalk meeting — report-{section}" in body
-        assert "## Turn 1:" in body, (
-            f"transcript {transcript} missing per-turn structure"
-        )
+        assert "## Turn 1:" in body, f"transcript {transcript} missing per-turn structure"
 
         # And the per-turn files (one per role per round) must exist
         # under the canonical ``meeting-<purpose>-turn-<n>-<role>.md`` shape.
-        per_turn_files = list(
-            run_dir.glob(f"meeting-report-{section}-turn-*.md")
-        )
-        assert per_turn_files, (
-            f"no per-turn files for section {section} in {run_dir}"
-        )
+        per_turn_files = list(run_dir.glob(f"meeting-report-{section}-turn-*.md"))
+        assert per_turn_files, f"no per-turn files for section {section} in {run_dir}"
 
     # Sanity: the run still produced a valid report.
     assert result.report_path.exists()

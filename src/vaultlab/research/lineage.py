@@ -80,10 +80,11 @@ import json
 import logging
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from vaultlab.kb.paths import (
     article_stub_path,
@@ -102,7 +103,6 @@ from vaultlab.provenance import ProvenanceRecord, write_receipts
 from vaultlab.research.acquisition import acquire_pdfs_for_corpus
 from vaultlab.research.binning import (
     BinningCallback,
-    BinningTask,
     assign_buckets_with_llm,
 )
 from vaultlab.research.corpus import (
@@ -202,8 +202,7 @@ def _derive_max_papers(
         # we get here ``n_pdfs_cached`` already reflects the retried count.
         return n_pdfs_cached
     raise ValueError(
-        f"unknown depth: {depth!r} (expected one of "
-        f"'fast', 'balanced', 'thorough', 'complete')"
+        f"unknown depth: {depth!r} (expected one of 'fast', 'balanced', 'thorough', 'complete')"
     )
 
 
@@ -320,7 +319,7 @@ class LineageRunResult:
     duration_seconds: float = 0.0
     project_slug: str = ""
     project_view_paths: dict[str, Path] = field(default_factory=dict)
-    corpus: "Corpus | None" = None
+    corpus: Corpus | None = None
     figure_assignments: dict[str, Path] = field(default_factory=dict)
     figures_acquired: int = 0
 
@@ -582,9 +581,7 @@ def _write_article_stub(kb_root: Path, paper: Paper) -> Path | None:
 # Regex to parse Tier rows in a sibling project's papers.md, e.g.
 #   | [[10.1126_science.1225829\|Jinek 2012]] | 2012 | 0.66 | 2 | — |
 # We match the wikilink slug only (column 1), since "Also in" needs no other data.
-_SIBLING_WIKILINK_RE = re.compile(
-    r"\[\[([A-Za-z0-9._\-+/]+)(?:\\?\|[^\]]*)?\]\]"
-)
+_SIBLING_WIKILINK_RE = re.compile(r"\[\[([A-Za-z0-9._\-+/]+)(?:\\?\|[^\]]*)?\]\]")
 
 
 def _scan_sibling_project_dois(
@@ -671,9 +668,7 @@ def _render_project_papers_md(
     tier_c = [(s, slug) for s, slug in rows if s.tier != "A"]
 
     # Tier-A: rank by og_score + forward_influence/10 (matches backfill script).
-    tier_a.sort(
-        key=lambda pair: -(pair[0].og_score + pair[0].forward_influence / 10)
-    )
+    tier_a.sort(key=lambda pair: -(pair[0].og_score + pair[0].forward_influence / 10))
     # Tier-C: by year descending, with year=0 sinking to the bottom.
     tier_c.sort(key=lambda pair: -(pair[0].year or 0))
 
@@ -725,24 +720,23 @@ def _render_project_papers_md(
     else:
         lines.append("_(no Tier-A papers — none had a cached PDF)_")
 
-    lines.extend([
-        "",
-        "## Tier C — citation-stat-only stubs",
-        "",
-        "Papers cited via the corpus's citation graph but not read full-text. "
-        "Frontmatter has citation metrics; LLM-written content sections are "
-        "empty. Linked here so the citation network is navigable in "
-        "Obsidian's graph view.",
-        "",
-    ])
-    if tier_c:
-        chunks = [
-            f"[[{slug}\\|{_project_view_label(s)}]]"
-            for s, slug in tier_c
+    lines.extend(
+        [
+            "",
+            "## Tier C — citation-stat-only stubs",
+            "",
+            "Papers cited via the corpus's citation graph but not read full-text. "
+            "Frontmatter has citation metrics; LLM-written content sections are "
+            "empty. Linked here so the citation network is navigable in "
+            "Obsidian's graph view.",
+            "",
         ]
+    )
+    if tier_c:
+        chunks = [f"[[{slug}\\|{_project_view_label(s)}]]" for s, slug in tier_c]
         # 5 per line for readability — same as the backfill script.
         for i in range(0, len(chunks), 5):
-            lines.append(" · ".join(chunks[i:i + 5]))
+            lines.append(" · ".join(chunks[i : i + 5]))
     else:
         lines.append("_(no Tier-C papers in this corpus)_")
 
@@ -832,11 +826,7 @@ def _render_decisions_log_entry(
     timestamp: str,
 ) -> str:
     """Render one append-only entry for ``decisions-log.md``."""
-    pct = (
-        f"{(pdfs_acquired / max(corpus_size, 1)) * 100:.0f}%"
-        if corpus_size
-        else "0%"
-    )
+    pct = f"{(pdfs_acquired / max(corpus_size, 1)) * 100:.0f}%" if corpus_size else "0%"
     deck_line = (
         f"- **Output deck:** {deck_path}"
         if deck_path is not None
@@ -945,10 +935,9 @@ def _safe_merge_start_here(
                 },
                 tags=["lit-arc", "project-view", "start-here"],
                 notes=(
-                    "Refreshed via lit-arc Phase 9. "
-                    "Merged with onboarding START_HERE."
-                    if is_onboarding else
-                    "Refreshed via lit-arc Phase 9 (overwrite)."
+                    "Refreshed via lit-arc Phase 9. Merged with onboarding START_HERE."
+                    if is_onboarding
+                    else "Refreshed via lit-arc Phase 9 (overwrite)."
                 ),
             )
             write_receipts(start_here_path, record)
@@ -972,18 +961,20 @@ def _safe_merge_start_here(
         if deck_path is not None
         else "- **Slide deck:** _(none — lit-arc only)_"
     )
-    new_section = "\n".join([
-        "## Lineage runs",
-        "",
-        f"- **Last run:** {date_str}",
-        f"- **Topic:** {topic}",
-        f"- **Corpus:** {n_total} papers ({n_tier_a} Tier-A, {n_tier_c} Tier-C)",
-        f"- **Lineage arc:** [[{arc_path.stem}|→ open arc]]",
-        "- **Per-paper manifest:** [[papers|→ open papers list]]",
-        "- **Decisions log:** [[decisions-log|→ open log]]",
-        deck_line,
-        "",
-    ])
+    new_section = "\n".join(
+        [
+            "## Lineage runs",
+            "",
+            f"- **Last run:** {date_str}",
+            f"- **Topic:** {topic}",
+            f"- **Corpus:** {n_total} papers ({n_tier_a} Tier-A, {n_tier_c} Tier-C)",
+            f"- **Lineage arc:** [[{arc_path.stem}|→ open arc]]",
+            "- **Per-paper manifest:** [[papers|→ open papers list]]",
+            "- **Decisions log:** [[decisions-log|→ open log]]",
+            deck_line,
+            "",
+        ]
+    )
 
     if "## Lineage runs" in existing:
         # Refresh the existing section in place so we don't accumulate
@@ -996,7 +987,7 @@ def _safe_merge_start_here(
         if next_h2 == -1:
             merged = prefix + new_section
         else:
-            merged = prefix + new_section + "\n" + existing[next_h2 + 1:]
+            merged = prefix + new_section + "\n" + existing[next_h2 + 1 :]
     else:
         if not existing.endswith("\n"):
             existing += "\n"
@@ -1068,9 +1059,7 @@ def _write_project_view(
 
     # Cross-project "Also in" detection — scan sibling project papers.md
     # at write time so refreshes stay current.
-    sibling_membership = _scan_sibling_project_dois(
-        kb_root, exclude_slug=project_slug
-    )
+    sibling_membership = _scan_sibling_project_dois(kb_root, exclude_slug=project_slug)
 
     # Resolve output paths via vaultlab.kb.paths (autonomous routing rule).
     start_here_p = ensure_parent(project_state_path(kb_root, project_slug))
@@ -1161,8 +1150,7 @@ def _write_project_view(
         decisions_p.write_text(existing + "\n" + new_entry, encoding="utf-8")
     else:
         decisions_p.write_text(
-            _decisions_log_header(project_slug=project_slug, topic=topic)
-            + new_entry,
+            _decisions_log_header(project_slug=project_slug, topic=topic) + new_entry,
             encoding="utf-8",
         )
 
@@ -1207,6 +1195,7 @@ def _pick_top_n_for_summarization(
         def _has_pdf(doi: str) -> bool:
             return cache_path_for(doi, pdf_cache_dir).exists()
     else:
+
         def _has_pdf(doi: str) -> bool:
             return False  # treat all equally
 
@@ -1215,9 +1204,7 @@ def _pick_top_n_for_summarization(
         # Secondary: og_score + forward_influence.
         return (
             1 if _has_pdf(doi) else 0,
-            float(metrics.og_score.get(doi, 0.0)) + float(
-                metrics.forward_influence.get(doi, 0)
-            ),
+            float(metrics.og_score.get(doi, 0.0)) + float(metrics.forward_influence.get(doi, 0)),
         )
 
     ranked = sorted(corpus.papers.keys(), key=_score, reverse=True)
@@ -1300,13 +1287,8 @@ def build_arc_prompt(
             slug = slugify_doi(s.doi) if s.doi else "?"
             label = _author_year_label(s)
             tldr = (s.tldr or "_(no full-text available — Tier C stub)_").strip()
-            findings_preview = "; ".join(
-                (s.key_findings or [])[:2]
-            ) or "_(no findings extracted)_"
-            lines.append(
-                f"- [[{slug}|{label}]] ({s.year}) — {tldr} "
-                f"Findings: {findings_preview}"
-            )
+            findings_preview = "; ".join((s.key_findings or [])[:2]) or "_(no findings extracted)_"
+            lines.append(f"- [[{slug}|{label}]] ({s.year}) — {tldr} Findings: {findings_preview}")
         return "\n".join(lines)
 
     history = _render_bucket("history", buckets.get("history", []))
@@ -1328,8 +1310,7 @@ def build_arc_prompt(
         la = _author_year_label(sa) if sa else a
         lb = _author_year_label(sb) if sb else b
         cocite_lines.append(
-            f"- [[{slugify_doi(a)}|{la}]] + [[{slugify_doi(b)}|{lb}]] — "
-            f"co-cited by {n} papers"
+            f"- [[{slugify_doi(a)}|{la}]] + [[{slugify_doi(b)}|{lb}]] — co-cited by {n} papers"
         )
     cocite_block = "\n".join(cocite_lines) if cocite_lines else "(none)"
 
@@ -1594,9 +1575,7 @@ def render_arc_from_response(
         corpus=corpus,
         method_relpath=task.method_relpath,
         narrative=narrative,
-        narrative_skipped_reason=(
-            "" if narrative is not None else "no narrative provided"
-        ),
+        narrative_skipped_reason=("" if narrative is not None else "no narrative provided"),
     )
     if write:
         task.output_path.write_text(arc_md, encoding="utf-8")
@@ -1639,6 +1618,7 @@ def _bucket_papers_table(
         # noisy. Emit a plain DOI-only row with a footnote rather than a
         # named wikilink, and tally the count for the table footer.
         from vaultlab.research.corpus import has_anonymous_author
+
         if has_anonymous_author(s.authors) and not s.year:
             lines.append(
                 f"| ? | _(metadata-only stub: {s.doi})_ | {s.tier} | "
@@ -1703,7 +1683,7 @@ def render_arc_markdown(
         # reviewer who lands on the arc without reading the methodology page
         # still understands what the score means.
         'og_score_methodology: "og_score: Kessler 1963 bibliographic '
-        "coupling — fraction of seed papers that cite each candidate.\"",
+        'coupling — fraction of seed papers that cite each candidate."',
         "---",
     ]
 
@@ -1769,9 +1749,7 @@ def render_arc_markdown(
     if metrics is not None and metrics.og_score:
         body.append("| OG-score | Paper | Year |")
         body.append("|---|---|---|")
-        top_og = sorted(metrics.og_score.items(), key=lambda kv: kv[1], reverse=True)[
-            :10
-        ]
+        top_og = sorted(metrics.og_score.items(), key=lambda kv: kv[1], reverse=True)[:10]
         for doi, score in top_og:
             s = summaries.get(doi)
             label = _author_year_label(s) if s else doi
@@ -1843,8 +1821,8 @@ def run_lit_arc(
     query_expansion_n: int = 5,
     forward_expansion: bool = True,
     forward_expansion_max_per_seed: int = 50,
-    arc_structure: "str | Any" = None,
-    verifier_callback: "Any | None" = None,
+    arc_structure: str | Any = None,
+    verifier_callback: Any | None = None,
     verifier_unverifiable_threshold: int = 1,
     crosstalk_runner: Any | None = None,
     crosstalk_n_rounds: int = 3,
@@ -1954,8 +1932,7 @@ def run_lit_arc(
     # Validate depth eagerly so callers get a clean error.
     if depth not in ("fast", "balanced", "thorough", "complete"):
         raise ValueError(
-            f"unknown depth: {depth!r} (expected one of "
-            f"'fast', 'balanced', 'thorough', 'complete')"
+            f"unknown depth: {depth!r} (expected one of 'fast', 'balanced', 'thorough', 'complete')"
         )
 
     # G-2 fix (option b): if project_slug wasn't threaded explicitly, walk
@@ -1966,6 +1943,7 @@ def run_lit_arc(
     if project_slug is None:
         try:
             from vaultlab.onboarding import load_project_config_from_cwd
+
             _cfg = load_project_config_from_cwd()
         except Exception:  # pragma: no cover — never break a run
             logger.exception("load_project_config_from_cwd failed")
@@ -1973,8 +1951,7 @@ def run_lit_arc(
         if _cfg is not None and getattr(_cfg, "slug", ""):
             project_slug = _cfg.slug
             logger.info(
-                "auto-discovered project_slug=%s from "
-                ".vaultlab-project.json (cwd=%s)",
+                "auto-discovered project_slug=%s from .vaultlab-project.json (cwd=%s)",
                 project_slug,
                 Path.cwd(),
             )
@@ -2031,13 +2008,9 @@ def run_lit_arc(
         except TypeError:
             # Older clients without ``queries=`` support — fall back to
             # the literal topic.
-            raw_seeds, search_trace = client.search_with_trace(
-                topic, max_results=max_seeds
-            )
+            raw_seeds, search_trace = client.search_with_trace(topic, max_results=max_seeds)
         except Exception:  # pragma: no cover — defensive
-            logger.exception(
-                "search_with_trace failed; falling back to plain client.search"
-            )
+            logger.exception("search_with_trace failed; falling back to plain client.search")
             raw_seeds = client.search(topic, max_results=max_seeds)
     else:
         raw_seeds = client.search(topic, max_results=max_seeds)
@@ -2048,9 +2021,7 @@ def run_lit_arc(
     # ------------------------------------------------------------------
     # Phase 2: search log
     # ------------------------------------------------------------------
-    log_path = _write_search_log(
-        kb_root=kb_root, topic=topic, seeds=seeds, date_str=date_str
-    )
+    log_path = _write_search_log(kb_root=kb_root, topic=topic, seeds=seeds, date_str=date_str)
     _emit(progress, "search_log", path=str(log_path))
     # Side-by-side per-source trace (Gap 1 — observability). Failure here
     # is logged-and-ignored: the markdown log + decisions log already
@@ -2138,6 +2109,7 @@ def run_lit_arc(
     # Resolve the arc structure (variable-length arc support — defaults
     # to SHORT for back-compat).
     from vaultlab.research.arc_structure import resolve_structure
+
     resolved_arc_structure = resolve_structure(arc_structure)
 
     if binner_callback is not None and corpus.metrics is not None:
@@ -2196,9 +2168,7 @@ def run_lit_arc(
             )
         except TypeError:
             acq_results = acq(corpus, pdf_cache_dir)
-    pdfs_acquired = sum(
-        1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None
-    )
+    pdfs_acquired = sum(1 for r in acq_results.values() if getattr(r, "pdf_path", None) is not None)
     _emit(progress, "pdfs_acquired", n=pdfs_acquired)
     # Per-DOI trace sidecar (Gap 2). Lives next to the run if available
     # so the decisions log can answer "which sources did we try for
@@ -2241,6 +2211,7 @@ def run_lit_arc(
             acq_fig = _acquire_figures
         else:
             from vaultlab.figures.acquisition import acquire_figures_for_corpus
+
             acq_fig = acquire_figures_for_corpus
         try:
             fig_results = acq_fig(
@@ -2353,10 +2324,7 @@ def run_lit_arc(
         # Adversarial crosstalk path — only when explicitly enabled AND a
         # crosstalk_runner is available. Falls through to single-shot
         # picker_callback / mechanical pick on any failure.
-        if (
-            picker_mode == "adversarial"
-            and crosstalk_runner is not None
-        ):
+        if picker_mode == "adversarial" and crosstalk_runner is not None:
             from vaultlab.research.picker import _build_candidates  # type: ignore[attr-defined]
             from vaultlab.workflows.crosstalk import (
                 adversarial_picker_meeting,
@@ -2369,11 +2337,13 @@ def run_lit_arc(
                 kb_root=Path(kb_root),
                 pdf_cache_dir=pdf_cache_dir,
             )
-            abstracts_md = "\n\n".join(
-                f"[{i + 1}] {c.doi} — {c.title or '(untitled)'}\n"
-                f"  Abstract: {c.abstract[:600]}"
-                for i, c in enumerate(candidates)
-            ) or "(no candidates)"
+            abstracts_md = (
+                "\n\n".join(
+                    f"[{i + 1}] {c.doi} — {c.title or '(untitled)'}\n  Abstract: {c.abstract[:600]}"
+                    for i, c in enumerate(candidates)
+                )
+                or "(no candidates)"
+            )
             ct_result = adversarial_picker_meeting(
                 topic=topic,
                 candidates=candidates,
@@ -2412,9 +2382,7 @@ def run_lit_arc(
                     n=resolved_max_papers,
                     pdf_cache_dir=pdf_cache_dir,
                 )
-                picker_method = (
-                    "citation-graph (adversarial picker fallback)"
-                )
+                picker_method = "citation-graph (adversarial picker fallback)"
                 # Bug #5: when adversarial synth output is unusable and we
                 # fall through to the mechanical picker, the audit trail
                 # would otherwise be empty. Write a decision-log entry with
@@ -2422,6 +2390,7 @@ def run_lit_arc(
                 # is still traceable.
                 try:
                     from vaultlab.research.picker import PickerTask
+
                     fallback_task = PickerTask(
                         topic=topic,
                         candidates=candidates,
@@ -2430,10 +2399,10 @@ def run_lit_arc(
                         system_prompt="(adversarial picker fallback)",
                         response_schema={},
                     )
-                    fallback_rationales = {
-                        d: "adversarial picker fallback after empty/invalid synthesizer output"
-                        for d in keep_list
-                    }
+                    fallback_rationales = dict.fromkeys(
+                        keep_list,
+                        "adversarial picker fallback after empty/invalid synthesizer output",
+                    )
                     write_picker_decision(
                         kb_root=Path(kb_root),
                         project=project,
@@ -2445,9 +2414,7 @@ def run_lit_arc(
                         fallback_dir=run_dir,
                     )
                 except Exception:  # pragma: no cover — never break the run
-                    logger.exception(
-                        "write_picker_decision (adversarial fallback) failed"
-                    )
+                    logger.exception("write_picker_decision (adversarial fallback) failed")
         elif picker_callback is not None:
             keep_list = pick_top_n_content_aware(
                 topic,
@@ -2503,10 +2470,7 @@ def run_lit_arc(
         )
 
     # Compute the per-doi summary path map.
-    summary_paths: dict[str, Path] = {
-        doi: summary_path(kb_root, doi)
-        for doi in summaries
-    }
+    summary_paths: dict[str, Path] = {doi: summary_path(kb_root, doi) for doi in summaries}
     summaries_written = sum(1 for p in summary_paths.values() if p.exists())
     _emit(
         progress,
@@ -2532,11 +2496,7 @@ def run_lit_arc(
     narrative: dict[str, str] | None = None
     skipped_reason = ""
     crosstalk_arc_result = None
-    if (
-        arc_mode == "adversarial"
-        and crosstalk_runner is not None
-        and _llm_arc is None
-    ):
+    if arc_mode == "adversarial" and crosstalk_runner is not None and _llm_arc is None:
         # Adversarial crosstalk path for arc generation.
         from vaultlab.workflows.crosstalk import (
             adversarial_arc_meeting,
@@ -2558,17 +2518,13 @@ def run_lit_arc(
                 logger.exception("write_crosstalk_artifacts (arc) failed")
         cleaned = {
             "history": str(ct_arc.final_output.get("history", "")).strip(),
-            "development": str(
-                ct_arc.final_output.get("development", "")
-            ).strip(),
+            "development": str(ct_arc.final_output.get("development", "")).strip(),
             "sota": str(ct_arc.final_output.get("sota", "")).strip(),
         }
         if any(cleaned.values()):
             narrative = cleaned
         else:
-            skipped_reason = (
-                "adversarial arc meeting returned no narrative paragraphs"
-            )
+            skipped_reason = "adversarial arc meeting returned no narrative paragraphs"
             narrative = None
 
     if narrative is not None:
@@ -2625,9 +2581,7 @@ def run_lit_arc(
                 top_co_citation=top_co,
             )
             try:
-                narrative = _call_anthropic_arc(
-                    prompt=prompt, api_key=api_key, model=DEFAULT_MODEL
-                )
+                narrative = _call_anthropic_arc(prompt=prompt, api_key=api_key, model=DEFAULT_MODEL)
             except Exception as exc:
                 skipped_reason = f"anthropic call raised: {exc}"
                 narrative = None
@@ -2656,10 +2610,7 @@ def run_lit_arc(
             if tldr:
                 blob_parts.append(f"TL;DR: {tldr}")
             if findings:
-                blob_parts.append(
-                    "Key findings:\n"
-                    + "\n".join(f"- {f}" for f in findings)
-                )
+                blob_parts.append("Key findings:\n" + "\n".join(f"- {f}" for f in findings))
             cited_summaries[doi.lower()] = "\n\n".join(blob_parts)
 
         per_section_results: dict[str, Any] = {}
@@ -2685,10 +2636,7 @@ def run_lit_arc(
             unverifiable_total += result.verdict_counts.get("unverifiable", 0)
 
         verification_summary = {
-            "by_section": {
-                sid: dict(r.verdict_counts)
-                for sid, r in per_section_results.items()
-            },
+            "by_section": {sid: dict(r.verdict_counts) for sid, r in per_section_results.items()},
             "unverifiable_total": int(unverifiable_total),
             "any_revisions_suggested": any(
                 r.any_revisions_suggested for r in per_section_results.values()
@@ -2771,8 +2719,7 @@ def run_lit_arc(
     # ------------------------------------------------------------------
     # Resolve the slug: explicit override beats topic-derived default.
     resolved_slug = (
-        project_slug.strip() if project_slug and project_slug.strip()
-        else slugify_topic(topic)
+        project_slug.strip() if project_slug and project_slug.strip() else slugify_topic(topic)
     )
     # Resolve a run_id suitable for the decisions-log entry: prefer the
     # caller-supplied run_dir.name, fall back to None (entry says so).
@@ -2786,15 +2733,11 @@ def run_lit_arc(
     # Decide the multi-agent crosstalk descriptor for the decisions log.
     crosstalk_parts: list[str] = []
     if picker_mode == "adversarial" and crosstalk_picker_result is not None:
-        crosstalk_parts.append(
-            f"picker:adversarial({crosstalk_picker_result.crosstalk_status})"
-        )
+        crosstalk_parts.append(f"picker:adversarial({crosstalk_picker_result.crosstalk_status})")
     elif picker_callback is not None:
         crosstalk_parts.append("picker")
     if arc_mode == "adversarial" and crosstalk_arc_result is not None:
-        crosstalk_parts.append(
-            f"arc:adversarial({crosstalk_arc_result.crosstalk_status})"
-        )
+        crosstalk_parts.append(f"arc:adversarial({crosstalk_arc_result.crosstalk_status})")
     elif narrator is not None or _llm_arc is not None:
         crosstalk_parts.append("arc")
     crosstalk = "+".join(crosstalk_parts) if crosstalk_parts else "none"

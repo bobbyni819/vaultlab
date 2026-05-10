@@ -36,34 +36,30 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from vaultlab.kb.paths import (
     ensure_parent,
-    transcript_path,
-    turn_path,
 )
 from vaultlab.runner.meetings import (
     adversarial_inject,
     build_meeting,
     compose_turns,
-    merge_outputs,
 )
 from vaultlab.runner.models import (
     Agenda,
     Meeting,
     MeetingMode,
-    MeetingResult,
     MeetingTurn,
     Mode,
     Role,
 )
 
 if TYPE_CHECKING:
-    from vaultlab.research.corpus import Corpus
     from vaultlab.research.graph_metrics import CorpusMetrics
     from vaultlab.research.picker import CandidatePaper
     from vaultlab.research.summarize import PaperSummary
@@ -71,9 +67,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "CrosstalkResult",
     "MAX_N_ROUNDS",
     "MEETING_TIMEOUT_SECONDS",
+    "CrosstalkResult",
     "RunnerCallback",
     "adversarial_arc_meeting",
     "adversarial_deck_plan_meeting",
@@ -154,9 +150,7 @@ RunnerCallback = Callable[[Meeting, list[Role]], list[dict[str, Any]]]
 
 def _validate_n_rounds(n_rounds: int) -> None:
     if n_rounds < 1:
-        raise ValueError(
-            f"n_rounds must be >= 1, got {n_rounds}"
-        )
+        raise ValueError(f"n_rounds must be >= 1, got {n_rounds}")
     if n_rounds > MAX_N_ROUNDS:
         raise ValueError(
             f"n_rounds={n_rounds} exceeds MAX_N_ROUNDS={MAX_N_ROUNDS}. "
@@ -389,16 +383,14 @@ def adversarial_picker_meeting(
     )
     questions = [
         "Which candidates are clearly on-topic vs tangential?",
-        "Are there seminal works among the candidates that the citation "
-        "graph alone would miss?",
-        "Are any high-citation candidates secretly off-topic (deceptive "
-        "citation signal)?",
+        "Are there seminal works among the candidates that the citation graph alone would miss?",
+        "Are any high-citation candidates secretly off-topic (deceptive citation signal)?",
         f"What are the top {target_n} picks, ranked, with rationales?",
     ]
     rules = [
         "Use the exact DOIs listed in the candidates — do NOT invent new DOIs.",
         "Synthesizer MUST return JSON of the form "
-        "{\"picks\": [{\"doi\": ..., \"rank\": int, \"rationale\": ...}, ...]} "
+        '{"picks": [{"doi": ..., "rank": int, "rationale": ...}, ...]} '
         "with no other top-level keys.",
         f"Return EXACTLY {target_n} picks.",
     ]
@@ -465,7 +457,7 @@ def adversarial_arc_meeting(
         "unknown": [],
     }
     for s in summaries.values():
-        bucket = (s.year_bucket or "unknown")
+        bucket = s.year_bucket or "unknown"
         bucket_lines.setdefault(bucket, []).append(
             f"- {s.doi} ({s.year}) [{s.tier}] og={s.og_score:.2f} fi={s.forward_influence}"
             f" — {(s.tldr or '').strip()[:200]}"
@@ -489,17 +481,14 @@ def adversarial_arc_meeting(
         "What is the foundational claim each bucket should anchor?",
         "Are field-development claims (X led to Y) supported by the actual "
         "summaries, or speculative?",
-        "Are major strands (methods, applications, mechanisms) all "
-        "represented?",
-        "Final 3-paragraph narrative with 3-5 wikilink citations per "
-        "paragraph?",
+        "Are major strands (methods, applications, mechanisms) all represented?",
+        "Final 3-paragraph narrative with 3-5 wikilink citations per paragraph?",
     ]
     rules = [
-        "Cite each claim with [[<doi-slug>|Author Year]] using only DOIs "
-        "from the corpus.",
+        "Cite each claim with [[<doi-slug>|Author Year]] using only DOIs from the corpus.",
         "Do not invent claims not present in the per-paper summaries.",
         "Synthesizer MUST return JSON of the form "
-        "{\"history\": str, \"development\": str, \"sota\": str} "
+        '{"history": str, "development": str, "sota": str} '
         "with no other top-level keys.",
     ]
     agenda = Agenda(
@@ -558,13 +547,11 @@ def adversarial_deck_plan_meeting(
     figure_assignments = dict(figure_assignments or {})
 
     summary_lines = [
-        f"- {s.doi} ({s.year}, {s.year_bucket}, tier {s.tier}) — "
-        f"{(s.tldr or '').strip()[:200]}"
+        f"- {s.doi} ({s.year}, {s.year_bucket}, tier {s.tier}) — {(s.tldr or '').strip()[:200]}"
         for s in summaries.values()
     ]
     fig_lines = [
-        f"- doi={doi} image_path={Path(p).as_posix()}"
-        for doi, p in figure_assignments.items()
+        f"- doi={doi} image_path={Path(p).as_posix()}" for doi, p in figure_assignments.items()
     ]
 
     statement = (
@@ -578,15 +565,13 @@ def adversarial_deck_plan_meeting(
         "Which figures best support each slide? Are any substituted "
         "(claim X but show figure from Y)?",
         "Are any slide claims overclaimed relative to the source TL;DR?",
-        f"Final {target_slide_count}-slide plan in the deck_plan response "
-        "schema?",
+        f"Final {target_slide_count}-slide plan in the deck_plan response schema?",
     ]
     rules = [
-        "Pick figures ONLY from the available figure_assignments — do not "
-        "fabricate image paths.",
+        "Pick figures ONLY from the available figure_assignments — do not fabricate image paths.",
         "Every bullet must cite a real paper via [[<doi-slug>|Author Year]].",
         "Synthesizer MUST return JSON of the form "
-        "{\"story_arc_summary\": str, \"slides\": [...]} matching the "
+        '{"story_arc_summary": str, "slides": [...]} matching the '
         "deck_plan response schema.",
         f"Hit target_slide_count={target_slide_count} exactly.",
     ]
@@ -670,9 +655,7 @@ def rigor_audit(
     issue noting the audit was skipped).
     """
     if audit_kind not in {"arc", "deck", "report"}:
-        raise ValueError(
-            f"audit_kind must be 'arc', 'deck', or 'report', got {audit_kind!r}"
-        )
+        raise ValueError(f"audit_kind must be 'arc', 'deck', or 'report', got {audit_kind!r}")
 
     summaries = summaries or {}
 
@@ -696,11 +679,14 @@ def rigor_audit(
 
     auditor = ROLE_TEMPLATES["rigor_auditor"]
 
-    summaries_md = "\n".join(
-        f"- {doi}: tldr={(s.tldr or '').strip()[:160]} | "
-        f"findings={'; '.join((s.key_findings or [])[:3])[:200]}"
-        for doi, s in (summaries or {}).items()
-    ) or "(no summaries provided)"
+    summaries_md = (
+        "\n".join(
+            f"- {doi}: tldr={(s.tldr or '').strip()[:160]} | "
+            f"findings={'; '.join((s.key_findings or [])[:3])[:200]}"
+            for doi, s in (summaries or {}).items()
+        )
+        or "(no summaries provided)"
+    )
 
     statement = (
         f"Audit the {audit_kind} document below for rigor. Return ONLY a "
@@ -715,9 +701,8 @@ def rigor_audit(
         "Do all [[wikilinks]] target existing summary files?",
     ]
     rules = [
-        "Return ONLY a JSON object: {\"passed\": bool, \"issues\": [...]}.",
-        "Each issue must have loc, severity (blocker|major|minor), kind, "
-        "and fix.",
+        'Return ONLY a JSON object: {"passed": bool, "issues": [...]}.',
+        "Each issue must have loc, severity (blocker|major|minor), kind, and fix.",
         "Set passed=true only when no blocker or major issues remain.",
     ]
     agenda = Agenda(
@@ -749,8 +734,7 @@ def rigor_audit(
                     "loc": "(audit)",
                     "severity": "minor",
                     "kind": "other",
-                    "fix": "rigor_audit called with no runner_callback; "
-                    "audit skipped.",
+                    "fix": "rigor_audit called with no runner_callback; audit skipped.",
                 }
             ],
         }
@@ -826,9 +810,7 @@ def rigor_audit(
     passed = bool(parsed.get("passed", False))
     # Belt-and-braces: if the auditor said passed=True but there are
     # blocker/major issues, override.
-    has_serious = any(
-        i.get("severity") in {"blocker", "major"} for i in norm_issues
-    )
+    has_serious = any(i.get("severity") in {"blocker", "major"} for i in norm_issues)
     if has_serious and passed:
         passed = False
     return {"passed": passed, "issues": norm_issues}
@@ -856,9 +838,7 @@ def write_crosstalk_artifacts(
 
     purpose = result.purpose or "meeting"
     # transcript-<purpose>.md so multiple meetings per run don't collide
-    transcript_p = ensure_parent(
-        Path(run_dir) / f"meeting-{purpose}-transcript.md"
-    )
+    transcript_p = ensure_parent(Path(run_dir) / f"meeting-{purpose}-transcript.md")
 
     # Render transcript.
     lines: list[str] = [
@@ -881,9 +861,7 @@ def write_crosstalk_artifacts(
     for i, turn in enumerate(result.rounds, start=1):
         # Use a purpose-prefixed slug so multiple meetings per run don't
         # collide on turn-1-data_analyst.md.
-        per_turn = ensure_parent(
-            Path(run_dir) / f"meeting-{purpose}-turn-{i}-{turn.role_id}.md"
-        )
+        per_turn = ensure_parent(Path(run_dir) / f"meeting-{purpose}-turn-{i}-{turn.role_id}.md")
         per_turn.write_text(
             f"# {turn.role_id} (turn {i})\n\n{turn.output.strip()}\n",
             encoding="utf-8",

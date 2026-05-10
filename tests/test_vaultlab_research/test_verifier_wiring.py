@@ -5,18 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import pytest
-
-from vaultlab.research.claim_verification import ClaimVerificationTask
-from vaultlab.research.paper import Paper
-
 # Reuse the existing fakes from test_picker
 from tests.test_vaultlab_research.test_picker import (
-    _FakeClient,
     _fake_acquire,
     _fake_fetch_refs,
+    _FakeClient,
     _make_seeds,
 )
+from vaultlab.research.claim_verification import ClaimVerificationTask
 
 
 def _stub_summary_llm(*, pdf_bytes, prompt, api_key, model, **_):
@@ -38,25 +34,16 @@ def _stub_narrator(arc_task) -> dict[str, str]:
     """Stub narrator returns three short paragraphs with wikilink citations."""
     # Use real DOIs from _make_seeds() — they're slugified into wikilinks.
     return {
-        "history": (
-            "[[10.1000_seed-2018|Seed 2018]] introduced the foundational "
-            "method."
-        ),
-        "development": (
-            "[[10.1000_seed-2020|Seed 2020]] refined the protocol."
-        ),
-        "sota": (
-            "[[10.1000_seed-2024|Seed 2024]] pushes the frontier."
-        ),
+        "history": ("[[10.1000_seed-2018|Seed 2018]] introduced the foundational method."),
+        "development": ("[[10.1000_seed-2020|Seed 2020]] refined the protocol."),
+        "sota": ("[[10.1000_seed-2024|Seed 2024]] pushes the frontier."),
     }
 
 
 def test_verifier_callback_runs_when_supplied(tmp_path: Path, monkeypatch):
     """When verifier_callback is given, it gets called once per non-empty section."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     seen_tasks: list[ClaimVerificationTask] = []
@@ -70,9 +57,7 @@ def test_verifier_callback_runs_when_supplied(tmp_path: Path, monkeypatch):
                     "position": claim.position,
                     "verdict": "supported",
                     "evidence": "matches the summary",
-                    "evidence_doi": (
-                        claim.cited_dois[0] if claim.cited_dois else ""
-                    ),
+                    "evidence_doi": (claim.cited_dois[0] if claim.cited_dois else ""),
                 }
                 for claim in task.claims
             ]
@@ -107,9 +92,7 @@ def test_no_verifier_callback_means_no_verification(tmp_path: Path, monkeypatch)
     The arc is still written; nothing in the output mentions verification.
     """
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     seeds = _make_seeds()
@@ -129,15 +112,11 @@ def test_no_verifier_callback_means_no_verification(tmp_path: Path, monkeypatch)
     assert result.arc_path.exists()
 
 
-def test_verifier_callback_handles_unverifiable_claims(
-    tmp_path: Path, monkeypatch
-):
+def test_verifier_callback_handles_unverifiable_claims(tmp_path: Path, monkeypatch):
     """When the verifier returns unverifiable for some claims, the run
     completes without crashing (Schurch-2020-style overclaim case)."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     def verifier(task: ClaimVerificationTask) -> dict[str, Any]:
@@ -172,14 +151,10 @@ def test_verifier_callback_handles_unverifiable_claims(
     assert result.arc_path.exists()
 
 
-def test_verifier_callback_exception_does_not_crash_run(
-    tmp_path: Path, monkeypatch
-):
+def test_verifier_callback_exception_does_not_crash_run(tmp_path: Path, monkeypatch):
     """A crashing verifier_callback is caught; the rest of the run completes."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "vaultlab.research.config.get_config", lambda *a, **k: {}
-    )
+    monkeypatch.setattr("vaultlab.research.config.get_config", lambda *a, **k: {})
     from vaultlab.research.lineage import run_lit_arc
 
     def broken_verifier(task):

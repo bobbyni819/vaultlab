@@ -153,9 +153,7 @@ class TestDoiSlug:
         p = cache_path_for("10.1/a", tmp_path)
         assert p == tmp_path / "10.1_a.pdf"
 
-    def test_cache_path_back_compat_resolves_legacy_dash_format(
-        self, tmp_path: Path
-    ):
+    def test_cache_path_back_compat_resolves_legacy_dash_format(self, tmp_path: Path):
         """399 PDFs already on disk under the dash-format slug must still resolve.
 
         Pre-2026-04-30 ``doi_slug`` produced ``10-1126_science-1225829``;
@@ -174,9 +172,7 @@ class TestDoiSlug:
         assert resolved == legacy
         assert resolved.exists()
 
-    def test_cache_path_prefers_dot_format_when_both_exist(
-        self, tmp_path: Path
-    ):
+    def test_cache_path_prefers_dot_format_when_both_exist(self, tmp_path: Path):
         """If both formats live on disk the canonical dot-format wins."""
         from vaultlab.research.acquisition import _legacy_doi_slug
 
@@ -373,8 +369,7 @@ class TestUnpaywallTier:
                         _json={
                             "best_oa_location": {
                                 "url_for_pdf": (
-                                    "https://pmc.ncbi.nlm.nih.gov/articles/"
-                                    "PMC9999/pdf/main.pdf"
+                                    "https://pmc.ncbi.nlm.nih.gov/articles/PMC9999/pdf/main.pdf"
                                 ),
                                 "license": "cc-by",
                             }
@@ -617,9 +612,7 @@ class TestLicenseCapture:
             (None, "unknown"),
         ],
     )
-    def test_unpaywall_license(
-        self, license_input: str | None, expected: str, tmp_path: Path
-    ):
+    def test_unpaywall_license(self, license_input: str | None, expected: str, tmp_path: Path):
         session = _FakeSession(
             [
                 (
@@ -660,9 +653,7 @@ class TestLicenseCapture:
 
 class TestBadInput:
     def test_empty_doi_returns_failed(self, tmp_path: Path):
-        result = acquire_pdf(
-            "", cache_dir=tmp_path, apis={}
-        )
+        result = acquire_pdf("", cache_dir=tmp_path, apis={})
         assert result.source == "failed"
         assert result.error == "empty doi"
 
@@ -700,9 +691,7 @@ class TestBatchAcquireForCorpus:
         assert sorted(called) == ["10.1/a", "10.1/b", "10.1/c"]
 
     def test_progress_callback(self, monkeypatch, tmp_path: Path):
-        def fake_acquire(
-            doi, *, cache_dir, apis, skip_paywalled, timeout
-        ) -> AcquisitionResult:
+        def fake_acquire(doi, *, cache_dir, apis, skip_paywalled, timeout) -> AcquisitionResult:
             return AcquisitionResult(
                 doi=doi, pdf_path=None, source="failed", license=None, error="x"
             )
@@ -725,16 +714,17 @@ class TestBatchAcquireForCorpus:
         """``aggressive_retry=True`` re-runs failed DOIs with skip_paywalled=False."""
         calls: list[tuple[str, bool]] = []
 
-        def fake_acquire(
-            doi, *, cache_dir, apis, skip_paywalled, timeout
-        ) -> AcquisitionResult:
+        def fake_acquire(doi, *, cache_dir, apis, skip_paywalled, timeout) -> AcquisitionResult:
             calls.append((doi, skip_paywalled))
             # First pass (skip_paywalled=True): a fails, b succeeds.
             # Second pass (skip_paywalled=False) for a: succeeds.
             if doi == "10.1/a" and skip_paywalled:
                 return AcquisitionResult(
-                    doi=doi, pdf_path=None, source="failed",
-                    license=None, error="paywalled",
+                    doi=doi,
+                    pdf_path=None,
+                    source="failed",
+                    license=None,
+                    error="paywalled",
                 )
             return AcquisitionResult(
                 doi=doi,
@@ -764,19 +754,18 @@ class TestBatchAcquireForCorpus:
         b_calls = [sp for d, sp in calls if d == "10.1/b"]
         assert b_calls == [True]
 
-    def test_aggressive_retry_off_skips_paywalled_retry(
-        self, monkeypatch, tmp_path: Path
-    ) -> None:
+    def test_aggressive_retry_off_skips_paywalled_retry(self, monkeypatch, tmp_path: Path) -> None:
         """Default (aggressive_retry=False) leaves failed DOIs alone."""
         calls: list[tuple[str, bool]] = []
 
-        def fake_acquire(
-            doi, *, cache_dir, apis, skip_paywalled, timeout
-        ) -> AcquisitionResult:
+        def fake_acquire(doi, *, cache_dir, apis, skip_paywalled, timeout) -> AcquisitionResult:
             calls.append((doi, skip_paywalled))
             return AcquisitionResult(
-                doi=doi, pdf_path=None, source="failed",
-                license=None, error="paywalled",
+                doi=doi,
+                pdf_path=None,
+                source="failed",
+                license=None,
+                error="paywalled",
             )
 
         monkeypatch.setattr(acq, "acquire_pdf", fake_acquire)

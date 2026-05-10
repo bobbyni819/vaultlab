@@ -31,8 +31,14 @@ from skimage.feature import canny
 from skimage.morphology import binary_dilation, disk
 
 Direction = Literal[
-    "top", "right", "bottom", "left",
-    "top-left", "top-right", "bottom-left", "bottom-right",
+    "top",
+    "right",
+    "bottom",
+    "left",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
 ]
 
 
@@ -45,7 +51,7 @@ def whitespace_mask(image_path: str | Path) -> np.ndarray:
 
 
 @lru_cache(maxsize=8)
-def _compute_mask(path_str: str, mtime: float) -> np.ndarray:  # noqa: ARG001
+def _compute_mask(path_str: str, mtime: float) -> np.ndarray:
     """Cache key: (resolved path, mtime). Recomputes when the file changes."""
     rgb = np.asarray(Image.open(path_str).convert("RGB"))
     gray = skcolor.rgb2gray(rgb)
@@ -70,8 +76,14 @@ def find_marker_offset(
     *,
     marker_size_px: int = 120,
     preferred_directions: tuple[Direction, ...] = (
-        "top", "bottom", "left", "right",
-        "top-left", "top-right", "bottom-left", "bottom-right",
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
     ),
     avoid_other_bboxes: tuple[tuple[int, int, int, int], ...] = (),
     min_whitespace_frac: float = 0.90,
@@ -147,7 +159,7 @@ def find_marker_offset(
                     avoid_other_bboxes,
                 ):
                     continue
-                patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
+                patch = mask[my : my + marker_size_px, mx : mx + marker_size_px]
                 if patch.size == 0:
                     continue
                 ws_frac = float(patch.mean())
@@ -170,14 +182,9 @@ def find_marker_offset(
             ):
                 continue
             # Skip patches that overlap the bbox itself
-            if not (
-                mx + marker_size_px <= x0
-                or x1 <= mx
-                or my + marker_size_px <= y0
-                or y1 <= my
-            ):
+            if not (mx + marker_size_px <= x0 or x1 <= mx or my + marker_size_px <= y0 or y1 <= my):
                 continue
-            patch = mask[my:my + marker_size_px, mx:mx + marker_size_px]
+            patch = mask[my : my + marker_size_px, mx : mx + marker_size_px]
             if patch.size == 0:
                 continue
             ws_frac = float(patch.mean())

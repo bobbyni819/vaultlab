@@ -19,8 +19,10 @@ def add_section_divider(pres: Any, title: str) -> Any:
     sh_in = pres.slide_height / 914400
 
     tx = slide.shapes.add_textbox(
-        Inches(0.5), Inches(sh_in / 2 - 0.5),
-        Inches(sw_in - 1.0), Inches(1.5),
+        Inches(0.5),
+        Inches(sh_in / 2 - 0.5),
+        Inches(sw_in - 1.0),
+        Inches(1.5),
     )
     tx.text_frame.text = title
     apply_font(tx.text_frame, size=48, bold=True, pres=pres)

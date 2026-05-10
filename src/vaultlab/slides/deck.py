@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from vaultlab.figures.understand.models import ElementAnnotation
     from vaultlab.research.lineage import LineageRunResult
 
 logger = logging.getLogger(__name__)
@@ -220,9 +219,7 @@ def build_deck(
             pres = load_hickey_lab_presentation(theme="dark")
             layout: SlideLayout = HICKEY_LAB_LAYOUT
         except FileNotFoundError:
-            logger.warning(
-                "Hickey Lab template not bundled; falling back to default theme."
-            )
+            logger.warning("Hickey Lab template not bundled; falling back to default theme.")
             pres = Presentation()
             pres.slide_width = Inches(13.333)
             pres.slide_height = Inches(7.5)
@@ -436,6 +433,7 @@ def build_deck_from_lineage_result(
     if project_slug is None:
         try:
             from vaultlab.onboarding import load_project_config_from_cwd
+
             _cfg = load_project_config_from_cwd()
         except Exception:  # pragma: no cover — never break a run
             logger.exception("load_project_config_from_cwd failed")
@@ -443,8 +441,7 @@ def build_deck_from_lineage_result(
         if _cfg is not None and getattr(_cfg, "slug", ""):
             project_slug = _cfg.slug
             logger.info(
-                "auto-discovered project_slug=%s from "
-                ".vaultlab-project.json (cwd=%s)",
+                "auto-discovered project_slug=%s from .vaultlab-project.json (cwd=%s)",
                 project_slug,
                 Path.cwd(),
             )
@@ -529,19 +526,16 @@ def build_deck_from_lineage_result(
                 audit_kind="deck",
                 runner_callback=crosstalk_runner,
             )
-            blockers = [
-                i for i in audit.get("issues", [])
-                if i.get("severity") == "blocker"
-            ]
+            blockers = [i for i in audit.get("issues", []) if i.get("severity") == "blocker"]
             if blockers and audit_strict:
                 raise RuntimeError(
                     f"rigor_audit found {len(blockers)} blocker issue(s) "
                     "and audit_strict=True; refusing to ship deck."
                 )
             audit_status = (
-                "failed" if blockers
-                else ("passed_with_warnings" if not audit.get("passed", True)
-                      else "passed")
+                "failed"
+                if blockers
+                else ("passed_with_warnings" if not audit.get("passed", True) else "passed")
             )
             if not audit.get("passed", True):
                 # Prepend a warning slide noting the audit issues.
@@ -551,8 +545,7 @@ def build_deck_from_lineage_result(
                         "type": "text",
                         "title": "[Audit warnings]",
                         "bullets": [
-                            f"{i.get('severity', '?')}: "
-                            f"{i.get('loc', '?')} — {i.get('fix', '')}"
+                            f"{i.get('severity', '?')}: {i.get('loc', '?')} — {i.get('fix', '')}"
                             for i in audit.get("issues", [])[:6]
                         ],
                     },
@@ -613,19 +606,16 @@ def build_deck_from_lineage_result(
                 audit_kind="deck",
                 runner_callback=crosstalk_runner,
             )
-            blockers = [
-                i for i in audit.get("issues", [])
-                if i.get("severity") == "blocker"
-            ]
+            blockers = [i for i in audit.get("issues", []) if i.get("severity") == "blocker"]
             if blockers and audit_strict:
                 raise RuntimeError(
                     f"rigor_audit found {len(blockers)} blocker issue(s) "
                     "and audit_strict=True; refusing to ship deck."
                 )
             audit_status = (
-                "failed" if blockers
-                else ("passed_with_warnings" if not audit.get("passed", True)
-                      else "passed")
+                "failed"
+                if blockers
+                else ("passed_with_warnings" if not audit.get("passed", True) else "passed")
             )
             if not audit.get("passed", True):
                 dict_plan.setdefault("slides", []).insert(
@@ -634,8 +624,7 @@ def build_deck_from_lineage_result(
                         "type": "text",
                         "title": "[Audit warnings]",
                         "bullets": [
-                            f"{i.get('severity', '?')}: "
-                            f"{i.get('loc', '?')} — {i.get('fix', '')}"
+                            f"{i.get('severity', '?')}: {i.get('loc', '?')} — {i.get('fix', '')}"
                             for i in audit.get("issues", [])[:6]
                         ],
                     },
@@ -662,9 +651,7 @@ def build_deck_from_lineage_result(
         affiliation=affiliation,
         figure_assignments=figure_assignments or {},
     )
-    out_pptx = build_deck(
-        plan, out, citations=_collect_citations_from_summaries(lineage_result)
-    )
+    out_pptx = build_deck(plan, out, citations=_collect_citations_from_summaries(lineage_result))
     _write_deck_provenance(
         out_pptx,
         lineage_result=lineage_result,
@@ -720,9 +707,7 @@ def _summaries_to_paper_summaries(
             authors=list(fm.get("authors", []) or []),
             year=int(fm.get("year") or 0) if fm.get("year") else 0,
             journal=fm.get("journal", "") or "",
-            citation_count=int(fm.get("citation_count") or 0)
-                if fm.get("citation_count")
-                else 0,
+            citation_count=int(fm.get("citation_count") or 0) if fm.get("citation_count") else 0,
             og_score=float(fm.get("og_score") or 0.0),
             forward_influence=int(fm.get("forward_influence") or 0),
             year_bucket=fm.get("year_bucket", "unknown") or "unknown",
@@ -809,8 +794,8 @@ def _add_title_slide(pres, ds: DeckSlide, plan: DeckPlan, layout) -> None:
     from pptx.util import Inches, Pt
 
     from vaultlab.slides.annotated_figure_slide import (
-        text_color_for_theme,
         muted_text_color_for_theme,
+        text_color_for_theme,
     )
 
     blank = pres.slide_layouts[6]
@@ -870,11 +855,11 @@ def _add_section_intro_slide(pres, ds: DeckSlide, layout) -> None:
     from pptx.util import Inches, Pt
 
     from vaultlab.slides.annotated_figure_slide import (
-        text_color_for_theme,
         muted_text_color_for_theme,
+        text_color_for_theme,
     )
 
-    blank = pres.shapes if False else pres.slide_layouts[6]  # noqa: invariant
+    blank = pres.shapes if False else pres.slide_layouts[6]
     s = pres.slides.add_slide(pres.slide_layouts[6])
 
     section_name = ds.content.get("section_name", "")
@@ -975,10 +960,10 @@ def _add_bullets_slide(
     from pptx.util import Inches, Pt
 
     from vaultlab.slides.annotated_figure_slide import (
-        text_color_for_theme,
-        muted_text_color_for_theme,
         _add_page_number,
         _add_section_banner,
+        muted_text_color_for_theme,
+        text_color_for_theme,
     )
 
     s = pres.slides.add_slide(pres.slide_layouts[6])
@@ -1096,7 +1081,6 @@ def _add_references_slide(pres, ds: DeckSlide, layout) -> None:
 
     from vaultlab.slides.annotated_figure_slide import (
         text_color_for_theme,
-        muted_text_color_for_theme,
     )
 
     s = pres.slides.add_slide(pres.slide_layouts[6])
@@ -1252,16 +1236,13 @@ def _plan_from_lineage(
             title="Background",
             content={
                 "section_name": "Background",
-                "key_question": (
-                    f"What foundational work established {lineage_result.topic}?"
-                ),
+                "key_question": (f"What foundational work established {lineage_result.topic}?"),
                 # Bobby 2026-04-30: never ship the placeholder text — bucket
                 # fallback above guarantees history_papers is non-empty when
                 # *any* corpus papers exist, but fall back to a generic
                 # framing line if the entire summaries dict is empty.
-                "bullets": history_bullets or [
-                    f"Establishing the foundations of {lineage_result.topic}."
-                ],
+                "bullets": history_bullets
+                or [f"Establishing the foundations of {lineage_result.topic}."],
             },
             notes=dual_format(
                 mental_map={
@@ -1359,19 +1340,15 @@ def _plan_from_lineage(
         # Bug #4: never ship "(no history-bucket summaries available)" —
         # _fill_empty_buckets above guaranteed at least one history paper
         # if the corpus is non-empty.
-        history_bullet_dois = [
-            s.get("doi", "") for s in history_papers[:5] if s.get("doi")
-        ]
+        history_bullet_dois = [s.get("doi", "") for s in history_papers[:5] if s.get("doi")]
         cited_dois.update(history_bullet_dois)
         slides.append(
             DeckSlide(
                 kind="bullets",
                 title="Foundational findings",
                 content={
-                    "bullets": [
-                        _bullet_from_summary(s)
-                        for s in history_papers[:5]
-                    ] or [
+                    "bullets": [_bullet_from_summary(s) for s in history_papers[:5]]
+                    or [
                         f"No prior work catalogued in this corpus for {lineage_result.topic}.",
                     ],
                     "citations": history_bullet_dois,
@@ -1396,7 +1373,8 @@ def _plan_from_lineage(
             content={
                 "section_name": "Development",
                 "key_question": "How did the field evolve?",
-                "bullets": development_bullets or [
+                "bullets": development_bullets
+                or [
                     f"Tracing how {lineage_result.topic} developed.",
                 ],
             },
@@ -1418,7 +1396,8 @@ def _plan_from_lineage(
             kind="bullets",
             title="State of the art",
             content={
-                "bullets": sota_bullets or [
+                "bullets": sota_bullets
+                or [
                     f"Current state of the art for {lineage_result.topic}.",
                 ],
                 "citations": sota_dois,
@@ -1516,7 +1495,7 @@ def _read_summary_frontmatters(
             fm = yaml.safe_load(text[3:end]) or {}
         except yaml.YAMLError:
             fm = {}
-        body = text[end + 4:]
+        body = text[end + 4 :]
         # Extract TL;DR (first non-empty line under "## TL;DR")
         tldr = _extract_section(body, "## TL;DR")
         findings = _extract_bullet_section(body, "## Key findings")
@@ -1546,9 +1525,7 @@ def _extract_bullet_section(body: str, heading: str) -> list[str]:
     return [
         line[2:].strip()
         for line in text.splitlines()
-        if line.startswith("- ")
-        and "_(none)_" not in line
-        and "_(empty)_" not in line
+        if line.startswith("- ") and "_(none)_" not in line and "_(empty)_" not in line
     ][:5]
 
 
@@ -1601,7 +1578,7 @@ def _strip_yaml_frontmatter(text: str) -> str:
     end = text.find("\n---", 3)
     if end == -1:
         return text
-    return text[end + 4:].lstrip("\n")
+    return text[end + 4 :].lstrip("\n")
 
 
 def _synthesis_bullets_from_arc(arc_text: str) -> list[str]:
@@ -1667,11 +1644,7 @@ def _looks_like_yaml_kv_line(line: str) -> bool:
     if not head:
         return False
     # Short alphanum + underscore key with no whitespace -> looks YAML-ish.
-    return (
-        len(head) <= 32
-        and " " not in head
-        and head.replace("_", "").replace("-", "").isalnum()
-    )
+    return len(head) <= 32 and " " not in head and head.replace("_", "").replace("-", "").isalnum()
 
 
 def _narrative_paragraphs(body: str) -> list[str]:
@@ -1824,7 +1797,7 @@ def _pick_figure_for_bucket(
 # how many to render based on the global cap.
 
 _FIGURE_MIN_BYTES = 100 * 1024  # 100 KB — skip decorative crops/labels
-_FIGURE_TOTAL_CAP = 8           # global ceiling on figure-slides per deck
+_FIGURE_TOTAL_CAP = 8  # global ceiling on figure-slides per deck
 
 
 def _figure_size_bytes(path: Path) -> int:
@@ -1937,10 +1910,7 @@ def _pick_figures_for_bucket_multi(
         return []
     leader_row = bucket_papers[0]
     claim_doi = (leader_row.get("doi") or "").strip()
-    leader_tier = (
-        (leader_row.get("tier") or summaries.get(claim_doi, {}).get("tier") or "")
-        .upper()
-    )
+    leader_tier = (leader_row.get("tier") or summaries.get(claim_doi, {}).get("tier") or "").upper()
     leader_is_tier_a = leader_tier in ("", "A")
 
     # Collect Tier-A papers in the bucket along with the largest figure
@@ -1969,11 +1939,7 @@ def _pick_figures_for_bucket_multi(
     leader = next((t for t in tier_a if t[0] == claim_doi), None)
     rest = [t for t in tier_a if t[0] != claim_doi]
     rest.sort(
-        key=lambda t: float(
-            t[1].get("og_score")
-            or summaries.get(t[0], {}).get("og_score")
-            or 0.0
-        ),
+        key=lambda t: float(t[1].get("og_score") or summaries.get(t[0], {}).get("og_score") or 0.0),
         reverse=True,
     )
 
@@ -2075,20 +2041,13 @@ def _allocate_figure_budget(
     # then pop from the end of whichever bucket is currently largest
     # until the total fits within total_cap.
     def _og(doi: str) -> float:
-        return float(
-            (summaries.get(doi) or {}).get("og_score") or 0.0
-        )
+        return float((summaries.get(doi) or {}).get("og_score") or 0.0)
 
-    out = {
-        b: sorted(picks, key=lambda t: _og(t[1]), reverse=True)
-        for b, picks in raw.items()
-    }
+    out = {b: sorted(picks, key=lambda t: _og(t[1]), reverse=True) for b, picks in raw.items()}
     while sum(len(v) for v in out.values()) > total_cap:
         # Pick the bucket with the most picks; ties broken by alphabetic
         # bucket order for determinism.
-        bucket_name = max(
-            out, key=lambda b: (len(out[b]), -ord(b[0]))
-        )
+        bucket_name = max(out, key=lambda b: (len(out[b]), -ord(b[0])))
         if not out[bucket_name]:
             break
         out[bucket_name].pop()  # drop the lowest-og_score pick in that bucket
@@ -2316,16 +2275,18 @@ def _collect_citations_from_summaries(
 #   shape, ``build_from_plan`` renders it deterministically.
 
 # Slide types the dict-plan builder understands.
-SUPPORTED_PLAN_SLIDE_TYPES: frozenset[str] = frozenset({
-    "title",
-    "section_divider",
-    "figure",
-    "two_figure",
-    "quote",
-    "multi_figure",
-    "text",
-    "references",
-})
+SUPPORTED_PLAN_SLIDE_TYPES: frozenset[str] = frozenset(
+    {
+        "title",
+        "section_divider",
+        "figure",
+        "two_figure",
+        "quote",
+        "multi_figure",
+        "text",
+        "references",
+    }
+)
 
 
 def build_from_plan(
@@ -2506,7 +2467,9 @@ def build_from_plan(
                 pictures = [s for s in slide.shapes if s.shape_type == 13]
                 if pictures:
                     add_annotations(
-                        slide, pictures[0], annotations,
+                        slide,
+                        pictures[0],
+                        annotations,
                         with_animations=with_animations,
                     )
             except Exception:
@@ -2527,6 +2490,7 @@ def build_from_plan(
 
     if write_marp:
         from vaultlab.slides.marp import write_marp as _write_marp
+
         marp_path = out_pptx.with_suffix(".md")
         _write_marp(plan, marp_path)
         result["marp"] = marp_path
@@ -2660,16 +2624,16 @@ def _write_plan_kb_report(plan: dict[str, Any], pptx_path: Path, kb_log: Any) ->
         title = s.get("title", "")
         slide_summary_lines.append(f"{i}. **{stype}** — {title}")
 
-    sources_used = sorted({
-        s.get("citation_source", "")
-        for s in slides_plan
-        if s.get("citation_source")
-    } | {
-        f.get("citation_source", "")
-        for s in slides_plan if s.get("type") == "multi_figure"
-        for f in s.get("figures", [])
-        if f.get("citation_source")
-    })
+    sources_used = sorted(
+        {s.get("citation_source", "") for s in slides_plan if s.get("citation_source")}
+        | {
+            f.get("citation_source", "")
+            for s in slides_plan
+            if s.get("type") == "multi_figure"
+            for f in s.get("figures", [])
+            if f.get("citation_source")
+        }
+    )
     sources_used = [src for src in sources_used if src]
 
     content = f"""---

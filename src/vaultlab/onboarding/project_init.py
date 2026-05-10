@@ -181,8 +181,7 @@ def scan_project_folder(path: str | Path) -> FolderInventory:
         counts=dict(counter),
         samples=samples,
         total_files=total,
-        has_readme=(project_path / "README.md").exists()
-        or (project_path / "README.rst").exists(),
+        has_readme=(project_path / "README.md").exists() or (project_path / "README.rst").exists(),
         has_claude_md=(project_path / "CLAUDE.md").exists(),
         has_pyproject=(project_path / "pyproject.toml").exists(),
     )
@@ -457,9 +456,7 @@ def _render_start_here_body(
     if inventory.has_claude_md:
         suggested_files.append("- `CLAUDE.md`")
     # Top-3 sample paths from the largest categories
-    top_categories = sorted(
-        inventory.counts.items(), key=lambda kv: -kv[1]
-    )[:3]
+    top_categories = sorted(inventory.counts.items(), key=lambda kv: -kv[1])[:3]
     for cat, _count in top_categories:
         for rel in inventory.samples.get(cat, [])[:2]:
             suggested_files.append(f"- `{rel}`")
@@ -535,8 +532,8 @@ later.
 
 - **Slug:** `{slug}`
 - **Topic:** {intake.topic or "(unspecified)"}
-- **Goals:** {', '.join(intake.goals) if intake.goals else '(none)'}
-- **Audience:** {', '.join(intake.audiences) if intake.audiences else '(none)'}
+- **Goals:** {", ".join(intake.goals) if intake.goals else "(none)"}
+- **Audience:** {", ".join(intake.audiences) if intake.audiences else "(none)"}
 - **Why:** Initial onboarding via `/onboard-project`. Intake form
   saved at `Wiki/Projects/{slug}/intake.md`.
 """
@@ -549,9 +546,7 @@ later.
 # ---------------------------------------------------------------------------
 
 
-def _compose_follow_ups(
-    intake: IntakeForm, inventory: FolderInventory
-) -> list[str]:
+def _compose_follow_ups(intake: IntakeForm, inventory: FolderInventory) -> list[str]:
     """Identify 3-5 gaps the slash command should ask about.
 
     Heuristics:
@@ -578,10 +573,7 @@ def _compose_follow_ups(
 
     drafting_goals = {"draft_manuscript_section", "build_deep_research_report"}
     if drafting_goals & set(intake.goals):
-        has_manuscript = (
-            inventory.counts.get("manuscript", 0) > 0
-            or "prior_drafts" in have_keys
-        )
+        has_manuscript = inventory.counts.get("manuscript", 0) > 0 or "prior_drafts" in have_keys
         if not has_manuscript:
             qs.append(
                 "You're drafting written output but I don't see a manuscript "
@@ -615,8 +607,7 @@ def _compose_follow_ups(
     # Cap at 5; pad to 3 with a generic catch-all if we have <3
     if len(qs) < 3:
         qs.append(
-            "Is there a related project or KB note vaultlab should "
-            "cross-reference? (skip if not)"
+            "Is there a related project or KB note vaultlab should cross-reference? (skip if not)"
         )
     return qs[:5]
 
@@ -640,9 +631,7 @@ def copy_intake_template_to(project_path: str | Path) -> Path:
     target = Path(project_path) / "project_intake.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     # Try the repo-relative template first
-    repo_template = (
-        Path(__file__).resolve().parents[3] / "templates" / "project_intake.md"
-    )
+    repo_template = Path(__file__).resolve().parents[3] / "templates" / "project_intake.md"
     if repo_template.exists():
         shutil.copyfile(repo_template, target)
     else:

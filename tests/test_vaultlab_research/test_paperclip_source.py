@@ -13,7 +13,6 @@ from vaultlab.research.sources.paperclip import (
     _parse_search_output,
 )
 
-
 # ---------- Real paperclip search-output fixtures -------------------------
 
 # Fixture #1: 3-result block from a real demo run on
@@ -141,6 +140,7 @@ def test_parse_no_results_header():
 
 # ---------- Client API tests (subprocess mocked) --------------------------
 
+
 def test_client_unavailable_when_binary_missing():
     """Client.available is False when paperclip binary not on PATH."""
     with patch("vaultlab.research.sources.paperclip.shutil.which", return_value=None):
@@ -150,10 +150,13 @@ def test_client_unavailable_when_binary_missing():
 
 def test_client_authenticated_via_env_var():
     """PAPERCLIP_API_KEY env var is sufficient for is_authenticated."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch.dict("os.environ", {"PAPERCLIP_API_KEY": "test-key"}):
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.dict("os.environ", {"PAPERCLIP_API_KEY": "test-key"}),
+    ):
         client = PaperclipClient()
         assert client.is_authenticated()
 
@@ -165,13 +168,15 @@ def test_client_unauthenticated_raises_in_search():
     when ``paperclip config`` explicitly says "not signed in" AND no
     credentials file is found.
     """
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch("vaultlab.research.sources.paperclip.os.path.isfile",
-               return_value=False), \
-         patch.dict("os.environ", {}, clear=True), \
-         patch("vaultlab.research.sources.paperclip.subprocess.run") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch("vaultlab.research.sources.paperclip.os.path.isfile", return_value=False),
+        patch.dict("os.environ", {}, clear=True),
+        patch("vaultlab.research.sources.paperclip.subprocess.run") as mock_run,
+    ):
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="Auth: not signed in",
@@ -184,11 +189,14 @@ def test_client_unauthenticated_raises_in_search():
 
 def test_client_returns_papers_on_success():
     """Search subprocess returns parsed Paper objects."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout=SEARCH_OUTPUT_3,
@@ -202,11 +210,14 @@ def test_client_returns_papers_on_success():
 
 def test_client_returns_empty_on_search_error():
     """Non-zero exit returns empty list, doesn't raise."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(
             returncode=2,
             stdout="",
@@ -219,11 +230,14 @@ def test_client_returns_empty_on_search_error():
 
 def test_client_search_passes_source_filter():
     """sources= kwarg becomes -s SOURCE flags on the CLI."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         client = PaperclipClient()
         client.search("query", sources=["pmc", "biorxiv"])
@@ -244,11 +258,13 @@ def test_lookup_doi_returns_paper_on_hit():
      arx_2107.07953 · arXiv · 2021-07-16
      "This paper reviews multiplexed antibody-based imaging."
 """
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists",
-               return_value=True), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(returncode=0, stdout=output, stderr="")
         client = PaperclipClient()
         paper = client.lookup_doi("10.48550/arXiv.2107.07953")
@@ -262,21 +278,25 @@ def test_lookup_doi_returns_paper_on_hit():
 
 def test_lookup_doi_returns_none_on_miss():
     """When paperclip exits non-zero, lookup_doi returns None silently."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists",
-               return_value=True), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="not found")
         client = PaperclipClient()
         assert client.lookup_doi("10.1/missing") is None
 
 
 def test_lookup_doi_returns_none_on_empty_input():
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists",
-               return_value=True):
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+    ):
         client = PaperclipClient()
         assert client.lookup_doi("") is None
         assert client.lookup_doi(None) is None
@@ -284,11 +304,14 @@ def test_lookup_doi_returns_none_on_empty_input():
 
 def test_client_search_passes_since_flag():
     """since= kwarg becomes --since flag."""
-    with patch("vaultlab.research.sources.paperclip.shutil.which",
-               return_value="/usr/bin/paperclip"), \
-         patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True), \
-         patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}), \
-         patch.object(PaperclipClient, "_run_paperclip") as mock_run:
+    with (
+        patch(
+            "vaultlab.research.sources.paperclip.shutil.which", return_value="/usr/bin/paperclip"
+        ),
+        patch("vaultlab.research.sources.paperclip.os.path.exists", return_value=True),
+        patch.dict("os.environ", {"PAPERCLIP_API_KEY": "k"}),
+        patch.object(PaperclipClient, "_run_paperclip") as mock_run,
+    ):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         client = PaperclipClient()
         client.search("query", since="30d")

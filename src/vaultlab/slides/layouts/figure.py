@@ -15,8 +15,9 @@ animations afterward.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from vaultlab.slides.layouts._helpers import (
     Inches,
@@ -51,9 +52,7 @@ def add_figure_slide(
     sizes_d = sizes()
 
     if title:
-        tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-        )
+        tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
@@ -102,8 +101,10 @@ def add_figure_slide(
         bul_top_in = fig_top_in + 0.3
         bul_height_in = fig_height_in - 0.3
         bx = slide.shapes.add_textbox(
-            bul_left, Inches(bul_top_in),
-            Inches(bul_width_in), Inches(bul_height_in),
+            bul_left,
+            Inches(bul_top_in),
+            Inches(bul_width_in),
+            Inches(bul_height_in),
         )
         tf = bx.text_frame
         tf.word_wrap = True
@@ -124,8 +125,10 @@ def add_figure_slide(
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(0.3), Inches(sh_in - 0.4),
-            Inches(sw_in - 0.6), Inches(0.3),
+            Inches(0.3),
+            Inches(sh_in - 0.4),
+            Inches(sw_in - 0.6),
+            Inches(0.3),
         )
         cit.text_frame.text = citation_source
         apply_font(cit.text_frame, size=9, pres=pres)
@@ -150,9 +153,7 @@ def add_figure_only_slide(
     sizes_d = sizes()
 
     if title:
-        tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-        )
+        tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
@@ -168,8 +169,12 @@ def add_figure_only_slide(
 
     img_path = Path(image_path)
     add_picture_fit(
-        slide, str(img_path), fig_left, fig_top,
-        Inches(fig_width_in), Inches(fig_height_in),
+        slide,
+        str(img_path),
+        fig_left,
+        fig_top,
+        Inches(fig_width_in),
+        Inches(fig_height_in),
     )
 
     if caption:
@@ -185,14 +190,17 @@ def add_figure_only_slide(
                 run.font.italic = True
             try:
                 from pptx.enum.text import PP_ALIGN
+
                 para.alignment = PP_ALIGN.CENTER
             except Exception:
                 pass
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(0.3), Inches(sh_in - 0.4),
-            Inches(sw_in - 0.6), Inches(0.3),
+            Inches(0.3),
+            Inches(sh_in - 0.4),
+            Inches(sw_in - 0.6),
+            Inches(0.3),
         )
         cit.text_frame.text = citation_source
         apply_font(cit.text_frame, size=9, pres=pres)
@@ -215,9 +223,7 @@ def add_figure_above_bullets_slide(
     sizes_d = sizes()
 
     if title:
-        tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-        )
+        tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
@@ -232,15 +238,17 @@ def add_figure_above_bullets_slide(
 
     img_path = Path(image_path)
     add_picture_fit(
-        slide, str(img_path), fig_left, Inches(fig_top_in),
-        Inches(fig_width_in), Inches(fig_height_in),
+        slide,
+        str(img_path),
+        fig_left,
+        Inches(fig_top_in),
+        Inches(fig_width_in),
+        Inches(fig_height_in),
     )
 
     if caption:
         cap_top = Inches(fig_top_in + fig_height_in + 0.05)
-        cx = slide.shapes.add_textbox(
-            fig_left, cap_top, Inches(fig_width_in), Inches(0.35)
-        )
+        cx = slide.shapes.add_textbox(fig_left, cap_top, Inches(fig_width_in), Inches(0.35))
         cx.text_frame.text = caption
         cx.text_frame.word_wrap = True
         apply_font(cx.text_frame, size=12, pres=pres)
@@ -252,8 +260,10 @@ def add_figure_above_bullets_slide(
         bul_top_in = fig_top_in + fig_height_in + (0.45 if caption else 0.1)
         bul_height_in = sh_in - bul_top_in - cit_height_in - 0.1
         bx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(bul_top_in),
-            Inches(sw_in - 1.0), Inches(bul_height_in),
+            Inches(0.5),
+            Inches(bul_top_in),
+            Inches(sw_in - 1.0),
+            Inches(bul_height_in),
         )
         tf = bx.text_frame
         tf.word_wrap = True
@@ -273,8 +283,10 @@ def add_figure_above_bullets_slide(
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(0.3), Inches(sh_in - 0.4),
-            Inches(sw_in - 0.6), Inches(0.3),
+            Inches(0.3),
+            Inches(sh_in - 0.4),
+            Inches(sw_in - 0.6),
+            Inches(0.3),
         )
         cit.text_frame.text = citation_source
         apply_font(cit.text_frame, size=9, pres=pres)
@@ -300,9 +312,7 @@ def add_two_figure_compare_slide(
     sizes_d = sizes()
 
     if title:
-        tx = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8)
-        )
+        tx = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(sw_in - 1.0), Inches(0.8))
         tx.text_frame.text = title
         apply_font(tx.text_frame, size=sizes_d["heading"], bold=True, pres=pres)
 
@@ -311,29 +321,38 @@ def add_two_figure_compare_slide(
     fig_height_in = sh_in - fig_top_in - 1.2 - cit_height_in
     half_width_in = (sw_in - 1.5) / 2
 
-    for i, (img, label, caption) in enumerate([
-        (left_image, left_label, left_caption),
-        (right_image, right_label, right_caption),
-    ]):
+    for i, (img, label, caption) in enumerate(
+        [
+            (left_image, left_label, left_caption),
+            (right_image, right_label, right_caption),
+        ]
+    ):
         x_left = 0.5 + i * (half_width_in + 0.5)
         if label:
             lbl = slide.shapes.add_textbox(
-                Inches(x_left), Inches(fig_top_in - 0.5),
-                Inches(half_width_in), Inches(0.4),
+                Inches(x_left),
+                Inches(fig_top_in - 0.5),
+                Inches(half_width_in),
+                Inches(0.4),
             )
             lbl.text_frame.text = label
             apply_font(lbl.text_frame, size=20, bold=True, pres=pres)
 
         add_picture_fit(
-            slide, str(img),
-            Inches(x_left), Inches(fig_top_in),
-            Inches(half_width_in), Inches(fig_height_in),
+            slide,
+            str(img),
+            Inches(x_left),
+            Inches(fig_top_in),
+            Inches(half_width_in),
+            Inches(fig_height_in),
         )
 
         if caption:
             cx = slide.shapes.add_textbox(
-                Inches(x_left), Inches(fig_top_in + fig_height_in + 0.1),
-                Inches(half_width_in), Inches(0.6),
+                Inches(x_left),
+                Inches(fig_top_in + fig_height_in + 0.1),
+                Inches(half_width_in),
+                Inches(0.6),
             )
             cx.text_frame.text = caption
             cx.text_frame.word_wrap = True
@@ -344,8 +363,10 @@ def add_two_figure_compare_slide(
 
     if citation_source:
         cit = slide.shapes.add_textbox(
-            Inches(0.3), Inches(sh_in - 0.4),
-            Inches(sw_in - 0.6), Inches(0.3),
+            Inches(0.3),
+            Inches(sh_in - 0.4),
+            Inches(sw_in - 0.6),
+            Inches(0.3),
         )
         cit.text_frame.text = citation_source
         apply_font(cit.text_frame, size=9, pres=pres)
@@ -365,10 +386,12 @@ def add_quote_slide(
 
     quote_top_in = sh_in * 0.30
     qx = slide.shapes.add_textbox(
-        Inches(1.0), Inches(quote_top_in),
-        Inches(sw_in - 2.0), Inches(sh_in * 0.40),
+        Inches(1.0),
+        Inches(quote_top_in),
+        Inches(sw_in - 2.0),
+        Inches(sh_in * 0.40),
     )
-    qx.text_frame.text = f'“{quote}”'
+    qx.text_frame.text = f"“{quote}”"
     qx.text_frame.word_wrap = True
     apply_font(qx.text_frame, size=36, bold=False, pres=pres)
     for para in qx.text_frame.paragraphs:
@@ -376,20 +399,24 @@ def add_quote_slide(
             run.font.italic = True
         try:
             from pptx.enum.text import PP_ALIGN
+
             para.alignment = PP_ALIGN.CENTER
         except Exception:
             pass
 
     if attribution:
         ax = slide.shapes.add_textbox(
-            Inches(1.0), Inches(quote_top_in + sh_in * 0.40 + 0.3),
-            Inches(sw_in - 2.0), Inches(0.6),
+            Inches(1.0),
+            Inches(quote_top_in + sh_in * 0.40 + 0.3),
+            Inches(sw_in - 2.0),
+            Inches(0.6),
         )
         ax.text_frame.text = f"— {attribution}"
         apply_font(ax.text_frame, size=20, pres=pres)
         for para in ax.text_frame.paragraphs:
             try:
                 from pptx.enum.text import PP_ALIGN
+
                 para.alignment = PP_ALIGN.CENTER
             except Exception:
                 pass

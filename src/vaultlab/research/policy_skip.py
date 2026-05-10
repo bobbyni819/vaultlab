@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -127,15 +127,17 @@ def mark_skipped(
     if any((e.get("doi") or "").lower() == doi_lower for e in entries):
         logger.info("DOI %s already in policy_skipped.json — leaving as-is", doi_lower)
     else:
-        entries.append({
-            "doi": doi_lower,
-            "reason": reason,
-            "batch": batch,
-            "skipped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "error_text": (error_text or "")[:500],  # truncate long stack traces
-            "notes": notes,
-            "needs_human_review": True,
-        })
+        entries.append(
+            {
+                "doi": doi_lower,
+                "reason": reason,
+                "batch": batch,
+                "skipped_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "error_text": (error_text or "")[:500],  # truncate long stack traces
+                "notes": notes,
+                "needs_human_review": True,
+            }
+        )
 
     log_path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
@@ -188,14 +190,15 @@ def is_skipped(doi: str, project_dir: Path) -> bool:
     doi_lower = (doi or "").strip().lower()
     if not doi_lower:
         return False
-    return any(
-        (e.get("doi") or "").lower() == doi_lower
-        for e in list_skipped(project_dir)
-    )
+    return any((e.get("doi") or "").lower() == doi_lower for e in list_skipped(project_dir))
 
 
 def _stub_template(
-    *, doi: str, reason: str, batch: str | None, notes: str,
+    *,
+    doi: str,
+    reason: str,
+    batch: str | None,
+    notes: str,
 ) -> str:
     """Render the minimal stub summary file for a skipped paper."""
     batch_line = f"\nbatch: {batch}" if batch else ""
@@ -205,7 +208,7 @@ def _stub_template(
         f"doi: {doi}\n"
         f"tier: skipped_policy\n"
         f"reason: {reason!r}{batch_line}\n"
-        f"extracted_at: '{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}'\n"
+        f"extracted_at: '{datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')}'\n"
         f"needs_human_review: true\n"
         f"---\n"
         f"\n"
@@ -281,23 +284,23 @@ def fetch_list_paywalled(
             if outcome is None:
                 if any(t in tier_errors for t in ("elsevier", "springer")):
                     err_str = str(
-                        tier_errors.get("elsevier", "")
-                        or tier_errors.get("springer", "")
+                        tier_errors.get("elsevier", "") or tier_errors.get("springer", "")
                     ).lower()
                     if "key missing" not in err_str and "no api key" not in err_str:
                         outcome = "failed_paywalled"
         if outcome != "failed_paywalled":
             continue
-        out.append({
-            "doi": doi,
-            "title": rec.get("title") or "",
-            "journal": rec.get("journal") or "",
-            "year": rec.get("year") or 0,
-            "publisher_url": rec.get("publisher_url")
-                or f"https://doi.org/{doi}",
-            "cache_target_path": rec.get("cache_target_path") or "",
-            "why_paywalled": _summarize_why_paywalled(rec.get("tier_errors") or {}),
-        })
+        out.append(
+            {
+                "doi": doi,
+                "title": rec.get("title") or "",
+                "journal": rec.get("journal") or "",
+                "year": rec.get("year") or 0,
+                "publisher_url": rec.get("publisher_url") or f"https://doi.org/{doi}",
+                "cache_target_path": rec.get("cache_target_path") or "",
+                "why_paywalled": _summarize_why_paywalled(rec.get("tier_errors") or {}),
+            }
+        )
     # Sort by publisher cluster heuristic
     out.sort(key=_publisher_sort_key)
     return out
@@ -327,7 +330,12 @@ def _publisher_sort_key(entry: dict[str, Any]) -> tuple[int, str]:
     doi = (entry.get("doi") or "").lower()
     if "nature" in journal or doi.startswith("10.1038"):
         return (0, doi)
-    if "cell" in journal or "cell.com" in (entry.get("publisher_url") or "").lower() or doi.startswith("10.1016/j.cels") or doi.startswith("10.1016/j.cell"):
+    if (
+        "cell" in journal
+        or "cell.com" in (entry.get("publisher_url") or "").lower()
+        or doi.startswith("10.1016/j.cels")
+        or doi.startswith("10.1016/j.cell")
+    ):
         return (1, doi)
     if "science" in journal or doi.startswith("10.1126"):
         return (2, doi)
@@ -341,9 +349,9 @@ def _publisher_sort_key(entry: dict[str, Any]) -> tuple[int, str]:
 
 
 __all__ = [
-    "is_policy_refusal_error",
-    "mark_skipped",
-    "list_skipped",
-    "is_skipped",
     "fetch_list_paywalled",
+    "is_policy_refusal_error",
+    "is_skipped",
+    "list_skipped",
+    "mark_skipped",
 ]

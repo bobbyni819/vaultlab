@@ -52,8 +52,8 @@ def _compute_pixel_signature(image_path: Path) -> dict[str, Any]:
     Returns a JSON-serializable dict ready to drop into the index.
     """
     try:
-        from PIL import Image
         import numpy as np
+        from PIL import Image
     except ImportError:
         return {"error": "PIL/numpy not installed"}
 
@@ -62,7 +62,12 @@ def _compute_pixel_signature(image_path: Path) -> dict[str, Any]:
     arr = np.asarray(img).reshape(-1, 3)
     arr = arr[~np.all(arr >= 250, axis=1)]  # drop white background
     if len(arr) == 0:
-        return {"size_px": [w, h], "aspect": w / h if h else 0.0, "dominant_bins": [], "n_pixels_non_bg": 0}
+        return {
+            "size_px": [w, h],
+            "aspect": w / h if h else 0.0,
+            "dominant_bins": [],
+            "n_pixels_non_bg": 0,
+        }
 
     bins = (arr // _COLOR_BIN_SIZE).astype(int)
     bin_keys, bin_counts = np.unique(bins, axis=0, return_counts=True)
@@ -75,7 +80,7 @@ def _compute_pixel_signature(image_path: Path) -> dict[str, Any]:
         "aspect": round(float(w / h) if h > 0 else 0.0, 3),
         "dominant_bins": top_keys,
         "dominant_bin_counts": [int(c) for c in top_counts],
-        "n_pixels_non_bg": int(len(arr)),
+        "n_pixels_non_bg": len(arr),
     }
 
 
@@ -184,7 +189,7 @@ def _signature_distance(sig_a: dict[str, Any], sig_b: dict[str, Any]) -> float:
     # Build sparse vectors keyed by tuple(bin_key)
     def to_dict(bins, counts):
         out = {}
-        for k, c in zip(bins, counts):
+        for k, c in zip(bins, counts, strict=False):
             out[tuple(k)] = float(c)
         return out
 
@@ -257,11 +262,13 @@ def find_figure_pairs(
             if entry.get("doi_or_data_source") == (query_entry or {}).get("doi_or_data_source"):
                 reasoning_bits.append("same source paper / dataset")
 
-        candidates.append({
-            "entry": entry,
-            "similarity": round(adjusted_sim, 3),
-            "reasoning": "; ".join(reasoning_bits),
-        })
+        candidates.append(
+            {
+                "entry": entry,
+                "similarity": round(adjusted_sim, 3),
+                "reasoning": "; ".join(reasoning_bits),
+            }
+        )
 
     candidates.sort(key=lambda c: -c["similarity"])
     return candidates[:top_n]

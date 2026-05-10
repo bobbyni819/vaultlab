@@ -2,6 +2,7 @@
 
 Ported from ``bobby-tools/tests/test_bobby_slides/test_annotations.py``.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,7 +22,6 @@ from vaultlab.slides import (
     load_template,
 )
 from vaultlab.slides.template import lab_template_path
-
 
 pytestmark = pytest.mark.skipif(
     lab_template_path() is None,
@@ -48,9 +48,14 @@ class TestAnnotations:
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
         assert len(pictures) == 1
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1, "color": "FF0000"},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1, "color": "FF0000"},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 1
 
     def test_rect_annotation(self, tmp_path):
@@ -59,9 +64,14 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "rect", "bbox": [0.1, 0.1, 0.4, 0.4], "color": "00FF00"},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "rect", "bbox": [0.1, 0.1, 0.4, 0.4], "color": "00FF00"},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 1
 
     def test_arrow_annotation(self, tmp_path):
@@ -70,9 +80,14 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "arrow", "from": [0.2, 0.2], "to": [0.6, 0.7], "color": "FFEB3B"},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "arrow", "from": [0.2, 0.2], "to": [0.6, 0.7], "color": "FFEB3B"},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 1
 
     def test_label_annotation(self, tmp_path):
@@ -81,9 +96,14 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "label", "x": 0.5, "y": 0.9, "text": "Key area"},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "label", "x": 0.5, "y": 0.9, "text": "Key area"},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 1
 
     def test_multiple_annotations(self, tmp_path):
@@ -92,11 +112,16 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "circle", "x": 0.3, "y": 0.3, "r": 0.05},
-            {"type": "rect", "bbox": [0.5, 0.5, 0.7, 0.7]},
-            {"type": "arrow", "from": [0.1, 0.1], "to": [0.9, 0.9]},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "circle", "x": 0.3, "y": 0.3, "r": 0.05},
+                {"type": "rect", "bbox": [0.5, 0.5, 0.7, 0.7]},
+                {"type": "arrow", "from": [0.1, 0.1], "to": [0.9, 0.9]},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 3
 
     def test_pptx_reloads_after_annotations(self, tmp_path):
@@ -105,9 +130,14 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        add_annotations(slide, pictures[0], [
-            {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1},
-        ], with_animations=False)
+        add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1},
+            ],
+            with_animations=False,
+        )
         reloaded = _save_and_reload(pres, tmp_path, "ann.pptx")
         assert len(reloaded.slides) > 0
 
@@ -117,11 +147,16 @@ class TestAnnotations:
         make_test_image(fig)
         slide = add_figure_slide(pres, fig, title="Test")
         pictures = [s for s in slide.shapes if s.shape_type == 13]
-        anns = add_annotations(slide, pictures[0], [
-            {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1},
-            {"type": "weird_unknown_type"},
-            {"type": "rect", "bbox": [0.1, 0.1, 0.3, 0.3]},
-        ], with_animations=False)
+        anns = add_annotations(
+            slide,
+            pictures[0],
+            [
+                {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1},
+                {"type": "weird_unknown_type"},
+                {"type": "rect", "bbox": [0.1, 0.1, 0.3, 0.3]},
+            ],
+            with_animations=False,
+        )
         assert len(anns) == 2  # circle + rect, weird type skipped
 
     def test_empty_annotations_returns_empty(self, tmp_path):
@@ -140,11 +175,15 @@ class TestAnnotationsViaBuildFromPlan:
         make_test_image(fig)
         plan = {
             "slides": [
-                {"type": "figure", "title": "T", "image_path": str(fig),
-                 "annotations": [
-                     {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1, "color": "FF0000"},
-                     {"type": "label", "x": 0.5, "y": 0.85, "text": "Important"},
-                 ]},
+                {
+                    "type": "figure",
+                    "title": "T",
+                    "image_path": str(fig),
+                    "annotations": [
+                        {"type": "circle", "x": 0.5, "y": 0.5, "r": 0.1, "color": "FF0000"},
+                        {"type": "label", "x": 0.5, "y": 0.85, "text": "Important"},
+                    ],
+                },
             ],
         }
         out = tmp_path / "deck.pptx"
@@ -159,11 +198,15 @@ class TestAnnotationsViaBuildFromPlan:
         make_test_image(fig)
         plan = {
             "slides": [
-                {"type": "figure", "title": "T", "image_path": str(fig),
-                 "annotations": [
-                     {"type": "circle", "x": 0.3, "y": 0.3, "r": 0.05, "click_index": 0},
-                     {"type": "circle", "x": 0.7, "y": 0.7, "r": 0.05, "click_index": 1},
-                 ]},
+                {
+                    "type": "figure",
+                    "title": "T",
+                    "image_path": str(fig),
+                    "annotations": [
+                        {"type": "circle", "x": 0.3, "y": 0.3, "r": 0.05, "click_index": 0},
+                        {"type": "circle", "x": 0.7, "y": 0.7, "r": 0.05, "click_index": 1},
+                    ],
+                },
             ],
         }
         out = tmp_path / "deck.pptx"
@@ -176,11 +219,15 @@ class TestAnnotationsViaBuildFromPlan:
         make_test_image(fig)
         plan = {
             "slides": [
-                {"type": "figure", "title": "T", "image_path": str(fig),
-                 "annotations": [
-                     {"type": "circle"},  # missing coords — uses defaults
-                     {},  # totally empty — should be skipped
-                 ]},
+                {
+                    "type": "figure",
+                    "title": "T",
+                    "image_path": str(fig),
+                    "annotations": [
+                        {"type": "circle"},  # missing coords — uses defaults
+                        {},  # totally empty — should be skipped
+                    ],
+                },
             ],
         }
         out = tmp_path / "deck.pptx"

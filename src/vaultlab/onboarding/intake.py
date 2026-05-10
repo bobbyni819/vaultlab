@@ -258,9 +258,7 @@ def _read_your_answer(section_body: str) -> str:
     (covers casual fills that omit the marker).
     """
     lines = section_body.splitlines()
-    has_marker = any(
-        line.strip().upper().startswith("YOUR ANSWER:") for line in lines
-    )
+    has_marker = any(line.strip().upper().startswith("YOUR ANSWER:") for line in lines)
     answer_lines: list[str] = []
 
     if has_marker:
@@ -452,9 +450,7 @@ def _render_filled_body(form: IntakeForm) -> str:
     if form.exclusions.get("exclude_preprints"):
         parts.append("- [x] Don't include preprints")
     if "min_year" in form.exclusions:
-        parts.append(
-            f"- [x] Don't summarize papers older than {form.exclusions['min_year']}"
-        )
+        parts.append(f"- [x] Don't summarize papers older than {form.exclusions['min_year']}")
     if form.exclusions.get("english_only"):
         parts.append("- [x] Skip non-English papers")
     if form.exclusions.get("exclude_old_papers"):

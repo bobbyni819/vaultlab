@@ -25,13 +25,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from vaultlab.runner.models import Mode, Role
 from vaultlab.roles._loader import (
     RoleNotFoundError,
     list_roles,
     load_all_roles,
     load_role,
 )
+from vaultlab.runner.models import Mode, Role
 
 
 @lru_cache(maxsize=1)
@@ -89,15 +89,21 @@ ROLE_TEMPLATES = _RoleTemplatesProxy()
 # ``bobby_ailab._roles.roles_for`` table; the literature-mode swap and
 # critiqued_* prefix are honoured the same way.
 _MEETING_TYPE_ROLES: dict[str, list[str]] = {
-    "reasoning":         ["__analyst__", "domain_expert", "__critic__"],
-    "synthesis":         ["synthesizer"],
-    "brainstorm":        ["figure_lead", "__critic__"],
-    "narrate":           ["narrator"],
-    "deep_think":        ["__analyst__", "domain_expert", "__critic__", "synthesizer"],
-    "team_meeting":      ["team_lead", "__analyst__", "domain_expert", "__critic__"],
-    "critique":          ["domain_expert", "__critic__"],
-    "figure_read":       ["figure_reader"],
-    "visual_deep_think": ["__analyst__", "figure_reader", "domain_expert", "__critic__", "synthesizer"],
+    "reasoning": ["__analyst__", "domain_expert", "__critic__"],
+    "synthesis": ["synthesizer"],
+    "brainstorm": ["figure_lead", "__critic__"],
+    "narrate": ["narrator"],
+    "deep_think": ["__analyst__", "domain_expert", "__critic__", "synthesizer"],
+    "team_meeting": ["team_lead", "__analyst__", "domain_expert", "__critic__"],
+    "critique": ["domain_expert", "__critic__"],
+    "figure_read": ["figure_reader"],
+    "visual_deep_think": [
+        "__analyst__",
+        "figure_reader",
+        "domain_expert",
+        "__critic__",
+        "synthesizer",
+    ],
 }
 
 
@@ -121,7 +127,7 @@ def roles_for(meeting_type: str, mode: Mode = Mode.DATA_ANALYSIS) -> list[Role]:
     critic_id = "methods_critic" if mode == Mode.DATA_ANALYSIS else "literature_critic"
 
     if meeting_type.startswith("critiqued_"):
-        base = meeting_type[len("critiqued_"):]
+        base = meeting_type[len("critiqued_") :]
         if base not in catalog:
             raise ValueError(f"unknown role for critiqued meeting: {base}")
         return [catalog[base], catalog[critic_id]]
@@ -137,11 +143,11 @@ def roles_for(meeting_type: str, mode: Mode = Mode.DATA_ANALYSIS) -> list[Role]:
 
 
 __all__ = [
+    "ROLE_TEMPLATES",
     "Role",
     "RoleNotFoundError",
+    "list_roles",
     "load_all_roles",
     "load_role",
-    "list_roles",
-    "ROLE_TEMPLATES",
     "roles_for",
 ]

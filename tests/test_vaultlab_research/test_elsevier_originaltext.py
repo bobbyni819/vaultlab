@@ -8,18 +8,14 @@ returns the full article body as machine-extracted plain text under
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from pathlib import Path
-
-import pytest
+from unittest.mock import patch
 
 from vaultlab.research.corpus import Corpus
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.paper import Paper
 from vaultlab.research.sources.elsevier import ElsevierClient
 from vaultlab.research.summarize import prepare_summary_task
-
 
 # ---------------------------------------------------------------------------
 # fetch_full_text_json
@@ -84,9 +80,7 @@ def _make_minimal_corpus() -> Corpus:
         doi="10.1016/j.cell.2018.07.010",
         source_api="pubmed",
     )
-    corpus = Corpus(
-        topic="t", seeds=[seed], papers={seed.doi: seed}
-    )
+    corpus = Corpus(topic="t", seeds=[seed], papers={seed.doi: seed})
     compute_metrics(corpus)
     return corpus
 

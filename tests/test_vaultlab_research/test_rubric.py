@@ -15,7 +15,6 @@ from vaultlab.research.rubric import (
     rubric_section_for_prompt,
 )
 
-
 # ---------------------------------------------------------------------------
 # Default rubric structure
 # ---------------------------------------------------------------------------
@@ -99,9 +98,7 @@ def test_anti_pattern_guard_4_vs_1_disagreement_surfaces_dissent():
     has — they collapse to int-mean and lose the dissent. Vaultlab's
     aggregate refuses to do that.
     """
-    scores = [
-        RubricScore(f"c{i}", {"soundness": 4}) for i in range(4)
-    ] + [
+    scores = [RubricScore(f"c{i}", {"soundness": 4}) for i in range(4)] + [
         RubricScore("c5_dissenter", {"soundness": 1}, rationale="fatal flaw"),
     ]
     result = aggregate_rubric_scores(scores)
@@ -144,9 +141,10 @@ def test_aggregate_dissent_threshold_is_configurable():
     assert "originality" in aggregate_rubric_scores(scores_diff).dissent_flagged
 
     # Custom threshold = 3 — spread of 2 not flagged
-    assert "originality" not in aggregate_rubric_scores(
-        scores_diff, dissent_threshold=3
-    ).dissent_flagged
+    assert (
+        "originality"
+        not in aggregate_rubric_scores(scores_diff, dissent_threshold=3).dissent_flagged
+    )
 
 
 # ---------------------------------------------------------------------------

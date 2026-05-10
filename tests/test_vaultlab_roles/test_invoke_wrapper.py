@@ -7,17 +7,16 @@ multi-role verdicts into a single per-artifact rollup.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from vaultlab.roles._invoke import (
+    JOURNAL_TARGET_DEFAULTS,
+    META_AGENT_ROLES,
     AggregatedAudit,
     AuditPreparationError,
     AuditPrompt,
-    JOURNAL_TARGET_DEFAULTS,
-    META_AGENT_ROLES,
     aggregate_audits,
     available_journal_yaml,
     load_journal_guideline_yaml,

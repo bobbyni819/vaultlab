@@ -18,16 +18,15 @@ np = pytest.importorskip("numpy")
 pytest.importorskip("PIL")
 pytest.importorskip("skimage")
 
-from PIL import Image  # noqa: E402
+from PIL import Image
 
-from vaultlab.figures.understand import (  # noqa: E402
+from vaultlab.figures.understand import (
     ColorMotif,
     FigureUnderstandLog,
     VerificationIteration,
     save_understand_log,
     understand_figure,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -177,11 +176,7 @@ def test_save_understand_log_writes_to_canonical_path(tmp_path: Path) -> None:
     out = save_understand_log(log, tmp_path)
 
     expected = (
-        tmp_path
-        / "Sources"
-        / "Figures"
-        / "10.1038_s41586-023-05915-x"
-        / "fig1.understand.md"
+        tmp_path / "Sources" / "Figures" / "10.1038_s41586-023-05915-x" / "fig1.understand.md"
     )
     assert out == expected
     assert expected.exists()
@@ -339,14 +334,18 @@ def test_understand_pipeline_caps_verify_iterations(tmp_path: Path) -> None:
         return "stub"
 
     def match(_desc: str, regions):
-        return [
-            {
-                "element_name": "x",
-                "matched_region_id": "r0",
-                "rationale": "stub",
-                "confidence": 0.5,
-            }
-        ] if regions else []
+        return (
+            [
+                {
+                    "element_name": "x",
+                    "matched_region_id": "r0",
+                    "rationale": "stub",
+                    "confidence": 0.5,
+                }
+            ]
+            if regions
+            else []
+        )
 
     def verify(_png, _anns, iteration: int) -> VerificationIteration:
         return VerificationIteration(

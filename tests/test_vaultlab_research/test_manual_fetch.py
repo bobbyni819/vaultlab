@@ -101,15 +101,11 @@ def test_render_manual_fetch_uses_corpus_paper_metadata(tmp_path: Path):
         doi="10.1038/nmeth.2869",
     )
     results = {
-        "10.1038/nmeth.2869": _failed(
-            "10.1038/nmeth.2869", cache_path=cache_path
-        ),
+        "10.1038/nmeth.2869": _failed("10.1038/nmeth.2869", cache_path=cache_path),
     }
     corpus_papers = {"10.1038/nmeth.2869": paper}
 
-    out = render_manual_fetch_instructions(
-        results, corpus_papers=corpus_papers
-    )
+    out = render_manual_fetch_instructions(results, corpus_papers=corpus_papers)
 
     assert "Highly Multiplexed Imaging by Mass Cytometry" in out
     assert "Nature Methods" in out
@@ -124,9 +120,7 @@ def test_render_manual_fetch_lists_tier_errors(tmp_path: Path):
         "springer": "OA only at meta tier or 403",
     }
     results = {
-        "10.1038/nmeth.2869": _failed(
-            "10.1038/nmeth.2869", cache_path=cache_path, errors=errors
-        ),
+        "10.1038/nmeth.2869": _failed("10.1038/nmeth.2869", cache_path=cache_path, errors=errors),
     }
     out = render_manual_fetch_instructions(results)
 

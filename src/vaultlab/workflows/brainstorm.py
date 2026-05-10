@@ -14,11 +14,10 @@ Public surface
 from __future__ import annotations
 
 import os
-from typing import Optional  # noqa: F401  (kept for forwards compat)
+from typing import Optional
 
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
 from vaultlab.runner.models import Agenda
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows._utils import (
@@ -58,8 +57,10 @@ def plan_brainstorm_figures(
         ],
     )
     meeting = build_meeting(
-        topic=topic, meeting_type="brainstorm",
-        session_context=ctx, agenda=agenda,
+        topic=topic,
+        meeting_type="brainstorm",
+        session_context=ctx,
+        agenda=agenda,
     )
     runner = ClaudeCodeRunner(kb_path=cfg.kb_path, command_name="brainstorm-figures")
     plan = runner.plan(meeting, task=agenda)
@@ -68,11 +69,14 @@ def plan_brainstorm_figures(
         generated_by="brainstorm-figures",
         project=cfg.name,
         meeting_mode=meeting.mode.value,
-        topic=topic, kind="figure_plan",
+        topic=topic,
+        kind="figure_plan",
         tags=["figures", "brainstorm"],
     )
     return WorkflowPlan(
-        meeting=meeting, plan=plan, provenance=prov,
+        meeting=meeting,
+        plan=plan,
+        provenance=prov,
         canonical_output_path=canonical,
     )
 

@@ -28,13 +28,11 @@ _LAB_THEME_COLORS_HEX: dict[str, str] = {
     "accent4": "7C60C6",  # purple
     "accent5": "C9492C",  # red/orange
     "accent6": "D58C2E",  # gold
-    "dk2": "44546A",      # dark slate
-    "lt2": "E7E6E6",      # light gray
+    "dk2": "44546A",  # dark slate
+    "lt2": "E7E6E6",  # light gray
 }
 
-_BUNDLED_TEMPLATE_PATH = (
-    Path(__file__).parent / "themes" / "_assets" / "hickey_lab_template.pptx"
-)
+_BUNDLED_TEMPLATE_PATH = Path(__file__).parent / "themes" / "_assets" / "hickey_lab_template.pptx"
 
 _DEFAULT_FONT = "Roboto"
 
@@ -93,8 +91,8 @@ def _set_master_background(pres: Any, hex_color: str) -> None:
     bg_xml = (
         f'<p:bg xmlns:p="{p_ns}" xmlns:a="{a_ns}">'
         f'<p:bgPr><a:solidFill><a:srgbClr val="{hex_color}"/></a:solidFill>'
-        f'<a:effectLst/></p:bgPr>'
-        f'</p:bg>'
+        f"<a:effectLst/></p:bgPr>"
+        f"</p:bg>"
     )
     for master in pres.slide_masters:
         sld_root = master.element
@@ -139,8 +137,7 @@ def load_template(
         resolved = lab_template_path()
         if resolved is None:
             raise FileNotFoundError(
-                "Hickey Lab template not bundled. Expected at:\n"
-                f"  {_BUNDLED_TEMPLATE_PATH}"
+                f"Hickey Lab template not bundled. Expected at:\n  {_BUNDLED_TEMPLATE_PATH}"
             )
     else:
         resolved = Path(path)
@@ -172,10 +169,7 @@ def theme_colors() -> dict[str, Any]:
     """Return the Hickey Lab theme colors as ``RGBColor`` instances."""
     from pptx.dml.color import RGBColor
 
-    return {
-        name: RGBColor.from_string(hex_val)
-        for name, hex_val in _LAB_THEME_COLORS_HEX.items()
-    }
+    return {name: RGBColor.from_string(hex_val) for name, hex_val in _LAB_THEME_COLORS_HEX.items()}
 
 
 def theme_colors_hex() -> dict[str, str]:

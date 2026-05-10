@@ -377,7 +377,16 @@ def _extract_tool_name(text: str) -> str:
         if m:
             candidate = m.group(1).strip(",.;:()[]{}\"'")
             # Exclude generic words that often follow "we present"
-            if candidate.lower() in {"a", "an", "the", "two", "three", "this", "an open", "a novel"}:
+            if candidate.lower() in {
+                "a",
+                "an",
+                "the",
+                "two",
+                "three",
+                "this",
+                "an open",
+                "a novel",
+            }:
                 continue
             if 2 <= len(candidate) <= 50:
                 return candidate

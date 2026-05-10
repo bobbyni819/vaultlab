@@ -9,16 +9,14 @@ the wrapper extracts the synthesizer's structured JSON correctly.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
-from vaultlab.research.graph_metrics import CorpusMetrics
 from vaultlab.research.picker import CandidatePaper
 from vaultlab.research.summarize import PaperSummary
 from vaultlab.workflows.crosstalk import (
-    CrosstalkResult,
     MAX_N_ROUNDS,
+    CrosstalkResult,
     adversarial_arc_meeting,
     adversarial_deck_plan_meeting,
     adversarial_picker_meeting,
@@ -26,7 +24,6 @@ from vaultlab.workflows.crosstalk import (
     rigor_audit,
     write_crosstalk_artifacts,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -111,7 +108,7 @@ def _stub_runner_for_picker(picks_dois: list[str]) -> object:
             if r.id == "synthesizer":
                 payload = {
                     "picks": [
-                        {"doi": d, "rank": i + 1, "rationale": f"Pick {i+1}"}
+                        {"doi": d, "rank": i + 1, "rationale": f"Pick {i + 1}"}
                         for i, d in enumerate(picks_dois)
                     ]
                 }
@@ -296,8 +293,7 @@ def test_adversarial_deck_plan_meeting_loads_narrator_and_figure_lead(
                 payload = {
                     "story_arc_summary": "h -> d -> s",
                     "slides": [
-                        {"type": "title", "title": "T", "subtitle": "",
-                         "author": "B"},
+                        {"type": "title", "title": "T", "subtitle": "", "author": "B"},
                     ],
                 }
                 outputs.append({"output": json.dumps(payload)})
@@ -319,9 +315,7 @@ def test_adversarial_deck_plan_meeting_loads_narrator_and_figure_lead(
     assert captured_roles, "runner_callback was never invoked"
     role_ids = captured_roles[0]
     # The deck-pipeline roles MUST be instantiated.
-    assert "narrator" in role_ids, (
-        f"deck-plan meeting did not load 'narrator' role; got {role_ids}"
-    )
+    assert "narrator" in role_ids, f"deck-plan meeting did not load 'narrator' role; got {role_ids}"
     assert "figure_lead" in role_ids, (
         f"deck-plan meeting did not load 'figure_lead' role; got {role_ids}"
     )
@@ -475,9 +469,7 @@ def test_timeout_returns_partial_result() -> None:
 
     def _slow_runner(meeting, roles):
         time.sleep(0.1)
-        return [
-            {"output": "(too slow)"} for _ in roles
-        ]
+        return [{"output": "(too slow)"} for _ in roles]
 
     result = adversarial_picker_meeting(
         topic="t",
@@ -590,7 +582,7 @@ def test_append_decisions_log_entry_creates_or_appends(tmp_path) -> None:
     )
     text2 = p2.read_text(encoding="utf-8")
     assert "picker meeting" in text2  # earlier entry preserved
-    assert "arc meeting" in text2     # new entry added
+    assert "arc meeting" in text2  # new entry added
 
 
 # ---------------------------------------------------------------------------
@@ -607,8 +599,9 @@ def test_synthesizer_with_fenced_json_still_parsed() -> None:
             if r.id == "synthesizer":
                 wrapped = (
                     "```json\n"
-                    + json.dumps({"picks": [{"doi": "10.1/found-1990",
-                                              "rank": 1, "rationale": "x"}]})
+                    + json.dumps(
+                        {"picks": [{"doi": "10.1/found-1990", "rank": 1, "rationale": "x"}]}
+                    )
                     + "\n```"
                 )
                 outs.append({"output": wrapped})
@@ -635,10 +628,8 @@ def test_synthesizer_with_preamble_then_json_still_parsed() -> None:
         outs = []
         for r in roles:
             if r.id == "synthesizer":
-                payload = {"picks": [{"doi": "10.1/method-2010",
-                                       "rank": 1, "rationale": "x"}]}
-                outs.append({"output": "Sure, here is the result:\n"
-                                       + json.dumps(payload)})
+                payload = {"picks": [{"doi": "10.1/method-2010", "rank": 1, "rationale": "x"}]}
+                outs.append({"output": "Sure, here is the result:\n" + json.dumps(payload)})
             else:
                 outs.append({"output": "x"})
         return outs

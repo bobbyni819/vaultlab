@@ -351,15 +351,16 @@ class TestBuildDeckFromLineageResult:
 
         # No figure_assignments — figure slide MUST become a bullets slide
         out = build_deck_from_lineage_result(
-            result, speaker="B", kb_root=kb_root, figure_assignments={},
+            result,
+            speaker="B",
+            kb_root=kb_root,
+            figure_assignments={},
         )
         pres = Presentation(str(out))
         # Inspect the third slide (history slot) — should be a bullets slide,
         # not a figure slide. We detect by checking shape names: figure slides
         # have ann*_box / ann*_marker shapes; bullets have slide_bullets.
-        names_per_slide = [
-            {sh.name for sh in s.shapes} for s in pres.slides
-        ]
+        names_per_slide = [{sh.name for sh in s.shapes} for s in pres.slides]
         # The "Foundational findings" slide is index 2
         assert "slide_bullets" in names_per_slide[2]
 
@@ -595,8 +596,12 @@ class TestSynthesisSlideContent:
         assert "date:" not in joined
         assert "seeds:" not in joined
         # Must mention something from the synthesis section
-        assert any("spatial transcriptomics" in b.lower() or "single-cell" in b.lower()
-                   or "3d" in b.lower() for b in bullets)
+        assert any(
+            "spatial transcriptomics" in b.lower()
+            or "single-cell" in b.lower()
+            or "3d" in b.lower()
+            for b in bullets
+        )
 
     def test_arc_without_synthesis_falls_back_to_last_paragraph(self) -> None:
         from vaultlab.slides.deck import _synthesis_bullets_from_arc
@@ -799,6 +804,7 @@ class TestFigureSubstitution:
         assert cap.startswith("Substituted figure from")
         # Wikilink resolves to slug|label
         from vaultlab.kb.paths import slugify_doi
+
         slug = slugify_doi("10.1126/science.fake")
         assert f"[[{slug}|Goltsev 2018" in cap
         # Body text from TL;DR
@@ -864,9 +870,7 @@ class TestFigureSubstitution:
         bullets = _bullets_from_substituted_figure(claim, fig, n=5)
         assert bullets == ["Claim 1", "Claim 2", "Claim 3"]
 
-    def test_lineage_deck_substitution_caption_in_pptx(
-        self, tmp_path, pptx
-    ) -> None:
+    def test_lineage_deck_substitution_caption_in_pptx(self, tmp_path, pptx) -> None:
         """End-to-end: 3-paper bucket where leader has no figure but #2 does
         → rendered slide caption MUST contain 'Substituted figure from'."""
         from pptx import Presentation
@@ -1038,7 +1042,8 @@ class TestFigureSlideTitleAndClearance:
         for s in pres.slides:
             names = {sh.name for sh in s.shapes}
             if "slide_title" in names and any(
-                sh.shape_type == 13 for sh in s.shapes  # 13 == PICTURE
+                sh.shape_type == 13
+                for sh in s.shapes  # 13 == PICTURE
             ):
                 fig_slide = s
                 break
@@ -1051,20 +1056,18 @@ class TestFigureSlideTitleAndClearance:
         )
         assert "Gjerstorff 2006" not in title_text
         # The author label should appear in the caption instead
-        caption_shape = next(
-            (sh for sh in fig_slide.shapes if sh.name == "slide_caption"), None
-        )
+        caption_shape = next((sh for sh in fig_slide.shapes if sh.name == "slide_caption"), None)
         if caption_shape is not None:
-            assert "Gjerstorff" in caption_shape.text_frame.text or \
-                "2006" in caption_shape.text_frame.text
+            assert (
+                "Gjerstorff" in caption_shape.text_frame.text
+                or "2006" in caption_shape.text_frame.text
+            )
 
 
 class TestDeckSmokeWithBugTriggers:
     """Synthetic small deck with all bug triggers — confirm fixes hold."""
 
-    def test_smoke_no_anon_no_yaml_no_placeholder_no_dump(
-        self, tmp_path, pptx
-    ) -> None:
+    def test_smoke_no_anon_no_yaml_no_placeholder_no_dump(self, tmp_path, pptx) -> None:
         """Build a deck with: empty history bucket, YAML-only arc, mixed-format authors, 20-paper corpus.
 
         Then verify the rendered deck has none of:
@@ -1169,6 +1172,7 @@ class TestBuildDeckAdversarial:
 
     def _write_synthetic_kb(self, kb_root: Path) -> tuple[Path, dict[str, Path]]:
         from vaultlab.kb.paths import slugify_doi as _sd
+
         summary_paths: dict[str, Path] = {}
         for doi, year, bucket, title in [
             ("10.1/h", 1995, "history", "Foundation"),
@@ -1193,7 +1197,9 @@ class TestBuildDeckAdversarial:
 
     def test_adversarial_plan_with_stub_runner(self, tmp_path, pptx) -> None:
         import json as _json
+
         from pptx import Presentation as _Presentation
+
         from vaultlab.research.lineage import LineageRunResult
         from vaultlab.slides import build_deck_from_lineage_result
 
@@ -1214,8 +1220,11 @@ class TestBuildDeckAdversarial:
                         "story_arc_summary": "arc",
                         "slides": [
                             {"type": "title", "title": "x", "author": "B"},
-                            {"type": "text", "title": "Findings",
-                             "bullets": ["[[10.1_h|Smith 1995]] foundation"]},
+                            {
+                                "type": "text",
+                                "title": "Findings",
+                                "bullets": ["[[10.1_h|Smith 1995]] foundation"],
+                            },
                         ],
                     }
                     outs.append({"output": _json.dumps(payload)})
@@ -1240,7 +1249,9 @@ class TestBuildDeckAdversarial:
     def test_adversarial_plan_with_final_audit_warning(self, tmp_path, pptx) -> None:
         """When rigor_audit returns blocker issues + audit_strict=False, deck still builds + adds a warning slide."""
         import json as _json
+
         from pptx import Presentation as _Presentation
+
         from vaultlab.research.lineage import LineageRunResult
         from vaultlab.slides import build_deck_from_lineage_result
 
@@ -1261,8 +1272,12 @@ class TestBuildDeckAdversarial:
                 payload = {
                     "passed": False,
                     "issues": [
-                        {"loc": "slide 1", "severity": "blocker",
-                         "kind": "ungrounded_claim", "fix": "ground claim"},
+                        {
+                            "loc": "slide 1",
+                            "severity": "blocker",
+                            "kind": "ungrounded_claim",
+                            "fix": "ground claim",
+                        },
                     ],
                 }
                 outs.append({"output": _json.dumps(payload)})
@@ -1273,8 +1288,11 @@ class TestBuildDeckAdversarial:
                             "story_arc_summary": "arc",
                             "slides": [
                                 {"type": "title", "title": "x", "author": "B"},
-                                {"type": "text", "title": "Findings",
-                                 "bullets": ["[[10.1_h|Smith 1995]] foundation"]},
+                                {
+                                    "type": "text",
+                                    "title": "Findings",
+                                    "bullets": ["[[10.1_h|Smith 1995]] foundation"],
+                                },
                             ],
                         }
                         outs.append({"output": _json.dumps(payload)})
@@ -1304,11 +1322,11 @@ class TestBuildDeckAdversarial:
                     titles.append(sh.text_frame.text)
         assert any("Audit warnings" in t for t in titles)
 
-    def test_adversarial_plan_with_final_audit_strict_blockers_raises(
-        self, tmp_path, pptx
-    ) -> None:
+    def test_adversarial_plan_with_final_audit_strict_blockers_raises(self, tmp_path, pptx) -> None:
         import json as _json
+
         import pytest as _pytest
+
         from vaultlab.research.lineage import LineageRunResult
         from vaultlab.slides import build_deck_from_lineage_result
 
@@ -1327,17 +1345,27 @@ class TestBuildDeckAdversarial:
                 payload = {
                     "passed": False,
                     "issues": [
-                        {"loc": "x", "severity": "blocker",
-                         "kind": "ungrounded_claim", "fix": "fix"},
+                        {
+                            "loc": "x",
+                            "severity": "blocker",
+                            "kind": "ungrounded_claim",
+                            "fix": "fix",
+                        },
                     ],
                 }
                 outs.append({"output": _json.dumps(payload)})
             else:
                 for r in roles:
                     if r.id == "synthesizer":
-                        outs.append({"output": _json.dumps({
-                            "slides": [{"type": "title", "title": "x", "author": "B"}],
-                        })})
+                        outs.append(
+                            {
+                                "output": _json.dumps(
+                                    {
+                                        "slides": [{"type": "title", "title": "x", "author": "B"}],
+                                    }
+                                )
+                            }
+                        )
                     else:
                         outs.append({"output": "x"})
             return outs
@@ -1426,18 +1454,14 @@ class TestDeckProvenanceReceipts:
         assert method_p.exists(), f"missing {method_p}"
 
         rec = _json.loads(json_p.read_text(encoding="utf-8"))
-        assert rec["generated_by"] == (
-            "vaultlab.slides.deck.build_deck_from_lineage_result"
-        )
+        assert rec["generated_by"] == ("vaultlab.slides.deck.build_deck_from_lineage_result")
         assert rec["topic"] == "provenance test topic"
         assert rec["kind"] == "slide_deck"
         assert rec["project"] == "prov-test"
         assert rec["params"]["speaker"] == "Bobby Ni"
         assert rec["params"]["plan_mode"] == "fast"
         # The arc is recorded as a related output for the audit log.
-        assert any(
-            "x-lineage-2026-04-30.md" in r for r in rec.get("related_outputs", [])
-        )
+        assert any("x-lineage-2026-04-30.md" in r for r in rec.get("related_outputs", []))
 
         # method.md is human-readable narrative — should at least name
         # the generator and show some context.
@@ -1496,6 +1520,7 @@ class TestAggressiveFigurePicker:
         # filesize (ballpark — actual PNG size depends on entropy).
         # Use a noisy image so PNG compression doesn't make it tiny.
         import random
+
         side = max(64, int((size / 3) ** 0.5))
         img = Image.new("RGB", (side, side))
         rng = random.Random(hash(doi) & 0xFFFF)
@@ -1508,9 +1533,7 @@ class TestAggressiveFigurePicker:
         img.save(p, "PNG")
         return p
 
-    def test_corpus_with_5_tier_a_papers_yields_at_least_4_figure_slides(
-        self, tmp_path
-    ) -> None:
+    def test_corpus_with_5_tier_a_papers_yields_at_least_4_figure_slides(self, tmp_path) -> None:
         """5 Tier-A papers each with one large figure -> >=4 figure-slides."""
         from pptx import Presentation
 
@@ -1569,11 +1592,7 @@ class TestAggressiveFigurePicker:
         pres = Presentation(str(out))
 
         # Count slides containing pictures (shape_type==13).
-        n_figure_slides = sum(
-            1
-            for s in pres.slides
-            if any(sh.shape_type == 13 for sh in s.shapes)
-        )
+        n_figure_slides = sum(1 for s in pres.slides if any(sh.shape_type == 13 for sh in s.shapes))
         assert n_figure_slides >= 4, (
             f"expected >=4 figure-slides but got {n_figure_slides} "
             f"(corpus has 6 Tier-A papers, each with a cached figure)"
@@ -1632,11 +1651,7 @@ class TestAggressiveFigurePicker:
             figure_assignments=figure_assignments,
         )
         pres = Presentation(str(out))
-        n_figure_slides = sum(
-            1
-            for s in pres.slides
-            if any(sh.shape_type == 13 for sh in s.shapes)
-        )
+        n_figure_slides = sum(1 for s in pres.slides if any(sh.shape_type == 13 for sh in s.shapes))
         assert n_figure_slides <= _FIGURE_TOTAL_CAP, (
             f"figure-slide count exceeded cap {_FIGURE_TOTAL_CAP}: got {n_figure_slides}"
         )
@@ -1653,11 +1668,11 @@ class TestAggressiveFigurePicker:
         d = tmp_path / "10-1_x"
         d.mkdir(parents=True, exist_ok=True)
         sizes = [
-            ("fig1.png", 5_000),     # decorative crop
-            ("fig2.png", 8_000),     # decorative crop
-            ("fig3.png", 250_000),   # main result figure
-            ("fig4.png", 30_000),    # mid-size
-            ("fig5.png", 12_000),    # decorative
+            ("fig1.png", 5_000),  # decorative crop
+            ("fig2.png", 8_000),  # decorative crop
+            ("fig3.png", 250_000),  # main result figure
+            ("fig4.png", 30_000),  # mid-size
+            ("fig5.png", 12_000),  # decorative
         ]
         files = []
         for name, size in sizes:
@@ -1666,14 +1681,17 @@ class TestAggressiveFigurePicker:
             files.append(p)
         # Manifest lists all 5 in order.
         import json as _json
+
         manifest = d / ".figures.json"
         manifest.write_text(
-            _json.dumps({
-                "figures": [
-                    {"figure_id": f"fig{i+1}", "file_path": str(p)}
-                    for i, p in enumerate(files)
-                ]
-            }),
+            _json.dumps(
+                {
+                    "figures": [
+                        {"figure_id": f"fig{i + 1}", "file_path": str(p)}
+                        for i, p in enumerate(files)
+                    ]
+                }
+            ),
             encoding="utf-8",
         )
         # figure_assignments: only the SEED path (fig1) is registered;
@@ -1687,9 +1705,7 @@ class TestAggressiveFigurePicker:
             f"picker chose {chosen.name} instead of the 250 KB main figure"
         )
 
-    def test_pick_figures_for_bucket_multi_returns_one_per_paper(
-        self, tmp_path
-    ) -> None:
+    def test_pick_figures_for_bucket_multi_returns_one_per_paper(self, tmp_path) -> None:
         """A bucket with 3 Tier-A papers each having a figure produces 3 picks."""
         from vaultlab.slides.deck import _pick_figures_for_bucket_multi
 
@@ -1710,9 +1726,7 @@ class TestAggressiveFigurePicker:
             "10.1/b": figs[1],
             "10.1/c": figs[2],
         }
-        picks = _pick_figures_for_bucket_multi(
-            bucket_papers, figure_assignments, max_per_bucket=4
-        )
+        picks = _pick_figures_for_bucket_multi(bucket_papers, figure_assignments, max_per_bucket=4)
         assert len(picks) == 3
         # Leader is first; each pick has claim_doi == fig_doi (no
         # substitution because every paper has its own figure).
@@ -1720,9 +1734,7 @@ class TestAggressiveFigurePicker:
             assert claim_doi == fig_doi
         assert picks[0][0] == "10.1/a"  # leader
 
-    def test_pick_figures_for_bucket_multi_respects_max_per_bucket(
-        self, tmp_path
-    ) -> None:
+    def test_pick_figures_for_bucket_multi_respects_max_per_bucket(self, tmp_path) -> None:
         """``max_per_bucket=2`` caps the result list at 2 entries."""
         from vaultlab.slides.deck import _pick_figures_for_bucket_multi
 
@@ -1732,21 +1744,12 @@ class TestAggressiveFigurePicker:
             p.write_bytes(b"\x89PNG\r\n" + b"x" * 200_000)
             figs.append(p)
 
-        bucket_papers = [
-            {"doi": f"10.1/p{i}", "tier": "A", "og_score": 5.0 - i}
-            for i in range(5)
-        ]
-        figure_assignments = {
-            f"10.1/p{i}": figs[i] for i in range(5)
-        }
-        picks = _pick_figures_for_bucket_multi(
-            bucket_papers, figure_assignments, max_per_bucket=2
-        )
+        bucket_papers = [{"doi": f"10.1/p{i}", "tier": "A", "og_score": 5.0 - i} for i in range(5)]
+        figure_assignments = {f"10.1/p{i}": figs[i] for i in range(5)}
+        picks = _pick_figures_for_bucket_multi(bucket_papers, figure_assignments, max_per_bucket=2)
         assert len(picks) == 2
 
-    def test_pick_figures_for_bucket_multi_skips_tier_c_papers(
-        self, tmp_path
-    ) -> None:
+    def test_pick_figures_for_bucket_multi_skips_tier_c_papers(self, tmp_path) -> None:
         """Tier-C papers must NEVER be picked as figure-slide subjects."""
         from vaultlab.slides.deck import _pick_figures_for_bucket_multi
 
@@ -1760,9 +1763,7 @@ class TestAggressiveFigurePicker:
             {"doi": "10.1/a", "tier": "A"},  # Tier-A
         ]
         figure_assignments = {"10.1/c": fig_c, "10.1/a": fig_a}
-        picks = _pick_figures_for_bucket_multi(
-            bucket_papers, figure_assignments
-        )
+        picks = _pick_figures_for_bucket_multi(bucket_papers, figure_assignments)
         # Exactly one pick — the Tier-A paper. The Tier-C paper, even
         # with a cached figure, must never appear as fig_doi.
         assert len(picks) == 1

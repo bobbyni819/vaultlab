@@ -68,12 +68,13 @@ slash command body runs the LLM step in-session.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from vaultlab.research.corpus import Corpus
     from vaultlab.research.arc_structure import ArcStructure
+    from vaultlab.research.corpus import Corpus
 
 logger = logging.getLogger(__name__)
 
@@ -257,15 +258,13 @@ def binning_response_schema(
                             "type": "string",
                             "enum": valid_list,
                             "description": (
-                                "Section ID — one of: "
-                                + ", ".join(repr(b) for b in valid_list)
+                                "Section ID — one of: " + ", ".join(repr(b) for b in valid_list)
                             ),
                         },
                         "rationale": {
                             "type": "string",
                             "description": (
-                                "Short justification (1-2 sentences) "
-                                "grounded in the abstract."
+                                "Short justification (1-2 sentences) grounded in the abstract."
                             ),
                         },
                     },
@@ -293,7 +292,7 @@ def build_binning_prompt(
     *,
     topic: str,
     candidates: list[BinningCandidate],
-    arc_structure: "ArcStructure | None" = None,
+    arc_structure: ArcStructure | None = None,
 ) -> str:
     """Build the user-message prompt for the binning LLM.
 
@@ -311,6 +310,7 @@ def build_binning_prompt(
     # Lazy import to avoid circulars at module load.
     if arc_structure is None:
         from vaultlab.research.arc_structure import SHORT as _SHORT
+
         arc_structure = _SHORT
 
     section_ids_str = " / ".join(s.id.upper() for s in arc_structure.sections)
@@ -356,15 +356,9 @@ def build_binning_prompt(
         lines.append(f"    Abstract: {_truncate_abstract(c.abstract)}")
         lines.append("")
 
-    valid_section_ids_str = ", ".join(
-        repr(s.id) for s in arc_structure.sections
-    )
+    valid_section_ids_str = ", ".join(repr(s.id) for s in arc_structure.sections)
     example_id_a = arc_structure.sections[0].id
-    example_id_b = (
-        arc_structure.sections[1].id
-        if len(arc_structure.sections) > 1
-        else example_id_a
-    )
+    example_id_b = arc_structure.sections[1].id if len(arc_structure.sections) > 1 else example_id_a
     lines.extend(
         [
             "OUTPUT FORMAT:",
@@ -376,10 +370,7 @@ def build_binning_prompt(
                 f'    {{"doi": "<doi>", "bucket": "{example_id_a}", '
                 '"rationale": "<1-2 sentences grounded in the abstract>"},'
             ),
-            (
-                f'    {{"doi": "<doi>", "bucket": "{example_id_b}", '
-                '"rationale": "..."},'
-            ),
+            (f'    {{"doi": "<doi>", "bucket": "{example_id_b}", "rationale": "..."}},'),
             "    ...",
             "  ]",
             "}",
@@ -398,7 +389,7 @@ def build_binning_prompt(
 
 
 def _build_candidates(
-    corpus: "Corpus",
+    corpus: Corpus,
     *,
     max_candidates: int,
 ) -> list[BinningCandidate]:
@@ -419,6 +410,7 @@ def _build_candidates(
     if metrics is None:
         ranked_dois = dois
     else:
+
         def _coarse_score(doi: str) -> float:
             return float(metrics.og_score.get(doi, 0.0)) + float(
                 metrics.forward_influence.get(doi, 0)
@@ -438,9 +430,7 @@ def _build_candidates(
             abstract = "[no abstract]"
         og = float(metrics.og_score.get(doi, 0.0)) if metrics else 0.0
         fwd = int(metrics.forward_influence.get(doi, 0)) if metrics else 0
-        det_bucket = (
-            metrics.year_buckets.get(doi, "unknown") if metrics else "unknown"
-        )
+        det_bucket = metrics.year_buckets.get(doi, "unknown") if metrics else "unknown"
         out.append(
             BinningCandidate(
                 doi=doi,
@@ -461,11 +451,11 @@ def _build_candidates(
 
 
 def prepare_binning_task(
-    corpus: "Corpus",
+    corpus: Corpus,
     topic: str,
     *,
     max_candidates: int = 200,
-    arc_structure: "ArcStructure | None" = None,
+    arc_structure: ArcStructure | None = None,
 ) -> BinningTask:
     """Prepare a binning task. Does NOT call any LLM.
 
@@ -492,11 +482,10 @@ def prepare_binning_task(
     """
     if arc_structure is None:
         from vaultlab.research.arc_structure import SHORT
+
         arc_structure = SHORT
     candidates = _build_candidates(corpus, max_candidates=max_candidates)
-    prompt = build_binning_prompt(
-        topic=topic, candidates=candidates, arc_structure=arc_structure
-    )
+    prompt = build_binning_prompt(topic=topic, candidates=candidates, arc_structure=arc_structure)
     section_ids = tuple(s.id for s in arc_structure.sections)
     return BinningTask(
         topic=topic,
@@ -522,7 +511,7 @@ def _coverage(
     """
     if valid_section_ids is None:
         valid_section_ids = tuple(sorted(_LEGACY_VALID_BUCKETS))
-    out: dict[str, int] = {sid: 0 for sid in valid_section_ids}
+    out: dict[str, int] = dict.fromkeys(valid_section_ids, 0)
     out["unknown"] = 0
     for b in buckets.values():
         if b in out:
@@ -590,9 +579,7 @@ def render_binning_from_response(
         # arc support). Falls back to the legacy 3-bucket set when the
         # task was built before the field existed.
         valid_section_set = (
-            set(task.valid_section_ids)
-            if task.valid_section_ids
-            else _LEGACY_VALID_BUCKETS
+            set(task.valid_section_ids) if task.valid_section_ids else _LEGACY_VALID_BUCKETS
         )
         if bucket not in valid_section_set:
             logger.debug("binning dropped invalid bucket %r for %s", raw_bucket, doi)
@@ -618,7 +605,7 @@ def render_binning_from_response(
     )
 
 
-def _deterministic_only_result(corpus: "Corpus") -> BinningResult:
+def _deterministic_only_result(corpus: Corpus) -> BinningResult:
     """Build a BinningResult that just mirrors corpus.metrics.year_buckets.
 
     Used as the fallback when no callback / SDK is wired and fallback
@@ -684,7 +671,7 @@ def _call_anthropic_for_binning(
 
 
 def assign_buckets_with_llm(
-    corpus: "Corpus",
+    corpus: Corpus,
     topic: str,
     *,
     binner_callback: BinningCallback | None = None,
@@ -692,7 +679,7 @@ def assign_buckets_with_llm(
     max_candidates: int = 200,
     fallback_to_deterministic: bool = True,
     model: str = "claude-sonnet-4-6",
-    arc_structure: "ArcStructure | None" = None,
+    arc_structure: ArcStructure | None = None,
 ) -> BinningResult:
     """Assign every corpus paper to a lineage bucket via LLM-driven binning.
 
@@ -788,9 +775,7 @@ def assign_buckets_with_llm(
                 type(raw).__name__,
             )
             if not fallback_to_deterministic:
-                raise MissingBinningCallback(
-                    "binner_callback returned non-dict; cannot bin"
-                )
+                raise MissingBinningCallback("binner_callback returned non-dict; cannot bin")
             return _deterministic_only_result(corpus)
     else:
         # SDK mode.
@@ -802,13 +787,9 @@ def assign_buckets_with_llm(
                 if sdk_client is True
                 else getattr(sdk_client, "api_key", None) or load_anthropic_api_key()
             )
-            response = _call_anthropic_for_binning(
-                task=task, api_key=api_key, model=model
-            )
+            response = _call_anthropic_for_binning(task=task, api_key=api_key, model=model)
         except Exception as exc:
-            logger.warning(
-                "SDK binning failed: %s; falling back to deterministic", exc
-            )
+            logger.warning("SDK binning failed: %s; falling back to deterministic", exc)
             if not fallback_to_deterministic:
                 raise
             return _deterministic_only_result(corpus)

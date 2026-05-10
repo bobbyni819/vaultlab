@@ -11,7 +11,6 @@ from vaultlab.parsers import (
     summarize_ratings,
 )
 
-
 CRITIC_SAMPLE_DATA_MODE = """
 ## F001
 - **Rating:** ROBUST
@@ -119,9 +118,13 @@ def test_summarize_ratings_empty() -> None:
 
 
 def test_summarize_ratings_counts_by_category() -> None:
-    s = summarize_ratings({
-        "F001": "ROBUST", "F002": "ROBUST", "F003": "WEAK",
-    })
+    s = summarize_ratings(
+        {
+            "F001": "ROBUST",
+            "F002": "ROBUST",
+            "F003": "WEAK",
+        }
+    )
     assert "2 ROBUST" in s
     assert "1 WEAK" in s
 

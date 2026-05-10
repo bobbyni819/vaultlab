@@ -39,8 +39,8 @@ Lineage
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from vaultlab.kb.paths import slugify_topic
@@ -373,7 +373,7 @@ def lint_kb(
                     severity="fail",
                     kind="missing_folder",
                     path=proj_dir,
-                    message=f"Project folder does not exist",
+                    message="Project folder does not exist",
                     fix=f"Run scaffold_kb(kb_root, '{project_slug}') to create.",
                 )
             )
@@ -391,7 +391,7 @@ def lint_kb(
         project_slug=project_slug or "",
         findings=findings,
         schema_version=schema_version,
-        audited_at=datetime.now(timezone.utc),
+        audited_at=datetime.now(UTC),
     )
 
 
@@ -412,7 +412,7 @@ def _lint_project_folders(proj_dir: Path) -> list[LintFinding]:
                     kind="missing_folder",
                     path=target,
                     message=f"Required canonical folder missing: {folder}",
-                    fix=f"Create with mkdir, or rerun scaffold_kb(force=True).",
+                    fix="Create with mkdir, or rerun scaffold_kb(force=True).",
                 )
             )
     return findings
@@ -431,8 +431,8 @@ def _lint_top_level_files(proj_dir: Path) -> list[LintFinding]:
                     path=target,
                     message=f"Required top-level file missing: {filename}",
                     fix=(
-                        f"Run scaffold_kb(force=True) to populate, or "
-                        f"create manually following the schema."
+                        "Run scaffold_kb(force=True) to populate, or "
+                        "create manually following the schema."
                     ),
                 )
             )
@@ -459,9 +459,9 @@ def _lint_naming_conventions(proj_dir: Path) -> list[LintFinding]:
                     kind="naming_violation",
                     path=f,
                     message=(
-                        f"Article filename does not match "
-                        f"AuthorYearTitle convention "
-                        f"(e.g., 'Pentimalli_2025_lipid-axis.md')."
+                        "Article filename does not match "
+                        "AuthorYearTitle convention "
+                        "(e.g., 'Pentimalli_2025_lipid-axis.md')."
                     ),
                     fix="Rename to AuthorLast_Year_short-title.md (no spaces).",
                 )
@@ -486,7 +486,10 @@ def _lint_index_freshness(proj_dir: Path) -> list[LintFinding]:
     for f in sources_dir.rglob("*.md"):
         latest_source_mtime = max(latest_source_mtime, f.stat().st_mtime)
 
-    if latest_source_mtime > 0 and (latest_source_mtime - idx_mtime) > _INDEX_STALENESS_DAYS * 86400:
+    if (
+        latest_source_mtime > 0
+        and (latest_source_mtime - idx_mtime) > _INDEX_STALENESS_DAYS * 86400
+    ):
         findings.append(
             LintFinding(
                 severity="warn",
@@ -554,11 +557,11 @@ def _start_here_template(slug: str, today: str, weekday: str) -> str:
         f"2. **When creating any new KB file**: add a bullet under today's "
         f"section with a link to it; status = 🟡 deliverable / 🔴 TODO / "
         f"🟢 in-progress.\n"
-        f"3. **When the user signals completion** (\"sent the email\", "
-        f"\"pushed to xlsx\", \"told the team\"): move the item from "
+        f'3. **When the user signals completion** ("sent the email", '
+        f'"pushed to xlsx", "told the team"): move the item from '
         f"🔴/🟡/🟢 to ✅ under that same day.\n"
         f"4. **When detected via tool result** (file written, email sent, "
-        f"commit landed): move to ✅ without waiting; note \"auto-detected\".\n"
+        f'commit landed): move to ✅ without waiting; note "auto-detected".\n'
         f"5. **Never delete** — items stay visible in their date section.\n"
         f"6. **Quick nav block** — maintain a top-level Quick nav grouping "
         f"the most-linked files.\n"

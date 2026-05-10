@@ -64,8 +64,8 @@ __all__ = [
     "DEFAULT_VISION_MODEL",
     "describe_via_sdk",
     "match_via_sdk",
-    "verify_via_sdk",
     "understand_figure_via_sdk",
+    "verify_via_sdk",
 ]
 
 
@@ -89,7 +89,7 @@ def _resolve_api_key(explicit: str | None) -> str:
 
 def _make_client(api_key: str | None):
     """Build an ``anthropic.Anthropic`` client, deferring the import."""
-    import anthropic  # noqa: PLC0415 — deferred so the package stays light to import
+    import anthropic
 
     key = _resolve_api_key(api_key)
     return anthropic.Anthropic(api_key=key)
@@ -138,7 +138,7 @@ def _extract_json(text: str) -> dict[str, Any] | None:
     if s.startswith("```"):
         first_newline = s.find("\n")
         if first_newline != -1:
-            s = s[first_newline + 1:]
+            s = s[first_newline + 1 :]
         if s.endswith("```"):
             s = s[:-3].rstrip()
     start = s.find("{")
@@ -166,7 +166,7 @@ def _extract_json(text: str) -> dict[str, Any] | None:
         elif ch == "}":
             depth -= 1
             if depth == 0:
-                blob = s[start:i + 1]
+                blob = s[start : i + 1]
                 try:
                     parsed = json.loads(blob)
                     return parsed if isinstance(parsed, dict) else None
@@ -218,9 +218,7 @@ def describe_via_sdk(
     """
     cli = client or _make_client(api_key)
     blocks = [_image_block(task.figure_path), {"type": "text", "text": task.prompt}]
-    parsed = _call_messages(
-        client=cli, model=model, system=task.system, user_blocks=blocks
-    )
+    parsed = _call_messages(client=cli, model=model, system=task.system, user_blocks=blocks)
     description, _ = render_describe_from_response(parsed, task)
     return description
 
@@ -242,9 +240,7 @@ def match_via_sdk(
     if task.annotated_preview_path is not None and task.annotated_preview_path.exists():
         blocks.append(_image_block(task.annotated_preview_path))
     blocks.append({"type": "text", "text": task.prompt})
-    parsed = _call_messages(
-        client=cli, model=model, system=task.system, user_blocks=blocks
-    )
+    parsed = _call_messages(client=cli, model=model, system=task.system, user_blocks=blocks)
     return render_match_from_response(parsed, task)
 
 
@@ -261,9 +257,7 @@ def verify_via_sdk(
         _image_block(task.annotated_image_path),
         {"type": "text", "text": task.prompt},
     ]
-    parsed = _call_messages(
-        client=cli, model=model, system=task.system, user_blocks=blocks
-    )
+    parsed = _call_messages(client=cli, model=model, system=task.system, user_blocks=blocks)
     return render_verify_from_response(parsed, task)
 
 
@@ -347,15 +341,11 @@ def understand_figure_via_sdk(
     description_holder: dict[str, str] = {"value": ""}
 
     def describe_fn(image_path: Path) -> str:
-        task = prepare_describe_task(
-            image_path, paper_doi=paper_doi, paper_tldr=paper_tldr
-        )
+        task = prepare_describe_task(image_path, paper_doi=paper_doi, paper_tldr=paper_tldr)
         # Inline the SDK call so we can also capture the elements list,
         # which the SDK callback signature (str return) wouldn't expose.
         blocks = [_image_block(task.figure_path), {"type": "text", "text": task.prompt}]
-        parsed = _call_messages(
-            client=cli, model=model, system=task.system, user_blocks=blocks
-        )
+        parsed = _call_messages(client=cli, model=model, system=task.system, user_blocks=blocks)
         description, elements = render_describe_from_response(parsed, task)
         description_holder["value"] = description
         described_elements_holder["value"] = elements
@@ -379,12 +369,10 @@ def understand_figure_via_sdk(
         # so the verifier sees the current state of the boxes.
         try:
             render_debug_overlay(figure_path, annotations, annotated_path)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("verify_fn: render_debug_overlay failed: %s", exc)
         expected = [a.label for a in annotations] or described_elements_holder["value"]
-        task = prepare_verify_task(
-            annotated_path, iteration=iteration, expected_elements=expected
-        )
+        task = prepare_verify_task(annotated_path, iteration=iteration, expected_elements=expected)
         return verify_via_sdk(task, client=cli, model=model, api_key=api_key)
 
     return understand_figure(

@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from vaultlab.roles import load_role, list_roles
-
+from vaultlab.roles import list_roles, load_role
 
 META_AGENT_ROLES = [
     "journal_reviewer",
@@ -47,8 +46,7 @@ def test_role_has_focus_areas(role_id: str) -> None:
     """Each role declares ≥ 4 focus areas (per SPEC-B requirement)."""
     role = load_role(role_id)
     assert len(role.focus_areas) >= 4, (
-        f"{role_id} has only {len(role.focus_areas)} focus areas; "
-        f"SPEC-B requires ≥ 4."
+        f"{role_id} has only {len(role.focus_areas)} focus areas; SPEC-B requires ≥ 4."
     )
 
 
@@ -57,8 +55,7 @@ def test_role_has_evaluation_criteria(role_id: str) -> None:
     """Each role declares ≥ 4 evaluation criteria."""
     role = load_role(role_id)
     assert len(role.evaluation_criteria) >= 4, (
-        f"{role_id} has only {len(role.evaluation_criteria)} criteria; "
-        f"SPEC-B requires ≥ 4."
+        f"{role_id} has only {len(role.evaluation_criteria)} criteria; SPEC-B requires ≥ 4."
     )
 
 
@@ -121,9 +118,7 @@ def test_expert_reviewer_uses_pi_archetype_as_gold_standard() -> None:
     text = role.system_prompt + role.description
     text_lower = text.lower()
     # PI / advisor / mentor archetype must be present (gold standard)
-    has_pi_archetype = (
-        "pi" in text_lower or "advisor" in text_lower or "mentor" in text_lower
-    )
+    has_pi_archetype = "pi" in text_lower or "advisor" in text_lower or "mentor" in text_lower
     assert has_pi_archetype, (
         "expert_reviewer must reference the PI/advisor/mentor archetype "
         "as the gold standard for full-project-oversight expert review"
@@ -153,8 +148,7 @@ def test_adoption_evaluator_has_what_they_see() -> None:
     role = load_role("adoption_evaluator")
     fmt = role.output_format
     assert "what_they_see" in fmt, (
-        "adoption_evaluator must surface user-perspective via what_they_see "
-        "field per SPEC-B."
+        "adoption_evaluator must surface user-perspective via what_they_see field per SPEC-B."
     )
 
 
@@ -172,9 +166,7 @@ def test_publication_compliance_has_per_check_results() -> None:
     # Required check names
     required_checks = ["fig_dpi", "fig_font_min", "fig_color_blind_safe"]
     for check in required_checks:
-        assert check in fmt, (
-            f"publication_guideline_compliance must define {check} check"
-        )
+        assert check in fmt, f"publication_guideline_compliance must define {check} check"
 
 
 def test_publication_compliance_anchored_in_yaml() -> None:

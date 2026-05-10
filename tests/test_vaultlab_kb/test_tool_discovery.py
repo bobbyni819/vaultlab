@@ -9,17 +9,13 @@ from __future__ import annotations
 from pathlib import Path
 from unittest import mock
 
-import pytest
-
 from vaultlab.kb.tools_index.discovery import (
     DiscoveredTool,
     detect_tool_signature,
-    discovered_dir,
     extract_tool_metadata,
     is_already_known,
     save_discovered_tool,
 )
-
 
 # Sample abstracts — real-shaped text patterns
 ABSTRACT_INTRODUCES_TOOL = """
@@ -131,15 +127,19 @@ def test_save_discovered_tool_creates_md(tmp_path: Path, monkeypatch) -> None:
     fake_pkgs = tmp_path / "packages"
     fake_pkgs.mkdir()
 
-    with mock.patch(
-        "vaultlab.kb.tools_index.discovery.packages_dir",
-        return_value=fake_pkgs,
-    ), mock.patch(
-        "vaultlab.kb.tools_index.discovery.load_index",
-        return_value={},  # no curated entries in the fake setup
-    ), mock.patch(
-        "vaultlab.kb.tools_index.discovery.load_external_repos",
-        return_value=[],
+    with (
+        mock.patch(
+            "vaultlab.kb.tools_index.discovery.packages_dir",
+            return_value=fake_pkgs,
+        ),
+        mock.patch(
+            "vaultlab.kb.tools_index.discovery.load_index",
+            return_value={},  # no curated entries in the fake setup
+        ),
+        mock.patch(
+            "vaultlab.kb.tools_index.discovery.load_external_repos",
+            return_value=[],
+        ),
     ):
         tool = DiscoveredTool(
             name="testtool-xyz",
@@ -180,6 +180,7 @@ def test_save_discovered_tool_skips_when_already_curated(tmp_path: Path) -> None
 def test_render_md_includes_status_discovered() -> None:
     """Rendered markdown declares status: discovered."""
     from vaultlab.kb.tools_index.discovery import _render_tool_md
+
     tool = DiscoveredTool(
         name="foo",
         description="Foo is a tool.",

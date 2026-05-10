@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from vaultlab.research.recency_quota import (
     DEFAULT_QUOTA_12MO,
     DEFAULT_QUOTA_24MO,
@@ -129,12 +127,11 @@ def test_short_picklist_caller_chooses_quotas():
     """For a 10-pick list, the caller passes scaled quotas (e.g., 2 + 1)
     explicitly. The function honors them as given without auto-scaling."""
     picks = [
-        {"doi": f"10.1/old{i}", "year": 2010, "rank": i+1, "composite_score": 10-i}
+        {"doi": f"10.1/old{i}", "year": 2010, "rank": i + 1, "composite_score": 10 - i}
         for i in range(10)
     ]
     candidate_pool = {
-        f"10.1/recent{i}": {"year": 2025, "composite_score": 8-i*0.1}
-        for i in range(5)
+        f"10.1/recent{i}": {"year": 2025, "composite_score": 8 - i * 0.1} for i in range(5)
     }
 
     result = apply_recency_quotas(
@@ -223,13 +220,14 @@ def test_review_quotas_match_bobbys_2026_05_01_floor():
     default 6+3 level. Review-paper scope picks ~150 papers; 30+30
     recency is 20% by count but covers the SOTA window."""
     from vaultlab.research.recency_quota import (
-        REVIEW_QUOTA_24MO,
         REVIEW_QUOTA_12MO,
-        STANDARD_QUOTA_24MO,
-        STANDARD_QUOTA_12MO,
-        SHORT_QUOTA_24MO,
+        REVIEW_QUOTA_24MO,
         SHORT_QUOTA_12MO,
+        SHORT_QUOTA_24MO,
+        STANDARD_QUOTA_12MO,
+        STANDARD_QUOTA_24MO,
     )
+
     assert REVIEW_QUOTA_24MO == 30
     assert REVIEW_QUOTA_12MO == 30
     # Standard scope ~75-pick lists

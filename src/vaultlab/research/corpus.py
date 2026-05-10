@@ -18,8 +18,9 @@ later PDF-reading task should fill the gap.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from vaultlab.research.citation_lookup import (
     Reference,
@@ -68,7 +69,7 @@ class Corpus:
     papers: dict[str, Paper] = field(default_factory=dict)
     references: dict[str, list[str]] = field(default_factory=dict)
     cited_by: dict[str, list[str]] = field(default_factory=dict)
-    metrics: "CorpusMetrics | None" = None
+    metrics: CorpusMetrics | None = None
 
     # ------------------------------------------------------------------
     # Convenience views
@@ -505,9 +506,7 @@ def backfill_authors_via_chain(
             try:
                 authors = fetcher(doi)
             except Exception as exc:  # never let one source crash the run
-                logger.warning(
-                    "Backfill source %s raised for %s: %s", source_name, doi, exc
-                )
+                logger.warning("Backfill source %s raised for %s: %s", source_name, doi, exc)
                 continue
             if not authors:
                 continue

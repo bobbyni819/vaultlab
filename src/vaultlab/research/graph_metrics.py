@@ -92,7 +92,7 @@ def _year_bucket_assignments(
     """
     valid = [(d, y) for d, y in years_by_doi.items() if y]
     if not valid:
-        return {d: "unknown" for d in years_by_doi}
+        return dict.fromkeys(years_by_doi, "unknown")
 
     valid.sort(key=lambda kv: kv[1])
     n = len(valid)
@@ -131,7 +131,7 @@ def _year_bucket_assignments(
 # ---------------------------------------------------------------------------
 
 
-def compute_metrics(corpus: "Corpus") -> CorpusMetrics:
+def compute_metrics(corpus: Corpus) -> CorpusMetrics:
     """Compute :class:`CorpusMetrics` for ``corpus`` and attach to it.
 
     Mutates ``corpus.metrics`` and also returns the metrics object.
@@ -165,7 +165,7 @@ def compute_metrics(corpus: "Corpus") -> CorpusMetrics:
     # 2. Forward influence: in-degree on the seed x seed subgraph.
     # ------------------------------------------------------------------
     seed_set = set(seed_dois)
-    forward_influence: dict[str, int] = {d: 0 for d in seed_dois}
+    forward_influence: dict[str, int] = dict.fromkeys(seed_dois, 0)
     for seed_doi in seed_dois:
         cited = corpus.references.get(seed_doi) or []
         for target in set(cited):
@@ -188,9 +188,7 @@ def compute_metrics(corpus: "Corpus") -> CorpusMetrics:
             for j in range(i + 1, len(unique)):
                 pair_counts[(unique[i], unique[j])] += 1
 
-    co_citation_pairs = [
-        (a, b, c) for (a, b), c in pair_counts.items() if c >= 2
-    ]
+    co_citation_pairs = [(a, b, c) for (a, b), c in pair_counts.items() if c >= 2]
     co_citation_pairs.sort(key=lambda x: (-x[2], x[0], x[1]))
 
     # ------------------------------------------------------------------

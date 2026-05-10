@@ -37,9 +37,9 @@ but new code should import from :mod:`vaultlab.roles` directly.
 from __future__ import annotations
 
 from vaultlab.runner._claude_code import (
+    DEFAULT_TOOLS_BY_ROLE,
     AgentSpec,
     ClaudeCodeRunner,
-    DEFAULT_TOOLS_BY_ROLE,
     RunPlan,
     render_plan_as_instructions,
 )

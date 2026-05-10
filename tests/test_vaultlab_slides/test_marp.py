@@ -2,6 +2,7 @@
 
 Ported from ``bobby-tools/tests/test_bobby_slides/test_marp.py``.
 """
+
 from __future__ import annotations
 
 from vaultlab.slides.marp import deck_plan_to_marp, write_marp
@@ -90,12 +91,14 @@ class TestSpeakerNotes:
     def test_renders_speaker_notes_as_html_comment(self):
         plan = {
             "title": "T",
-            "slides": [{
-                "type": "text",
-                "title": "Slide",
-                "bullets": ["b"],
-                "speaker_notes": {"hook": "H", "transition": "T"},
-            }],
+            "slides": [
+                {
+                    "type": "text",
+                    "title": "Slide",
+                    "bullets": ["b"],
+                    "speaker_notes": {"hook": "H", "transition": "T"},
+                }
+            ],
         }
         result = deck_plan_to_marp(plan)
         assert "<!--" in result

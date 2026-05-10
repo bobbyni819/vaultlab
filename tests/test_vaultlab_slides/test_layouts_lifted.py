@@ -3,6 +3,7 @@
 Ported from ``bobby-tools/tests/test_bobby_slides/test_layout.py``. Adapts
 imports to the vaultlab namespace.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,7 +25,6 @@ from vaultlab.slides.layouts import (
     add_title_slide,
 )
 from vaultlab.slides.template import default_font, lab_template_path, load_template
-
 
 pytestmark = pytest.mark.skipif(
     lab_template_path() is None,
@@ -96,7 +96,8 @@ class TestAddFigureSlide:
         fig = tmp_path / "b.png"
         make_test_image(fig)
         add_figure_slide(
-            pres, fig,
+            pres,
+            fig,
             title="With Bullets",
             bullets=["n=100", "p<0.001", "Effect size: 0.8"],
         )
@@ -108,7 +109,8 @@ class TestAddFigureSlide:
         fig = tmp_path / "c.png"
         make_test_image(fig)
         add_figure_slide(
-            pres, fig,
+            pres,
+            fig,
             title="Cited",
             citation_source="Smith et al., 2024, Nature",
         )
@@ -186,10 +188,13 @@ class TestAddSectionDivider:
 class TestAddReferencesSlide:
     def test_with_refs(self, tmp_path):
         pres = load_template()
-        add_references_slide(pres, [
-            "Smith et al., 2024, Nature",
-            "Jones et al., 2023, Cell",
-        ])
+        add_references_slide(
+            pres,
+            [
+                "Smith et al., 2024, Nature",
+                "Jones et al., 2023, Cell",
+            ],
+        )
         reloaded = _save_and_reload(pres, tmp_path, "refs.pptx")
         all_text = []
         for s in reloaded.slides:

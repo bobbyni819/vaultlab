@@ -32,8 +32,9 @@ parameter.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Public typing surface
@@ -111,9 +112,7 @@ _SYSTEM_PROMPT = (
 )
 
 
-def prepare_query_expansion_task(
-    topic: str, *, target_n: int = 5
-) -> QueryExpansionTask:
+def prepare_query_expansion_task(topic: str, *, target_n: int = 5) -> QueryExpansionTask:
     """Build a :class:`QueryExpansionTask` for ``topic``."""
     user_prompt = (
         f"Topic: {topic}\n\n"
@@ -255,17 +254,15 @@ def expand_query(
         # raises. We don't want the search step to die because the LLM
         # had a transient failure.
         return expand_topic_deterministic(topic, target_n=target_n)
-    return render_queries_from_response(
-        response, topic=topic, target_n=target_n
-    )
+    return render_queries_from_response(response, topic=topic, target_n=target_n)
 
 
 __all__ = [
-    "QueryExpansionTask",
     "QueryExpansionCallback",
-    "query_expansion_response_schema",
-    "prepare_query_expansion_task",
-    "render_queries_from_response",
-    "expand_topic_deterministic",
+    "QueryExpansionTask",
     "expand_query",
+    "expand_topic_deterministic",
+    "prepare_query_expansion_task",
+    "query_expansion_response_schema",
+    "render_queries_from_response",
 ]

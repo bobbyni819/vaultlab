@@ -27,20 +27,17 @@ from typing import Any
 import pytest
 
 from vaultlab.research.binning import (
-    BinningCandidate,
     BinningResult,
     BinningTask,
     MissingBinningCallback,
     assign_buckets_with_llm,
     binning_response_schema,
-    build_binning_prompt,
     prepare_binning_task,
     render_binning_from_response,
 )
 from vaultlab.research.corpus import Corpus
 from vaultlab.research.graph_metrics import compute_metrics
 from vaultlab.research.paper import Paper
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -87,8 +84,7 @@ def _make_seeds() -> list[Paper]:
             citation_count=3000,
             source_api="pubmed",
             abstract=(
-                "We describe an evolved adenosine deaminase that converts "
-                "A to G at target loci."
+                "We describe an evolved adenosine deaminase that converts A to G at target loci."
             ),
         ),
     ]
@@ -216,9 +212,7 @@ def test_prepare_binning_task_makes_no_http_calls(monkeypatch):
 
     class _Guard:
         def __getattr__(self, name):
-            raise AssertionError(
-                f"prepare_binning_task touched anthropic.{name}"
-            )
+            raise AssertionError(f"prepare_binning_task touched anthropic.{name}")
 
     monkeypatch.setitem(sys.modules, "anthropic", _Guard())
 
@@ -356,9 +350,7 @@ def test_render_binning_from_response_valid_json_populates_buckets():
     assert result.bucket_by_doi["10.1126/science.1225829"] == "history"
     assert result.bucket_by_doi["10.1038/nature17946"] == "development"
     assert result.bucket_by_doi["10.1038/nature24644"] == "sota"
-    assert result.rationale_by_doi["10.1126/science.1225829"] == (
-        "Foundational Cas9 paper."
-    )
+    assert result.rationale_by_doi["10.1126/science.1225829"] == ("Foundational Cas9 paper.")
     assert result.coverage_summary["history"] == 1
     assert result.coverage_summary["development"] == 1
     assert result.coverage_summary["sota"] == 1
@@ -385,10 +377,7 @@ def test_render_binning_from_response_missing_doi_falls_back():
     # deterministic bucket via the candidate list.
     cand_by_doi = {c.doi: c for c in task.candidates}
     for doi in ("10.1038/nature17946", "10.1038/nature24644"):
-        assert (
-            result.bucket_by_doi[doi]
-            == cand_by_doi[doi].deterministic_bucket
-        )
+        assert result.bucket_by_doi[doi] == cand_by_doi[doi].deterministic_bucket
 
 
 def test_render_binning_from_response_invalid_bucket_falls_back():
@@ -506,9 +495,7 @@ def test_assign_buckets_with_llm_uses_callback():
 def test_assign_buckets_with_llm_no_callback_returns_deterministic():
     """No callback + fallback=True returns deterministic-only buckets."""
     corpus = _make_corpus_with_metrics()
-    result = assign_buckets_with_llm(
-        corpus, "t", fallback_to_deterministic=True
-    )
+    result = assign_buckets_with_llm(corpus, "t", fallback_to_deterministic=True)
     metrics = corpus.metrics
     assert metrics is not None
     for doi in corpus.papers:
@@ -519,9 +506,7 @@ def test_assign_buckets_with_llm_no_callback_raises_when_disabled():
     """No callback + fallback=False raises MissingBinningCallback."""
     corpus = _make_corpus_with_metrics()
     with pytest.raises(MissingBinningCallback):
-        assign_buckets_with_llm(
-            corpus, "t", fallback_to_deterministic=False
-        )
+        assign_buckets_with_llm(corpus, "t", fallback_to_deterministic=False)
 
 
 def test_assign_buckets_with_llm_callback_raises_falls_back_when_enabled():
@@ -638,8 +623,7 @@ def test_coverage_summary_counts_correctly():
     def _callback(task: BinningTask) -> dict[str, Any]:
         return {
             "assignments": [
-                {"doi": c.doi, "bucket": "history", "rationale": "x"}
-                for c in task.candidates
+                {"doi": c.doi, "bucket": "history", "rationale": "x"} for c in task.candidates
             ]
         }
 

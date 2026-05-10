@@ -13,11 +13,9 @@ Public surface
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
 from vaultlab.runner.models import Agenda
-
 from vaultlab.workflows._models import WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
 from vaultlab.workflows._utils import _slug
@@ -32,7 +30,7 @@ def plan_narrate_finding(
     exact_value: str = "",
     data_source: str = "",
     mechanism: str = "",
-    literature: Optional[list[str]] = None,
+    literature: list[str] | None = None,
     status: str = "unknown",
     category: str = "unknown",
 ) -> WorkflowPlan:
@@ -73,9 +71,7 @@ def plan_narrate_finding(
     runner = ClaudeCodeRunner(kb_path=cfg.kb_path, command_name="narrate-finding")
     plan = runner.plan(meeting, task=agenda)
     slug = _slug(claim)
-    canonical = os.path.join(
-        cfg.kb_path, "Wiki", "Concepts", f"{finding_id.lower()}-{slug}.md"
-    )
+    canonical = os.path.join(cfg.kb_path, "Wiki", "Concepts", f"{finding_id.lower()}-{slug}.md")
     prov = Provenance(
         generated_by="narrate-finding",
         project=cfg.name,
@@ -86,7 +82,9 @@ def plan_narrate_finding(
         tags=["narration", finding_id.lower()],
     )
     return WorkflowPlan(
-        meeting=meeting, plan=plan, provenance=prov,
+        meeting=meeting,
+        plan=plan,
+        provenance=prov,
         canonical_output_path=canonical,
     )
 

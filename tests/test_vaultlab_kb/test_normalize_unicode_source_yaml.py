@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-
 # -----------------------------------------------------------------------------
 # Module loader — the script lives under ``scripts/`` (not in any package), so
 # we load it via importlib so the tests can exercise its helpers directly.
@@ -27,9 +26,7 @@ import pytest
 def normalize_module():
     repo_root = Path(__file__).resolve().parents[2]
     script_path = repo_root / "scripts" / "_normalize_unicode_source_yaml.py"
-    spec = importlib.util.spec_from_file_location(
-        "_normalize_unicode_source_yaml", script_path
-    )
+    spec = importlib.util.spec_from_file_location("_normalize_unicode_source_yaml", script_path)
     assert spec and spec.loader, f"Could not load {script_path}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules["_normalize_unicode_source_yaml"] = mod
@@ -121,11 +118,7 @@ def test_normalize_summary_file_rewrites_yaml_frontmatter(normalize_module, tmp_
     _write_summary(
         f,
         frontmatter=(
-            "doi: 10.1/example\n"
-            "title: Example\n"
-            "authors:\n"
-            "- Kennedy‐Darling J\n"
-            "year: 2020\n"
+            "doi: 10.1/example\ntitle: Example\nauthors:\n- Kennedy‐Darling J\nyear: 2020\n"
         ),
         body="## TL;DR\nThe Kennedy‐Darling study showed...\n",
     )
@@ -141,9 +134,7 @@ def test_normalize_summary_file_rewrites_yaml_frontmatter(normalize_module, tmp_
     assert "Kennedy‐Darling study" in new_text
 
 
-def test_normalize_summary_file_idempotent_on_clean_file(
-    normalize_module, tmp_path: Path
-):
+def test_normalize_summary_file_idempotent_on_clean_file(normalize_module, tmp_path: Path):
     """Clean file is byte-identical after a sweep (no write at all)."""
     f = tmp_path / "10.1_clean.md"
     _write_summary(
@@ -160,18 +151,12 @@ def test_normalize_summary_file_idempotent_on_clean_file(
     assert f.stat().st_mtime_ns == before_mtime
 
 
-def test_normalize_summary_file_idempotent_after_first_pass(
-    normalize_module, tmp_path: Path
-):
+def test_normalize_summary_file_idempotent_after_first_pass(normalize_module, tmp_path: Path):
     """Run twice on a dirty file: first pass changes, second is a no-op."""
     f = tmp_path / "10.1_dirty.md"
     _write_summary(
         f,
-        frontmatter=(
-            "doi: 10.1/dirty\n"
-            "authors:\n- Kennedy‐Darling J\n"
-            "year: 2020\n"
-        ),
+        frontmatter=("doi: 10.1/dirty\nauthors:\n- Kennedy‐Darling J\nyear: 2020\n"),
     )
     changed1, counts1 = normalize_module.normalize_summary_file(f)
     assert changed1 is True
@@ -229,9 +214,7 @@ def test_sweep_kb_summaries_counts_and_normalizes(normalize_module, tmp_path: Pa
         summaries / "c-clean.md",
         frontmatter="doi: 10.1/c\nauthors:\n- Smith J\nyear: 2022\n",
     )
-    (summaries / "no-fm.md").write_text(
-        "# heading only\nKennedy‐Darling here.\n", encoding="utf-8"
-    )
+    (summaries / "no-fm.md").write_text("# heading only\nKennedy‐Darling here.\n", encoding="utf-8")
 
     stats = normalize_module.sweep_kb_summaries(tmp_path)
     assert stats["scanned"] == 4

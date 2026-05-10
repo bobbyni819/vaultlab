@@ -116,11 +116,7 @@ class OpenAlexClient:
             host = item.get("host_venue") or {}
             primary = item.get("primary_location") or {}
             source_obj = primary.get("source") or {}
-            journal = (
-                host.get("display_name")
-                or source_obj.get("display_name")
-                or ""
-            )
+            journal = host.get("display_name") or source_obj.get("display_name") or ""
 
             return Paper(
                 title=title,
@@ -128,9 +124,7 @@ class OpenAlexClient:
                 year=year,
                 journal=journal,
                 doi=doi,
-                abstract=_reconstruct_abstract(
-                    item.get("abstract_inverted_index")
-                ),
+                abstract=_reconstruct_abstract(item.get("abstract_inverted_index")),
                 url=doi_url or item.get("id", ""),
                 pdf_url=_pick_pdf_url(item),
                 citation_count=int(item.get("cited_by_count") or 0),
