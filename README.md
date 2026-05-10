@@ -54,7 +54,7 @@ I've used OpenClaw and other agent harnesses to automate workflows. Token cost r
 
 ## Centralized memory — one LLM session sees everything
 
-VaultLab is a **research operating system** for Claude Code. The LLM doesn't just read code — it reads your literature, your meetings, your inbox + calendar, your knowledge base, your project state, all under one session. Cross-project insights surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* Onboarding a new lab member is sharing the Drive folder.
+VaultLab gives Claude Code a research-shaped working memory. The LLM doesn't just read code — it reads your literature, your meetings, your inbox + calendar, your knowledge base, your project state, all under one session. Cross-project observations surface automatically: *"You saw a similar exhausted-T-cell phenotype in your 2026-03 tonsil run."* Onboarding a new lab member is sharing the Drive folder.
 
 | Context source | What VaultLab does with it |
 |---|---|
