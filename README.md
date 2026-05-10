@@ -38,7 +38,7 @@ Claude does the entire bootstrap — clone → pip install → KB init → slash
 
 ## About
 
-I'm Bobby Ni, a PhD student in Biomedical Engineering in the **Hickey Lab** at Duke University. I do wet-lab spatial omics — CODEX multiplexed protein imaging, MALDI imaging mass spectrometry, scRNA-seq integration — and a lot of computational work alongside it.
+I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I do wet-lab spatial omics — CODEX multiplexed protein imaging, MALDI imaging mass spectrometry, scRNA-seq integration — and a lot of computational work alongside it.
 
 Research at scale is fragmented: a lot of meetings, most of which don't get recorded; papers piling up in Drive; notes on a lab NAS; archives on University OneDrive; updates from collaborators in whichever app they happened to ping you on. The university hands you several storage locations; the lab adds its own. Context lives everywhere except where the LLM is looking.
 
