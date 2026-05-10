@@ -31,7 +31,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          # Install [dev] for tooling + the feature extras whose tests run in CI.
+          # End-users get the slim base; only CI pulls these heavier deps.
+          pip install -e ".[dev,slides,figures,research,citations]"
 
       - name: Lint with ruff
         run: |
