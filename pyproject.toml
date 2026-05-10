@@ -223,7 +223,10 @@ ignore = [
     "C408",   # unnecessary-collection-call — dict() vs {} is reader preference
     "C416",   # unnecessary-comprehension — sometimes the comprehension is clearer
     "RUF007", # zip-instead-of-pairwise — pairwise is 3.10+; zip works
+    "RUF059", # unpacked-variable-never-used — destructuring is sometimes clearer than indexing
+    "UP042",  # str-enum-double-inheritance — (str, Enum) inheritance is intentional for .value access
     "UP046",  # non-pep695-generic-class — PEP 695 syntax not universal yet
+    "UP047",  # generic-function-without-type-params — PEP 695 not universal
 ]
 
 [tool.ruff.format]
