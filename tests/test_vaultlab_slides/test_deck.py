@@ -1167,6 +1167,27 @@ class TestDeckSmokeWithBugTriggers:
                     )
 
 
+def _has_lab_template() -> bool:
+    """Whether the lab .pptx template is bundled in this checkout.
+
+    The Hickey Lab template is intentionally NOT bundled in the public repo
+    (lab-branded artifact). Tests that exercise the adversarial deck-plan
+    flow load the bundled template at module-import time, so they need to
+    skip cleanly in environments where the template file isn't present
+    (CI, fresh clones, any non-Hickey-Lab user).
+    """
+    try:
+        from vaultlab.slides.template import lab_template_path
+
+        return lab_template_path() is not None
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not _has_lab_template(),
+    reason="Lab .pptx template not bundled (not included in public repo).",
+)
 class TestBuildDeckAdversarial:
     """Coverage for plan_mode='adversarial' + final_audit on build_deck_from_lineage_result."""
 
