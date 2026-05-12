@@ -35,6 +35,22 @@ from __future__ import annotations
 
 from vaultlab.report import _components as components
 from vaultlab.report import editors
+from vaultlab.report.dispatch import (
+    ArtifactKind,
+    UnknownArtifact,
+    render_artifact_html,
+    write_artifact_html,
+)
 from vaultlab.report.html import Theme, render_report, write_report
 
-__all__ = ["Theme", "components", "editors", "render_report", "write_report"]
+__all__ = [
+    "ArtifactKind",
+    "Theme",
+    "UnknownArtifact",
+    "components",
+    "editors",
+    "render_artifact_html",
+    "render_report",
+    "write_artifact_html",
+    "write_report",
+]
