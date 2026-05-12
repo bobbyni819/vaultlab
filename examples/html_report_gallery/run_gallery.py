@@ -303,6 +303,57 @@ def _sample_dossier() -> dict:
     }
 
 
+def _sample_response_letter() -> dict:
+    """Sample ResponseLetter dict (use dict form so dispatch can route via /audit-html)."""
+    return {
+        "reviewer": 2,
+        "opening": "We thank Reviewer 2 for the constructive feedback. Below we address each comment.",
+        "comments": [
+            {
+                "stable_id": "R2-C1",
+                "reviewer": 2,
+                "quote": "The sample size n=3 per condition is underpowered for the effect size claimed.",
+                "kind": "method_critique",
+                "action": "ACCEPT_ANALYSIS",
+                "evidence_ref": "§Results, p.9 lines 4-12; Supplementary Table 2",
+                "response_text": "We agree. A post-hoc power analysis (now in Supp. Table 2) shows that for the observed effect size (Cohen's d=1.6), n=3 yields 78% power at α=0.05. We have softened the claim and added the analysis.",
+                "open_question": "",
+            },
+            {
+                "stable_id": "R2-C2",
+                "reviewer": 2,
+                "quote": "The claim that the mechanism 'causes' tissue remodelling is not supported by observational data.",
+                "kind": "overclaim",
+                "action": "SOFTEN_CLAIM",
+                "evidence_ref": "§Discussion, p.14 lines 8-15",
+                "response_text": "We have revised 'causes' to 'is associated with, under the conditions tested'. The new wording aligns with the observational nature of the cohort.",
+                "open_question": "",
+            },
+            {
+                "stable_id": "R2-C3",
+                "reviewer": 2,
+                "quote": "Authors should perform a CRISPR knockout validation experiment.",
+                "kind": "missing_experiment",
+                "action": "AUTHOR_INPUT_NEEDED",
+                "evidence_ref": "",
+                "response_text": "",
+                "open_question": "Do we have CRISPR-KO line access for the target within the 8-week revision window? If not, can we instead point to an existing KO study in the literature?",
+            },
+            {
+                "stable_id": "R2-C4",
+                "reviewer": 2,
+                "quote": "The introduction misses the important reference of Park et al. 2023.",
+                "kind": "missing_citation",
+                "action": "ACCEPT_CITATION",
+                "evidence_ref": "§Introduction, p.2 line 8",
+                "response_text": "Apologies for the oversight. Park et al. 2023 is now cited at p.2 line 8 as foundational context for the spatial-transcriptomics framing.",
+                "open_question": "",
+            },
+        ],
+        "closing": "We hope these revisions address all of Reviewer 2's concerns and improve the manuscript.",
+    }
+
+
 def _sample_litarc_narrative() -> str:
     return """# Lit-arc overview
 
@@ -340,8 +391,9 @@ def main(argv: list[str] | None = None) -> int:
 
     from vaultlab.citations.report_html import write_citation_audit_html
     from vaultlab.kb.dossier_html import write_dossier_report
+    from vaultlab.manuscript.respond_html import write_response_letter_html
     from vaultlab.report import _components as c
-    from vaultlab.report import editors, render_report
+    from vaultlab.report import editors, render_report, write_artifact_html
     from vaultlab.research.litarc_html import write_litarc_report
     from vaultlab.slides.audit_html import write_audit_report
     from vaultlab.slides.preview_html import write_deck_preview
@@ -355,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
     reasoning = _sample_reasoning_result()
     dossier = _sample_dossier()
     citations = _sample_citations()
+    response_letter = _sample_response_letter()
 
     written: list[tuple[str, Path]] = []
 
@@ -408,6 +461,19 @@ def main(argv: list[str] | None = None) -> int:
         (
             "Keynav deck preview",
             write_deck_preview(out_dir / "deck-preview.html", deck_plan),
+        )
+    )
+    written.append(
+        (
+            "Reviewer response letter",
+            write_response_letter_html(out_dir / "response-letter.html", response_letter),
+        )
+    )
+    # Demonstrate the universal dispatcher: same data, routed by shape.
+    written.append(
+        (
+            "Dispatched (auto-detect)",
+            write_artifact_html(out_dir / "dispatched-reasoning.html", reasoning),
         )
     )
 

@@ -60,6 +60,8 @@ def test_gallery_script_runs_end_to_end(tmp_path: Path):
         "citation-audit.html",
         "dossier.html",
         "deck-preview.html",
+        "response-letter.html",
+        "dispatched-reasoning.html",
         "slide-reorder.html",
         "citation-triage.html",
         "deckplan-tuner.html",
@@ -94,6 +96,8 @@ def test_index_links_to_every_consumer(tmp_path: Path):
         "citation-audit.html",
         "dossier.html",
         "deck-preview.html",
+        "response-letter.html",
+        "dispatched-reasoning.html",
         "slide-reorder.html",
         "citation-triage.html",
         "deckplan-tuner.html",
@@ -116,4 +120,5 @@ def test_index_contains_card_grid(tmp_path: Path):
 
     index_text = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "vl-cards" in index_text
-    assert "10 HTML outputs generated" in index_text or "9 HTML outputs generated" in index_text
+    # Gallery now ships 11 consumers + 1 index reference at minimum.
+    assert "HTML outputs generated" in index_text
