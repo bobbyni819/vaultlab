@@ -2,11 +2,40 @@
 
 All notable changes to vaultlab. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic versioning where feasible (alpha → 0.x.y).
 
-## [Unreleased]
+## [Unreleased] — v0.0.4 in progress
 
-### Added
+### Added — HTML output system (Track A)
 
-- **`vaultlab.report` package** — HTML output for vaultlab artifacts (audits, lit-arc narratives, reasoning chains, dossiers, plans). One entrypoint (`render_report(title, sections, ...)`) wraps 15 composable component primitives (`tldr_box`, `card_grid`, `severity_card`, `matrix_table`, `compare_panel`, `collapsible_step`, `tabbed_block`, `timeline`, `svg_arg_graph`, `kanban_board`, `template_editor`, `status_chip`, `margin_glossary`, `keynav_deck`, `filter_bar`, `section`) into a self-contained single-file HTML document with inline CSS + vanilla JS, no external assets. Mobile-responsive + print-friendly. Modeled on patterns from Thariq Shihipar's "Unreasonable Effectiveness of HTML" gallery (Anthropic, 2026). See `src/vaultlab/report/SKILL.md` for the design rationale and when-to-use-HTML guidance.
+- **`vaultlab.report` package** — HTML output for vaultlab artifacts. One entrypoint (`render_report(title, sections, ...)`) wraps 15 composable component primitives (`tldr_box`, `card_grid`, `severity_card`, `matrix_table`, `compare_panel`, `collapsible_step`, `tabbed_block`, `timeline`, `svg_arg_graph`, `kanban_board`, `template_editor`, `status_chip`, `margin_glossary`, `keynav_deck`, `filter_bar`, `section`) into a self-contained single-file HTML document with inline CSS + vanilla JS, no external assets. Mobile-responsive + print-friendly. Modeled on Thariq Shihipar's "Unreasonable Effectiveness of HTML" gallery (Anthropic, 2026).
+- **HTML deck-audit report** — `vaultlab.slides.audit_html.build_audit_report_html(plan, audit)`. Severity-filtered per-slide cards, jump-to-source, XSS-hardened. Replaces the long-form MD audit.
+- **HTML lit-arc narrative** — `vaultlab.research.litarc_html.build_litarc_report_html(...)`. Tier-filtered paper cards, frontmatter chips, optional SVG citation graph, basic markdown rendering for the narrative.
+- **HTML reasoning-chain report** — `vaultlab.workflows.reasoning_html.build_reasoning_report_html(result)`. Color-coded per-role rounds, expandable prompt+output, JSON pretty-printing in synthesizer outputs.
+- **HTML citation audit report** — `vaultlab.citations.report_html.build_citation_audit_html(audit)`. Filterable per-citation cards, copy-DOI buttons, hallucination flag chips, action-items table.
+- **HTML project-dossier report** — `vaultlab.kb.dossier_html.build_dossier_report_html(dossier)`. Tabbed 9-section navigation, freshness badge, per-section source list, all-sources appendix.
+- **HTML keynav .pptx preview** — `vaultlab.slides.preview_html.build_deck_preview_html(plan)`. Arrow-key navigable slideshow with inline-embedded base64 figures; browser-openable, no PowerPoint needed.
+
+### Added — Two-way HTML editors (Track D)
+
+- **Slide reorder editor** — `vaultlab.report.editors.build_slide_reorder_editor(plan)`. Drag slides between sections (or to "Cut"); export new ordering as JSON/markdown.
+- **Citation triage editor** — `vaultlab.report.editors.build_citation_triage_editor(citations)`. 5-pile kanban for accept/reject/flag verdicts; auto-bucket by existing status; JSON export.
+- **Deck-plan tuner** — `vaultlab.report.editors.build_deckplan_tuner(template, samples)`. Live-preview `{{var}}` template editor with 2-3 sample papers, token counter, copy-prompt button.
+
+### Added — nature-skills absorption (Track B + C)
+
+- **`vaultlab.figures.contract`** + `contract.md` SKILL: figure-contract discipline that must precede plotting code. 4 archetypes (`FigureArchetype`), NMI pastel palette, mandatory rcParams, `triple_export(fig, stem)` for SVG+PDF+TIFF. Validation raises `ContractViolation` on hard failures; soft warnings flag suboptimal commitments. Absorbed from nature-figure (Yuan Yizhe, SJTU).
+- **`vaultlab.slides.journal_club_arcs`**: 7 paper-type narrative arcs (discovery / methods / dataset / clinical / materials / review / generic) with conclusion-first slide titles. English + simplified-Chinese variants. Heuristic `classify_paper_type(metadata)` from frontmatter. Absorbed from nature-paper2ppt.
+- **`vaultlab.manuscript.polish`**: 25 prose rules across 7 categories + 12-step polishing workflow + 65+ British-English replacement pairs + `check_sentence_length`/`check_us_spelling` helpers. Absorbed from nature-polishing.
+- **`vaultlab.manuscript.respond`**: Reviewer response letter scaffolding. `CommentKind` taxonomy (12 types), `ActionType` enum (9 actions), `ReviewerComment`/`ResponseLetter` dataclasses, `R<n>-C<m>` stable IDs, heuristic classifier, numbered-list parser, markdown renderer. Absorbed from nature-response.
+- **`vaultlab.manuscript.data_availability`**: 15-repository registry (GEO, SRA, GenBank, ENA, PRIDE, MassIVE, PDB, EMPIAR, IDR, EGA, dbGaP, Dryad, Zenodo, OSF, GitHub) with regex identifier formats + URL templates + DAS citation prose, 14-item FAIR checklist, 6 statement-pattern templates (`DAScenario`), heuristic `audit_statement(text)` flagging vague "reasonable request" / unrestricted human data / missing identifiers. Absorbed from nature-data.
+- **`vaultlab.citations.export`**: ENW / RIS / Zotero RDF exporters with author-string normalization, HTML-escaped RDF, no-fabrication rule. `write_export(path, citations, fmt=None)` auto-infers format from extension. Absorbed from nature-citation.
+
+### Inspirations / attribution
+
+- New entries in `INSPIRATIONS.md` for Thariq Shihipar (PATTERN: HTML-first thesis) and Yuan Yizhe's nature-skills (PATTERN+CONCEPT: 5 of 7 SKILL.md bundles absorbed as Python primitives, MIT, no source-code copy).
+
+### Test coverage
+
+1734 tests pass (+184 from v0.0.3 baseline of 1550).
 
 ## [0.0.3] — 2026-05-10
 

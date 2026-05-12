@@ -273,6 +273,52 @@ When you take from a source, make sure it appears in at least 2 of those (this f
 
 ---
 
+## Adopted in v0.0.4 (2026-05-12)
+
+### Thariq Shihipar — "The Unreasonable Effectiveness of HTML"
+
+**Source:** thariqs.github.io/html-effectiveness — Anthropic, Claude Code team (2026)
+
+**Type:** PATTERN — adopted the HTML-first output thesis for vaultlab artifacts.
+
+**What we took:**
+- The thesis that HTML beats markdown for audit/report output longer than ~100 lines (information density, navigability, shareability, two-way interaction).
+- The 20-example gallery as a pattern catalog (TL;DR boxes, severity cards, kanban boards, prompt tuners, keynav decks, timelines, SVG arg-graphs, etc.).
+- The "single-file, vanilla JS, no framework" constraint — kept all of vaultlab.report self-contained for archive-friendliness.
+- The two-way HTML insight (drag/edit → "Copy as JSON/markdown" → paste back into next prompt) — the foundation of `vaultlab.report.editors`.
+
+**Where it lives in vaultlab:**
+- `src/vaultlab/report/` — 15 component primitives + render_report entrypoint + SKILL.md
+- `src/vaultlab/report/editors.py` — slide-reorder, citation-triage, deck-plan tuner
+- `src/vaultlab/slides/audit_html.py` — deck-audit HTML consumer
+- `src/vaultlab/research/litarc_html.py` — lit-arc HTML narrative
+- `src/vaultlab/workflows/reasoning_html.py` — reasoning-chain HTML
+- `src/vaultlab/citations/report_html.py` — citation-audit HTML
+- `src/vaultlab/kb/dossier_html.py` — dossier HTML
+- `src/vaultlab/slides/preview_html.py` — keynav .pptx preview
+
+**License:** Thariq's piece is a blog post + demo gallery (educational). No code copied; pattern-level inspiration only.
+
+### Yuan Yizhe — `nature-skills`
+
+**Source:** github.com/Yuan1z0825/nature-skills — Shanghai Jiao Tong University, 2026 (MIT)
+
+**Type:** PATTERN + CONCEPT — adopted 5 of the 7 SKILL.md instruction bundles into vaultlab primitives. No source code copied; rules + 4-archetype taxonomy + 7 paper-type arcs absorbed as data + helpers.
+
+**What we took:**
+- `nature-figure` → `src/vaultlab/figures/contract.py` + `contract.md`: 4-archetype taxonomy (quantitative_grid / schematic_led_composite / image_plate_and_quant / asymmetric_mixed_modality), conclusion → evidence-chain discipline, NMI pastel palette, mandatory rcParams, triple_export (SVG+PDF+TIFF).
+- `nature-paper2ppt` → `src/vaultlab/slides/journal_club_arcs.py`: 7 paper-type narrative arcs (discovery, methods, dataset, clinical, materials, review, generic) with English + simplified-Chinese title variants; conclusion-first slide-title discipline.
+- `nature-polishing` → `src/vaultlab/manuscript/polish.py`: 25 prose rules across 7 categories + 12-step polishing workflow + 65+ British-English replacement pairs + sentence-length / spelling checkers.
+- `nature-response` → `src/vaultlab/manuscript/respond.py`: CommentKind taxonomy (12), ActionType enum (9), R<n>-C<m> stable-ID scheme, heuristic comment classifier, numbered-list parser, markdown response-letter renderer.
+- `nature-data` → `src/vaultlab/manuscript/data_availability.py`: 15-repository registry with regex identifier formats + URL templates + DAS citation prose, 14-item FAIR checklist, 6 statement-pattern templates, heuristic DAS auditor.
+- `nature-citation` → `src/vaultlab/citations/export.py`: ENW / RIS / Zotero RDF exporters with author-string normalization, HTML-escaped RDF, no-fabrication rule (empty fields stay empty).
+
+Two of the 7 skills (`nature-reader`, `nature-citation`-screening-page) were deferred — vaultlab has overlapping primitives in `research.batched_reader` and `citations.auditor` already.
+
+**License compatibility:** Source is MIT-licensed. vaultlab does not import or vendor any of the original code; the rules and taxonomies were re-implemented from scratch in Python so they could be tested, versioned, and queried. Attribution remains required and is given here + in module docstrings.
+
+---
+
 ## Pending Bobby review
 
 This document is a starting point. Bobby to:
