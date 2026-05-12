@@ -34,6 +34,7 @@ Public API::
 from __future__ import annotations
 
 from vaultlab.report import _components as components
+from vaultlab.report import editors
 from vaultlab.report.html import Theme, render_report, write_report
 
-__all__ = ["render_report", "write_report", "components", "Theme"]
+__all__ = ["Theme", "components", "editors", "render_report", "write_report"]

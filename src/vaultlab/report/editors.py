@@ -29,8 +29,8 @@ import html as _html
 from pathlib import Path
 from typing import Any
 
-from vaultlab.report import components as c
-from vaultlab.report import render_report
+from vaultlab.report import _components as c
+from vaultlab.report.html import render_report
 
 
 def _safe(text: Any) -> str:
