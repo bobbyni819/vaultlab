@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import html as _html
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -91,9 +91,9 @@ def _inline(text: str) -> str:
 
 def _freshness_badge(compiled_at: datetime) -> tuple[str, str]:
     """Compute freshness label + severity."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if compiled_at.tzinfo is None:
-        compiled_at = compiled_at.replace(tzinfo=timezone.utc)
+        compiled_at = compiled_at.replace(tzinfo=UTC)
     age_hours = (now - compiled_at).total_seconds() / 3600
     if age_hours < 24:
         return (f"fresh ({age_hours:.0f}h ago)", "good")
@@ -137,7 +137,7 @@ def build_dossier_report_html(
         sections_raw = dossier.get("sections", []) or []
         compiled_at_raw = dossier.get("compiled_at")
         compiled_at = (
-            compiled_at_raw if isinstance(compiled_at_raw, datetime) else datetime.now(timezone.utc)
+            compiled_at_raw if isinstance(compiled_at_raw, datetime) else datetime.now(UTC)
         )
         kb_root = dossier.get("kb_root")
 

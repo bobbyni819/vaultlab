@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,7 @@ def fresh_dossier_dict() -> dict:
     return {
         "project_slug": "metabolism",
         "kb_root": Path("/kb/metabolism"),
-        "compiled_at": datetime.now(timezone.utc),
+        "compiled_at": datetime.now(UTC),
         "sections": [
             {
                 "slug": "origin",
@@ -46,7 +46,7 @@ def fresh_dossier_dict() -> dict:
 @pytest.fixture
 def stale_dossier_dict(fresh_dossier_dict) -> dict:
     d = dict(fresh_dossier_dict)
-    d["compiled_at"] = datetime.now(timezone.utc) - timedelta(days=5)
+    d["compiled_at"] = datetime.now(UTC) - timedelta(days=5)
     return d
 
 
@@ -130,7 +130,7 @@ def test_handles_dataclass_dossier():
         project_slug="x",
         kb_root=Path("/kb"),
         sections=[FakeSection("a", "A title", "body", [Path("p.md")])],
-        compiled_at=datetime.now(timezone.utc),
+        compiled_at=datetime.now(UTC),
     )
     html = build_dossier_report_html(d)
     assert "<!doctype html>" in html
@@ -140,7 +140,7 @@ def test_handles_dataclass_dossier():
 def test_xss_safe_against_evil_section_body():
     d = {
         "project_slug": "x",
-        "compiled_at": datetime.now(timezone.utc),
+        "compiled_at": datetime.now(UTC),
         "sections": [
             {
                 "slug": "a",
@@ -158,7 +158,7 @@ def test_xss_safe_against_evil_section_body():
 def test_empty_dossier():
     d = {
         "project_slug": "empty",
-        "compiled_at": datetime.now(timezone.utc),
+        "compiled_at": datetime.now(UTC),
         "sections": [],
     }
     html = build_dossier_report_html(d)
