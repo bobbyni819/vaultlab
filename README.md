@@ -217,6 +217,41 @@ If you'd rather read the setup docs first before installing:
 
 ---
 
+### HTML output for everything readable
+
+Audit reports, lit-arc narratives, reasoning-chain transcripts, project dossiers, citation audits, and deck previews ship as **single-file HTML** — inline CSS, vanilla JS, no external assets, mobile-responsive, print-friendly. One `.html` file is the artifact: open in any browser, archive, share as an email attachment, view on a phone. Markdown stays for things you edit in your text editor (frontmatter, KB notes, READMEs).
+
+Inspired by Thariq Shihipar's *"Unreasonable Effectiveness of HTML"* (Anthropic, 2026) — the gallery at [thariqs.github.io/html-effectiveness](https://thariqs.github.io/html-effectiveness) is the pattern source for vaultlab's 15-component primitive library at `vaultlab.report`.
+
+**Two-way HTML.** Some outputs are tiny purpose-built editors: drag slides between sections, drop citations into accept/reject/flag piles, edit a slide-plan template with live preview against 2-3 sample papers. Each editor has a *"Copy as JSON"* button — you paste the result back into the next vaultlab prompt. Output becomes structured input for the next operation.
+
+Slash commands: `/audit-html` (universal dispatcher), `/preview-deck`, `/reorder-slides`, `/journal-club`. Or call the API directly:
+
+```python
+from vaultlab.slides.audit_html import write_audit_report
+from vaultlab.research.litarc_html import write_litarc_report
+from vaultlab.workflows.reasoning_html import write_reasoning_report
+from vaultlab.report.editors import build_slide_reorder_editor
+```
+
+Run `python examples/html_report_gallery/run_gallery.py` to generate every consumer + editor against sample data and open the index in a browser.
+
+### Manuscript prep — polish, response letters, data availability
+
+Three subpackages absorbed from the [nature-skills](https://github.com/Yuan1z0825/nature-skills) bundle (MIT) and re-implemented as testable Python primitives:
+
+- **`vaultlab.manuscript.polish`** — 25 academic-prose rules across 7 categories + 12-step polishing workflow + 65+ British-English replacement pairs + sentence-length / US-spelling checkers. Slash command: `/polish <manuscript>`.
+- **`vaultlab.manuscript.respond`** — reviewer response letter scaffolding. 12-kind comment taxonomy × 9 action types, `R<n>-C<m>` stable IDs, numbered-list parser, markdown renderer. Slash command: `/respond <reviewer-block>`.
+- **`vaultlab.manuscript.data_availability`** — 15-repository registry (GEO, SRA, PRIDE, PDB, EMPIAR, EGA, dbGaP, Dryad, Zenodo, …) with regex identifier formats + DAS citation prose, 14-item FAIR checklist, 6 statement templates, heuristic auditor. Slash command: `/das-audit <text>`.
+
+Plus **`vaultlab.figures.contract`** — the figure-contract discipline. Before any matplotlib call: declare the conclusion, evidence chain, archetype, backend, and export contract. Validation raises `ContractViolation` for missing commitments; warns about Nature-policy violations (≥300 DPI TIFF, ≤183mm width, image-integrity notes for image plates). Companion command: `/figure-contract`.
+
+### Citation export to your reference manager
+
+`vaultlab.citations.export.write_export(path, citations, fmt=None)` writes ENW (EndNote) / RIS (Mendeley, Papers, Zotero) / Zotero RDF formats. Auto-infers format from extension. Empty fields stay empty — no fabricated metadata.
+
+---
+
 ## Specialty module (in progress)
 
 I work in a spatial-omics lab, so VaultLab has the start of an optional module covering the tools I use day-to-day — CODEX multiplex IF, MALDI imaging, spatial transcriptomics, scRNA-seq, generic imaging / flow. It's not required to use VaultLab and isn't a focus of v0.1; it's an accessory for people whose work touches the same modalities. Most of it is still being built out.

@@ -134,6 +134,18 @@ All prompts, role definitions, workflow descriptions, slash command bodies, and 
 
 If you find yourself writing a triple-quoted prompt in a `.py` file, **stop** — the content goes in a sibling `.md`.
 
+**Output formats addendum (v0.0.4):** for *human-readable artifacts longer than ~100 lines* (audit reports, lit-arc narratives, reasoning chains, project dossiers, citation audits, plan docs), the default output format is **HTML**, not markdown. Emit via `vaultlab.report.render_report(...)` or one of the six consumers (`slides.audit_html`, `research.litarc_html`, `workflows.reasoning_html`, `citations.report_html`, `kb.dossier_html`, `slides.preview_html`). Markdown stays for things humans **edit** in their text editor (frontmatter, KB notes, READMEs, slash command bodies, role prompts). Markdown ↔ HTML is "edit me ↔ read me", not "old ↔ new".
+
+### Invariant 7a — Manuscript-prep subpackage discipline (v0.0.4)
+
+The `vaultlab.manuscript.{polish, respond, data_availability}` subpackages ship the rules + taxonomies as **data**, not just SKILL.md prose. New manuscript-related skills must follow the same pattern:
+
+- Rule sets get a `@dataclass(frozen=True)` representation + a module-level registry constant (e.g. `POLISH_RULES`, `FAIR_CHECKLIST`).
+- Heuristic helpers (classifiers, validators, auditors) are testable Python functions, not LLM-only.
+- The SKILL.md prose explains *when to load* and *how to apply*; the Python explains *what the rule is and how to check it*.
+
+This makes the rules versioned, queryable, and CI-testable. The same pattern applies to `figures.contract` and `slides.journal_club_arcs`.
+
 ### Invariant 8 — KB ↔ repo boundary
 
 - **Repo** holds: Python code, slash commands, skills, role prompts, tests, AGENTS.md, README.md, CLAUDE.md, per-package READMEs, `docs/`

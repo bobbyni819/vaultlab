@@ -47,6 +47,16 @@ For v0.0.1, most commands print "not yet implemented." See [Roadmap](../README.m
 - `/manuscript-section <name> draft` — draft a section with verified citations
 - `/manuscript-section <name> review` — review section with cite-watch + critic
 - `/manuscript-export final` — strip evidence; produce submission-ready
+- `/polish <manuscript-path>` — 25-rule prose polish + 12-step workflow (v0.0.4)
+- `/respond <reviewer-block>` — point-by-point response letter scaffolding (v0.0.4)
+- `/das-audit <text-or-manuscript>` — Data Availability statement audit + FAIR check (v0.0.4)
+
+### HTML output (v0.0.4)
+- `/audit-html <input>` — universal dispatcher: render any deck-audit / lit-arc / reasoning chain / citation audit / dossier as HTML
+- `/preview-deck <plan-or-pptx>` — keynav HTML preview (arrow keys, inline-base64 figures, no PowerPoint needed)
+- `/reorder-slides <plan>` — drag-drop slide reorder editor; export new ordering as JSON
+- `/journal-club <doi-or-summary>` — paper-type-aware journal-club deck (en + zh-CN)
+- `/figure-contract "<conclusion>"` — figure-contract before plotting (conclusion → evidence chain → archetype → backend → export)
 
 ### Slides (flagship)
 - `/build-deck <topic> --intent <kind> --theme <name> --length <N>` — end-to-end deck generation
