@@ -2,6 +2,12 @@
 
 All notable changes to vaultlab. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic versioning where feasible (alpha → 0.x.y).
 
+## [Unreleased]
+
+### Added
+
+- **`vaultlab.report` package** — HTML output for vaultlab artifacts (audits, lit-arc narratives, reasoning chains, dossiers, plans). One entrypoint (`render_report(title, sections, ...)`) wraps 15 composable component primitives (`tldr_box`, `card_grid`, `severity_card`, `matrix_table`, `compare_panel`, `collapsible_step`, `tabbed_block`, `timeline`, `svg_arg_graph`, `kanban_board`, `template_editor`, `status_chip`, `margin_glossary`, `keynav_deck`, `filter_bar`, `section`) into a self-contained single-file HTML document with inline CSS + vanilla JS, no external assets. Mobile-responsive + print-friendly. Modeled on patterns from Thariq Shihipar's "Unreasonable Effectiveness of HTML" gallery (Anthropic, 2026). See `src/vaultlab/report/SKILL.md` for the design rationale and when-to-use-HTML guidance.
+
 ## [0.0.3] — 2026-05-10
 
 ### Added
