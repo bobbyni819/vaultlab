@@ -67,6 +67,14 @@ The plan's success criteria are the union of all 20 sub-goals' criteria. For thi
   - Discovery: `vaultlab.provenance` already implements the audit-manifest concept; 6 entrypoints already comply. The terms are aliases.
   - Followup: sub-goal 1.2b wires citations/*, manuscript/*, report/* (the 4 holdouts).
   - Commits: `b4b3ca4` (3.2 + 4.1), `bc4044d` (1.2a)
+- [2026-05-15] Destructive-op hardening complete ✅ (flipped 1 of 2 invariant xfails to pass)
+  - Added `dry_run` kw-only param to `vaultlab.context.user_memory.forget` + `vaultlab.context.meetings.ingest_transcript`.
+  - `test_destructive_helpers_offer_dry_run` now PASSES; suite is 7 pass / 1 xfail (was 6/2).
+  - Commit: `6af6fad`
+- [2026-05-15] Sub-goal 1.2b partial: citations wired ✅ (1 of 4 module-groups)
+  - `vaultlab.citations.generate_report` now writes `.provenance.json` + `.method.md` sidecars alongside the markdown audit report.
+  - Remaining gaps: `manuscript/{polish,respond,data_availability}.py` + `report/dispatch.py`. The single remaining invariant xfail closes when those land.
+  - Commit: `272d2d4`
 
 ## EVIDENCE
 
@@ -87,14 +95,26 @@ end-to-end with all evidence + commits. The remaining 19 sub-goals
 must continue in subsequent `/goal` invocations (one per sub-goal, as
 the plan was designed for)._
 
-### What's done (this run, cumulative)
+### What's done (this run, cumulative across multiple `/goal` invocations)
 
 1. ✅ **Sub-goal 1.1** — Red-line invariant tests + CI workflow (commit `2d33413`)
 2. ✅ **Sub-goal 3.2** — CONTRIBUTING three-example rule + testimony template + README link (commit `b4b3ca4`)
 3. ✅ **Sub-goal 4.1** — HTML pattern coverage audit (commit `b4b3ca4`)
 4. ✅ **Sub-goal 1.2a** — audit-manifest framework alignment (provenance ≡ audit) (commit `bc4044d`)
+5. ✅ **Destructive-op hardening** — flipped invariant xfail to pass via `dry_run` on `forget` + `ingest_transcript` (commit `6af6fad`)
+6. 🟡 **Sub-goal 1.2b partial** — citations wired (1 of 4 module-groups); manuscript/report remain (commit `272d2d4`)
 
-**3 full sub-goals + 1 partial (1.2a) = 4 of 20 progressed.** Sub-goal 1.2b (wire write_receipts into citations/manuscript/report) is the natural next step.
+**Effective progress: 5 full + 1 partial of 20 sub-goals (~30%).** Invariant test suite: 7 pass / 1 xfail (the remaining xfail closes when manuscript/report are wired).
+
+### Smallest highest-value next step
+
+Continue 1.2b by wiring `vaultlab.provenance.write_receipts` into:
+- `vaultlab.manuscript.polish` artifact-write site
+- `vaultlab.manuscript.respond` artifact-write site
+- `vaultlab.manuscript.data_availability` artifact-write site
+- `vaultlab.report` HTML writer (if it writes a primary artifact distinct from the consumers)
+
+When those land, the last invariant xfail flips to a passing assertion and Red Line #2 is fully enforced.
 
 ### What's next (suggested invocation order)
 
