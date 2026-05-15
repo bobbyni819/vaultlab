@@ -2,7 +2,41 @@
 
 All notable changes to vaultlab. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows semantic versioning where feasible (alpha → 0.x.y).
 
-## [Unreleased] — v0.0.4 in progress
+## [Unreleased]
+
+## [0.0.5] — 2026-05-15
+
+Big release. Bundles the previously in-flight v0.0.4 work (HTML output system, nature-skills absorption, manuscript subpackages, two-way editors) with 19 north-star plan sub-goals shipped on 2026-05-14/15. All 4 red lines (no fabrication, no silent failures, no user-data loss, no vendor lock-in) are now mechanically enforced by an always-on CI invariant suite. Test count grew from 1734 → 2040.
+
+### Added — North-star plan execution (2026-05-15)
+
+- **Sub-goal 1.1 — Red-line invariant tests + CI workflow.** `tests/test_vaultlab_invariants/test_red_lines.py` enforces all 4 red lines via static analysis. `.github/workflows/invariants.yml` runs on every push (~2s, no fixtures). Suite: 8 passed / 0 xfail.
+- **Sub-goal 1.2 — Audit-manifest contract.** Every artifact-producing entrypoint writes `<output>.provenance.json` + `<output>.method.md` sidecars via `vaultlab.provenance.write_receipts`. Wired into `slides/render`, `figures/publication/save`, `citations/reporter`, `manuscript/{polish,respond,data_availability}`, `report/dispatch`, and `kb/start_here`.
+- **Sub-goal 1.3 — Per-module standalone integration tests.** 8 new `test_standalone.py` files prove each public-API module is end-to-end runnable from a fresh `tmp_path` with no prior vaultlab state.
+- **Sub-goal 1.4 — `vaultlab demo` command.** Single-command demo produces an audit-clean 7-slide journal-club deck from bundled OA sample data in ~1.1s. Fully offline, no API keys. `src/vaultlab/data/demo/` ships in the wheel.
+- **Sub-goal 1.5 — Clean-VM onboarding test.** `Dockerfile.onboarding` + `.github/workflows/onboarding.yml` verify `pip install vaultlab → vaultlab demo` completes in <30 min on a clean container (Criterion #4 proof).
+- **Sub-goal 2.1 — `vaultlab.research.full_reader`.** Bilingual figure-aware full-paper Markdown reader; closes the last nature-skills gap (7 of 7 nature-skills absorbed).
+- **Sub-goal 2.2 — KB retrieval upgrade (SPEC-C).** `vaultlab.kb.retrieve_by_frontmatter` + `vaultlab.kb.build_indexes` (generates `_Index.md` / `_Catalog.md` / `_BackLinks.md`). Layered retrieval cascade per the researcher-pathway thinking memory.
+- **Sub-goal 2.3 — KB setup + lint as primitives (SPEC-D).** Public-API surface for `vaultlab.kb.setup` / `vaultlab.kb.lint` (canonical aliases for existing `scaffold_kb` / `lint_kb`).
+- **Sub-goal 2.4 — Crosstalk invocation policy (SPEC-E).** `vaultlab.workflows.crosstalk_policy.should_invoke(ctx)` gates round-table firing by task kind. Wired into `lineage.run_lit_arc` (picker + arc) and `slides.deck.build_deck_from_lineage_result`. Skip-decisions recorded in provenance.
+- **Sub-goal 2.5 — Task-weight dispatch (SPEC-F).** `vaultlab.workflows.task_weight.classify(task) → light/medium/heavy` + `model_for_weight(weight, config_path)` resolution. Defaults: light=Haiku, medium=Sonnet, heavy=Opus. Configurable via `~/.config/vaultlab/dispatch.json`. Wired into `research.full_reader`.
+- **Sub-goal 2.6 — Result-analysis pipeline (SPEC-A).** `vaultlab.analysis.run_pipeline(project_dir)` consumes tidy CSV/Parquet results and produces figures + methods paragraph + provenance manifests. Scope discipline enforced: rejects raw-data formats (.fastq/.bam/.h5ad/.nd2/.czi/.mzml).
+- **Sub-goal 3.1 — Examples seed workflows.** `examples/journal-club/`, `examples/manuscript-section/`, `examples/citation-cleanup/` — each with README + `run.py` + inputs + expected outputs. Runnable offline.
+- **Sub-goal 3.2 — Adoption surface.** Three-example rule generalized in CONTRIBUTING.md. New `.github/ISSUE_TEMPLATE/testimony.md`. README link block above the fold.
+- **Sub-goal 3.3 — GitHub Discussions live.** Discussions enabled + welcome thread at https://github.com/bobbyni819/vaultlab/discussions/1. Criterion #1's testimony channel is now LIVE.
+- **Sub-goal 4.1 — HTML pattern coverage audit.** `docs/html-pattern-coverage.md` maps all 20 patterns from Thariq's gallery: 12 ✅ / 8 🟡 / 0 ❌.
+- **Sub-goal 4.2 — Top-4 unimplemented HTML patterns.** `vaultlab.report.state_dashboard_html` (composite #16+#15+#6), `feature_flag_editor` (#19), `approaches_compare_html` (#1). Earlier slice: `weekly_status_html` (#16).
+- **Sub-goal 4.3 — `vaultlab.report` SKILL.md catalog.** Decision table + per-pattern catalog covering all 20 patterns + every primitive.
+- **Sub-goal 5.1 — Meta-agent roles (SPEC-B) audit.** 4 roles (`journal_reviewer`, `expert_reviewer`, `adoption_evaluator`, `publication_guideline_compliance`) verified shipped.
+- **Sub-goal 5.2 — 4 slide deck templates.** `investor_pitch`, `lab_meeting`, `conference_talk`, `journal_club` builders. Each respects hard slide rules (Roboto, 28/24/18pt, no overlap, descriptive titles).
+- **Sub-goal 5.3 — 4 slide layouts.** `equation_slide`, `table_slide`, `comparison_table_slide`, `acknowledgments_grid_slide`. Native python-pptx tables; hard-rule conformant.
+- **Sub-goal 5.4 — Slide self-review pass.** `vaultlab.slides.self_review.review_deck(pptx)` reads each rendered slide and returns a unified `ReviewReport`. CLI: `vaultlab slides review <pptx>`. HTML rendering via existing `audit_html` builder.
+- **Sub-goal 5.5 — Granular custom-figure handling.** `is_single_plot(image)` predicate + `suggest_figure_layout()` dispatcher. Single-plot figures (volcano, UMAP, single bar) no longer get panel-cut.
+- **Destructive-op hardening** — `dry_run` kwarg on `vaultlab.context.user_memory.forget` + `vaultlab.context.meetings.ingest_transcript`. Closes the last invariant xfail under Red Line #3.
+
+### Added — HTML output system (Track A — was v0.0.4 in flight)
+
+- **`vaultlab.report` package** — HTML output for vaultlab artifacts. One entrypoint (`render_report(title, sections, ...)`) wraps 15 composable component primitives (`tldr_box`, `card_grid`, `severity_card`, `matrix_table`, `compare_panel`, `collapsible_step`, `tabbed_block`, `timeline`, `svg_arg_graph`, `kanban_board`, `template_editor`, `status_chip`, `margin_glossary`, `keynav_deck`, `filter_bar`, `section`) into a self-contained single-file HTML document with inline CSS + vanilla JS, no external assets. Mobile-responsive + print-friendly. Modeled on Thariq Shihipar's "Unreasonable Effectiveness of HTML" gallery (Anthropic, 2026).
 
 ### Added — HTML output system (Track A)
 
