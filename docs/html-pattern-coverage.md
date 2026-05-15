@@ -19,7 +19,7 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
-| 1 | Three Code Approaches | 🟡 | `compare_panel`, `card_grid` | None — designed for SPEC docs but no SPEC currently uses the HTML output |
+| 1 | Three Code Approaches | ✅ | `compare_panel`, `card_grid` | `vaultlab.report.approaches_compare_html.build_approaches_compare_html` — 2-up via `compare_panel`, 3+ via `card_grid` with RECOMMENDED badge; sub-goal 4.2 |
 | 2 | Visual Design Directions | 🟡 | `card_grid` + inline SVG | None — figure-contract draft mode not yet HTML-rendered |
 | 3 | Implementation Plan | ✅ | `timeline`, `svg_arg_graph`, `tldr_box` | `vaultlab.workflows.reasoning_html.build_reasoning_report_html` for crosstalk plans; this very plan doc is HTML |
 
@@ -29,7 +29,7 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 |---|---|---|---|---|
 | 4 | Annotated Pull Request | ✅ | `severity_card`, `margin_glossary` | `vaultlab.slides.audit_html.build_audit_report_html` (per-slide critique with severity tags) + `vaultlab.citations.report_html.build_citation_audit_html` (per-citation cards) |
 | 5 | PR Writeup for Reviewers | 🟡 | `matrix_table`, `compare_panel` | None — release notes still markdown; v0.0.5 changelog HTML is a candidate |
-| 6 | Module Map | 🟡 | `svg_arg_graph`, `card_grid` | None — `system-state-<date>.md` still markdown |
+| 6 | Module Map | ✅ | `svg_arg_graph`, `card_grid` | `vaultlab.report.state_dashboard_html` (composite consumer) — `vaultlab.*` package graph + legend cards; sub-goal 4.2 |
 
 ### Design & prototypes
 
@@ -53,13 +53,13 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
 | 14 | How a Feature Works | ✅ | `tldr_box`, `collapsible_step`, `tabbed_block`, `margin_glossary` | `vaultlab.kb.dossier_html.build_dossier_report_html` (9-section dossier with tabbed view + freshness badge) |
-| 15 | Concept Explainer | 🟡 | custom JS over `svg_arg_graph` | None — mechanism explainers in lit-arc are static, not interactive |
+| 15 | Concept Explainer | ✅ | custom JS over `svg_arg_graph` | `vaultlab.report.state_dashboard_html` (composite consumer) — optional inline explainer panel with hot-path highlighting; sub-goal 4.2 |
 
 ### Reports
 
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
-| 16 | Weekly Status | 🟡 | `tldr_box`, `matrix_table`, SVG bar | None — `/weekly` and `/eod` still write to Google Doc, not HTML |
+| 16 | Weekly Status | ✅ | `tldr_box`, `card_grid`, `severity_card` | `vaultlab.report.weekly_status_html.build_weekly_status_html` — TL;DR + metrics + shipped / in-flight / blocker grids; commit 6bd6dc6 |
 | 17 | Incident Timeline | 🟡 | `timeline`, `tabbed_block` | None — pipeline postmortem HTML not wired |
 
 ### Custom editors (two-way HTML)
@@ -67,17 +67,19 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
 | 18 | Ticket Triage Board | 🆕✅ | `kanban_board` | `vaultlab.report.editors.build_citation_triage_editor` + `build_slide_reorder_editor` |
-| 19 | Feature Flag Editor | 🟡 | extend `template_editor` w/ toggles | None — vaultlab config editor not yet wired |
+| 19 | Feature Flag Editor | ✅ | grouped toggles + clipboard-copy | `vaultlab.report.feature_flag_editor.build_feature_flag_editor` — grouped toggles + Copy diff / Copy current / Copy defaults; sub-goal 4.2 |
 | 20 | Prompt Tuner | 🆕✅ | `template_editor` | `vaultlab.report.editors.build_deckplan_tuner` |
 
 ## Summary
 
 - **Total patterns:** 20
-- **✅ Implemented (primitive + consumer):** 7 (#3, #4, #10, #13, #14, #18, #20)
-- **🟡 Partial (primitive exists, no consumer yet):** 13
+- **✅ Implemented (primitive + consumer):** 12 (#1, #3, #4, #6, #10, #13, #14, #15, #16, #18, #19, #20)
+- **🟡 Partial (primitive exists, no consumer yet):** 8 (#2, #5, #7, #8, #9, #11, #12, #17)
 - **❌ Missing (no primitive):** 0
 
-**Key finding:** every primitive is in `vaultlab.report` already. The remaining 13 patterns are not infrastructure gaps — they're consumer gaps. We have the LEGO bricks; we just haven't built every model.
+**Key finding:** every primitive is in `vaultlab.report` already. The remaining 8 patterns are not infrastructure gaps — they're consumer gaps. We have the LEGO bricks; we just haven't built every model.
+
+**Sub-goal 4.2 update (2026-05-15):** patterns #1, #6, #15, #16, #19 all shipped. Patterns #6 + #15 wired as the composite `state_dashboard_html` consumer per the audit's recommendation; #1 and #19 ship as standalone consumers (`approaches_compare_html`, `feature_flag_editor`). See `.claude/goals/html-patterns-top4-implementation.md`.
 
 ## Top-5 highest-fit-for-vaultlab patterns to wire next
 

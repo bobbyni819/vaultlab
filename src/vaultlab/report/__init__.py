@@ -35,13 +35,30 @@ from __future__ import annotations
 
 from vaultlab.report import _components as components
 from vaultlab.report import editors
+from vaultlab.report.approaches_compare_html import (
+    Approach,
+    ApproachesCompare,
+    build_approaches_compare_html,
+    write_approaches_compare_html,
+)
 from vaultlab.report.dispatch import (
     ArtifactKind,
     UnknownArtifact,
     render_artifact_html,
     write_artifact_html,
 )
+from vaultlab.report.feature_flag_editor import (
+    FeatureFlagConfig,
+    FlagGroup,
+    build_feature_flag_editor,
+    write_feature_flag_editor,
+)
 from vaultlab.report.html import Theme, render_report, write_report
+from vaultlab.report.state_dashboard_html import (
+    StateDashboard,
+    build_state_dashboard_html,
+    write_state_dashboard_html,
+)
 from vaultlab.report.weekly_status_html import (
     WeeklyStatusReport,
     build_weekly_status_html,
@@ -49,16 +66,27 @@ from vaultlab.report.weekly_status_html import (
 )
 
 __all__ = [
+    "Approach",
+    "ApproachesCompare",
     "ArtifactKind",
+    "FeatureFlagConfig",
+    "FlagGroup",
+    "StateDashboard",
     "Theme",
     "UnknownArtifact",
     "WeeklyStatusReport",
+    "build_approaches_compare_html",
+    "build_feature_flag_editor",
+    "build_state_dashboard_html",
     "build_weekly_status_html",
     "components",
     "editors",
     "render_artifact_html",
     "render_report",
+    "write_approaches_compare_html",
     "write_artifact_html",
+    "write_feature_flag_editor",
     "write_report",
+    "write_state_dashboard_html",
     "write_weekly_status_html",
 ]
