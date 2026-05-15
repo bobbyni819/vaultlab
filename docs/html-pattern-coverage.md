@@ -6,6 +6,10 @@
 
 This audit answers: for each of Thariq's 20 patterns, is the underlying primitive implemented in `vaultlab.report`? Is a real vaultlab consumer using it? What's left?
 
+> **See also:** [`src/vaultlab/report/SKILL.md`](../src/vaultlab/report/SKILL.md) —
+> the per-pattern catalog with minimal usage examples + consumer pointers
+> (sub-goal 4.3). This audit is the *status*; the SKILL.md is the *how-to-use*.
+
 ## Legend
 
 - ✅ **Implemented** — primitive exists AND ≥1 real vaultlab consumer uses it
@@ -111,4 +115,4 @@ Estimated effort: one `/goal "build vaultlab.report.state_html consumer + /state
 ## Followup tracking
 
 - This audit's findings update sub-goal 4.2's success criteria. The plan's "top-5" target stays the same in cardinality but the specific patterns chosen are now justified by data.
-- Sub-goal 4.3 (catalog SKILL.md) remains valid — but should be authored AFTER 4.2 lands so the catalog includes the new consumers as examples.
+- Sub-goal 4.3 (catalog SKILL.md) landed 2026-05-15 — see [`src/vaultlab/report/SKILL.md`](../src/vaultlab/report/SKILL.md) for the per-pattern catalog with import-verified examples. Bidirectionally cross-linked.
