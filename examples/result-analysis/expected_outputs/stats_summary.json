@@ -1,0 +1,79 @@
+{
+  "results.csv": {
+    "sample_id": {
+      "dtype": "object",
+      "n": 50,
+      "n_missing": 0,
+      "unique_count": 50,
+      "top_values": [
+        {
+          "value": "S001",
+          "count": 1
+        },
+        {
+          "value": "S038",
+          "count": 1
+        },
+        {
+          "value": "S028",
+          "count": 1
+        },
+        {
+          "value": "S029",
+          "count": 1
+        },
+        {
+          "value": "S030",
+          "count": 1
+        }
+      ]
+    },
+    "group": {
+      "dtype": "object",
+      "n": 50,
+      "n_missing": 0,
+      "unique_count": 3,
+      "top_values": [
+        {
+          "value": "control",
+          "count": 17
+        },
+        {
+          "value": "low_dose",
+          "count": 17
+        },
+        {
+          "value": "high_dose",
+          "count": 16
+        }
+      ]
+    },
+    "replicate": {
+      "dtype": "int64",
+      "n": 50,
+      "n_missing": 0,
+      "mean": 8.84,
+      "std": 4.862853785461322,
+      "min": 1.0,
+      "max": 17.0
+    },
+    "gene_x_expression": {
+      "dtype": "float64",
+      "n": 50,
+      "n_missing": 0,
+      "mean": 6.67582,
+      "std": 2.190345510812094,
+      "min": 1.898,
+      "max": 11.261
+    },
+    "qc_score": {
+      "dtype": "float64",
+      "n": 50,
+      "n_missing": 0,
+      "mean": 0.925376,
+      "std": 0.040496321626860406,
+      "min": 0.8501,
+      "max": 0.987
+    }
+  }
+}

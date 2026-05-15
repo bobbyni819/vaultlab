@@ -1,0 +1,26 @@
+{
+  "figures": {
+    "fig1_expression_by_group": {
+      "kind": "bar",
+      "source": "results.csv",
+      "x": "group",
+      "y": "gene_x_expression",
+      "title": "Mean gene-X expression by treatment group",
+      "ylabel": "gene_x_expression (log2)"
+    },
+    "fig2_expression_histogram": {
+      "kind": "histogram",
+      "source": "results.csv",
+      "x": "gene_x_expression",
+      "title": "Distribution of gene-X expression across samples",
+      "bins": 20
+    },
+    "fig3_qc_vs_expression": {
+      "kind": "scatter",
+      "source": "results.csv",
+      "x": "qc_score",
+      "y": "gene_x_expression",
+      "title": "QC score vs gene-X expression"
+    }
+  }
+}
