@@ -246,16 +246,6 @@ class TestNoUserDataLoss:
     - Database DROP / DELETE
     """
 
-    @pytest.mark.xfail(
-        reason=(
-            "Known violators: vaultlab.context.user_memory::forget and "
-            "vaultlab.context.meetings::ingest_transcript lack dry_run "
-            "params today. Followup hardening sub-goal will add them; "
-            "this test then becomes a passing assertion. Tracked in the "
-            "north-star plan's Phase 1 PROGRESS section."
-        ),
-        strict=False,
-    )
     def test_destructive_helpers_offer_dry_run(self) -> None:
         """Functions that delete user-visible artifacts must accept a
         ``dry_run`` parameter. This is a heuristic scan."""

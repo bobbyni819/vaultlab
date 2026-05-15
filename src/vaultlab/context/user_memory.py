@@ -209,19 +209,28 @@ def recall_all() -> tuple[str, list[MemoryEntry]]:
     return index_text, entries
 
 
-def forget(category: Category, name: str) -> bool:
-    """Delete a memory entry. Returns True if a file was removed.
+def forget(category: Category, name: str, *, dry_run: bool = False) -> bool:
+    """Delete a memory entry. Returns True if a file was (or would be) removed.
 
     Rare operation — only for outdated / contradictory memories. Caller
     should confirm with the user before invoking (Invariant 10 destructive).
+
+    Args:
+        category: Memory category (``user`` / ``feedback`` / ``project`` / ``reference``).
+        name: Memory slug (the ``name:`` frontmatter field).
+        dry_run: When ``True``, return whether the entry exists without
+            actually deleting it. Lets callers preview the action before
+            committing to it. Defaults to ``False`` (perform the deletion).
     """
     root = memory_root()
     target = root / f"{category}_{name}.md"
-    if target.exists():
-        target.unlink()
-        _refresh_index(root)
+    if not target.exists():
+        return False
+    if dry_run:
         return True
-    return False
+    target.unlink()
+    _refresh_index(root)
+    return True
 
 
 # ---------------------------------------------------------------------------

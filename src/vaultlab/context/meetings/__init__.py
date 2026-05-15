@@ -285,6 +285,7 @@ def ingest_transcript(
     project: str = "",
     label: str | None = None,
     move: bool = False,
+    dry_run: bool = False,
 ) -> Path:
     """Copy or move a finished transcript file into the KB.
 
@@ -304,9 +305,13 @@ def ingest_transcript(
             uses the source filename's stem.
         move: When ``True``, the source file is removed after successful
             copy. When ``False`` (default), the source is left alone.
+        dry_run: When ``True``, compute the destination path but do NOT
+            write to the KB or delete the source. Use to preview where a
+            transcript would land before committing the ingest. Defaults
+            to ``False``.
 
     Returns:
-        Absolute path to the new file in the KB.
+        Absolute path to the new (or would-be, on dry_run) file in the KB.
 
     Raises:
         FileNotFoundError: When the source file doesn't exist.
@@ -354,6 +359,8 @@ def ingest_transcript(
         recording_path=recording_path,
     )
     out_path = _meetings_dir(kb_root) / f"{date_str}-{slug}.md"
+    if dry_run:
+        return out_path
     out_path.write_text(fm + "\n\n" + body, encoding="utf-8")
 
     if move:
