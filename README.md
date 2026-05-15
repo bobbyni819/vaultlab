@@ -36,6 +36,34 @@ Summarize what's installed, then wait for my project description.
 
 Claude does the entire bootstrap — clone → pip install → KB init → slash command wiring → reads the dispatch table → asks what project you want. After step 5, slash commands like `/lit-arc`, `/build-deck`, `/cite audit` are available in every Claude Code session on your machine. Full walkthrough: [`QUICKSTART.md`](QUICKSTART.md).
 
+## First run — produce a real artifact in under 5 minutes
+
+No KB, no API key, no Claude Code required to confirm the install works:
+
+```bash
+pip install vaultlab
+vaultlab demo
+```
+
+This composes a real audit-clean journal-club deck from a bundled
+open-access paper and two synthetic figures, **fully offline**. You get
+the same output shape every other vaultlab pipeline produces:
+
+```
+./vaultlab-demo-out/
+  deck.pptx                       # 7-slide journal-club deck
+  deck.pptx.provenance.json       # machine-readable receipt (inputs, params, hashes)
+  deck.pptx.method.md             # human-readable methods narrative
+  inputs/
+    paper.json                    # the seed metadata — edit + re-run to remix
+    figures/                      # the synthetic PNGs the deck uses
+```
+
+Runs in ~1-2 seconds. No network calls, no LLM invocations — useful as a
+smoke test in CI or on a fresh machine before you trust the heavier
+slash-command workflows. Customize: edit `inputs/paper.json` (or pass
+`--out-dir <other>`) and re-run.
+
 ## About
 
 I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I'm doing wet-lab, spatial omics work and building computational tools to create virtual tissue simulations.

@@ -366,6 +366,10 @@ def main(argv: list[str] | None = None) -> int:
     cmd, rest = argv[0], argv[1:]
     if cmd == "init":
         return _cmd_init(rest)
+    if cmd == "demo":
+        from vaultlab.cli.demo import main as _demo_main
+
+        return _demo_main(rest)
     if cmd == "list-policy-skipped":
         return _cmd_list_policy_skipped(rest)
     if cmd == "fetch-list":
@@ -389,6 +393,7 @@ def _print_usage(stream: object = None) -> None:
         "vaultlab v0.0.3 — alpha\n"
         "\n"
         "Usage:\n"
+        "  vaultlab demo [--out-dir <path>]          First-run audit-clean artifact (<5 min)\n"
         "  vaultlab init [<kb-root-path>]            Configure KB root (one-time)\n"
         "  vaultlab claude-setup [--dry-run]         Wire slash commands + global CLAUDE.md\n"
         "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
@@ -398,6 +403,7 @@ def _print_usage(stream: object = None) -> None:
         "\n"
         "First-time setup (recommended order):\n"
         "  pip install vaultlab\n"
+        "  vaultlab demo                              # produce your first artifact (<5 min)\n"
         "  vaultlab init                              # set KB root\n"
         "  vaultlab claude-setup                      # make slash commands global\n"
         "\n"

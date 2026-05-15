@@ -1,0 +1,28 @@
+{
+  "title": "Tissue schematics map the specialization of immune tissue motifs and their appropriation by tumors",
+  "authors": [
+    "Salil S. Bhate",
+    "Graham L. Barlow",
+    "Christian M. Schürch",
+    "Garry P. Nolan"
+  ],
+  "year": 2022,
+  "journal": "Cell Systems",
+  "doi": "10.1016/j.cels.2022.06.008",
+  "pmid": "35863345",
+  "pmcid": "PMC9509566",
+  "license": "Cited per fair use (bibliographic metadata only). Original article © the authors; published in Cell Systems with PMC OA Subset deposition. Figures in this demo are synthetic — not reproduced from the source.",
+  "abstract": "Multiplexed imaging reveals that tissue function is coordinated by cellular neighborhoods. We show that immune tissue motifs — recurring spatial arrangements of immune cell types — are conserved across normal lymphoid organs and chronic inflammatory tissues, and that tumors selectively co-opt subsets of these motifs to evade immune control. Using CODEX imaging of 47 markers across 26 tissues, we identify a discrete catalogue of motifs and show that each tumor lineage adopts a characteristic schematic. The work suggests that the building blocks of tissue immunity are modular and that disease can be understood as motif rewiring rather than the appearance of wholly novel cell states.",
+  "demo_note": "Bundled with vaultlab as a journal-club deck demo seed. The demo composes a five-slide deck from this metadata plus two synthetic example figures. No external services are contacted; no figures are reproduced from the source paper.",
+  "topic": "Multiplexed tissue imaging — cellular neighborhoods and immune motifs",
+  "key_claims": [
+    "Immune cell types arrange into a small, conserved catalogue of spatial motifs across normal and chronic-inflammatory tissues.",
+    "Tumors do not invent new motifs — they selectively co-opt subsets of existing immune-tissue motifs.",
+    "CODEX multiplexed imaging at single-cell resolution makes motif-level analysis tractable across many tissue types."
+  ],
+  "discussion_questions": [
+    "If motifs are conserved building blocks, what is the minimal vocabulary needed to describe tumor immune evasion?",
+    "How would you test whether a perturbation (e.g. checkpoint blockade) drives motif rewiring vs. cell-state change?",
+    "What CODEX panel design choices would maximise motif discoverability for a new tissue?"
+  ]
+}
