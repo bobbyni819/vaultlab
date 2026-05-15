@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 from vaultlab.citations.models import AuditReport, Citation, VerificationStatus
+from vaultlab.provenance import ProvenanceRecord, write_receipts
 
 
 def generate_report(
@@ -76,6 +77,21 @@ def generate_report(
             os.makedirs(dirname, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(md)
+
+        # Audit-manifest contract (red line #2: no silent failures).
+        # Every artifact-producing entrypoint writes provenance receipts;
+        # see vaultlab/.claude/goals/vaultlab-north-star.md.
+        record = ProvenanceRecord(
+            generated_by="vaultlab.citations.generate_report",
+            kind="citation_audit",
+            inputs=list(report.source_files),
+            params={
+                "total_citations": report.total,
+                "high_risk_unverified": report.high_risk_unverified,
+                "by_status": dict(report.by_status),
+            },
+        )
+        write_receipts(output_path, record)
 
     return md
 
