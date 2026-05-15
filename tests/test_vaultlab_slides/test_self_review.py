@@ -417,3 +417,39 @@ class TestColorContrastCheck:
         a = _contrast_ratio((0x11, 0x55, 0x99), (0xEE, 0xEE, 0xEE))
         b = _contrast_ratio((0xEE, 0xEE, 0xEE), (0x11, 0x55, 0x99))
         assert abs(a - b) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.3 close-out — time-budget + Q&A anticipator wiring
+# ---------------------------------------------------------------------------
+
+
+class TestReviewDeckAddOns:
+    """``review_deck`` should expose optional time-budget + Q&A audits."""
+
+    def test_time_budget_not_run_by_default(self, good_deck: Path) -> None:
+        report = review_deck(good_deck)
+        assert report.time_budget is None
+        assert report.anticipated_questions == []
+
+    def test_time_budget_runs_when_requested(self, good_deck: Path) -> None:
+        report = review_deck(good_deck, budget_minutes=10)
+        assert report.time_budget is not None
+        assert report.time_budget.budget_minutes == 10
+        assert report.time_budget.per_slide
+
+    def test_time_budget_over_flags_arc_warning(self, good_deck: Path) -> None:
+        # 1-min slot is impossible to meet for any non-trivial deck.
+        report = review_deck(good_deck, budget_minutes=1, qa_reserve_minutes=0)
+        rules = {i["rule"] for i in report.story_arc_issues}
+        assert "time-budget-over" in rules, (
+            f"Expected time-budget-over warning. Got: {report.story_arc_issues}"
+        )
+
+    def test_anticipate_questions_runs_when_requested(self, good_deck: Path) -> None:
+        report = review_deck(good_deck, anticipate_questions=True, qa_n_questions=5)
+        # Good deck may not trigger heuristic questions; just confirm
+        # the list shape is correct (no exception, list-typed).
+        assert isinstance(report.anticipated_questions, list)
+        # Length is bounded by the cap
+        assert len(report.anticipated_questions) <= 5

@@ -51,6 +51,16 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
+# Phase 7.3 add-on hooks (time-budget + Q&A anticipator)
+# ---------------------------------------------------------------------------
+#
+# Both are OPTIONAL extensions to ``review_deck``: they fire only when the
+# caller passes the matching keyword (``budget_minutes`` or
+# ``anticipate_questions=True``). The default behaviour of ``review_deck``
+# is unchanged so existing tests + the CLI gate stay byte-identical.
+
+
+# ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
@@ -115,6 +125,11 @@ class ReviewReport:
     pptx_path: Path
     per_slide: list[SlideReview] = field(default_factory=list)
     story_arc_issues: list[dict[str, str]] = field(default_factory=list)
+    # Optional Phase 7.3 add-on outputs. Populated only when the matching
+    # keyword arguments are passed to :func:`review_deck`. ``None`` means
+    # the audit wasn't requested; consumers shouldn't infer "pass".
+    time_budget: Any = None
+    anticipated_questions: list[Any] = field(default_factory=list)
 
     # -- aggregates -------------------------------------------------------
 
@@ -188,7 +203,15 @@ class ReviewReport:
 # ---------------------------------------------------------------------------
 
 
-def review_deck(pptx_path: Path | str) -> ReviewReport:
+def review_deck(
+    pptx_path: Path | str,
+    *,
+    budget_minutes: int | None = None,
+    qa_reserve_minutes: int = 5,
+    anticipate_questions: bool = False,
+    qa_runner_callback: Any = None,
+    qa_n_questions: int = 10,
+) -> ReviewReport:
     """Run the full self-review pass on a rendered ``.pptx``.
 
     The check sequence mirrors the audits documented in this module's
@@ -201,11 +224,29 @@ def review_deck(pptx_path: Path | str) -> ReviewReport:
     ----------
     pptx_path
         Path to the rendered ``.pptx`` to review.
+    budget_minutes
+        Optional. When set, calls
+        :func:`vaultlab.slides.time_budget.audit_time_budget` and stores
+        the report on :attr:`ReviewReport.time_budget`. Over-budget
+        decks also pick up a deck-level ``warning`` issue
+        (``rule="time-budget-over"``).
+    qa_reserve_minutes
+        Q&A reserve to subtract from the speaking budget; defaults to 5.
+    anticipate_questions
+        Optional. When ``True``, calls
+        :func:`vaultlab.slides.qa_anticipator.anticipate_qa` and stores
+        the question list on :attr:`ReviewReport.anticipated_questions`.
+    qa_runner_callback
+        Optional ``(prompt) -> str`` callable forwarded to the Q&A
+        anticipator's LLM mode. Falls back to heuristics on failure.
+    qa_n_questions
+        Cap on anticipated-question count (default 10).
 
     Returns
     -------
     ReviewReport
-        Composite report with per-slide + story-arc issues.
+        Composite report with per-slide + story-arc issues, plus the
+        optional time-budget / Q&A outputs.
 
     Raises
     ------
@@ -232,6 +273,52 @@ def review_deck(pptx_path: Path | str) -> ReviewReport:
         report.per_slide.append(review)
 
     _audit_story_arc(report)
+
+    # Optional add-ons (Phase 7.3 close-out). Both routes silently no-op
+    # when the import fails — they're load-bearing only when the caller
+    # explicitly asks for them.
+    if budget_minutes is not None:
+        try:
+            from vaultlab.slides.time_budget import audit_time_budget
+
+            tb_report = audit_time_budget(
+                pptx_path,
+                budget_minutes=budget_minutes,
+                qa_reserve_minutes=qa_reserve_minutes,
+            )
+            report.time_budget = tb_report
+            if tb_report.over_budget():
+                total_min = tb_report.estimated_total_seconds // 60
+                total_sec = tb_report.estimated_total_seconds % 60
+                report.story_arc_issues.append(
+                    {
+                        "severity": "warning",
+                        "rule": "time-budget-over",
+                        "detail": (
+                            f"Estimated speak time {total_min}:{total_sec:02d} "
+                            f"exceeds the {tb_report.budget_seconds // 60}-min "
+                            "speaking budget. Trim slides or shorten body lines."
+                        ),
+                        "loc": "(deck)",
+                    }
+                )
+        except Exception:  # pragma: no cover — best-effort
+            logger.exception("review_deck: time-budget audit failed")
+
+    if anticipate_questions:
+        try:
+            from vaultlab.slides.qa_anticipator import anticipate_qa
+
+            report.anticipated_questions = list(
+                anticipate_qa(
+                    pptx_path,
+                    runner_callback=qa_runner_callback,
+                    n_questions=qa_n_questions,
+                )
+            )
+        except Exception:  # pragma: no cover — best-effort
+            logger.exception("review_deck: Q&A anticipator failed")
+
     return report
 
 

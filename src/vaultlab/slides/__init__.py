@@ -64,6 +64,13 @@ from vaultlab.slides.notes import (
     parse_speaker_notes,
 )
 from vaultlab.slides.render import RenderError, render_pptx
+from vaultlab.slides.time_budget import (
+    SlideTimeEstimate,
+    TimeBudgetReport,
+    audit_time_budget,
+)
+from vaultlab.slides.version_diff import DeckDiff, SlideDiff, diff_decks
+from vaultlab.slides.qa_anticipator import AnticipatedQuestion, anticipate_qa
 from vaultlab.slides.self_review import (
     ReviewReport,
     SlideReview,
@@ -94,6 +101,15 @@ __all__ = [
     "render_pptx",
     "review_deck",
     "write_review_report",
+    # Phase 7.3 close-out: time-budget audit + Q&A anticipator + version diff
+    "AnticipatedQuestion",
+    "DeckDiff",
+    "SlideDiff",
+    "SlideTimeEstimate",
+    "TimeBudgetReport",
+    "anticipate_qa",
+    "audit_time_budget",
+    "diff_decks",
     # Dict-plan-driven deck builder
     "build_from_plan",
     # KB reader
