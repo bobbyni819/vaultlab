@@ -1,0 +1,42 @@
+name: Invariants
+
+# Always-on CI: enforces the four red lines from
+# .claude/goals/vaultlab-north-star.md.
+#
+# Cheap to run (~2 seconds, no fixtures, no LLM, no figure rendering),
+# so it runs on every push/PR without burning Actions minutes the way
+# the full test matrix does.
+#
+# If this workflow turns red, vaultlab's trust contract has been
+# violated. Read the test failure for the specific red line and fix
+# before merging.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install vaultlab (slim, dev)
+        run: |
+          python -m pip install --upgrade pip
+          # Invariant tests are static-analysis only; slim install is enough.
+          pip install -e ".[dev]"
+
+      - name: Run red-line invariant tests
+        run: |
+          pytest tests/test_vaultlab_invariants/ -v --tb=short
