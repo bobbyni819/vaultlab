@@ -54,6 +54,19 @@ The plan's success criteria are the union of all 20 sub-goals' criteria. For thi
 - [2026-05-14 22:01] Sub-goal 1.1 complete — 6 pass / 2 xfail / CI workflow wired ✅
   - Goal file: `.claude/goals/wire-redline-invariant-tests.md`
   - Files added: `tests/test_vaultlab_invariants/test_red_lines.py`, `tests/test_vaultlab_invariants/__init__.py`, `.github/workflows/invariants.yml`
+  - Commit: `2d33413`
+- [2026-05-15] Sub-goal 3.2 (CONTRIBUTING.md three-example rule + testimony template + README link) complete ✅
+  - Goal file: `.claude/goals/contributing-md-with-three-example-rule.md`
+  - Files modified/added: `CONTRIBUTING.md`, `README.md`, `.github/ISSUE_TEMPLATE/testimony.md`
+- [2026-05-15] Sub-goal 4.1 (html-pattern-coverage-audit) complete ✅
+  - Goal file: `.claude/goals/html-pattern-coverage-audit.md`
+  - Files added: `docs/html-pattern-coverage.md` (+ KB mirror)
+  - Key finding: 7/20 patterns have implemented consumers; 13/20 have primitive but no consumer; 0/20 missing primitive
+- [2026-05-15] Sub-goal 1.2a (audit-manifest framework alignment) complete ✅
+  - Goal file: `.claude/goals/audit-manifest-framework-alignment.md`
+  - Discovery: `vaultlab.provenance` already implements the audit-manifest concept; 6 entrypoints already comply. The terms are aliases.
+  - Followup: sub-goal 1.2b wires citations/*, manuscript/*, report/* (the 4 holdouts).
+  - Commits: `b4b3ca4` (3.2 + 4.1), `bc4044d` (1.2a)
 
 ## EVIDENCE
 
@@ -74,9 +87,14 @@ end-to-end with all evidence + commits. The remaining 19 sub-goals
 must continue in subsequent `/goal` invocations (one per sub-goal, as
 the plan was designed for)._
 
-### What's done
+### What's done (this run, cumulative)
 
-1. ✅ **Sub-goal 1.1** — Red-line invariant tests + CI workflow
+1. ✅ **Sub-goal 1.1** — Red-line invariant tests + CI workflow (commit `2d33413`)
+2. ✅ **Sub-goal 3.2** — CONTRIBUTING three-example rule + testimony template + README link (commit `b4b3ca4`)
+3. ✅ **Sub-goal 4.1** — HTML pattern coverage audit (commit `b4b3ca4`)
+4. ✅ **Sub-goal 1.2a** — audit-manifest framework alignment (provenance ≡ audit) (commit `bc4044d`)
+
+**3 full sub-goals + 1 partial (1.2a) = 4 of 20 progressed.** Sub-goal 1.2b (wire write_receipts into citations/manuscript/report) is the natural next step.
 
 ### What's next (suggested invocation order)
 
