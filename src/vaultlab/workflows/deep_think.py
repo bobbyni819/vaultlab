@@ -38,6 +38,11 @@ from vaultlab.workflows._utils import (
     _inject_prior_context,
     _session_summary_if_exists,
 )
+from vaultlab.workflows.crosstalk_policy import (
+    CrosstalkContext,
+    should_invoke,
+    skip_reason,
+)
 from vaultlab.workflows.ensemble import plan_ensemble_critic
 from vaultlab.workflows.synthesis import plan_synthesis
 
@@ -50,6 +55,56 @@ def _get_role(role_id: str):
     intermediate cache, no bobby_ailab lookup.
     """
     return load_role(role_id)
+
+
+def _record_crosstalk_decision(
+    prov: Provenance,
+    ctx: CrosstalkContext,
+) -> tuple[bool, str | None]:
+    """Stamp a Provenance with the crosstalk-policy decision and return it.
+
+    SPEC-E sub-goal 2.4: every crosstalk-firing site records ``invoked`` /
+    ``skip_reason`` / ``task_kind`` so audits can reconstruct why a given
+    deep-think run was or wasn't a round-table. The decision is folded
+    into the WorkflowPlan's provenance via:
+
+    * ``tags`` — short machine-greppable markers (``crosstalk_invoked=true``,
+      ``crosstalk_task_kind=deep_think``)
+    * ``notes`` — appended human-readable summary (preserves any existing
+      note text); includes the skip reason when applicable
+
+    The workflow ``Provenance`` dataclass has no ``params`` dict (unlike
+    the project-wide ``ProvenanceRecord`` in :mod:`vaultlab.provenance`),
+    so we encode the manifest entries into the fields that exist. This
+    mirrors the pattern already in :mod:`vaultlab.research.lineage` and
+    :mod:`vaultlab.slides.deck`.
+    """
+    invoked = should_invoke(ctx)
+    reason = skip_reason(ctx)
+    invoked_tag = f"crosstalk_invoked={str(invoked).lower()}"
+    kind_tag = f"crosstalk_task_kind={ctx.task_kind}"
+    # Idempotent stamp: dedupe so plan-time + runtime calls don't pile up
+    # duplicate tags. The same dataclass instance flows through both
+    # ``plan_deep_think_with_ensemble_critic`` and
+    # ``run_deep_think_with_ensemble_critic`` — second call should be a
+    # no-op when the decision hasn't changed.
+    existing = set(prov.tags)
+    new_tags = [t for t in (invoked_tag, kind_tag) if t not in existing]
+    if new_tags:
+        prov.tags = list(prov.tags) + new_tags
+    note_bits = [
+        f"crosstalk_invoked={invoked}",
+        f"crosstalk_task_kind={ctx.task_kind}",
+    ]
+    if reason:
+        note_bits.append(f"crosstalk_skip_reason={reason!r}")
+    summary = "; ".join(note_bits)
+    if summary not in (prov.notes or ""):
+        if prov.notes:
+            prov.notes = f"{prov.notes}\n{summary}"
+        else:
+            prov.notes = summary
+    return invoked, reason
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +175,17 @@ def plan_deep_think_round(
         round=round_num,
         kind="deep_think_round",
         tags=["deep-think", agenda.investigation_mode.value],
+    )
+    # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy and
+    # record the decision on the workflow's provenance. The classic
+    # round-table (Analyst → Expert → Critic → Synthesizer) is a
+    # cross-evidence reasoning task → 'deep_think'.
+    _record_crosstalk_decision(
+        prov,
+        CrosstalkContext(
+            task_kind="deep_think",
+            n_evidence_sources=len(agenda.questions),
+        ),
     )
     return WorkflowPlan(meeting=meeting, plan=plan, provenance=prov)
 
@@ -323,6 +389,18 @@ def plan_deep_think_with_ensemble_critic(
     ]
     synth_wp.provenance.kind = "deep_think_ensemble_synthesis"
 
+    # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy.
+    # The ensemble-critic deep-think is the canonical "fire the round-
+    # table" workflow → 'deep_think'. Stamp the decision on every phase's
+    # provenance so each phase output records why the round-table fired
+    # (or didn't); the synthesis phase gets the canonical final record.
+    bundle_ctx = CrosstalkContext(
+        task_kind="deep_think",
+        n_evidence_sources=len(pre_agenda_questions),
+    )
+    for phase_wp in (pre_wp, *critic_wps, meta_wp, synth_wp):
+        _record_crosstalk_decision(phase_wp.provenance, bundle_ctx)
+
     return DeepThinkEnsembleBundle(
         pre_critic=pre_wp,
         critic_plans=critic_wps,
@@ -353,7 +431,24 @@ def run_deep_think_with_ensemble_critic(
 
     Returns the same bundle with every plan's turns filled and outputs
     written.
+
+    SPEC-E sub-goal 2.4 — The ensemble-critic bundle is the runtime
+    firing point for deep-think crosstalk. We re-stamp each phase's
+    provenance with the policy decision here so hand-built bundles (that
+    skipped ``plan_deep_think_with_ensemble_critic``) still record the
+    decision in their output files. The bundle always executes —
+    matching the lineage / deck-plan pattern, where the gate is
+    instrumentation, not flow-control — but the decision lives in every
+    phase output's provenance frontmatter for audits to reconstruct.
     """
+    n_critics_in_bundle = len(bundle.critic_plans)
+    runtime_ctx = CrosstalkContext(
+        task_kind="deep_think",
+        n_evidence_sources=max(n_critics_in_bundle, 1),
+    )
+    for phase_wp in bundle.all_plans:
+        _record_crosstalk_decision(phase_wp.provenance, runtime_ctx)
+
     # Phase 1
     run_workflow(bundle.pre_critic, agent_fn=agent_fn, resume=resume)
     pre_critic_outputs = "\n\n".join(
