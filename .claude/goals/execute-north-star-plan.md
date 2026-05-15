@@ -75,6 +75,12 @@ The plan's success criteria are the union of all 20 sub-goals' criteria. For thi
   - `vaultlab.citations.generate_report` now writes `.provenance.json` + `.method.md` sidecars alongside the markdown audit report.
   - Remaining gaps: `manuscript/{polish,respond,data_availability}.py` + `report/dispatch.py`. The single remaining invariant xfail closes when those land.
   - Commit: `272d2d4`
+- [2026-05-15] **Parallel-agent dispatch run** — 3 sub-goals shipped concurrently ✅
+  - **Sub-goal 1.2b finished** (Agent A, commit `0b2546b`): wired write_receipts into `manuscript/polish.py`, `manuscript/respond.py`, `manuscript/data_availability.py`, `report/dispatch.py`, and `slides/render.py`. Removed xfail. **Invariant suite now 8 passed / 0 xfailed — Red Line #2 fully enforced.**
+  - **Sub-goal 5.3** (Agent B, commit `36a2875`): 4 new slide layouts (equation, table, comparison_table, acknowledgments_grid). +21 slide tests. Hard rules verified (Roboto, 28/24/18pt, no overlap).
+  - **Sub-goal 4.2 slice** (Agent C, commit `6bd6dc6`): `vaultlab.report.weekly_status_html` consumer implementing Thariq pattern #16. +11 report tests. Composes existing primitives.
+  - Coordination: orthogonal file sets, all 3 first-try pushes succeeded, 0 merge conflicts.
+  - Master goal file for this orchestration: `.claude/goals/parallel-execute-north-star.md`
 
 ## EVIDENCE
 
@@ -102,9 +108,11 @@ the plan was designed for)._
 3. ✅ **Sub-goal 4.1** — HTML pattern coverage audit (commit `b4b3ca4`)
 4. ✅ **Sub-goal 1.2a** — audit-manifest framework alignment (provenance ≡ audit) (commit `bc4044d`)
 5. ✅ **Destructive-op hardening** — flipped invariant xfail to pass via `dry_run` on `forget` + `ingest_transcript` (commit `6af6fad`)
-6. 🟡 **Sub-goal 1.2b partial** — citations wired (1 of 4 module-groups); manuscript/report remain (commit `272d2d4`)
+6. ✅ **Sub-goal 1.2b complete** — provenance wiring landed in citations (commit `272d2d4`), then manuscript/* + report/dispatch + slides/render (commit `0b2546b`). **Invariant suite: 8/0.**
+7. ✅ **Sub-goal 5.3** — 4 new slide layouts (commit `36a2875`)
+8. ✅ **Sub-goal 4.2 slice** — weekly status HTML consumer (commit `6bd6dc6`)
 
-**Effective progress: 5 full + 1 partial of 20 sub-goals (~30%).** Invariant test suite: 7 pass / 1 xfail (the remaining xfail closes when manuscript/report are wired).
+**Effective progress: 8 full sub-goals of 20 + meaningful slices of 4.2 = ~45% of the 20-sub-goal plan.** Invariant test suite: **8 pass / 0 xfail** — all 4 red lines fully enforced.
 
 ### Smallest highest-value next step
 
