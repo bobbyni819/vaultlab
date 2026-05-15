@@ -272,6 +272,99 @@ def triple_export(
     return written
 
 
+# ---------------------------------------------------------------------------
+# Layout dispatch — single-plot vs multi-panel (sub-goal 5.5)
+# ---------------------------------------------------------------------------
+#
+# Persona-driven default per the strategic spec: comp-bio PhDs and wet-lab
+# researchers frequently submit single-plot figures (one volcano, one UMAP,
+# one bar chart). Previous code paths assumed every figure was multi-panel
+# and tried to subdivide single-plot inputs — see audit notes in the goal
+# doc `.claude/goals/granular-custom-figure-handling.md`.
+#
+# ``suggest_figure_layout`` composes the structural panel detector
+# (vaultlab.figures.understand.whitespace.is_single_plot) with the
+# context-aware preferences (does the slide author want bullets? a caption?
+# is the image very wide?) to choose a slide-layout name suitable for the
+# deck planner.
+#
+# Returned names map 1:1 to ``vaultlab.slides.layouts`` primitives plus a
+# pseudo "figure_with_panels" that signals to the caller "this image is
+# multi-panel — do NOT try to subdivide further; route to
+# add_figure_only_slide (or add_multi_figure_slide if the caller has split
+# the panels into separate files)".
+
+
+def suggest_figure_layout(
+    image_path: Path | str,
+    *,
+    has_bullets: bool = False,
+    has_caption: bool = False,
+    wide_aspect_threshold: float = 2.0,
+) -> str:
+    """Suggest a slide-layout name for a figure image.
+
+    Parameters
+    ----------
+    image_path
+        PNG / JPG of the figure (rendered, on disk).
+    has_bullets
+        Whether the slide author wants bullets alongside the figure.
+    has_caption
+        Whether the slide author has a caption to display.
+    wide_aspect_threshold
+        Aspect ratio (width/height) above which a single-plot figure is
+        considered "hero-wide" and gets ``figure_only`` regardless of
+        ``has_caption``.
+
+    Returns
+    -------
+    str
+        One of:
+        - ``"figure_only"`` — full-width centered figure, no bullets.
+        - ``"figure_with_bullets"`` — figure left, bullets right (the default
+          ``add_figure_slide`` layout).
+        - ``"figure_with_side_caption"`` — figure left, caption right.
+        - ``"figure_with_panels"`` — image is multi-panel; the caller should
+          route to ``add_figure_only_slide`` (or ``add_multi_figure_slide``
+          if panels are separate files) and NOT attempt any further
+          subdivision.
+
+    Notes
+    -----
+    Single-plot figures are *never* classed as ``figure_with_panels`` — this
+    is the regression sub-goal 5.5 fixes.
+    """
+    from vaultlab.figures.understand.whitespace import is_single_plot
+
+    single = is_single_plot(image_path)
+
+    if not single:
+        # Multi-panel input: don't try to subdivide further.
+        return "figure_with_panels"
+
+    # Single-plot routing.
+    if has_bullets:
+        return "figure_with_bullets"
+
+    # Wide-aspect single plot: prefer hero layout even with a caption.
+    try:
+        from PIL import Image
+
+        with Image.open(image_path) as img:
+            w, h = img.size
+        aspect = w / h if h > 0 else 1.0
+    except Exception:
+        aspect = 1.0
+
+    if aspect >= wide_aspect_threshold:
+        return "figure_only"
+
+    if has_caption:
+        return "figure_with_side_caption"
+    return "figure_only"
+
+
 __all__ = [
     "NMI_PASTEL",
     "RC_PARAMS",
@@ -283,6 +376,7 @@ __all__ = [
     "FigureArchetype",
     "FigureContract",
     "apply_rcparams",
+    "suggest_figure_layout",
     "triple_export",
     "validate_contract",
 ]

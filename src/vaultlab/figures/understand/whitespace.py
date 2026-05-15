@@ -219,4 +219,219 @@ def _collides(
     return False
 
 
-__all__ = ["find_marker_offset", "whitespace_mask"]
+# ---------------------------------------------------------------------------
+# Panel detection — XY-cut gutter projection (sub-goal 5.5)
+# ---------------------------------------------------------------------------
+#
+# Comp-bio + wet-lab researchers regularly submit single-plot figures (one
+# volcano, one UMAP, one bar chart). The old code paths assumed every figure
+# was multi-panel; panel-cutting those subdivided legend boxes / axis labels
+# into bogus "panels". Sub-goal 5.5 adds:
+#
+#   * detect_panels(image_path) — recursive XY-cut: project the whitespace
+#     mask onto X and Y axes, find contiguous high-whitespace gutters, split
+#     and recurse.
+#   * is_single_plot(image_path) — convenience predicate.
+#
+# Why this works:
+#   The whitespace mask already excludes glyph-adjacent pixels (edge-dilation
+#   covers ≥30px radius around any text or axis line). So a corner-legend
+#   does NOT carve out a gutter — the legend glyphs anchor an edge-zone that
+#   prevents the projection from registering a clean cut. Only structural
+#   gutters between subplots survive.
+#
+# Algorithm parameters (chosen empirically against matplotlib-default output
+# at dpi=100, bbox_inches="tight"):
+#   - min gutter thickness: 3% of the corresponding axis
+#   - min gutter purity:    99% of pixels along the projected band must be
+#                           true whitespace
+#   - min panel side:       12% of the corresponding axis (smaller candidate
+#                           splits are rejected — they're usually padding
+#                           around the figure edge, not real panels)
+#   - max recursion depth:  3 (so a 2×2 grid splits into 4 panels but we
+#                           don't keep slicing inside each panel forever)
+
+
+def _project_whitespace(mask, axis: int):
+    """Per-row (axis=1) or per-column (axis=0) whitespace fraction in [0, 1]."""
+    return mask.mean(axis=axis)
+
+
+def _find_gutters(
+    profile,
+    *,
+    min_run: int,
+    purity: float = 0.99,
+) -> list[tuple[int, int]]:
+    """Find contiguous runs in ``profile`` where value ≥ ``purity``.
+
+    Returns list of ``(start, end_exclusive)``. Runs shorter than ``min_run``
+    are dropped.
+    """
+    runs: list[tuple[int, int]] = []
+    in_run = False
+    start = 0
+    for i, v in enumerate(profile):
+        if v >= purity:
+            if not in_run:
+                start = i
+                in_run = True
+        else:
+            if in_run:
+                if i - start >= min_run:
+                    runs.append((start, i))
+                in_run = False
+    if in_run and len(profile) - start >= min_run:
+        runs.append((start, len(profile)))
+    return runs
+
+
+def _split_by_gutters(
+    length: int, gutters: list[tuple[int, int]], *, min_side: int
+) -> list[tuple[int, int]]:
+    """Convert gutter runs into the inter-gutter segments to keep.
+
+    Drop segments shorter than ``min_side`` (they're padding or sliver text).
+    """
+    if not gutters:
+        return [(0, length)]
+    # Outer padding gutters (touching either edge) are not real splits — they
+    # just bound the figure. Filter them out so a centered chart with a wide
+    # outside margin doesn't get classed as "two panels" (the chart + a void).
+    interior = [g for g in gutters if g[0] > 0 and g[1] < length]
+    if not interior:
+        return [(0, length)]
+    segments: list[tuple[int, int]] = []
+    cursor = 0
+    for gs, ge in interior:
+        if gs - cursor >= min_side:
+            segments.append((cursor, gs))
+        cursor = ge
+    if length - cursor >= min_side:
+        segments.append((cursor, length))
+    return segments
+
+
+def _xy_cut(
+    mask, x0: int, y0: int, x1: int, y1: int, *, depth: int, max_depth: int
+) -> list[tuple[int, int, int, int]]:
+    """Recursive XY-cut on the slice ``mask[y0:y1, x0:x1]``.
+
+    Returns a list of bboxes in **source-image coordinates**. Each step tries
+    the dimension with the strongest gutter first; if it splits into ≥2
+    segments, recurse into each segment on the orthogonal dimension. Stops
+    when no gutter exists or ``depth >= max_depth``.
+    """
+    sub = mask[y0:y1, x0:x1]
+    H, W = sub.shape
+    if H == 0 or W == 0 or depth >= max_depth:
+        return [(x0, y0, x1, y1)]
+
+    min_run_x = max(int(W * 0.03), 4)
+    min_run_y = max(int(H * 0.03), 4)
+    min_side_x = max(int(W * 0.12), 20)
+    min_side_y = max(int(H * 0.12), 20)
+
+    col_profile = _project_whitespace(sub, axis=0)  # mean over rows → per-col
+    row_profile = _project_whitespace(sub, axis=1)  # mean over cols → per-row
+
+    vertical_gutters = _find_gutters(col_profile, min_run=min_run_x)
+    horizontal_gutters = _find_gutters(row_profile, min_run=min_run_y)
+
+    x_segments = _split_by_gutters(W, vertical_gutters, min_side=min_side_x)
+    y_segments = _split_by_gutters(H, horizontal_gutters, min_side=min_side_y)
+
+    # No interior gutter survived on either axis → this is a leaf panel.
+    if len(x_segments) == 1 and len(y_segments) == 1:
+        return [(x0, y0, x1, y1)]
+
+    results: list[tuple[int, int, int, int]] = []
+    # Take the cartesian product. For a 2×2 grid that's 4 cells; for a 1×N
+    # row of panels one of the axes is a singleton segment.
+    for ys, ye in y_segments:
+        for xs, xe in x_segments:
+            sub_x0 = x0 + xs
+            sub_y0 = y0 + ys
+            sub_x1 = x0 + xe
+            sub_y1 = y0 + ye
+            # Recurse one more level so an irregular composite (e.g. row of
+            # 3 on top + 1 wide below) still gets split fully. With
+            # max_depth=3 we never recurse forever.
+            results.extend(
+                _xy_cut(
+                    mask,
+                    sub_x0,
+                    sub_y0,
+                    sub_x1,
+                    sub_y1,
+                    depth=depth + 1,
+                    max_depth=max_depth,
+                )
+            )
+    return results
+
+
+def detect_panels(
+    image: str | Path | "Image.Image",
+    *,
+    max_depth: int = 3,
+) -> list[tuple[int, int, int, int]]:
+    """Detect panel bounding boxes in a figure via XY-cut whitespace gutters.
+
+    Parameters
+    ----------
+    image
+        Path to a PNG/JPG, or a ``PIL.Image.Image`` instance.
+    max_depth
+        Maximum recursion depth. Default 3 splits a 2×2 grid in one pass and
+        bottoms out before pathological over-segmentation.
+
+    Returns
+    -------
+    list[tuple[int, int, int, int]]
+        ``(x0, y0, x1, y1)`` for each detected panel, in source pixels.
+        Length 1 for single-plot figures; ≥2 for multi-panel figures.
+
+    Notes
+    -----
+    The algorithm is intentionally conservative — it only splits where the
+    whitespace mask shows a contiguous gutter of ≥3% of the corresponding
+    axis at ≥99% true-whitespace purity. Because the whitespace mask
+    excludes a 30-px edge-dilation zone around every glyph and axis line, a
+    corner legend does not carve out an interior gutter.
+
+    Used by :func:`is_single_plot` and by
+    :func:`vaultlab.figures.contract.suggest_figure_layout` (sub-goal 5.5).
+    """
+    if isinstance(image, (str, Path)):
+        mask = whitespace_mask(image)
+    else:
+        # PIL.Image input — bypass the cache (no stable mtime key).
+        rgb = np.asarray(image.convert("RGB"))
+        gray = skcolor.rgb2gray(rgb)
+        hsv = skcolor.rgb2hsv(rgb)
+        color_white = (hsv[..., 2] > 0.92) & (hsv[..., 1] < 0.08)
+        edges = canny(gray, sigma=2.0)
+        edges_dilated = binary_dilation(edges, disk(30))
+        mask = color_white & ~edges_dilated
+
+    H, W = mask.shape
+    return _xy_cut(mask, 0, 0, W, H, depth=0, max_depth=max_depth)
+
+
+def is_single_plot(image: str | Path | "Image.Image") -> bool:
+    """True iff the figure has exactly one detected panel.
+
+    Convenience predicate over :func:`detect_panels`. Use it in layout
+    dispatch to skip panel-cutting for single-plot figures (volcano, UMAP,
+    single bar chart, etc.).
+    """
+    return len(detect_panels(image)) == 1
+
+
+__all__ = [
+    "detect_panels",
+    "find_marker_offset",
+    "is_single_plot",
+    "whitespace_mask",
+]

@@ -389,11 +389,11 @@ def _check_recipe_conformance(img, recipe_metadata: dict[str, Any] | None) -> Au
             detail="no expected_panel_count in recipe metadata; skipping",
         )
     try:
-        from vaultlab.figures.understand.whitespace import detect_panels  # type: ignore
+        from vaultlab.figures.understand.whitespace import detect_panels
 
         panels = detect_panels(img)
         actual_panels = len(panels)
-    except (ImportError, Exception) as exc:
+    except Exception as exc:
         return AuditCheck(
             name="recipe_conformance",
             severity="warn",

@@ -104,10 +104,68 @@ triple_export(fig, "output/figs/figure_2", contract=contract)
 - 3D scientific visualization beyond matplotlib's reach.
 - Illustrator / Figma-first composition where Python only renders panels.
 
+## Single-plot vs multi-panel handling
+
+Comp-bio PhDs and wet-lab researchers regularly submit single-plot figures
+(one volcano, one UMAP, one bar chart). The previous panel-detection step
+incorrectly tried to subdivide these — splitting axis labels and corner
+legends into bogus "panels". Sub-goal 5.5 fixes this with a granular
+predicate plus a layout-dispatch helper:
+
+```python
+from vaultlab.figures.understand.whitespace import detect_panels, is_single_plot
+from vaultlab.figures.contract import suggest_figure_layout
+
+# Predicate — True iff the figure has exactly one detected panel.
+is_single_plot("path/to/volcano.png")  # True
+
+# Bbox list — length 1 for single-plot figures, ≥2 for multi-panel.
+detect_panels("path/to/4_panel_grid.png")  # [(x0, y0, x1, y1), ...]
+
+# Layout dispatch — picks a slide-layout name for the deck planner.
+suggest_figure_layout(
+    "path/to/volcano.png",
+    has_bullets=True,
+    has_caption=False,
+)  # "figure_with_bullets"
+```
+
+### Algorithm — recursive XY-cut on the whitespace mask
+
+The detector projects the whitespace mask (the same edge-dilated mask used
+by `find_marker_offset`) onto X and Y axes, finds contiguous "gutter" runs
+where ≥99% of pixels are true whitespace for ≥3% of the corresponding
+axis, then recurses into each segment. The whitespace mask already
+excludes a 30-px edge-dilation zone around every glyph and axis line, so
+corner legends do NOT carve out an interior gutter — only structural
+splits between subplots survive.
+
+Recursion depth is capped at 3 (so a 2×2 grid splits in one pass but we
+don't keep slicing inside each cell forever).
+
+### Layout dispatch routing
+
+`suggest_figure_layout` composes the predicate with caller-supplied
+context flags:
+
+| Input | Returned layout |
+| --- | --- |
+| multi-panel image (any flags) | `"figure_with_panels"` (caller must NOT subdivide further; route to `add_figure_only_slide`) |
+| single-plot, `has_bullets=True` | `"figure_with_bullets"` (`add_figure_slide` — figure left, bullets right) |
+| single-plot, wide aspect ≥2.0, no bullets | `"figure_only"` (`add_figure_only_slide` — hero) |
+| single-plot, `has_caption=True`, normal aspect | `"figure_with_side_caption"` |
+| single-plot, bare | `"figure_only"` |
+
+Single-plot figures are *never* classed as `figure_with_panels` — that's
+the regression the sub-goal addresses.
+
 ## Related
 
 - `vaultlab.figures.recipes` — 11 specific chart recipes (heatmap,
   volcano, UMAP overlay, …) that implement these rules.
 - `vaultlab.figures.publication.{color, legend, save, stamp, style}` —
   publication helpers consumed by recipes.
+- `vaultlab.figures.understand.whitespace` — panel detection + whitespace
+  primitives (`detect_panels`, `is_single_plot`, `whitespace_mask`,
+  `find_marker_offset`).
 - nature-figure upstream skill — `nature-skills/skills/nature-figure/`.
