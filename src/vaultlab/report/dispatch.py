@@ -27,6 +27,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
+from vaultlab.provenance import ProvenanceRecord, write_receipts
+
 ArtifactKind = Literal[
     "deck-audit",
     "litarc",
@@ -137,10 +139,25 @@ def write_artifact_html(
     **extra: Any,
 ) -> Path:
     """Render and write a vaultlab artifact as a single-file HTML."""
-    html_str = render_artifact_html(data, kind=kind, **extra)
+    resolved_kind = kind or _detect_kind(data)
+    html_str = render_artifact_html(data, kind=resolved_kind, **extra)
     p = Path(out_path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(html_str, encoding="utf-8")
+
+    # Audit-manifest contract (red line #2: no silent failures).
+    # Every artifact-producing entrypoint writes provenance receipts;
+    # see vaultlab/.claude/goals/vaultlab-north-star.md.
+    record = ProvenanceRecord(
+        generated_by="vaultlab.report.dispatch.write_artifact_html",
+        kind="html_report",
+        inputs=[],
+        params={
+            "artifact_kind": resolved_kind,
+            "size_chars": len(html_str),
+        },
+    )
+    write_receipts(str(p), record)
     return p
 
 

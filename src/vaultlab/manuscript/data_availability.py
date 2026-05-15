@@ -29,7 +29,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Literal
+
+from vaultlab.provenance import ProvenanceRecord, write_receipts
 
 
 @dataclass(frozen=True)
@@ -374,6 +377,58 @@ def audit_statement(text: str) -> list[StatementAuditFinding]:
     return findings
 
 
+def write_data_availability_statement(
+    out_path: Path | str,
+    statement: str,
+    *,
+    scenario: DAScenario | str | None = None,
+    inputs: list[str] | None = None,
+) -> Path:
+    """Write a Data Availability Statement to disk with provenance receipts.
+
+    The statement is wrapped in a minimal markdown header and audited for
+    common DAS failures. ``<out_path>.provenance.json`` and
+    ``<out_path>.method.md`` sidecars are written next to the output
+    (Red Line #2: no silent failures).
+    """
+    findings = audit_statement(statement)
+
+    lines: list[str] = [
+        "# Data Availability",
+        "",
+        statement.strip(),
+        "",
+    ]
+    if findings:
+        lines.append("## Audit findings")
+        lines.append("")
+        for f in findings:
+            lines.append(f"- **{f.severity.upper()}**: {f.message}")
+        lines.append("")
+
+    body = "\n".join(lines)
+    p = Path(out_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body, encoding="utf-8")
+
+    # Audit-manifest contract (red line #2: no silent failures).
+    scenario_value = ""
+    if scenario is not None:
+        scenario_value = scenario.value if isinstance(scenario, DAScenario) else str(scenario)
+    record = ProvenanceRecord(
+        generated_by="vaultlab.manuscript.data_availability.write_data_availability_statement",
+        kind="manuscript_data_availability",
+        inputs=list(inputs or []),
+        params={
+            "scenario": scenario_value,
+            "n_findings": len(findings),
+            "n_blockers": sum(1 for f in findings if f.severity == "blocker"),
+        },
+    )
+    write_receipts(str(p), record)
+    return p
+
+
 __all__ = [
     "DAScenario",
     "FAIR_CHECKLIST",
@@ -384,4 +439,5 @@ __all__ = [
     "StatementAuditFinding",
     "audit_statement",
     "statement_template",
+    "write_data_availability_statement",
 ]

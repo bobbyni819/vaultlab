@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from vaultlab.provenance import ProvenanceRecord, write_receipts
 from vaultlab.slides.deck import Deck, Slide
 from vaultlab.slides.layouts import LayoutSpec, get_layout
 from vaultlab.slides.themes import Theme, get_theme
@@ -82,6 +83,21 @@ def render_pptx(deck: Deck, output_path: str | Path) -> Path:
             pass
 
     pres.save(out)
+
+    # Audit-manifest contract (red line #2: no silent failures).
+    # Every artifact-producing entrypoint writes provenance receipts;
+    # see vaultlab/.claude/goals/vaultlab-north-star.md.
+    record = ProvenanceRecord(
+        generated_by="vaultlab.slides.render.render_pptx",
+        kind="slide_deck",
+        inputs=[],
+        params={
+            "n_slides": len(deck.slides),
+            "theme": deck.theme,
+            **{k: v for k, v in (deck.metadata or {}).items() if isinstance(v, (str, int, float, bool))},
+        },
+    )
+    write_receipts(str(out), record)
     return out
 
 

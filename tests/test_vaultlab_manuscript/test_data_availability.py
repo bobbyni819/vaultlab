@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 
 from vaultlab.manuscript.data_availability import (
     FAIR_CHECKLIST,
@@ -10,6 +12,7 @@ from vaultlab.manuscript.data_availability import (
     DAScenario,
     audit_statement,
     statement_template,
+    write_data_availability_statement,
 )
 
 
@@ -110,3 +113,33 @@ def test_audit_clean_statement_passes():
     # May or may not have warnings, but no blocker should fire on this clean statement.
     blockers = [f for f in findings if f.severity == "blocker"]
     assert blockers == []
+
+
+def test_write_data_availability_statement_emits_provenance(tmp_path: Path):
+    """Writing a DAS must emit provenance receipts (red line #2)."""
+    statement = (
+        "RNA-seq data are deposited at GEO under accession GSE123456. "
+        "Source data are provided in the supplementary materials."
+    )
+    out = tmp_path / "das.md"
+    written = write_data_availability_statement(
+        out,
+        statement,
+        scenario=DAScenario.PUBLIC_DEPOSIT,
+    )
+    assert Path(written) == out
+    assert out.exists()
+    body = out.read_text(encoding="utf-8")
+    assert "Data Availability" in body
+    assert "GSE123456" in body
+    # Provenance sidecars
+    prov_path = out.with_suffix(out.suffix + ".provenance.json")
+    method_path = out.with_suffix(out.suffix + ".method.md")
+    assert prov_path.exists()
+    assert method_path.exists()
+    record = json.loads(prov_path.read_text(encoding="utf-8"))
+    assert record["kind"] == "manuscript_data_availability"
+    assert (
+        record["generated_by"]
+        == "vaultlab.manuscript.data_availability.write_data_availability_statement"
+    )

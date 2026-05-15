@@ -27,7 +27,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
+
+from vaultlab.provenance import ProvenanceRecord, write_receipts
 
 Category = Literal[
     "sentence_architecture",
@@ -400,6 +403,70 @@ def check_us_spelling(text: str) -> list[tuple[str, str]]:
     return found
 
 
+def write_polish_report(
+    out_path: Path | str,
+    text: str,
+    *,
+    source_path: str = "",
+    max_words: int = 30,
+) -> Path:
+    """Run the polish checkers over ``text`` and write a markdown report
+    to ``out_path`` with provenance receipts (Red Line #2).
+
+    The report aggregates :func:`check_sentence_length` and
+    :func:`check_us_spelling` findings into a human-readable markdown
+    file. ``<out_path>.provenance.json`` + ``<out_path>.method.md`` are
+    written next to it.
+    """
+    long_sentences = check_sentence_length(text, max_words=max_words)
+    us_words = check_us_spelling(text)
+
+    lines: list[str] = [
+        "# Polish report",
+        "",
+    ]
+    if source_path:
+        lines.append(f"**Source:** {source_path}")
+        lines.append("")
+    lines.append(f"**Long sentences (> {max_words} words):** {len(long_sentences)}")
+    lines.append(f"**US-spelling tokens:** {len(us_words)}")
+    lines.append("")
+
+    if long_sentences:
+        lines.append("## Long sentences")
+        lines.append("")
+        for idx, count, sentence in long_sentences:
+            preview = sentence.strip().replace("\n", " ")
+            lines.append(f"- [{idx}] ({count} words) {preview}")
+        lines.append("")
+
+    if us_words:
+        lines.append("## US → UK spelling suggestions")
+        lines.append("")
+        for us_word, uk_word in us_words:
+            lines.append(f"- `{us_word}` → `{uk_word}`")
+        lines.append("")
+
+    body = "\n".join(lines)
+    p = Path(out_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body, encoding="utf-8")
+
+    # Audit-manifest contract (red line #2: no silent failures).
+    record = ProvenanceRecord(
+        generated_by="vaultlab.manuscript.polish.write_polish_report",
+        kind="manuscript_polish",
+        inputs=[source_path] if source_path else [],
+        params={
+            "max_words": max_words,
+            "long_sentences": len(long_sentences),
+            "us_spelling_hits": len(us_words),
+        },
+    )
+    write_receipts(str(p), record)
+    return p
+
+
 __all__ = [
     "BRITISH_ENGLISH_PAIRS",
     "POLISH_RULES",
@@ -410,4 +477,5 @@ __all__ = [
     "check_us_spelling",
     "find_rule",
     "rules_by_category",
+    "write_polish_report",
 ]

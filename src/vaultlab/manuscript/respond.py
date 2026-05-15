@@ -28,6 +28,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+
+from vaultlab.provenance import ProvenanceRecord, write_receipts
 
 
 class CommentKind(str, Enum):
@@ -286,6 +289,39 @@ def parse_reviewer_block(text: str, reviewer_index: int = 1) -> list[ReviewerCom
     return out
 
 
+def write_response_letter(
+    out_path: Path | str,
+    letter: ResponseLetter,
+    *,
+    inputs: list[str] | None = None,
+) -> Path:
+    """Render the response letter and write it to disk with provenance receipts.
+
+    Emits ``<out_path>.provenance.json`` and ``<out_path>.method.md`` sidecars
+    next to the markdown output (Red Line #2: no silent failures).
+    """
+    md = render_response_letter(letter)
+    p = Path(out_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(md, encoding="utf-8")
+
+    # Audit-manifest contract (red line #2: no silent failures).
+    record = ProvenanceRecord(
+        generated_by="vaultlab.manuscript.respond.write_response_letter",
+        kind="manuscript_response",
+        inputs=list(inputs or []),
+        params={
+            "reviewer": letter.reviewer,
+            "n_comments": len(letter.comments),
+            "n_author_input_needed": sum(
+                1 for c in letter.comments if c.action == ActionType.AUTHOR_INPUT_NEEDED
+            ),
+        },
+    )
+    write_receipts(str(p), record)
+    return p
+
+
 __all__ = [
     "ActionType",
     "CommentKind",
@@ -296,4 +332,5 @@ __all__ = [
     "render_response_letter",
     "stable_id",
     "suggest_action",
+    "write_response_letter",
 ]

@@ -184,21 +184,6 @@ class TestNoSilentFailures:
             "has no precedent in code."
         )
 
-    @pytest.mark.xfail(
-        reason=(
-            "Audit-manifest contract is sub-goal 1.2 of the north-star plan. "
-            "vaultlab.provenance.write_receipts (which emits .provenance.json "
-            "+ .method.md sidecars) IS the audit-manifest contract — the "
-            "terms are aliased. As of 2026-05-15 it is wired into "
-            "figures/publication/save.py, slides/deck.py, research/{lineage,"
-            "report}.py, workflows/_provenance.py, and onboarding/"
-            "project_init.py. The remaining gap is citations/*, manuscript/*, "
-            "and report/*; sub-goal 1.2 closes those. This xfail becomes a "
-            "passing assertion when every entrypoint in ARTIFACT_ENTRYPOINTS "
-            "calls write_receipts."
-        ),
-        strict=False,
-    )
     def test_every_artifact_entrypoint_writes_manifest(self) -> None:
         """Will pass after 1.2 wires write_receipts into the holdouts."""
         # Scan known artifact-producing modules; assert each has at

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from vaultlab.manuscript.respond import (
     ActionType,
     CommentKind,
@@ -12,6 +15,7 @@ from vaultlab.manuscript.respond import (
     render_response_letter,
     stable_id,
     suggest_action,
+    write_response_letter,
 )
 
 
@@ -117,3 +121,33 @@ def test_render_response_letter():
     assert "AUTHOR INPUT NEEDED" in md
     assert "8-week revision window" in md
     assert "Thank you for your time." in md
+
+
+def test_write_response_letter_emits_provenance(tmp_path: Path):
+    """Writing a response letter must emit provenance receipts (red line #2)."""
+    letter = ResponseLetter(
+        reviewer=2,
+        comments=[
+            ReviewerComment(
+                stable_id="R2-C1",
+                reviewer=2,
+                quote="Clarify the controls.",
+                kind=CommentKind.RESULT_QUESTION,
+                action=ActionType.ACCEPT_TEXT,
+            ),
+        ],
+    )
+    out = tmp_path / "response-r2.md"
+    written = write_response_letter(out, letter)
+    assert Path(written) == out
+    assert out.exists()
+    text = out.read_text(encoding="utf-8")
+    assert "# Response to Reviewer 2" in text
+    # Provenance sidecars
+    prov_path = out.with_suffix(out.suffix + ".provenance.json")
+    method_path = out.with_suffix(out.suffix + ".method.md")
+    assert prov_path.exists(), f"missing provenance sidecar: {prov_path}"
+    assert method_path.exists(), f"missing method sidecar: {method_path}"
+    record = json.loads(prov_path.read_text(encoding="utf-8"))
+    assert record["kind"] == "manuscript_response"
+    assert record["generated_by"] == "vaultlab.manuscript.respond.write_response_letter"

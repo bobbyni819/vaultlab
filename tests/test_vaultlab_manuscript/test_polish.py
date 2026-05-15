@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from vaultlab.manuscript.polish import (
     BRITISH_ENGLISH_PAIRS,
     POLISH_RULES,
@@ -10,6 +13,7 @@ from vaultlab.manuscript.polish import (
     check_us_spelling,
     find_rule,
     rules_by_category,
+    write_polish_report,
 )
 
 
@@ -87,3 +91,22 @@ def test_check_us_spelling_skips_already_british():
     text = "We analysed behaviour and colour."
     findings = check_us_spelling(text)
     assert findings == []
+
+
+def test_write_polish_report_emits_provenance(tmp_path: Path):
+    """Writing a polish report must emit provenance receipts (red line #2)."""
+    text = "We analyzed the behavior of cells. " + ("word " * 35) + "."
+    out = tmp_path / "polish-report.md"
+    written = write_polish_report(out, text, source_path="manuscript.md")
+    assert Path(written) == out
+    assert out.exists()
+    body = out.read_text(encoding="utf-8")
+    assert "Polish report" in body or "polish" in body.lower()
+    # Provenance sidecars
+    prov_path = out.with_suffix(out.suffix + ".provenance.json")
+    method_path = out.with_suffix(out.suffix + ".method.md")
+    assert prov_path.exists()
+    assert method_path.exists()
+    record = json.loads(prov_path.read_text(encoding="utf-8"))
+    assert record["kind"] == "manuscript_polish"
+    assert record["generated_by"] == "vaultlab.manuscript.polish.write_polish_report"
