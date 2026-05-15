@@ -32,7 +32,7 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
 | 4 | Annotated Pull Request | ✅ | `severity_card`, `margin_glossary` | `vaultlab.slides.audit_html.build_audit_report_html` (per-slide critique with severity tags) + `vaultlab.citations.report_html.build_citation_audit_html` (per-citation cards) |
-| 5 | PR Writeup for Reviewers | 🟡 | `matrix_table`, `compare_panel` | None — release notes still markdown; v0.0.5 changelog HTML is a candidate |
+| 5 | PR Writeup for Reviewers | ✅ | `matrix_table`, `compare_panel`, `collapsible_step` | `vaultlab.report.pr_writeup_html.build_pr_writeup_html` — TL;DR + breaking chips + before/after test summary + per-file roll-up table + per-commit collapsibles; sub-goal 4.4 |
 | 6 | Module Map | ✅ | `svg_arg_graph`, `card_grid` | `vaultlab.report.state_dashboard_html` (composite consumer) — `vaultlab.*` package graph + legend cards; sub-goal 4.2 |
 
 ### Design & prototypes
@@ -49,7 +49,7 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
 | 11 | SVG Figure Sheet | 🟡 | `svg_arg_graph` + copy | Used inline in lit-arc HTML (citation graph) but not as a standalone schematic library |
-| 12 | Annotated Flowchart | 🟡 | `svg_arg_graph`, `collapsible_step` | None — research-pipeline phase explainer not yet HTML |
+| 12 | Annotated Flowchart | ✅ | `svg_arg_graph`, `collapsible_step` | `vaultlab.report.flowchart_html.build_flowchart_html` — LTR rank-laid SVG + per-step expandable detail with duration / failure-mode badges; sub-goal 4.4 |
 | 13 | Arrow-Key Slide Deck | ✅ | `keynav_deck` | `vaultlab.slides.preview_html.build_deck_preview_html` (same as #10) |
 
 ### Research & learning (highest-fit category)
@@ -64,7 +64,7 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 | # | Pattern | Status | Primitive | Real consumer |
 |---|---|---|---|---|
 | 16 | Weekly Status | ✅ | `tldr_box`, `card_grid`, `severity_card` | `vaultlab.report.weekly_status_html.build_weekly_status_html` — TL;DR + metrics + shipped / in-flight / blocker grids; commit 6bd6dc6 |
-| 17 | Incident Timeline | 🟡 | `timeline`, `tabbed_block` | None — pipeline postmortem HTML not wired |
+| 17 | Incident Timeline | ✅ | `timeline`, `tabbed_block` | `vaultlab.report.incident_timeline_html.build_incident_timeline_html` — minute-by-minute timeline + tabbed log excerpts + followup checklist; sub-goal 4.4 |
 
 ### Custom editors (two-way HTML)
 
@@ -77,13 +77,15 @@ This audit answers: for each of Thariq's 20 patterns, is the underlying primitiv
 ## Summary
 
 - **Total patterns:** 20
-- **✅ Implemented (primitive + consumer):** 12 (#1, #3, #4, #6, #10, #13, #14, #15, #16, #18, #19, #20)
-- **🟡 Partial (primitive exists, no consumer yet):** 8 (#2, #5, #7, #8, #9, #11, #12, #17)
+- **✅ Implemented (primitive + consumer):** 15 (#1, #3, #4, #5, #6, #10, #12, #13, #14, #15, #16, #17, #18, #19, #20)
+- **🟡 Partial (primitive exists, no consumer yet):** 5 (#2, #7, #8, #9, #11)
 - **❌ Missing (no primitive):** 0
 
-**Key finding:** every primitive is in `vaultlab.report` already. The remaining 8 patterns are not infrastructure gaps — they're consumer gaps. We have the LEGO bricks; we just haven't built every model.
+**Key finding:** every primitive is in `vaultlab.report` already. The remaining 5 patterns are not infrastructure gaps — they're consumer gaps. We have the LEGO bricks; we just haven't built every model.
 
 **Sub-goal 4.2 update (2026-05-15):** patterns #1, #6, #15, #16, #19 all shipped. Patterns #6 + #15 wired as the composite `state_dashboard_html` consumer per the audit's recommendation; #1 and #19 ship as standalone consumers (`approaches_compare_html`, `feature_flag_editor`). See `.claude/goals/html-patterns-top4-implementation.md`.
+
+**Sub-goal 4.4 update (2026-05-15):** patterns #5, #12, #17 all shipped as standalone consumers — `pr_writeup_html`, `flowchart_html`, `incident_timeline_html`. Each writes Red Line #2 provenance sidecars. See `.claude/goals/html-patterns-pr-flowchart-incident.md`.
 
 ## Top-5 highest-fit-for-vaultlab patterns to wire next
 

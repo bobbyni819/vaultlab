@@ -53,7 +53,27 @@ from vaultlab.report.feature_flag_editor import (
     build_feature_flag_editor,
     write_feature_flag_editor,
 )
+from vaultlab.report.flowchart_html import (
+    Flowchart,
+    FlowStep,
+    build_flowchart_html,
+    write_flowchart_html,
+)
 from vaultlab.report.html import Theme, render_report, write_report
+from vaultlab.report.incident_timeline_html import (
+    IncidentChecklist,
+    IncidentReport,
+    TimelineEntry,
+    build_incident_timeline_html,
+    write_incident_timeline_html,
+)
+from vaultlab.report.pr_writeup_html import (
+    CommitEntry,
+    FileChange,
+    PRWriteup,
+    build_pr_writeup_html,
+    write_pr_writeup_html,
+)
 from vaultlab.report.state_dashboard_html import (
     StateDashboard,
     build_state_dashboard_html,
@@ -69,14 +89,25 @@ __all__ = [
     "Approach",
     "ApproachesCompare",
     "ArtifactKind",
+    "CommitEntry",
     "FeatureFlagConfig",
+    "FileChange",
     "FlagGroup",
+    "FlowStep",
+    "Flowchart",
+    "IncidentChecklist",
+    "IncidentReport",
+    "PRWriteup",
     "StateDashboard",
     "Theme",
+    "TimelineEntry",
     "UnknownArtifact",
     "WeeklyStatusReport",
     "build_approaches_compare_html",
     "build_feature_flag_editor",
+    "build_flowchart_html",
+    "build_incident_timeline_html",
+    "build_pr_writeup_html",
     "build_state_dashboard_html",
     "build_weekly_status_html",
     "components",
@@ -86,6 +117,9 @@ __all__ = [
     "write_approaches_compare_html",
     "write_artifact_html",
     "write_feature_flag_editor",
+    "write_flowchart_html",
+    "write_incident_timeline_html",
+    "write_pr_writeup_html",
     "write_report",
     "write_state_dashboard_html",
     "write_weekly_status_html",
