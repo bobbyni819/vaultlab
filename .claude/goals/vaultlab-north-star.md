@@ -98,7 +98,7 @@ Vaultlab is the **LAYER ABOVE analysis**, not the analysis itself.
 
 _To be populated as criteria are satisfied._
 
-- ⏳ Criterion #1 (adoption signal): pending — no testimony received yet
+- 🟡 Criterion #1 (adoption signal): channel LIVE at https://github.com/bobbyni819/vaultlab/discussions — welcome thread #1 published inviting testimonies (Announcements category). Awaiting first non-Bobby contribution. NOTE: pinning requires UI click (GitHub GraphQL exposes `PinnedDiscussion` type but no public mutation to create one); Bobby to pin manually at https://github.com/bobbyni819/vaultlab/discussions/1.
 - 🟡 Criterion #2 (audit-grade enforced): partial — invariant test framework wired in CI (2026-05-14, `tests/test_vaultlab_invariants/test_red_lines.py` + `.github/workflows/invariants.yml`). 6 pass / 2 xfail. Universal `.audit.json` sidecar enforcement still pending sub-goal 1.2.
 - ⏳ Criterion #3 (plug-in companion): partial — most modules work standalone; per-module fresh-fixture tests not yet added
 - ⏳ Criterion #4 (<30-min onboarding): pending — scripted clean-VM test not yet wired
