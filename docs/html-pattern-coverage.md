@@ -1,0 +1,112 @@
+# HTML pattern coverage audit
+
+**Date:** 2026-05-15
+**Sub-goal:** 4.1 of the north-star plan (`.claude/goals/vaultlab-north-star-plan.md`)
+**Source:** the 20 patterns from `G:/My Drive/Knowledge/vaultlab/Output/Plans/html-and-nature-skills-2026-05-12.html` (Section 8), originally derived from Thariq's HTML-effectiveness gallery (`thariqs.github.io/html-effectiveness`).
+
+This audit answers: for each of Thariq's 20 patterns, is the underlying primitive implemented in `vaultlab.report`? Is a real vaultlab consumer using it? What's left?
+
+## Legend
+
+- ✅ **Implemented** — primitive exists AND ≥1 real vaultlab consumer uses it
+- 🟡 **Partial** — primitive exists but no consumer wired yet (component is callable; nobody calls it from a real output)
+- ❌ **Missing** — primitive not in `vaultlab.report` at all
+- 🆕 **Editor variant** — implemented via `vaultlab.report.editors` (interactive two-way HTML)
+
+## Coverage table
+
+### Exploration & planning
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 1 | Three Code Approaches | 🟡 | `compare_panel`, `card_grid` | None — designed for SPEC docs but no SPEC currently uses the HTML output |
+| 2 | Visual Design Directions | 🟡 | `card_grid` + inline SVG | None — figure-contract draft mode not yet HTML-rendered |
+| 3 | Implementation Plan | ✅ | `timeline`, `svg_arg_graph`, `tldr_box` | `vaultlab.workflows.reasoning_html.build_reasoning_report_html` for crosstalk plans; this very plan doc is HTML |
+
+### Code review & understanding
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 4 | Annotated Pull Request | ✅ | `severity_card`, `margin_glossary` | `vaultlab.slides.audit_html.build_audit_report_html` (per-slide critique with severity tags) + `vaultlab.citations.report_html.build_citation_audit_html` (per-citation cards) |
+| 5 | PR Writeup for Reviewers | 🟡 | `matrix_table`, `compare_panel` | None — release notes still markdown; v0.0.5 changelog HTML is a candidate |
+| 6 | Module Map | 🟡 | `svg_arg_graph`, `card_grid` | None — `system-state-<date>.md` still markdown |
+
+### Design & prototypes
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 7 | Living Design System | 🟡 | `card_grid` + clipboard-copy | None — palette/token swatches not yet rendered |
+| 8 | Component Variants | 🟡 | `card_grid` dense mode | None — slide-layout inventory not yet rendered |
+| 9 | Animation Sandbox | 🟡 | `template_editor` w/ slider | None — annotation-timing tuner not yet wired |
+| 10 | Clickable Flow | ✅ | `keynav_deck` | `vaultlab.slides.preview_html.build_deck_preview_html` (arrow-key nav HTML preview of decks) |
+
+### Diagrams & presentations
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 11 | SVG Figure Sheet | 🟡 | `svg_arg_graph` + copy | Used inline in lit-arc HTML (citation graph) but not as a standalone schematic library |
+| 12 | Annotated Flowchart | 🟡 | `svg_arg_graph`, `collapsible_step` | None — research-pipeline phase explainer not yet HTML |
+| 13 | Arrow-Key Slide Deck | ✅ | `keynav_deck` | `vaultlab.slides.preview_html.build_deck_preview_html` (same as #10) |
+
+### Research & learning (highest-fit category)
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 14 | How a Feature Works | ✅ | `tldr_box`, `collapsible_step`, `tabbed_block`, `margin_glossary` | `vaultlab.kb.dossier_html.build_dossier_report_html` (9-section dossier with tabbed view + freshness badge) |
+| 15 | Concept Explainer | 🟡 | custom JS over `svg_arg_graph` | None — mechanism explainers in lit-arc are static, not interactive |
+
+### Reports
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 16 | Weekly Status | 🟡 | `tldr_box`, `matrix_table`, SVG bar | None — `/weekly` and `/eod` still write to Google Doc, not HTML |
+| 17 | Incident Timeline | 🟡 | `timeline`, `tabbed_block` | None — pipeline postmortem HTML not wired |
+
+### Custom editors (two-way HTML)
+
+| # | Pattern | Status | Primitive | Real consumer |
+|---|---|---|---|---|
+| 18 | Ticket Triage Board | 🆕✅ | `kanban_board` | `vaultlab.report.editors.build_citation_triage_editor` + `build_slide_reorder_editor` |
+| 19 | Feature Flag Editor | 🟡 | extend `template_editor` w/ toggles | None — vaultlab config editor not yet wired |
+| 20 | Prompt Tuner | 🆕✅ | `template_editor` | `vaultlab.report.editors.build_deckplan_tuner` |
+
+## Summary
+
+- **Total patterns:** 20
+- **✅ Implemented (primitive + consumer):** 7 (#3, #4, #10, #13, #14, #18, #20)
+- **🟡 Partial (primitive exists, no consumer yet):** 13
+- **❌ Missing (no primitive):** 0
+
+**Key finding:** every primitive is in `vaultlab.report` already. The remaining 13 patterns are not infrastructure gaps — they're consumer gaps. We have the LEGO bricks; we just haven't built every model.
+
+## Top-5 highest-fit-for-vaultlab patterns to wire next
+
+Prioritization criteria: (a) directly serves a real research workflow Bobby or a target adopter would use; (b) reuses existing primitives without inventing new ones; (c) low engineering cost (one consumer module).
+
+| Rank | Pattern | Proposed consumer | Why high-fit |
+|---|---|---|---|
+| 1 | #16 Weekly Status | HTML view of `system-state-<date>.md` + `/weekly` output | Bobby writes a state doc every few days; HTML view replaces brittle markdown render and adds the velocity bar. Direct work-log improvement. |
+| 2 | #15 Concept Explainer | Interactive lit-arc mechanism explainer (CCI heatmap with click-to-highlight) | Lit-arc narratives are vaultlab's most-used output; making the central mechanism diagram interactive is high-leverage for both Bobby and adopters. |
+| 3 | #6 Module Map | HTML render of `system-state-<date>.md` showing the module graph | Pairs with #16; adopters needing to learn vaultlab's surface benefit. Reuses `svg_arg_graph`. |
+| 4 | #19 Feature Flag Editor | Two-way HTML editor for `~/.config/vaultlab/dispatch.json` (SPEC-F) | Couples nicely with SPEC-F (task-weight dispatch); adopters tune model routing per-workflow. Extends `template_editor`. |
+| 5 | #1 Three Code Approaches | SPEC-A/B/C/D/E/F dossier HTML output | The pending SPEC backlog already calls for "approach A/B/C with trade-offs" presentation; this is the natural HTML home. |
+
+## Out-of-scope for vaultlab
+
+- **#7 Living Design System (token swatches)** — vaultlab has 2 palettes (NMI_PASTEL + Nature-2026). A token-swatch HTML is overkill for so few tokens; this pattern is for design systems with 100+ tokens.
+- **#9 Animation Sandbox** — annotation timing is not a tunable user wants to fiddle with; vaultlab's default annotation timing should "just work" per the slide hard rules.
+
+## Recommended next sub-goal
+
+**Sub-goal 4.2 (in the north-star plan) should target patterns #16 + #15 + #6.** Together they form a "vaultlab state dashboard" HTML output (`/state-html` slash command) that:
+
+1. Renders the most-recent `system-state-<date>.md` as HTML
+2. Embeds an `svg_arg_graph` module map of `vaultlab.*` packages
+3. Adds an interactive mechanism explainer for the currently-active lit-arc
+
+Estimated effort: one `/goal "build vaultlab.report.state_html consumer + /state-html slash command"` invocation.
+
+## Followup tracking
+
+- This audit's findings update sub-goal 4.2's success criteria. The plan's "top-5" target stays the same in cardinality but the specific patterns chosen are now justified by data.
+- Sub-goal 4.3 (catalog SKILL.md) remains valid — but should be authored AFTER 4.2 lands so the catalog includes the new consumers as examples.

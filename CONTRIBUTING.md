@@ -12,6 +12,19 @@ Thanks for your interest. vaultlab is a side project under active alpha developm
 
 vaultlab has one maintainer (Bobby). Issues are reviewed **weekly** (typically weekends). For urgent issues, mention `@bobbyni819` in the issue.
 
+## The three-example rule (for new primitives)
+
+Before proposing a new public primitive (a new module, role, recipe, slash command, or top-level subpackage), gather **at least three concrete use cases** from real research workflows. Document them in the proposal issue.
+
+Why this rule exists: vaultlab's scope philosophy (see [`.claude/goals/vaultlab-north-star.md`](.claude/goals/vaultlab-north-star.md)) is "any purpose the existing primitives can serve." New primitives are only added when ≥3 use cases prove that the existing surface cannot compose to cover the need. This guards against premature abstraction and keeps the API small.
+
+The three examples must:
+- Come from real or realistically-scoped research tasks (not "someone might want to…")
+- Be distinct (not three variants of the same underlying need)
+- Show clearly why composing existing primitives doesn't work
+
+This rule applies in addition to the specific provenance rules below (figure recipes need ≥3 published examples in `corpus/sources.json`; roles need real workflow examples in the proposal; data-modality wrappers need ≥3 sample datasets).
+
 ## How to contribute
 
 ### Reporting bugs

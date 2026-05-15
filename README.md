@@ -305,6 +305,8 @@ The combination is the value. Several rows nobody else even attempts. If you onl
 
 **Contributors:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`docs/graphics-guide.md`](docs/graphics-guide.md)
 
+**Used vaultlab? Tell us!** Even a short note about what worked or what was rough is the primary adoption signal the project tracks. Open a [`[USED-IT]` testimony](https://github.com/bobbyni819/vaultlab/issues/new?template=testimony.md) or post in [Discussions](https://github.com/bobbyni819/vaultlab/discussions).
+
 ---
 
 ## Influences
