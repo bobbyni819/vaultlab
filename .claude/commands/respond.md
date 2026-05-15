@@ -89,6 +89,8 @@ Set `evidence_ref` to a concrete location in the revised manuscript
 ### Step 3 — Render
 
 ```python
+from vaultlab.manuscript.respond import write_response_letter
+
 letter = ResponseLetter(
     reviewer=<N>,
     opening="We thank the reviewer for the constructive comments...",
@@ -96,7 +98,11 @@ letter = ResponseLetter(
     closing="We hope these revisions address the reviewer's concerns.",
 )
 md_path = "response-to-reviewer-<N>.md"
-Path(md_path).write_text(render_response_letter(letter), encoding="utf-8")
+
+# v0.0.5 one-call writer — renders the letter and writes Red Line #2
+# provenance sidecars (.provenance.json + .method.md) next to the .md.
+# Prefer this over plain Path(...).write_text(render_response_letter(...)).
+write_response_letter(md_path, letter, inputs=["<reviewer-block-path>"])
 ```
 
 ### Step 4 — HTML view

@@ -43,6 +43,7 @@ from vaultlab.manuscript.polish import (
     check_us_spelling,
     POLISH_RULES,
     WORKFLOW_STEPS,
+    write_polish_report,
 )
 
 text = Path("<manuscript-path>").read_text(encoding="utf-8")
@@ -50,6 +51,18 @@ text = Path("<manuscript-path>").read_text(encoding="utf-8")
 # Automated checks
 long_sentences = check_sentence_length(text, max_words=30)
 us_words = check_us_spelling(text)
+
+# v0.0.5 one-call writer — long-sentence + US-spelling findings as a
+# markdown report with Red Line #2 provenance receipts. Use this for the
+# `--check-only` fast path; the full polish pass below also runs it.
+report_path = Path("<manuscript-stem>-polish-report.md")
+write_polish_report(
+    report_path,
+    text,
+    source_path="<manuscript-path>",
+    max_words=30,
+)
+# Sidecars: <report_path>.provenance.json + <report_path>.method.md
 ```
 
 ### Step 2 — LLM polish pass (default mode)

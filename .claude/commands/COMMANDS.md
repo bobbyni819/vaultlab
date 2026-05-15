@@ -58,6 +58,13 @@ For v0.0.1, most commands print "not yet implemented." See [Roadmap](../README.m
 - `/journal-club <doi-or-summary>` — paper-type-aware journal-club deck (en + zh-CN)
 - `/figure-contract "<conclusion>"` — figure-contract before plotting (conclusion → evidence chain → archetype → backend → export)
 
+### v0.0.5 primitives exposed as slash commands
+- `/full-reader <paper-source>` — bilingual figure-aware paper.md reader (DOI / paperclip-ID / PDF / arXiv ID / URL) with stable anchor IDs (S/C/F/T)
+- `/run-analysis <project-dir>` — vaultlab.analysis pipeline; tidy CSV/Parquet → stats + figures + methods.md + provenance receipts
+- `/state-dashboard <state-md-or-json>` — render a project state doc as an HTML dashboard (Pattern #16 + #6 + #15 composed)
+- `/review-deck <pptx-path>` — unified slide self-review (font / overlap / descriptive-title / story-arc) with critical-first HTML report
+- `/triage-citations <citations-json>` — drag-drop citation triage kanban (Accept / Reject / Needs review / Flag for plagiarism)
+
 ### Slides (flagship)
 - `/build-deck <topic> --intent <kind> --theme <name> --length <N>` — end-to-end deck generation
 - `/paper-to-slides <doi>` — extract figures from a paper, build journal-club deck

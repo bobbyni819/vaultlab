@@ -33,10 +33,21 @@ Drives `vaultlab.manuscript.data_availability`. Three checks:
 from vaultlab.manuscript.data_availability import (
     audit_statement, REPOSITORIES, FAIR_CHECKLIST,
     statement_template, DAScenario,
+    write_data_availability_statement,
 )
 
 text = Path("<das-path>").read_text() if Path("<das-path>").exists() else "<das-text>"
 findings = audit_statement(text)
+
+# v0.0.5 one-call writer — writes the statement + audit findings as a
+# markdown file with Red Line #2 provenance receipts. Use this when you
+# want the audited DAS persisted (not just the in-memory findings list).
+write_data_availability_statement(
+    "das-statement.md",
+    text,
+    scenario=DAScenario.PUBLIC_DEPOSIT,  # or whatever --scenario resolved to
+    inputs=["<das-path>"],
+)
 ```
 
 Findings come back as `StatementAuditFinding(severity, message)` —
