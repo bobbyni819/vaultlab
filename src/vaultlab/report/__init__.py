@@ -42,15 +42,23 @@ from vaultlab.report.dispatch import (
     write_artifact_html,
 )
 from vaultlab.report.html import Theme, render_report, write_report
+from vaultlab.report.weekly_status_html import (
+    WeeklyStatusReport,
+    build_weekly_status_html,
+    write_weekly_status_html,
+)
 
 __all__ = [
     "ArtifactKind",
     "Theme",
     "UnknownArtifact",
+    "WeeklyStatusReport",
+    "build_weekly_status_html",
     "components",
     "editors",
     "render_artifact_html",
     "render_report",
     "write_artifact_html",
     "write_report",
+    "write_weekly_status_html",
 ]
