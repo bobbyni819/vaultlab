@@ -64,6 +64,23 @@ smoke test in CI or on a fresh machine before you trust the heavier
 slash-command workflows. Customize: edit `inputs/paper.json` (or pass
 `--out-dir <other>`) and re-run.
 
+### Reproduce the onboarding test
+
+The 30-min time-to-first-artifact bar is verified in CI on every push
+via [`.github/workflows/onboarding.yml`](.github/workflows/onboarding.yml) —
+a clean Python 3.13 Docker container runs `pip install` from the working
+tree, then `vaultlab demo`, and asserts the elapsed wall-clock is under
+the bar. To reproduce locally:
+
+```bash
+docker build -f Dockerfile.onboarding -t vaultlab-onboarding .
+docker run --rm vaultlab-onboarding
+```
+
+A green run of the **Onboarding (Time-to-First-Artifact)** workflow is
+the published evidence that north-star Criterion #4 (under-30-min cold
+start to first artifact) is met on each commit to `main`.
+
 ## About
 
 I'm Bobby Ni, a PhD student in Biomedical Engineering in the Hickey Lab at Duke University. I'm doing wet-lab, spatial omics work and building computational tools to create virtual tissue simulations.

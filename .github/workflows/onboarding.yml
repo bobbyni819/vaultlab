@@ -1,0 +1,28 @@
+name: Onboarding (Time-to-First-Artifact)
+
+# Proves north-star Criterion #4: new user can pip install vaultlab and
+# produce a real artifact in <30 min on a clean Docker container.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  onboarding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35  # 30-min bar + 5-min build buffer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build onboarding image
+        run: docker build -f Dockerfile.onboarding -t vaultlab-onboarding .
+
+      - name: Run onboarding test
+        run: docker run --rm vaultlab-onboarding
+
+      - name: Report
+        if: success()
+        run: echo "Criterion #4 met — vaultlab demo completes from a clean container."

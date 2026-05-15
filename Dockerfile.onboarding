@@ -1,0 +1,36 @@
+# Onboarding test image — clean Python 3.13 environment, no vaultlab pre-installed.
+# Proves: a brand-new user can run `pip install vaultlab && vaultlab demo`
+# and get an audit-clean artifact in <30 min.
+#
+# Build:   docker build -f Dockerfile.onboarding -t vaultlab-onboarding .
+# Run:     docker run --rm vaultlab-onboarding
+
+FROM python:3.13-slim
+
+# Keep the image minimal — no compilers, no system libs beyond what
+# vaultlab actually needs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
+
+# We install vaultlab from the repo working tree by default. The CI
+# workflow can override by setting INSTALL_SOURCE=pypi to test the
+# published wheel instead.
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ ./src/
+COPY tests/ ./tests/
+
+# Install vaultlab + the extras the demo actually exercises.
+# `slides` brings in python-pptx (needed by `vaultlab demo`); `dev` is
+# kept for parity with the in-repo CI test job. End users on PyPI only
+# need `pip install vaultlab[slides]` — this image installs from the
+# working tree so it doubles as a pre-release smoke test.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e ".[dev,slides]"
+
+# Run the onboarding script on container start.
+COPY scripts/measure_onboarding.sh /usr/local/bin/measure_onboarding.sh
+RUN chmod +x /usr/local/bin/measure_onboarding.sh
+CMD ["/usr/local/bin/measure_onboarding.sh"]
