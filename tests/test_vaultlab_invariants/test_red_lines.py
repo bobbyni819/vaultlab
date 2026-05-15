@@ -187,16 +187,31 @@ class TestNoSilentFailures:
     @pytest.mark.xfail(
         reason=(
             "Audit-manifest contract is sub-goal 1.2 of the north-star plan. "
-            "Will become a passing assertion once every artifact-producing "
-            "entrypoint emits a .audit.json sidecar."
+            "vaultlab.provenance.write_receipts (which emits .provenance.json "
+            "+ .method.md sidecars) IS the audit-manifest contract — the "
+            "terms are aliased. As of 2026-05-15 it is wired into "
+            "figures/publication/save.py, slides/deck.py, research/{lineage,"
+            "report}.py, workflows/_provenance.py, and onboarding/"
+            "project_init.py. The remaining gap is citations/*, manuscript/*, "
+            "and report/*; sub-goal 1.2 closes those. This xfail becomes a "
+            "passing assertion when every entrypoint in ARTIFACT_ENTRYPOINTS "
+            "calls write_receipts."
         ),
         strict=False,
     )
     def test_every_artifact_entrypoint_writes_manifest(self) -> None:
-        """Will pass after 1.2 wires the audit-manifest contract."""
+        """Will pass after 1.2 wires write_receipts into the holdouts."""
         # Scan known artifact-producing modules; assert each has at
-        # least one call to a manifest writer.
+        # least one call to a provenance/manifest writer. We accept any
+        # of: write_receipts, ProvenanceRecord, write_manifest,
+        # AuditManifest, or a literal .provenance.json / .audit.json
+        # path string.
         unscanned_entrypoints = []
+        manifest_pattern = re.compile(
+            r"write_receipts|ProvenanceRecord|"
+            r"write_manifest|AuditManifest|"
+            r"\.provenance\.json|\.audit\.json"
+        )
         for module_path, _func_name in ARTIFACT_ENTRYPOINTS:
             full = SRC_ROOT.parent / module_path
             if not full.exists():
@@ -207,13 +222,13 @@ class TestNoSilentFailures:
             found_manifest = False
             for f in files:
                 text = f.read_text(encoding="utf-8")
-                if re.search(r"write_manifest|\.audit\.json|AuditManifest", text):
+                if manifest_pattern.search(text):
                     found_manifest = True
                     break
             if not found_manifest:
                 unscanned_entrypoints.append(module_path)
         assert not unscanned_entrypoints, (
-            f"Entrypoints without manifest writes: {unscanned_entrypoints}"
+            f"Entrypoints without manifest/provenance writes: {unscanned_entrypoints}"
         )
 
 
