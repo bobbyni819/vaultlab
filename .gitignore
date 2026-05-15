@@ -62,6 +62,7 @@ env/
 htmlcov/
 MANIFEST
 Output/
+examples/**/out/
 runs/
 scripts/_l4_state/
 scripts/_trial_acquisition_cache/

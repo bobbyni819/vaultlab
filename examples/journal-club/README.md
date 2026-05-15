@@ -1,26 +1,44 @@
-# Journal-club deck example
+# Journal Club
 
-`expected_outputs/journal-club-pentimalli-2026-05-05.pptx` is a 16-slide journal-club deck VaultLab built for Pentimalli & Rajewsky 2025, *Cell Systems* (3D NSCLC atlas via CosMx + SHG ECM imaging). All 7 figures were extracted from the paper PDF; layouts auto-picked from each figure's aspect ratio; speaker notes auto-derived from a Tier-A summary; bullets animated click-by-click; inline emphasis applied (bold ALL-CAPS labels + accent-color take-aways).
+**What this does:** End-to-end pipeline that takes a single DOI for a journal-club
+target and produces a slide deck (`.pptx`) plus a Tier-A-style markdown summary
+(`paper.md`). Composes `vaultlab.research` (best-effort metadata enrichment) with
+the dict-plan slide builder in `vaultlab.slides`.
 
-Open the `.pptx` to see the click-through animations. The README's "See it in action" section embeds a static GIF cycling through every slide and two representative still screenshots.
+**Primitives composed:**
 
-**Build time:** ~90 seconds. **Audit:** 0 overflow / 0 overlap.
+- `vaultlab.research.ResearchClient.get_paper(doi)` — best-effort enrichment of bundled metadata against PubMed / CrossRef / Semantic Scholar. Falls through to the bundled `inputs/paper.json` if no API config is available.
+- `vaultlab.slides.build_from_plan(plan, out)` — renders a hand-authored slide-plan dict to `.pptx` using the Hickey-lab template + layouts.
 
-## What's in the deck
+**Run:**
 
-1. Title — paper, speaker, audience tag
-2. Why this paper — outline of the contribution
-3. Who built it — Berlin × Munich × Padua × NanoString consortium
-4. The field — 7-year arc of spatial-omics maturation
-5. Section divider — "Now the figures"
-6–12. The 7 paper figures, each with descriptive sentence titles and 3-tier speaker notes
-13. Strengths vs limitations — `analogy` layout (side-by-side reveal on click)
-14. Take-home — `quote` layout (single big-text claim)
-15. Discussion seeds — 5 numbered questions
-16. References
+```bash
+python run.py
+```
 
-## How it was built
+Optional flags:
 
-The build script lived on the `prelim/journal-club-pentimalli-2026-05-05` branch and wraps `vaultlab.slides.deck.build_from_plan` with a hand-authored slide-plan dict. The plan is the kind of structure VaultLab's `/build-deck` slash command emits automatically; this example shows what one looks like.
+- `--no-fetch` — skip the real-API enrichment step entirely (recommended in CI / offline).
+- `--out PATH` — change output directory (default `./out/`).
+- `--open` — `os.startfile` the deck after building (Windows only).
 
-The full Pentimalli Tier-A summary feeding the speaker notes is at `Wiki/Summaries/10.1016_j.cels.2025.101261.md` in any KB that has run a literature pipeline including this paper.
+**Outputs land in:** `./out/` (created on first run; not committed).
+
+`./out/` contains:
+
+- `journal-club-<slug>.pptx` — 8-slide deck (title, why, who, divider, contribution, strengths/limits, discussion, refs)
+- `paper.md` — Tier-A-style markdown summary with frontmatter
+
+**Inputs:** `inputs/paper.json` — DOI + bundled fallback metadata. Pentimalli &
+Rajewsky 2025 (*Cell Systems*) is a PMC-OA paper (CC BY); only metadata is
+committed, not the PDF.
+
+**Adapt this:**
+
+- Swap `inputs/paper.json` for any other DOI + metadata. Required keys: `doi`, `title`. Optional: `authors`, `year`, `journal`, `abstract`.
+- Edit `_build_plan(paper)` in `run.py` to change the slide structure. The dict shape is documented in `vaultlab.slides.build_from_plan`.
+- For a richer multi-figure deck, see the historical reference output in `expected_outputs/journal-club-pentimalli-2026-05-05.pptx` (16-slide deck with extracted figures from the full paper PDF).
+
+**Reference output:** see `expected_outputs/` — includes a 16-slide reference
+`.pptx` from a previous full-fidelity build, plus `SUMMARY.md` describing what
+`run.py` currently produces with the bundled inputs.

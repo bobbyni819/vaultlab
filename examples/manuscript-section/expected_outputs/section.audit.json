@@ -1,0 +1,63 @@
+{
+  "total": 3,
+  "by_status": {
+    "unverified": 3
+  },
+  "high_risk_unverified": 0,
+  "citations": [
+    {
+      "raw_text": "(Smith et al., 2024)",
+      "authors": "Smith et al.",
+      "year": 2024,
+      "claim": "tumour-associated niches showing the lowest within-donor variance (Smith et al., 2024).",
+      "source_file": "C:\\Users\\bobby\\Downloads\\vaultlab\\examples\\manuscript-section\\out\\section.md",
+      "line_number": 13,
+      "doi": "",
+      "pmid": "",
+      "title": "",
+      "journal": "",
+      "status": "unverified",
+      "risk": "medium",
+      "evidence": null,
+      "hallucination_flags": []
+    },
+    {
+      "raw_text": "(Park et al., 2023)",
+      "authors": "Park et al.",
+      "year": 2023,
+      "claim": "each niche using deconvolution against a published reference (Park et al., 2023).",
+      "source_file": "C:\\Users\\bobby\\Downloads\\vaultlab\\examples\\manuscript-section\\out\\section.md",
+      "line_number": 19,
+      "doi": "",
+      "pmid": "",
+      "title": "",
+      "journal": "",
+      "status": "unverified",
+      "risk": "medium",
+      "evidence": null,
+      "hallucination_flags": []
+    },
+    {
+      "raw_text": "(Jones and Patel, 2022)",
+      "authors": "Jones and Patel",
+      "year": 2022,
+      "claim": "single-cell observations (Jones and Patel, 2022).",
+      "source_file": "C:\\Users\\bobby\\Downloads\\vaultlab\\examples\\manuscript-section\\out\\section.md",
+      "line_number": 33,
+      "doi": "",
+      "pmid": "",
+      "title": "",
+      "journal": "",
+      "status": "unverified",
+      "risk": "medium",
+      "evidence": null,
+      "hallucination_flags": []
+    }
+  ],
+  "hallucination_flags": [],
+  "action_items": [],
+  "source_files": [
+    "C:\\Users\\bobby\\Downloads\\vaultlab\\examples\\manuscript-section\\out\\section.md"
+  ],
+  "audit_date": "2026-05-15"
+}

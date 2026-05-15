@@ -1,0 +1,112 @@
+{
+  "source": "C:\\Users\\bobby\\Downloads\\vaultlab\\examples\\citation-cleanup\\inputs\\draft.md",
+  "audit_date": "2026-05-15",
+  "total": 10,
+  "counts": {
+    "ok": 2,
+    "review": 7,
+    "critical": 1
+  },
+  "citations": [
+    {
+      "raw_text": "(Asp et al., 2020)",
+      "authors": "Asp et al.",
+      "year": 2020,
+      "doi": "",
+      "pmid": "",
+      "line_number": 4,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    },
+    {
+      "raw_text": "(Park et al., 2023)",
+      "authors": "Park et al.",
+      "year": 2023,
+      "doi": "",
+      "pmid": "",
+      "line_number": 7,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    },
+    {
+      "raw_text": "DOI: 10.1038/s41592-024-02123-w",
+      "authors": "",
+      "year": 0,
+      "doi": "10.1038/s41592-024-02123-w",
+      "pmid": "",
+      "line_number": 11,
+      "severity": "ok",
+      "action": "DOI well-formed; verify against CrossRef in real run"
+    },
+    {
+      "raw_text": "(Doe et al., 2099)",
+      "authors": "Doe et al.",
+      "year": 2099,
+      "doi": "",
+      "pmid": "",
+      "line_number": 15,
+      "severity": "critical",
+      "action": "Year 2099 is implausible \u2014 possible hallucination"
+    },
+    {
+      "raw_text": "PMID: 28104796",
+      "authors": "",
+      "year": 0,
+      "doi": "",
+      "pmid": "28104796",
+      "line_number": 16,
+      "severity": "review",
+      "action": "Citation parsed without authors \u2014 re-check source markdown"
+    },
+    {
+      "raw_text": "(Garcia and Singh, 2024)",
+      "authors": "Garcia and Singh",
+      "year": 2024,
+      "doi": "",
+      "pmid": "",
+      "line_number": 19,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    },
+    {
+      "raw_text": "(Pentimalli and Rajewsky, 2025)",
+      "authors": "Pentimalli and Rajewsky",
+      "year": 2025,
+      "doi": "",
+      "pmid": "",
+      "line_number": 20,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    },
+    {
+      "raw_text": "doi:10.1016/j.cels.2025.101261.",
+      "authors": "",
+      "year": 0,
+      "doi": "10.1016/j.cels.2025.101261",
+      "pmid": "",
+      "line_number": 20,
+      "severity": "ok",
+      "action": "DOI well-formed; verify against CrossRef in real run"
+    },
+    {
+      "raw_text": "Lee et al. (2021)",
+      "authors": "Lee et al.",
+      "year": 2021,
+      "doi": "",
+      "pmid": "",
+      "line_number": 22,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    },
+    {
+      "raw_text": "(Lee 1822)",
+      "authors": "Lee",
+      "year": 1822,
+      "doi": "",
+      "pmid": "",
+      "line_number": 23,
+      "severity": "review",
+      "action": "Add DOI before publication; author-year alone cannot be verified"
+    }
+  ]
+}

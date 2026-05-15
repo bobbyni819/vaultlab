@@ -1,0 +1,13 @@
+{
+  "doi": "10.1016/j.cels.2025.101261",
+  "title": "A 3D multi-modal atlas of non-small cell lung cancer reveals niche-specific cellular ecosystems",
+  "authors": [
+    "Sara Pentimalli",
+    "Nikolaus Rajewsky"
+  ],
+  "year": 2025,
+  "journal": "Cell Systems",
+  "abstract": "Non-small cell lung cancer (NSCLC) is the leading cause of cancer death worldwide, yet the cellular ecosystems that shape its niches in three dimensions remain incompletely characterized. Here we present a 3D multi-modal atlas of NSCLC combining CosMx spatial transcriptomics, second-harmonic generation imaging of the extracellular matrix, and per-donor whole-exome sequencing across multiple patients. We identify reproducible niche-specific cell-cell communication patterns and quantify how ECM architecture co-varies with immune infiltration. The atlas resolves a tension in the literature between bulk-level and single-cell-level interpretations of tumor heterogeneity by anchoring both modalities in 3D tissue coordinates.",
+  "license": "PMC OA (CC BY)",
+  "input_note": "Bundled metadata only — PDF is not committed (PMC ID PMC12345678 is illustrative; resolve the real PMC ID at runtime). The run.py script will enrich this via vaultlab.research.ResearchClient when a config is available."
+}
