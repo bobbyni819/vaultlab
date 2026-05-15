@@ -2285,6 +2285,13 @@ SUPPORTED_PLAN_SLIDE_TYPES: frozenset[str] = frozenset(
         "multi_figure",
         "text",
         "references",
+        # Sub-goal 5.3 layouts wired into the dict-plan dispatcher so
+        # template builders (vaultlab.slides.templates) can emit them
+        # directly.
+        "equation",
+        "table",
+        "comparison_table",
+        "acknowledgments_grid",
     }
 )
 
@@ -2351,6 +2358,9 @@ def build_from_plan(
     from vaultlab.slides.animations import bullet_reveal, panel_buildup
     from vaultlab.slides.annotate import add_annotations
     from vaultlab.slides.layouts import (
+        add_acknowledgments_grid_slide,
+        add_comparison_table_slide,
+        add_equation_slide,
         add_figure_above_bullets_slide,
         add_figure_only_slide,
         add_figure_slide,
@@ -2358,6 +2368,7 @@ def build_from_plan(
         add_quote_slide,
         add_references_slide,
         add_section_divider,
+        add_table_slide,
         add_text_slide,
         add_title_slide,
         add_two_figure_compare_slide,
@@ -2453,6 +2464,40 @@ def build_from_plan(
                 pres,
                 references=slide_spec.get("references", []),
                 title=slide_spec.get("title", "References"),
+            )
+        elif stype == "equation":
+            slide = add_equation_slide(
+                pres,
+                equation=slide_spec.get("equation", ""),
+                title=slide_spec.get("title", ""),
+                caption=slide_spec.get("caption", ""),
+            )
+        elif stype == "table":
+            slide = add_table_slide(
+                pres,
+                rows=slide_spec.get("rows", []),
+                title=slide_spec.get("title", ""),
+                max_body_rows=slide_spec.get("max_body_rows", 10),
+                appendix_message=slide_spec.get(
+                    "appendix_message",
+                    "Table truncated — see appendix for full data",
+                ),
+            )
+        elif stype == "comparison_table":
+            slide = add_comparison_table_slide(
+                pres,
+                left_header=slide_spec.get("left_header", ""),
+                right_header=slide_spec.get("right_header", ""),
+                left_bullets=slide_spec.get("left_bullets", []),
+                right_bullets=slide_spec.get("right_bullets", []),
+                title=slide_spec.get("title", ""),
+                key_insight=slide_spec.get("key_insight", ""),
+            )
+        elif stype == "acknowledgments_grid":
+            slide = add_acknowledgments_grid_slide(
+                pres,
+                people=slide_spec.get("people", []),
+                title=slide_spec.get("title", "Acknowledgments"),
             )
         else:
             # Unknown type — skip silently; never break a deck render
