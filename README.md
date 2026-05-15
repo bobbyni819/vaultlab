@@ -23,8 +23,9 @@ Open Claude Code anywhere on your machine and paste:
 Hi Claude. Set me up to use vaultlab — github.com/bobbyni819/vaultlab.
 Bootstrap end-to-end (each step idempotent — skip if already done):
 
-1. Check `python -c "import vaultlab"`. If missing, clone the repo
-   to ~/code/vaultlab and `pip install -e ~/code/vaultlab`.
+1. Check `python -c "import vaultlab"`. If missing, run
+   `pip install vaultlab` (v0.0.5+ is on PyPI). For development /
+   editable install, clone to ~/code/vaultlab and `pip install -e .[all]`.
 2. Run `vaultlab init` (accept default ~/vaultlab-kb if prompted).
 3. Run `vaultlab claude-setup` to wire slash commands + global CLAUDE.md.
 4. Read vaultlab/READ_FIRST.md and absorb the dispatch table.
@@ -80,6 +81,20 @@ docker run --rm vaultlab-onboarding
 A green run of the **Onboarding (Time-to-First-Artifact)** workflow is
 the published evidence that north-star Criterion #4 (under-30-min cold
 start to first artifact) is met on each commit to `main`.
+
+## What's new in v0.0.5 (2026-05-15)
+
+19 of 20 north-star plan sub-goals shipped in one session. Highlights:
+
+- **All 4 red lines now mechanically enforced** by an always-on CI invariant suite (no fabrication / no silent failures / no user-data loss / no vendor lock-in). 8/0 passing.
+- **`vaultlab demo`** — single command produces an audit-clean journal-club deck in ~1.1s. Fully offline. (`pip install vaultlab && vaultlab demo`)
+- **All 7 nature-skills absorbed.** `vaultlab.research.full_reader` is the final piece — bilingual figure-aware full-paper Markdown reader.
+- **6 new SPEC executions:** result-analysis pipeline, KB retrieval upgrade, KB setup/lint primitives, crosstalk policy, task-weight dispatch, meta-agent roles.
+- **HTML coverage:** 12 of Thariq's 20 patterns now ship with real consumers. New: weekly status, state dashboard, feature flag editor, three-approaches comparison.
+- **Slide templates + layouts:** 4 deck templates (investor_pitch, lab_meeting, conference_talk, journal_club) + 4 new layouts (equation, table, comparison_table, acknowledgments_grid).
+- **GitHub Discussions LIVE** — testimony channel at [github.com/bobbyni819/vaultlab/discussions](https://github.com/bobbyni819/vaultlab/discussions). Tell us if you used vaultlab for something.
+
+Full release notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## About
 
@@ -221,6 +236,17 @@ The index records which package version each function lives in and which papers 
 ## Get started — inside Claude Code
 
 If you don't have Claude Code yet, install it from [claude.com/claude-code](https://claude.com/claude-code). VaultLab is the bundle of slash commands + role prompts + Python machinery you point Claude Code at.
+
+**Simpler install (recommended as of v0.0.5):**
+
+```bash
+pip install vaultlab
+vaultlab demo              # smoke-test — produces a deck in ~1s
+vaultlab init              # create a KB
+claude                     # open Claude Code; VaultLab slash commands are now available
+```
+
+**Dev / editable install** (if you want to hack on vaultlab itself):
 
 ```bash
 git clone https://github.com/bobbyni819/vaultlab && cd vaultlab
