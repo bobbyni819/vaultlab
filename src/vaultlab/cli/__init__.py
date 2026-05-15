@@ -153,6 +153,95 @@ def _cmd_fetch_list(argv: list[str]) -> int:
     return 0
 
 
+def _cmd_slides(argv: list[str]) -> int:
+    """Dispatch ``vaultlab slides <subcommand> ...``.
+
+    Subcommands:
+        review <pptx> [--html <out>]   Run the self-review pass on a rendered deck.
+    """
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(
+            "Usage: vaultlab slides review <pptx> [--html <out>]\n"
+            "\n"
+            "  Runs the composite self-review pass (layout hard rules + story-arc\n"
+            "  structural checks + bullet density + figure presence) on a rendered\n"
+            "  .pptx. Prints a summary to stdout; emits an HTML report (with the\n"
+            "  same look as the rigor-audit reports) when --html is supplied.",
+            file=sys.stderr,
+        )
+        return 1
+    sub, rest = argv[0], argv[1:]
+    if sub == "review":
+        return _cmd_slides_review(rest)
+    print(f"vaultlab slides: unknown subcommand {sub!r}", file=sys.stderr)
+    return 1
+
+
+def _cmd_slides_review(argv: list[str]) -> int:
+    """Run :func:`vaultlab.slides.review_deck` on a ``.pptx`` and print a summary."""
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(
+            "Usage: vaultlab slides review <pptx> [--html <out>]\n"
+            "\n"
+            "Exit codes:\n"
+            "  0  no critical issues (warnings/info may be present)\n"
+            "  2  at least one critical issue found\n"
+            "  1  usage error / file not found",
+            file=sys.stderr,
+        )
+        return 1
+    html_out: Path | None = None
+    pptx_path: Path | None = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--html":
+            if i + 1 >= len(argv):
+                print("vaultlab slides review: --html requires a path", file=sys.stderr)
+                return 1
+            html_out = Path(argv[i + 1]).expanduser()
+            i += 2
+            continue
+        if a.startswith("--"):
+            print(f"vaultlab slides review: unknown flag {a}", file=sys.stderr)
+            return 1
+        if pptx_path is None:
+            pptx_path = Path(a).expanduser()
+            i += 1
+            continue
+        print(f"vaultlab slides review: unexpected argument {a}", file=sys.stderr)
+        return 1
+
+    if pptx_path is None:
+        print("vaultlab slides review: need a <pptx> path", file=sys.stderr)
+        return 1
+    if not pptx_path.exists():
+        print(f"vaultlab slides review: file not found: {pptx_path}", file=sys.stderr)
+        return 1
+
+    from vaultlab.slides.self_review import review_deck, write_review_report
+
+    report = review_deck(pptx_path)
+
+    print(f"vaultlab slides review — {pptx_path}")
+    for line in report.summary_lines():
+        print(f"  {line}")
+    if not report.ok() or report.n_warning > 0:
+        print("\nIssues:")
+        for issue in report.all_issues():
+            sev = issue.get("severity", "info").upper()
+            rule = issue.get("rule", "")
+            loc = issue.get("loc", "")
+            detail = issue.get("detail", "")
+            print(f"  [{sev}] {loc} {rule}: {detail}")
+
+    if html_out is not None:
+        written = write_review_report(report, html_out)
+        print(f"\nHTML report: {written}")
+
+    return 2 if not report.ok() else 0
+
+
 def _cmd_paperclip_grep(argv: list[str]) -> int:
     """Passthrough to ``paperclip grep``.
 
@@ -380,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_paperclip_sql(rest)
     if cmd == "claude-setup":
         return _cmd_claude_setup(rest)
+    if cmd == "slides":
+        return _cmd_slides(rest)
 
     print(f"vaultlab: unknown command {cmd!r}", file=sys.stderr)
     _print_usage(stream=sys.stderr)
@@ -398,6 +489,7 @@ def _print_usage(stream: object = None) -> None:
         "  vaultlab claude-setup [--dry-run]         Wire slash commands + global CLAUDE.md\n"
         "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
         "  vaultlab fetch-list paywalled <log>       Manual-fetch shopping list\n"
+        "  vaultlab slides review <pptx> [--html <o>] Self-review a rendered deck\n"
         "  vaultlab paperclip-grep <pat> [path]      Regex over paperclip corpus\n"
         '  vaultlab paperclip-sql "<query>"          SQL over paperclip corpus\n'
         "\n"

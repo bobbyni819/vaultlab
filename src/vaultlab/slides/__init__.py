@@ -64,6 +64,12 @@ from vaultlab.slides.notes import (
     parse_speaker_notes,
 )
 from vaultlab.slides.render import RenderError, render_pptx
+from vaultlab.slides.self_review import (
+    ReviewReport,
+    SlideReview,
+    review_deck,
+    write_review_report,
+)
 from vaultlab.slides.template import (
     default_font,
     lab_template_path,
@@ -80,10 +86,14 @@ __all__ = [
     "DeckPlan",
     "DeckSlide",
     "RenderError",
+    "ReviewReport",
     "Slide",
+    "SlideReview",
     "build_deck",
     "build_deck_from_lineage_result",
     "render_pptx",
+    "review_deck",
+    "write_review_report",
     # Dict-plan-driven deck builder
     "build_from_plan",
     # KB reader
