@@ -97,6 +97,14 @@ from vaultlab.workflows.lit import plan_lit_dive
 from vaultlab.workflows.narrative import plan_narrate_finding
 from vaultlab.workflows.parallel import plan_parallel_runs
 from vaultlab.workflows.synthesis import plan_synthesis
+from vaultlab.workflows.task_weight import (
+    WEIGHT_TO_DEFAULT_MODEL,
+    TaskSpec,
+    Weight,
+    classify,
+    model_for_task,
+    model_for_weight,
+)
 
 __all__ = [
     # Data classes
@@ -110,10 +118,17 @@ __all__ = [
     "PlanGeneratorCallback",
     "Provenance",
     "RunnerCallback",
+    "TaskSpec",
+    "WEIGHT_TO_DEFAULT_MODEL",
+    "Weight",
     "WorkflowPlan",
     # Crosstalk policy
     "should_invoke",
     "skip_reason",
+    # Task-weight dispatch (SPEC-F)
+    "classify",
+    "model_for_task",
+    "model_for_weight",
     "read_provenance",
     "write_with_provenance",
     # Runners
