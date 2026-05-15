@@ -20,6 +20,11 @@ plan-driven decks where layout choice depends on slide intent.
 
 from __future__ import annotations
 
+from vaultlab.slides.layouts.acknowledgments_grid import (
+    add_acknowledgments_grid_slide,
+)
+from vaultlab.slides.layouts.comparison_table import add_comparison_table_slide
+from vaultlab.slides.layouts.equation import add_equation_slide
 from vaultlab.slides.layouts.figure import (
     add_figure_above_bullets_slide,
     add_figure_only_slide,
@@ -31,12 +36,16 @@ from vaultlab.slides.layouts.multi_figure import add_multi_figure_slide
 from vaultlab.slides.layouts.references import add_references_slide
 from vaultlab.slides.layouts.registry import LAYOUTS, LayoutSpec, get_layout
 from vaultlab.slides.layouts.section_divider import add_section_divider
+from vaultlab.slides.layouts.table import add_table_slide
 from vaultlab.slides.layouts.text import add_text_slide
 from vaultlab.slides.layouts.title import add_title_slide
 
 __all__ = [
     "LAYOUTS",
     "LayoutSpec",
+    "add_acknowledgments_grid_slide",
+    "add_comparison_table_slide",
+    "add_equation_slide",
     "add_figure_above_bullets_slide",
     "add_figure_only_slide",
     "add_figure_slide",
@@ -44,6 +53,7 @@ __all__ = [
     "add_quote_slide",
     "add_references_slide",
     "add_section_divider",
+    "add_table_slide",
     "add_text_slide",
     "add_title_slide",
     "add_two_figure_compare_slide",
