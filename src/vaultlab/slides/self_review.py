@@ -261,6 +261,7 @@ def _review_one_slide(slide: Any, slide_index: int, *, is_first: bool = False) -
     _check_descriptive_title(title, slide_type, review)
     _check_bullet_density(text_chunks, slide_type, review)
     _check_figure_presence(slide, title, text_chunks, slide_type, review)
+    _check_color_contrast(slide, review)
 
     return review
 
@@ -692,6 +693,180 @@ def _check_figure_presence(
                 "detail": (
                     "Slide text references a figure / panel / plot but the slide "
                     "has no embedded image. Add the figure or rephrase the caption."
+                ),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# WCAG color-contrast check (deferred-followups bundle, 2026-05-15)
+# ---------------------------------------------------------------------------
+#
+# AA threshold for normal-weight body text is 4.5:1. Anything below 3.0 is
+# borderline-unreadable on a projector and gets flagged as ``critical``; the
+# 3.0-4.5 band is a polish-worthy ``warning``.
+#
+# Conservative-by-design: we only flag when BOTH the run font color and the
+# resolved background color are concrete RGB. Theme / scheme colors, picture
+# fills, gradients, and BACKGROUND-inherited shapes against an unread slide
+# background all skip silently. The goal is "no false positives" — a missed
+# contrast issue is fine, a hallucinated one is not.
+
+
+_CONTRAST_AA_THRESHOLD = 4.5  # WCAG AA for normal-weight text
+_CONTRAST_CRITICAL_BELOW = 3.0  # below this, body is borderline-unreadable
+_DEFAULT_SLIDE_BG = (255, 255, 255)  # safe-default white when bg can't be resolved
+
+
+def _luminance(rgb: tuple[int, int, int]) -> float:
+    """Relative luminance per WCAG 2.x (sRGB → linear → weighted sum)."""
+
+    def chan(c: int) -> float:
+        s = c / 255
+        return s / 12.92 if s <= 0.03928 else ((s + 0.055) / 1.055) ** 2.4
+
+    r, g, b = rgb
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b)
+
+
+def _contrast_ratio(fg: tuple[int, int, int], bg: tuple[int, int, int]) -> float:
+    """WCAG contrast ratio (higher is better; 1.0 means same color)."""
+    L1 = _luminance(fg)
+    L2 = _luminance(bg)
+    L_high, L_low = max(L1, L2), min(L1, L2)
+    return (L_high + 0.05) / (L_low + 0.05)
+
+
+def _rgb_color_from_color_format(color_obj: Any) -> tuple[int, int, int] | None:
+    """Read a concrete RGB triple from a python-pptx ColorFormat.
+
+    Returns ``None`` for theme / scheme / unset colors so the audit stays
+    quiet on themed content where we can't be sure of the rendered shade.
+    """
+    if color_obj is None:
+        return None
+    try:
+        ctype = color_obj.type
+    except Exception:  # pragma: no cover — defensive
+        return None
+    if ctype is None:
+        return None
+    # MSO_THEME_COLOR_INDEX values produce themed shades we can't read here.
+    # Only "RGB" gives us a concrete .rgb. python-pptx raises AttributeError
+    # for any other color type.
+    try:
+        rgb = color_obj.rgb
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if rgb is None:
+        return None
+    try:
+        # RGBColor is a 3-byte hex string under the hood.
+        as_int = int(str(rgb), 16)
+    except (TypeError, ValueError):
+        return None
+    return ((as_int >> 16) & 0xFF, (as_int >> 8) & 0xFF, as_int & 0xFF)
+
+
+def _resolve_shape_background_rgb(shape: Any) -> tuple[int, int, int] | None:
+    """Best-effort: return the shape's solid fill RGB, or ``None``.
+
+    Only returns a value for ``MSO_FILL_TYPE.SOLID`` with a concrete RGB
+    fore-color. Gradients, pictures, patterns, theme fills, and the
+    BACKGROUND inherit-from-slide case all return ``None`` so the caller
+    can fall back to the slide-level default.
+    """
+    fill = getattr(shape, "fill", None)
+    if fill is None:
+        return None
+    try:
+        from pptx.enum.dml import MSO_FILL_TYPE  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover — gated at install time
+        return None
+    try:
+        if fill.type != MSO_FILL_TYPE.SOLID:
+            return None
+    except (AttributeError, ValueError):
+        return None
+    try:
+        return _rgb_color_from_color_format(fill.fore_color)
+    except Exception:  # pragma: no cover — defensive
+        return None
+
+
+def _check_color_contrast(slide: Any, review: SlideReview) -> None:
+    """Flag low-contrast text runs against the resolved background color.
+
+    Heuristic (intentionally conservative):
+
+    * Only check runs where ``font.color.type`` is ``RGB`` (concrete).
+    * Resolve background as the shape's solid fill if present, else fall
+      back to the safe-default slide background (``#FFFFFF``).
+    * Compute the WCAG contrast ratio. Flag ``critical`` below
+      :data:`_CONTRAST_CRITICAL_BELOW` (3.0) and ``warning`` between 3.0
+      and :data:`_CONTRAST_AA_THRESHOLD` (4.5).
+
+    Falls silent on theme colors / scheme fills / pictures / inherited
+    backgrounds. False-negative > false-positive — Bobby's hard rule.
+    """
+    seen_critical: list[tuple[float, tuple[int, int, int], tuple[int, int, int]]] = []
+    seen_warning: list[tuple[float, tuple[int, int, int], tuple[int, int, int]]] = []
+
+    for shape in slide.shapes:
+        if not getattr(shape, "has_text_frame", False):
+            continue
+        bg_rgb = _resolve_shape_background_rgb(shape) or _DEFAULT_SLIDE_BG
+        try:
+            paragraphs = list(shape.text_frame.paragraphs)
+        except Exception:  # pragma: no cover — defensive
+            continue
+        for para in paragraphs:
+            for run in para.runs:
+                font = getattr(run, "font", None)
+                if font is None:
+                    continue
+                try:
+                    text = (run.text or "").strip()
+                except Exception:  # pragma: no cover — defensive
+                    continue
+                if not text:
+                    continue
+                fg_rgb = _rgb_color_from_color_format(getattr(font, "color", None))
+                if fg_rgb is None:
+                    # Theme color / unset — skip (no false positives).
+                    continue
+                ratio = _contrast_ratio(fg_rgb, bg_rgb)
+                if ratio < _CONTRAST_CRITICAL_BELOW:
+                    seen_critical.append((ratio, fg_rgb, bg_rgb))
+                elif ratio < _CONTRAST_AA_THRESHOLD:
+                    seen_warning.append((ratio, fg_rgb, bg_rgb))
+
+    if seen_critical:
+        ratio, fg, bg = min(seen_critical, key=lambda t: t[0])
+        review.issues.append(
+            {
+                "severity": "critical",
+                "rule": "color-contrast",
+                "detail": (
+                    f"Text contrast ratio {ratio:.2f}:1 against background "
+                    f"#{fg[0]:02X}{fg[1]:02X}{fg[2]:02X} on "
+                    f"#{bg[0]:02X}{bg[1]:02X}{bg[2]:02X} — below the 3.0:1 "
+                    "floor (text will be illegible on a projector). Use a "
+                    "darker (or lighter) foreground."
+                ),
+            }
+        )
+    elif seen_warning:
+        ratio, fg, bg = min(seen_warning, key=lambda t: t[0])
+        review.issues.append(
+            {
+                "severity": "warning",
+                "rule": "color-contrast",
+                "detail": (
+                    f"Text contrast ratio {ratio:.2f}:1 — below WCAG AA "
+                    f"({_CONTRAST_AA_THRESHOLD:.1f}:1) for normal-weight body text. "
+                    f"Foreground #{fg[0]:02X}{fg[1]:02X}{fg[2]:02X} on background "
+                    f"#{bg[0]:02X}{bg[1]:02X}{bg[2]:02X}."
                 ),
             }
         )

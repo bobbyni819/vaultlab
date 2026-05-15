@@ -158,3 +158,109 @@ def test_write_creates_parent_dirs(tmp_path: Path):
     out = tmp_path / "nested" / "deep" / "art.html"
     write_artifact_html(out, data, kind="litarc", topic="x")
     assert out.exists()
+
+
+# ---------------------------------------------------------------------------
+# v0.0.5 consumer wiring (deferred-followups bundle)
+#
+# WeeklyStatusReport / StateDashboard / FeatureFlagConfig / ApproachesCompare
+# must auto-route through the universal dispatcher without callers having to
+# import each builder by name.
+
+
+def test_detects_weekly_status_dataclass(tmp_path: Path):
+    from vaultlab.report.weekly_status_html import WeeklyStatusReport
+
+    report = WeeklyStatusReport(
+        week_label="Week of 2026-05-15",
+        project="vaultlab",
+        tldr="Shipped dispatch wiring + color-contrast + inset-axes.",
+        shipped=[("dispatch", "wired 4 new kinds")],
+    )
+    out = tmp_path / "weekly.html"
+    written = write_artifact_html(out, report)
+    assert written == out
+    html = out.read_text(encoding="utf-8")
+    # Weekly-status renderer surfaces the project + week_label in the header.
+    assert "vaultlab" in html
+    assert "Week of 2026-05-15" in html
+    # And the "shipped" severity chip.
+    assert "shipped" in html.lower()
+
+
+def test_detects_weekly_status_from_dict():
+    data = {
+        "week_label": "Week of 2026-05-15",
+        "project": "vaultlab",
+        "tldr": "Bundle of small followups.",
+    }
+    html = render_artifact_html(data)
+    assert "Week of 2026-05-15" in html
+    assert "vaultlab" in html
+
+
+def test_detects_state_dashboard_dataclass(tmp_path: Path):
+    from vaultlab.report.state_dashboard_html import StateDashboard
+
+    state = StateDashboard(
+        project="vaultlab",
+        date="2026-05-15",
+        status_summary="Repo green; bundle 2 in flight.",
+        module_map=[("vaultlab.report", "HTML consumers", ["vaultlab.provenance"])],
+    )
+    out = tmp_path / "state.html"
+    write_artifact_html(out, state)
+    html = out.read_text(encoding="utf-8")
+    # The state-dashboard renderer surfaces the project + date.
+    assert "vaultlab" in html
+    assert "2026-05-15" in html
+
+
+def test_detects_feature_flag_editor_dataclass(tmp_path: Path):
+    from vaultlab.report.feature_flag_editor import FeatureFlagConfig, FlagGroup
+
+    cfg = FeatureFlagConfig(
+        title="Vaultlab Config",
+        intro="Toggle the v0.0.5 features.",
+        groups=[
+            FlagGroup(
+                title="HTML Consumers",
+                flags=[("weekly_status", True, "weekly status reports")],
+            ),
+        ],
+    )
+    out = tmp_path / "ff.html"
+    write_artifact_html(out, cfg)
+    html = out.read_text(encoding="utf-8")
+    assert "Vaultlab Config" in html
+    assert "weekly_status" in html
+
+
+def test_detects_approaches_compare_dataclass(tmp_path: Path):
+    from vaultlab.report.approaches_compare_html import Approach, ApproachesCompare
+
+    comp = ApproachesCompare(
+        title="How to ship the bundle",
+        approaches=[
+            Approach(name="One commit", summary="single coherent diff", recommended=True),
+            Approach(name="Three commits", summary="split per item"),
+        ],
+        decision_rationale="One commit keeps the diff coherent.",
+    )
+    out = tmp_path / "compare.html"
+    write_artifact_html(out, comp)
+    html = out.read_text(encoding="utf-8")
+    assert "How to ship the bundle" in html
+    assert "One commit" in html
+
+
+def test_feature_flag_not_confused_with_deck_plan():
+    """A deck plan has 'slides' AND 'title'; FeatureFlagConfig has 'groups'
+    AND 'title' but no 'slides'. Detection must keep them separate."""
+    from vaultlab.report.dispatch import _detect_kind
+
+    deck_plan = {"title": "Deck", "slides": [{"type": "title"}], "audit": {}, "plan": {}}
+    assert _detect_kind(deck_plan) == "deck-audit"
+
+    ff = {"title": "Config", "groups": [], "intro": ""}
+    assert _detect_kind(ff) == "feature-flag-editor"

@@ -278,3 +278,142 @@ class TestReviewDeckErrors:
     def test_missing_pptx_raises(self, tmp_path: Path) -> None:
         with pytest.raises(FileNotFoundError):
             review_deck(tmp_path / "nope.pptx")
+
+
+# ---------------------------------------------------------------------------
+# WCAG color-contrast check (deferred-followups bundle, 2026-05-15)
+# ---------------------------------------------------------------------------
+
+
+class TestColorContrastCheck:
+    """Per-text-shape WCAG contrast ratio.
+
+    AA threshold = 4.5 for normal text; <3.0 = critical, 3.0-4.5 = warning.
+    Theme/scheme colors must NOT trip the check (no false positives).
+    """
+
+    def _build_contrast_deck(
+        self,
+        tmp_path: Path,
+        *,
+        fg: tuple[int, int, int],
+        bg: tuple[int, int, int] | None = None,
+        name: str = "contrast.pptx",
+    ) -> Path:
+        """Build a single-slide pptx with a known fg/bg color pair."""
+        from pptx.dml.color import RGBColor
+
+        prs = PptxPresentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
+        layout = prs.slide_layouts[6]
+        slide = prs.slides.add_slide(layout)
+
+        # Title at top (large + Roboto, satisfies other audits).
+        tbox = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(1))
+        tp = tbox.text_frame.paragraphs[0]
+        tr = tp.add_run()
+        tr.text = "Slide title that is sufficiently descriptive"
+        tr.font.size = Pt(32)
+        tr.font.name = "Roboto"
+
+        # Body shape — apply explicit fill if bg given; else leave default.
+        body = slide.shapes.add_textbox(Inches(1), Inches(2), Inches(11), Inches(3))
+        if bg is not None:
+            body.fill.solid()
+            body.fill.fore_color.rgb = RGBColor(*bg)
+        bp = body.text_frame.paragraphs[0]
+        br = bp.add_run()
+        br.text = "Body text that should be legible at projector distance"
+        br.font.size = Pt(24)
+        br.font.name = "Roboto"
+        br.font.color.rgb = RGBColor(*fg)
+
+        out = tmp_path / name
+        prs.save(str(out))
+        return out
+
+    def test_low_contrast_text_is_critical(self, tmp_path: Path) -> None:
+        # Light-gray text on white background — ratio ≈ 1.6 (well below 3.0).
+        deck = self._build_contrast_deck(
+            tmp_path, fg=(0xDD, 0xDD, 0xDD), bg=(0xFF, 0xFF, 0xFF)
+        )
+        report = review_deck(deck)
+        rules = {(i["severity"], i["rule"]) for i in report.all_issues()}
+        assert ("critical", "color-contrast") in rules, (
+            f"Expected color-contrast critical. Got: {list(report.all_issues())}"
+        )
+
+    def test_borderline_contrast_is_warning(self, tmp_path: Path) -> None:
+        # Mid-gray text on white — ratio in the 3.0-4.5 band (warning, not critical).
+        # #888888 on white has ratio ≈ 3.54.
+        deck = self._build_contrast_deck(
+            tmp_path, fg=(0x88, 0x88, 0x88), bg=(0xFF, 0xFF, 0xFF)
+        )
+        report = review_deck(deck)
+        contrast_issues = [
+            i for i in report.all_issues() if i.get("rule") == "color-contrast"
+        ]
+        assert any(i.get("severity") == "warning" for i in contrast_issues), (
+            f"Expected color-contrast warning at borderline ratio. Got: {contrast_issues}"
+        )
+        # And not critical, since we're above 3.0.
+        assert not any(i.get("severity") == "critical" for i in contrast_issues)
+
+    def test_high_contrast_is_silent(self, tmp_path: Path) -> None:
+        # Black on white — ratio = 21:1 (max). No contrast issue should fire.
+        deck = self._build_contrast_deck(
+            tmp_path, fg=(0x00, 0x00, 0x00), bg=(0xFF, 0xFF, 0xFF)
+        )
+        report = review_deck(deck)
+        contrast_issues = [
+            i for i in report.all_issues() if i.get("rule") == "color-contrast"
+        ]
+        assert not contrast_issues, (
+            f"High-contrast deck should not raise contrast issues. Got: {contrast_issues}"
+        )
+
+    def test_unset_run_color_does_not_flag(self, tmp_path: Path) -> None:
+        """No fg color set → theme inherited → must skip silently (no false positive)."""
+        prs = PptxPresentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
+        layout = prs.slide_layouts[6]
+        slide = prs.slides.add_slide(layout)
+
+        tbox = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(1))
+        tp = tbox.text_frame.paragraphs[0]
+        tr = tp.add_run()
+        tr.text = "Slide title that is sufficiently descriptive"
+        tr.font.size = Pt(32)
+        tr.font.name = "Roboto"
+
+        body = slide.shapes.add_textbox(Inches(1), Inches(2), Inches(11), Inches(3))
+        bp = body.text_frame.paragraphs[0]
+        br = bp.add_run()
+        br.text = "Body text with no explicit color"
+        br.font.size = Pt(24)
+        br.font.name = "Roboto"
+        # NOTE: deliberately not touching br.font.color
+
+        out = tmp_path / "theme.pptx"
+        prs.save(str(out))
+        report = review_deck(out)
+        contrast_issues = [
+            i for i in report.all_issues() if i.get("rule") == "color-contrast"
+        ]
+        assert not contrast_issues, (
+            f"Themed colors should not be flagged. Got: {contrast_issues}"
+        )
+
+    def test_contrast_helpers_match_wcag(self) -> None:
+        from vaultlab.slides.self_review import _contrast_ratio
+
+        # Black on white is exactly 21:1 (the WCAG-defined max).
+        assert abs(_contrast_ratio((0, 0, 0), (255, 255, 255)) - 21.0) < 0.01
+        # Same color → ratio = 1.0.
+        assert abs(_contrast_ratio((128, 128, 128), (128, 128, 128)) - 1.0) < 1e-9
+        # Symmetry: order of args must not matter.
+        a = _contrast_ratio((0x11, 0x55, 0x99), (0xEE, 0xEE, 0xEE))
+        b = _contrast_ratio((0xEE, 0xEE, 0xEE), (0x11, 0x55, 0x99))
+        assert abs(a - b) < 1e-9

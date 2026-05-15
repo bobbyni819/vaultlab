@@ -284,3 +284,127 @@ def test_suggest_layout_for_very_wide_single_plot_prefers_figure_only(tmp_path: 
 
     layout = suggest_figure_layout(path, has_bullets=False, has_caption=False)
     assert layout == "figure_only"
+
+
+# ---------------------------------------------------------------------------
+# Inset-axes edge case (deferred-followups bundle, 2026-05-15)
+# ---------------------------------------------------------------------------
+#
+# A parent plot with a corner inset axes registers as 1 panel via XY-cut
+# (which is correct — we don't want to subdivide it), but downstream
+# captioning / LLM-side awareness needs to know there IS an inset. The
+# `has_corner_inset` heuristic + the `classify_panel_layout` wrapper add
+# that signal without changing the layout dispatcher's no-subdivide
+# behavior.
+
+
+def _make_inset_axes_fixture(
+    tmp_path: Path,
+    name: str = "single_inset.png",
+    *,
+    loc: str = "upper left",
+) -> Path:
+    """Single plot with a `inset_axes` at the given corner location."""
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+    ax.set_title("Main plot with inset axes")
+    axins = inset_axes(ax, width="30%", height="30%", loc=loc)
+    axins.plot([0, 1, 2], [5, 3, 8])
+    axins.tick_params(labelsize=6)
+    out = tmp_path / name
+    fig.savefig(out, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def test_has_corner_inset_true_for_inset_axes(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import has_corner_inset
+
+    path = _make_inset_axes_fixture(tmp_path)
+    assert has_corner_inset(path) is True
+
+
+def test_has_corner_inset_detects_inset_at_multiple_corners(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import has_corner_inset
+
+    for loc in ("upper left", "upper right", "lower left", "lower right"):
+        path = _make_inset_axes_fixture(
+            tmp_path, f"inset_{loc.replace(' ', '_')}.png", loc=loc
+        )
+        assert has_corner_inset(path) is True, f"Inset at {loc!r} not detected"
+
+
+def test_has_corner_inset_false_for_plain_single_plot(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import has_corner_inset
+
+    path = _make_single_plot_fixture(tmp_path)
+    assert has_corner_inset(path) is False
+
+
+def test_has_corner_inset_false_for_corner_legend(tmp_path: Path):
+    """A chart with an in-axes legend in the corner must NOT register as inset."""
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import has_corner_inset
+
+    path = _make_single_plot_with_corner_legend_fixture(tmp_path)
+    assert has_corner_inset(path) is False
+
+
+def test_classify_panel_layout_returns_single_plot_with_inset(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import classify_panel_layout
+
+    path = _make_inset_axes_fixture(tmp_path)
+    assert classify_panel_layout(path) == "single_plot_with_inset"
+
+
+def test_classify_panel_layout_returns_single_plot(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import classify_panel_layout
+
+    path = _make_single_plot_fixture(tmp_path)
+    assert classify_panel_layout(path) == "single_plot"
+
+
+def test_classify_panel_layout_returns_multi_panel(tmp_path: Path):
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import classify_panel_layout
+
+    path = _make_four_panel_fixture(tmp_path)
+    assert classify_panel_layout(path) == "multi_panel"
+
+
+def test_is_single_plot_true_for_figure_with_inset(tmp_path: Path):
+    """An inset-bearing figure is STILL one panel — `is_single_plot` must
+    return True so the layout dispatcher doesn't try to subdivide it."""
+    pytest.importorskip("skimage")
+    from vaultlab.figures.understand.whitespace import is_single_plot
+
+    path = _make_inset_axes_fixture(tmp_path)
+    assert is_single_plot(path) is True
+
+
+def test_suggest_layout_for_inset_figure_does_not_subdivide(tmp_path: Path):
+    """Layout dispatch on an inset-bearing single plot must NOT route to
+    figure_with_panels — the inset is part of the same panel."""
+    pytest.importorskip("skimage")
+    from vaultlab.figures.contract import suggest_figure_layout
+
+    path = _make_inset_axes_fixture(tmp_path)
+    for has_bullets in (False, True):
+        for has_caption in (False, True):
+            layout = suggest_figure_layout(
+                path, has_bullets=has_bullets, has_caption=has_caption
+            )
+            assert layout != "figure_with_panels", (
+                f"inset figure must never be classed as figure_with_panels "
+                f"(has_bullets={has_bullets}, has_caption={has_caption}, got {layout!r})"
+            )

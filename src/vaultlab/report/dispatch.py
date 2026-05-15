@@ -18,6 +18,14 @@ Detection rules (first match wins):
   * ``citation`` — has ``citations`` and ``by_status`` keys.
   * ``dossier`` — has ``project_slug`` and ``sections`` keys.
   * ``response-letter`` — has ``reviewer`` and ``comments`` keys.
+  * ``weekly-status`` — :class:`WeeklyStatusReport` (or a dict with
+    ``week_label`` + ``tldr`` keys).
+  * ``state-dashboard`` — :class:`StateDashboard` (or a dict with
+    ``status_summary`` + ``module_map`` keys).
+  * ``feature-flag-editor`` — :class:`FeatureFlagConfig` (or a dict with
+    a ``groups`` key whose entries look like FlagGroup tuples).
+  * ``approaches-compare`` — :class:`ApproachesCompare` (or a dict with
+    ``approaches`` + ``decision_rationale`` keys).
 
 Raises :class:`UnknownArtifact` if no rule matches.
 """
@@ -36,6 +44,10 @@ ArtifactKind = Literal[
     "citation",
     "dossier",
     "response-letter",
+    "weekly-status",
+    "state-dashboard",
+    "feature-flag-editor",
+    "approaches-compare",
 ]
 
 
@@ -45,6 +57,24 @@ class UnknownArtifact(ValueError):
 
 def _detect_kind(data: dict[str, Any] | Any) -> ArtifactKind:
     """Inspect a result dict and guess the artifact kind."""
+    # Fast-path: dataclass instances dispatch by type so we don't have to
+    # play guess-the-shape games for the v0.0.5 consumers.
+    if not isinstance(data, dict):
+        # Local imports to avoid circular import at module load.
+        from vaultlab.report.approaches_compare_html import ApproachesCompare
+        from vaultlab.report.feature_flag_editor import FeatureFlagConfig
+        from vaultlab.report.state_dashboard_html import StateDashboard
+        from vaultlab.report.weekly_status_html import WeeklyStatusReport
+
+        if isinstance(data, WeeklyStatusReport):
+            return "weekly-status"
+        if isinstance(data, StateDashboard):
+            return "state-dashboard"
+        if isinstance(data, FeatureFlagConfig):
+            return "feature-flag-editor"
+        if isinstance(data, ApproachesCompare):
+            return "approaches-compare"
+
     # Dataclass support: check attributes too.
     has = lambda k: (k in data) if isinstance(data, dict) else hasattr(data, k)  # noqa: E731
 
@@ -59,6 +89,20 @@ def _detect_kind(data: dict[str, Any] | Any) -> ArtifactKind:
         return "dossier"
     if has("reviewer") and has("comments"):
         return "response-letter"
+    # v0.0.5 HTML consumers: keep these BEFORE deck-audit so a state
+    # dashboard dict that happens to carry a 'slides' alias doesn't
+    # mis-route. Each picks a pair of fields that are unique to its
+    # dataclass.
+    if has("week_label") and has("tldr"):
+        return "weekly-status"
+    if has("status_summary") and has("module_map"):
+        return "state-dashboard"
+    if has("approaches") and has("decision_rationale"):
+        return "approaches-compare"
+    if has("groups") and has("title") and not has("slides"):
+        # Distinguish a FeatureFlagConfig from a deck plan: deck plans
+        # always have a 'slides' key, FeatureFlagConfig never does.
+        return "feature-flag-editor"
     if has("plan") and has("audit"):
         return "deck-audit"
     # Bare deck audit: a plan that has slides + passed at the top level
@@ -127,6 +171,44 @@ def render_artifact_html(
         from vaultlab.manuscript.respond_html import build_response_letter_html
 
         return build_response_letter_html(data, **extra)
+
+    if resolved_kind == "weekly-status":
+        from vaultlab.report.weekly_status_html import (
+            WeeklyStatusReport,
+            build_weekly_status_html,
+        )
+
+        report = data if isinstance(data, WeeklyStatusReport) else WeeklyStatusReport(**data)
+        # These consumers take their dataclass only; ignore extra kwargs
+        # for now (callers can still customize by mutating the input).
+        return build_weekly_status_html(report)
+
+    if resolved_kind == "state-dashboard":
+        from vaultlab.report.state_dashboard_html import (
+            StateDashboard,
+            build_state_dashboard_html,
+        )
+
+        state = data if isinstance(data, StateDashboard) else StateDashboard(**data)
+        return build_state_dashboard_html(state)
+
+    if resolved_kind == "feature-flag-editor":
+        from vaultlab.report.feature_flag_editor import (
+            FeatureFlagConfig,
+            build_feature_flag_editor,
+        )
+
+        cfg = data if isinstance(data, FeatureFlagConfig) else FeatureFlagConfig(**data)
+        return build_feature_flag_editor(cfg)
+
+    if resolved_kind == "approaches-compare":
+        from vaultlab.report.approaches_compare_html import (
+            ApproachesCompare,
+            build_approaches_compare_html,
+        )
+
+        comp = data if isinstance(data, ApproachesCompare) else ApproachesCompare(**data)
+        return build_approaches_compare_html(comp)
 
     raise UnknownArtifact(f"No renderer for kind: {resolved_kind!r}")
 

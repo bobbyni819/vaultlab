@@ -429,9 +429,136 @@ def is_single_plot(image: str | Path | "Image.Image") -> bool:
     return len(detect_panels(image)) == 1
 
 
+# ---------------------------------------------------------------------------
+# Inset-axes detection (deferred-followups bundle, 2026-05-15)
+# ---------------------------------------------------------------------------
+#
+# A figure with an inset axes (parent plot with a small chart embedded in
+# one corner) registers as 1 panel via XY-cut — the inset's glyphs/lines
+# anchor an edge-dilation zone that prevents the projection from finding a
+# clean gutter. That's correct behavior (we don't want to subdivide), but
+# downstream LLM-side captioning needs to know the figure carries an inset
+# so it can describe it properly.
+#
+# Heuristic: look for a small, rectangular-frame-shaped connected dark
+# component that sits ENTIRELY within one corner half of the figure. An
+# axis frame is mostly hollow (low fill ratio for its bounding box). Size
+# bounds (10-50% of each axis) exclude both individual glyphs (too small)
+# and the main plot frame itself (too big). The strict corner test (whole
+# bbox inside the outer half on both axes) keeps right-side legends and
+# axis labels from triggering false positives.
+#
+# An inset detected this way is informational only — the layout dispatch
+# still treats the figure as "single_plot_with_inset" (same routing as
+# "single_plot": don't subdivide).
+
+
+_INSET_MIN_AXIS_FRAC = 0.10  # at least 10% of each axis
+_INSET_MAX_AXIS_FRAC = 0.50  # at most 50% of each axis (above → main plot frame)
+_INSET_MAX_EXTENT = 0.20  # bbox fill-ratio cap — frames are mostly hollow
+_INSET_DARK_THRESHOLD = 0.5  # gray < 0.5 → "dark enough to be an axis stroke"
+
+
+def _gray_for(image: str | Path | "Image.Image") -> np.ndarray:
+    """Internal helper: load the grayscale image (path or PIL.Image)."""
+    if isinstance(image, (str, Path)):
+        rgb = np.asarray(Image.open(str(image)).convert("RGB"))
+    else:
+        rgb = np.asarray(image.convert("RGB"))
+    return skcolor.rgb2gray(rgb)
+
+
+def has_corner_inset(image: str | Path | "Image.Image") -> bool:
+    """Heuristic: detect a small rectangular-frame component in one corner.
+
+    Strategy:
+
+    1. Binarize: ``gray < 0.5`` → all axis-frame / glyph strokes (dark ink).
+    2. Connected-component label the dark mask.
+    3. For each component, check whether its bounding box looks like an
+       inset frame:
+
+       * Size: 10%-50% of each image axis (excludes single glyphs and the
+         main plot frame).
+       * Extent (bbox fill-ratio): ≤ 0.20 — axis frames enclose mostly
+         whitespace, so their dark pixels occupy a small fraction of
+         the bbox area.
+       * Corner placement: the ENTIRE bbox sits in one of the four
+         outer-half quadrants. ``x1 < W/2`` for the left side, ``x0 >
+         W/2`` for the right (symmetric for top/bottom). This prevents
+         a wide axis label or in-axes legend from being mis-classified.
+
+    A figure passes ``has_corner_inset`` when *at least one* connected
+    component matches all three criteria. The check is intentionally
+    conservative — designed to fire on textbook matplotlib
+    ``inset_axes`` content and to stay quiet on plain single plots,
+    bar/line charts with corner legends, and multi-panel figures (the
+    multi-panel case never reaches this code path because
+    :func:`classify_panel_layout` short-circuits when XY-cut returns ≥2
+    panels).
+    """
+    try:
+        from skimage import measure  # local import — measure is heavyweight
+    except ImportError:  # pragma: no cover — gated at install time
+        return False
+
+    gray = _gray_for(image)
+    H, W = gray.shape
+    dark = gray < _INSET_DARK_THRESHOLD
+    labeled = measure.label(dark, connectivity=2)
+    props = measure.regionprops(labeled)
+
+    min_w = _INSET_MIN_AXIS_FRAC * W
+    min_h = _INSET_MIN_AXIS_FRAC * H
+    max_w = _INSET_MAX_AXIS_FRAC * W
+    max_h = _INSET_MAX_AXIS_FRAC * H
+    half_w = W / 2
+    half_h = H / 2
+
+    for prop in props:
+        y0, x0, y1, x1 = prop.bbox
+        bw, bh = x1 - x0, y1 - y0
+        if bw < min_w or bw > max_w:
+            continue
+        if bh < min_h or bh > max_h:
+            continue
+        if prop.extent > _INSET_MAX_EXTENT:
+            continue
+        in_left = x1 < half_w
+        in_right = x0 > half_w
+        in_top = y1 < half_h
+        in_bottom = y0 > half_h
+        if (in_left or in_right) and (in_top or in_bottom):
+            return True
+    return False
+
+
+def classify_panel_layout(image: str | Path | "Image.Image") -> str:
+    """Return the panel-layout class for a figure.
+
+    One of:
+
+    * ``"single_plot"`` — exactly one panel, no detected corner inset.
+    * ``"single_plot_with_inset"`` — exactly one panel BUT a small
+      corner region carries an inset axes / supplementary chart. The
+      layout dispatch treats this identically to ``single_plot``
+      (don't subdivide) — the distinct label lets downstream captioners
+      mention the inset.
+    * ``"multi_panel"`` — XY-cut found ≥2 panels.
+
+    See :func:`has_corner_inset` for the inset heuristic.
+    """
+    n_panels = len(detect_panels(image))
+    if n_panels >= 2:
+        return "multi_panel"
+    return "single_plot_with_inset" if has_corner_inset(image) else "single_plot"
+
+
 __all__ = [
+    "classify_panel_layout",
     "detect_panels",
     "find_marker_offset",
+    "has_corner_inset",
     "is_single_plot",
     "whitespace_mask",
 ]
