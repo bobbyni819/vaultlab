@@ -73,6 +73,11 @@ from vaultlab.workflows.crosstalk import (
     rigor_audit,
     write_crosstalk_artifacts,
 )
+from vaultlab.workflows.crosstalk_policy import (
+    CrosstalkContext,
+    should_invoke,
+    skip_reason,
+)
 from vaultlab.workflows.deck_plan import (
     DeckPlanTask,
     PlanGeneratorCallback,
@@ -95,6 +100,7 @@ from vaultlab.workflows.synthesis import plan_synthesis
 
 __all__ = [
     # Data classes
+    "CrosstalkContext",
     "CrosstalkResult",
     "DeckPlanTask",
     "DeepThinkEnsembleBundle",
@@ -105,6 +111,9 @@ __all__ = [
     "Provenance",
     "RunnerCallback",
     "WorkflowPlan",
+    # Crosstalk policy
+    "should_invoke",
+    "skip_reason",
     "read_provenance",
     "write_with_provenance",
     # Runners

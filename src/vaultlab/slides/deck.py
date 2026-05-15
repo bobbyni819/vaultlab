@@ -327,6 +327,10 @@ def _write_deck_provenance(
     plan_mode_used: str,
     audit_status: str,
     figure_assignments: dict[str, Path] | None,
+    crosstalk_invoked: bool = False,
+    crosstalk_skip_reason: str | None = None,
+    crosstalk_task_kind: str | None = None,
+    crosstalk_n_rounds: int = 0,
 ) -> None:
     """Write the deck's ``.provenance.json`` + ``.method.md`` sidecars.
 
@@ -356,6 +360,11 @@ def _write_deck_provenance(
                 "audit_status": audit_status or "n/a",
                 "n_figure_assignments": len(figure_assignments or {}),
                 "n_summaries": len(lineage_result.summary_paths),
+                # SPEC-E sub-goal 2.4 — crosstalk invocation policy.
+                "crosstalk_invoked": crosstalk_invoked,
+                "crosstalk_skip_reason": crosstalk_skip_reason,
+                "crosstalk_task_kind": crosstalk_task_kind,
+                "crosstalk_n_rounds": crosstalk_n_rounds,
             },
             tags=["deck", "lit-arc"],
             notes=(
@@ -471,10 +480,27 @@ def build_deck_from_lineage_result(
             rigor_audit,
             write_crosstalk_artifacts,
         )
+        from vaultlab.workflows.crosstalk_policy import (
+            CrosstalkContext,
+            should_invoke,
+            skip_reason,
+        )
 
         summaries = _summaries_to_paper_summaries(
             _read_summary_frontmatters(lineage_result.summary_paths)
         )
+        # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy.
+        # The deck plan is a journal-club deliverable that integrates
+        # multi-paper evidence into a slide narrative → 'journal_club'.
+        _deck_ctx = CrosstalkContext(
+            task_kind="journal_club",
+            n_evidence_sources=len(summaries),
+            n_rounds_budget=crosstalk_n_rounds,
+        )
+        _deck_invoked = should_invoke(_deck_ctx)
+        _deck_skip_reason = skip_reason(_deck_ctx)
+        _deck_task_kind = _deck_ctx.task_kind
+
         ct = adversarial_deck_plan_meeting(
             topic=lineage_result.topic,
             summaries=summaries,
@@ -563,6 +589,10 @@ def build_deck_from_lineage_result(
             plan_mode_used=plan_mode_used,
             audit_status=audit_status,
             figure_assignments=figure_assignments,
+            crosstalk_invoked=_deck_invoked,
+            crosstalk_skip_reason=_deck_skip_reason,
+            crosstalk_task_kind=_deck_task_kind,
+            crosstalk_n_rounds=crosstalk_n_rounds,
         )
         return out_pptx
 

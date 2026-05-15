@@ -2320,6 +2320,12 @@ def run_lit_arc(
     tier_a_dois: set[str] | None = None
     picker_method: str = "citation-graph"
     crosstalk_picker_result = None
+    # SPEC-E sub-goal 2.4: cost-tracking sidecar for the policy decision.
+    # Recorded into provenance whether crosstalk fires or not so audits
+    # can reconstruct why a given run was or wasn't a round-table.
+    crosstalk_picker_invoked: bool = False
+    crosstalk_picker_skip_reason: str | None = None
+    crosstalk_picker_task_kind: str | None = None
     if resolved_max_papers and resolved_max_papers < corpus.n_papers:
         # Adversarial crosstalk path — only when explicitly enabled AND a
         # crosstalk_runner is available. Falls through to single-shot
@@ -2329,6 +2335,11 @@ def run_lit_arc(
             from vaultlab.workflows.crosstalk import (
                 adversarial_picker_meeting,
                 write_crosstalk_artifacts,
+            )
+            from vaultlab.workflows.crosstalk_policy import (
+                CrosstalkContext,
+                should_invoke,
+                skip_reason,
             )
 
             candidates = _build_candidates(
@@ -2344,6 +2355,16 @@ def run_lit_arc(
                 )
                 or "(no candidates)"
             )
+            # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy.
+            # Picker reasons across candidate abstracts to pick top-N → 'synthesis'.
+            _picker_ctx = CrosstalkContext(
+                task_kind="synthesis",
+                n_evidence_sources=len(candidates),
+                n_rounds_budget=crosstalk_n_rounds,
+            )
+            crosstalk_picker_task_kind = _picker_ctx.task_kind
+            crosstalk_picker_invoked = should_invoke(_picker_ctx)
+            crosstalk_picker_skip_reason = skip_reason(_picker_ctx)
             ct_result = adversarial_picker_meeting(
                 topic=topic,
                 candidates=candidates,
@@ -2496,12 +2517,35 @@ def run_lit_arc(
     narrative: dict[str, str] | None = None
     skipped_reason = ""
     crosstalk_arc_result = None
+    # SPEC-E sub-goal 2.4: cost-tracking sidecar for the arc-meeting policy
+    # decision. Mirrors the picker-side sidecar so both branches of the
+    # crosstalk-using pipeline land in the provenance manifest.
+    crosstalk_arc_invoked: bool = False
+    crosstalk_arc_skip_reason: str | None = None
+    crosstalk_arc_task_kind: str | None = None
     if arc_mode == "adversarial" and crosstalk_runner is not None and _llm_arc is None:
         # Adversarial crosstalk path for arc generation.
         from vaultlab.workflows.crosstalk import (
             adversarial_arc_meeting,
             write_crosstalk_artifacts,
         )
+        from vaultlab.workflows.crosstalk_policy import (
+            CrosstalkContext,
+            should_invoke,
+            skip_reason,
+        )
+
+        # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy.
+        # Arc writes the lineage doc that downstream manuscript-style work
+        # consumes → 'manuscript_draft'.
+        _arc_ctx = CrosstalkContext(
+            task_kind="manuscript_draft",
+            n_evidence_sources=len(summaries),
+            n_rounds_budget=crosstalk_n_rounds,
+        )
+        crosstalk_arc_task_kind = _arc_ctx.task_kind
+        crosstalk_arc_invoked = should_invoke(_arc_ctx)
+        crosstalk_arc_skip_reason = skip_reason(_arc_ctx)
 
         ct_arc = adversarial_arc_meeting(
             topic=topic,
@@ -2706,6 +2750,14 @@ def run_lit_arc(
             "max_papers_to_summarize_explicit": max_papers_to_summarize,
             "pdf_cache_dir": str(pdf_cache_dir),
             "narration": "claude" if narrative is not None else "skipped",
+            # SPEC-E sub-goal 2.4 — crosstalk policy decisions per call site.
+            "crosstalk_picker_invoked": crosstalk_picker_invoked,
+            "crosstalk_picker_skip_reason": crosstalk_picker_skip_reason,
+            "crosstalk_picker_task_kind": crosstalk_picker_task_kind,
+            "crosstalk_arc_invoked": crosstalk_arc_invoked,
+            "crosstalk_arc_skip_reason": crosstalk_arc_skip_reason,
+            "crosstalk_arc_task_kind": crosstalk_arc_task_kind,
+            "crosstalk_n_rounds": crosstalk_n_rounds,
         },
         model=DEFAULT_MODEL if narrative is not None else "",
         related_outputs=[str(log_path), *[str(p) for p in article_stubs]],
