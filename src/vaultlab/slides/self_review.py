@@ -349,6 +349,7 @@ def _review_one_slide(slide: Any, slide_index: int, *, is_first: bool = False) -
     _check_bullet_density(text_chunks, slide_type, review)
     _check_figure_presence(slide, title, text_chunks, slide_type, review)
     _check_color_contrast(slide, review)
+    _check_speaker_notes(slide, slide_type, review)
 
     return review
 
@@ -954,6 +955,192 @@ def _check_color_contrast(slide: Any, review: SlideReview) -> None:
                     f"({_CONTRAST_AA_THRESHOLD:.1f}:1) for normal-weight body text. "
                     f"Foreground #{fg[0]:02X}{fg[1]:02X}{fg[2]:02X} on background "
                     f"#{bg[0]:02X}{bg[1]:02X}{bg[2]:02X}."
+                ),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Speaker-notes structure audit (Bobby's two-tier hard rule)
+# ---------------------------------------------------------------------------
+#
+# ``feedback_slide_hard_rules`` requires every body slide to carry a
+# dual-format speaker-notes block: a mental-map heading (HOOK / KEY CLAIM /
+# EVIDENCE / KEY TERMS / CLICK / TRANSITION) AND a 200-400 word detailed
+# script underneath, separated by a visible divider. This audit catches
+# the common drift modes:
+#
+# * Figure / data slide ships with EMPTY notes — nothing to actually
+#   present. Critical.
+# * Notes present but mental-map labels missing — the on-stage scan
+#   index is gone. Warning.
+# * Script body is too thin to actually present from (< 100 words) on a
+#   non-title/divider slide. Warning.
+# * Script body is too long (> 500 words) — a draft pasted in, not a
+#   compressed script. Warning.
+#
+# Title / divider / references / acknowledgments slides are exempt from
+# the body-word-count rule (their notes are conventionally short).
+
+_NOTES_MIN_SCRIPT_WORDS = 100
+_NOTES_MAX_SCRIPT_WORDS = 500
+_NOTES_DIVIDER = "--- DETAILED SCRIPT ---"
+# Body-presentable slides — those needing a real spoken script. The empty /
+# mental-map / short-body / long-body rules apply here. References and
+# acknowledgments are NOT body slides; their notes are conventionally
+# short or absent.
+_NOTES_BODY_SLIDE_TYPES = {"figure", "text"}
+# Body-word-count rule exempts these structural slides. Empty-notes rule
+# similarly exempts the title / divider opener.
+_NOTES_STRUCTURAL_EXEMPT = {
+    "title",
+    "section_divider",
+    "references",
+    "acknowledgments",
+}
+
+
+def _extract_speaker_notes(slide: Any) -> str:
+    """Return the slide's speaker-notes plain-text, or ``""``."""
+    notes_slide = getattr(slide, "notes_slide", None)
+    if notes_slide is None:
+        return ""
+    tf = getattr(notes_slide, "notes_text_frame", None)
+    if tf is None:
+        return ""
+    try:
+        return (tf.text or "").strip()
+    except Exception:  # pragma: no cover — defensive
+        return ""
+
+
+def _split_notes_into_mental_map_and_script(notes_text: str) -> tuple[str, str]:
+    """Return ``(mental_map_block, script_body)`` from a notes string.
+
+    When the explicit ``--- DETAILED SCRIPT ---`` divider is present we
+    split on it. When it isn't, we treat lines starting with ``- LABEL:``
+    where LABEL matches a known mental-map key as the heading block, and
+    everything after them as script. This mirrors :mod:`vaultlab.slides.notes`.
+    """
+    if _NOTES_DIVIDER in notes_text:
+        head, _, tail = notes_text.partition(_NOTES_DIVIDER)
+        return head.strip(), tail.strip()
+    # No divider — try to recover a heading by inspecting line prefixes.
+    try:
+        from vaultlab.slides.notes import parse_speaker_notes
+    except Exception:  # pragma: no cover — slides module is local
+        return "", notes_text.strip()
+    parsed = parse_speaker_notes(notes_text)
+    if parsed:
+        # Bullets identified, but no explicit body section → treat the
+        # whole string as a mental-map-only document (no script body).
+        return notes_text.strip(), ""
+    return "", notes_text.strip()
+
+
+def _has_mental_map_heading(mental_map_block: str) -> bool:
+    """Cheap detection: at least one known mental-map LABEL parses out."""
+    if not mental_map_block.strip():
+        return False
+    try:
+        from vaultlab.slides.notes import parse_speaker_notes
+    except Exception:  # pragma: no cover — slides module is local
+        return False
+    parsed = parse_speaker_notes(mental_map_block)
+    return bool(parsed)
+
+
+def _word_count(text: str) -> int:
+    return len([w for w in text.split() if w.strip()])
+
+
+def _check_speaker_notes(slide: Any, slide_type: str, review: SlideReview) -> None:
+    """Flag missing / under-structured / under-length speaker notes.
+
+    See module-level commentary above for the four firing rules. Each
+    issue is filed against the slide review, not the deck arc, so the
+    HTML adapter renders them inline with the slide card.
+    """
+    notes_text = _extract_speaker_notes(slide)
+
+    # Rule 1 — empty notes on a body slide is critical (figure / data slides
+    # absolutely need something to say).
+    if not notes_text:
+        if slide_type in _NOTES_BODY_SLIDE_TYPES:
+            review.issues.append(
+                {
+                    "severity": "critical",
+                    "rule": "speaker-notes-empty",
+                    "detail": (
+                        "Slide has no speaker notes — there is nothing to actually "
+                        "say at the podium. Add a mental-map heading and a 200-400 "
+                        "word script per the two-tier hard rule."
+                    ),
+                }
+            )
+        # Title / divider / acknowledgments slides exempt from empty check.
+        return
+
+    mental_map_block, script_body = _split_notes_into_mental_map_and_script(notes_text)
+    has_map = _has_mental_map_heading(mental_map_block)
+    script_words = _word_count(script_body)
+
+    # Rule 2 — body slide notes missing the mental-map heading.
+    if slide_type in _NOTES_BODY_SLIDE_TYPES and not has_map:
+        review.issues.append(
+            {
+                "severity": "warning",
+                "rule": "speaker-notes-mental-map",
+                "detail": (
+                    "Speaker notes don't include the two-tier mental-map heading "
+                    "(HOOK / KEY CLAIM / EVIDENCE / KEY TERMS / CLICK / TRANSITION). "
+                    "Hard rule requires the on-stage scan-index above the script."
+                ),
+            }
+        )
+
+    # Word-count rules only apply to body slides; title / divider / ack are exempt.
+    if slide_type in _NOTES_STRUCTURAL_EXEMPT:
+        return
+
+    # Rule 3 — script body too thin.
+    if script_words and script_words < _NOTES_MIN_SCRIPT_WORDS:
+        review.issues.append(
+            {
+                "severity": "warning",
+                "rule": "speaker-notes-short",
+                "detail": (
+                    f"Script body is {script_words} words — under the "
+                    f"{_NOTES_MIN_SCRIPT_WORDS}-word floor for a body slide. "
+                    "Likely too thin to actually present from."
+                ),
+            }
+        )
+    elif not script_body and slide_type in _NOTES_BODY_SLIDE_TYPES:
+        # Notes only contain a mental-map block with no script underneath.
+        review.issues.append(
+            {
+                "severity": "warning",
+                "rule": "speaker-notes-short",
+                "detail": (
+                    "Speaker notes have a mental-map heading but no detailed "
+                    f"script body. Add a {_NOTES_MIN_SCRIPT_WORDS}-{_NOTES_MAX_SCRIPT_WORDS} "
+                    "word script under the divider."
+                ),
+            }
+        )
+
+    # Rule 4 — script body too long (likely an un-compressed draft).
+    if script_words > _NOTES_MAX_SCRIPT_WORDS:
+        review.issues.append(
+            {
+                "severity": "warning",
+                "rule": "speaker-notes-long",
+                "detail": (
+                    f"Script body is {script_words} words — over the "
+                    f"{_NOTES_MAX_SCRIPT_WORDS}-word ceiling. Compress to "
+                    f"{_NOTES_MIN_SCRIPT_WORDS}-{_NOTES_MAX_SCRIPT_WORDS} words "
+                    "or split the slide."
                 ),
             }
         )

@@ -68,19 +68,30 @@ def _record_crosstalk_decision(
     deep-think run was or wasn't a round-table. The decision is folded
     into the WorkflowPlan's provenance via:
 
+    * ``params`` — typed structured receipt (``crosstalk_invoked``,
+      ``crosstalk_task_kind``, ``crosstalk_skip_reason``). This is the
+      canonical home post-2026-05-15: the workflow ``Provenance``
+      dataclass now carries a ``params`` dict mirroring
+      :class:`vaultlab.provenance.ProvenanceRecord`.
     * ``tags`` — short machine-greppable markers (``crosstalk_invoked=true``,
-      ``crosstalk_task_kind=deep_think``)
+      ``crosstalk_task_kind=deep_think``). Kept for back-compat with audit
+      tooling that greps tags.
     * ``notes`` — appended human-readable summary (preserves any existing
-      note text); includes the skip reason when applicable
+      note text); includes the skip reason when applicable. Also kept for
+      back-compat.
 
-    The workflow ``Provenance`` dataclass has no ``params`` dict (unlike
-    the project-wide ``ProvenanceRecord`` in :mod:`vaultlab.provenance`),
-    so we encode the manifest entries into the fields that exist. This
-    mirrors the pattern already in :mod:`vaultlab.research.lineage` and
-    :mod:`vaultlab.slides.deck`.
+    The triple-write is intentional: ``params`` is the right home for
+    structured decisions, but old indexes / scripts read tags + notes so
+    we keep emitting both while the rest of the codebase migrates.
     """
     invoked = should_invoke(ctx)
     reason = skip_reason(ctx)
+
+    # Structured params (canonical post-unification home)
+    prov.params["crosstalk_invoked"] = invoked
+    prov.params["crosstalk_task_kind"] = ctx.task_kind
+    prov.params["crosstalk_skip_reason"] = reason
+
     invoked_tag = f"crosstalk_invoked={str(invoked).lower()}"
     kind_tag = f"crosstalk_task_kind={ctx.task_kind}"
     # Idempotent stamp: dedupe so plan-time + runtime calls don't pile up

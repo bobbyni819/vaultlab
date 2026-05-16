@@ -69,6 +69,13 @@ class Provenance:
     tags: list[str] = field(default_factory=list)
     finding_ids: list[str] = field(default_factory=list)
     notes: str = ""
+    # Structured key/value receipt parameters. Mirrors
+    # ``vaultlab.provenance.ProvenanceRecord.params`` — the workflow form was
+    # tags+notes-only historically, so call-sites encoded structured decisions
+    # (e.g. crosstalk-policy outcomes) into tag strings. This field gives them
+    # a typed home and lets ``to_dict`` / ``from_dict`` / frontmatter / the
+    # sidecar bridge all round-trip the same shape as ``ProvenanceRecord``.
+    params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.generated_at:
@@ -91,6 +98,7 @@ class Provenance:
             "tags",
             "finding_ids",
             "notes",
+            "params",
         ):
             value = getattr(self, field_name)
             if value or value == 0:
@@ -113,6 +121,7 @@ class Provenance:
             tags=list(d.get("tags", [])),
             finding_ids=list(d.get("finding_ids", [])),
             notes=str(d.get("notes", "")),
+            params=dict(d.get("params", {})),
         )
 
     def render_frontmatter(self) -> str:
@@ -176,6 +185,7 @@ def write_with_provenance(
                 tags=list(provenance.tags),
                 finding_ids=list(provenance.finding_ids),
                 notes=provenance.notes,
+                params=dict(provenance.params),
             )
             write_receipts(Path(path), record)
         except Exception:

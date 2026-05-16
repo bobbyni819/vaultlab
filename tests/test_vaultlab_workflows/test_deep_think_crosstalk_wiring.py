@@ -169,3 +169,88 @@ def test_run_ensemble_writes_decision_into_synthesis_canonical_file(cfg):
     assert "crosstalk_invoked=true" in prov.tags
     assert "crosstalk_task_kind=deep_think" in prov.tags
     assert "crosstalk_invoked=True" in (prov.notes or "")
+
+
+# ---------------------------------------------------------------------------
+# Provenance params dict — unification with ProvenanceRecord
+# ---------------------------------------------------------------------------
+#
+# Originally the crosstalk decision was encoded into ``tags`` + ``notes`` only,
+# because the workflow ``Provenance`` dataclass had no ``params`` dict. After
+# the unification followup, ``Provenance`` gains ``params: dict[str, Any]``
+# (mirroring ``vaultlab.provenance.ProvenanceRecord``) and the crosstalk
+# recorder writes the decision into ``params`` in addition to the legacy
+# tags/notes for back-compat.
+
+
+def test_provenance_dataclass_has_params_dict():
+    """The workflow Provenance dataclass exposes a params dict."""
+    from vaultlab.workflows._provenance import Provenance
+
+    p = Provenance(generated_by="x")
+    assert hasattr(p, "params"), "Provenance must carry a params dict (unification)"
+    assert isinstance(p.params, dict)
+    assert p.params == {}  # default-empty
+
+
+def test_plan_deep_think_round_records_decision_in_params(cfg):
+    """Crosstalk decision is mirrored into params alongside tags/notes."""
+    wp = plan_deep_think_round(cfg, topic="t")
+    params = wp.provenance.params
+    assert params.get("crosstalk_invoked") is True
+    assert params.get("crosstalk_task_kind") == "deep_think"
+    # No skip reason when the gate fired
+    assert params.get("crosstalk_skip_reason") is None
+
+
+def test_plan_ensemble_bundle_records_decision_in_params(cfg):
+    """Every phase carries the decision in params, not just tags."""
+    bundle = plan_deep_think_with_ensemble_critic(cfg, topic="t", n_critics=2)
+    for phase_wp in bundle.all_plans:
+        params = phase_wp.provenance.params
+        assert params.get("crosstalk_invoked") is True, (
+            f"phase {phase_wp.provenance.kind!r} missing crosstalk_invoked in params"
+        )
+        assert params.get("crosstalk_task_kind") == "deep_think"
+
+
+def test_run_ensemble_writes_params_into_synthesis_canonical_file(cfg):
+    """Canonical synthesis frontmatter round-trips the params dict."""
+    bundle = plan_deep_think_with_ensemble_critic(cfg, topic="t", n_critics=2)
+    run_deep_think_with_ensemble_critic(bundle, agent_fn=_stub_agent("ENS"))
+
+    canonical = bundle.synthesis.canonical_output_path
+    assert canonical is not None
+    prov = read_provenance(canonical)
+    assert prov is not None
+    # params survives YAML serialisation + reload
+    assert prov.params.get("crosstalk_invoked") is True
+    assert prov.params.get("crosstalk_task_kind") == "deep_think"
+
+
+def test_provenance_params_round_trips_through_to_from_dict():
+    """Provenance.to_dict / from_dict preserve the params field."""
+    from vaultlab.workflows._provenance import Provenance
+
+    p = Provenance(generated_by="x", params={"a": 1, "b": "two", "c": None})
+    d = p.to_dict()
+    assert "params" in d
+    assert d["params"]["a"] == 1
+    assert d["params"]["b"] == "two"
+    assert d["params"]["c"] is None
+    p2 = Provenance.from_dict(d)
+    assert p2.params == p.params
+
+
+def test_run_ensemble_params_idempotent_under_double_stamp(cfg):
+    """Plan-time + runtime stamps must not duplicate or corrupt params."""
+    bundle = plan_deep_think_with_ensemble_critic(cfg, topic="t", n_critics=2)
+    run_deep_think_with_ensemble_critic(bundle, agent_fn=_stub_agent("ENS"))
+
+    for phase_wp in bundle.all_plans:
+        params = phase_wp.provenance.params
+        # Exactly the three crosstalk keys, no list-multiplication
+        assert params.get("crosstalk_invoked") is True
+        assert params.get("crosstalk_task_kind") == "deep_think"
+        # skip_reason is None when invoked is True
+        assert params.get("crosstalk_skip_reason") is None
