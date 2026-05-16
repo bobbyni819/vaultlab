@@ -41,6 +41,12 @@ from vaultlab.report.approaches_compare_html import (
     build_approaches_compare_html,
     write_approaches_compare_html,
 )
+from vaultlab.report.component_variants_html import (
+    ComponentInventory,
+    ComponentVariant,
+    build_component_variants_html,
+    write_component_variants_html,
+)
 from vaultlab.report.dispatch import (
     ArtifactKind,
     UnknownArtifact,
@@ -79,6 +85,18 @@ from vaultlab.report.state_dashboard_html import (
     build_state_dashboard_html,
     write_state_dashboard_html,
 )
+from vaultlab.report.svg_figure_sheet_html import (
+    FigureSheet,
+    Schematic,
+    build_svg_figure_sheet_html,
+    write_svg_figure_sheet_html,
+)
+from vaultlab.report.visual_designs_html import (
+    DesignOption,
+    VisualDesigns,
+    build_visual_designs_html,
+    write_visual_designs_html,
+)
 from vaultlab.report.weekly_status_html import (
     WeeklyStatusReport,
     build_weekly_status_html,
@@ -90,7 +108,11 @@ __all__ = [
     "ApproachesCompare",
     "ArtifactKind",
     "CommitEntry",
+    "ComponentInventory",
+    "ComponentVariant",
+    "DesignOption",
     "FeatureFlagConfig",
+    "FigureSheet",
     "FileChange",
     "FlagGroup",
     "FlowStep",
@@ -98,17 +120,22 @@ __all__ = [
     "IncidentChecklist",
     "IncidentReport",
     "PRWriteup",
+    "Schematic",
     "StateDashboard",
     "Theme",
     "TimelineEntry",
     "UnknownArtifact",
+    "VisualDesigns",
     "WeeklyStatusReport",
     "build_approaches_compare_html",
+    "build_component_variants_html",
     "build_feature_flag_editor",
     "build_flowchart_html",
     "build_incident_timeline_html",
     "build_pr_writeup_html",
     "build_state_dashboard_html",
+    "build_svg_figure_sheet_html",
+    "build_visual_designs_html",
     "build_weekly_status_html",
     "components",
     "editors",
@@ -116,11 +143,14 @@ __all__ = [
     "render_report",
     "write_approaches_compare_html",
     "write_artifact_html",
+    "write_component_variants_html",
     "write_feature_flag_editor",
     "write_flowchart_html",
     "write_incident_timeline_html",
     "write_pr_writeup_html",
     "write_report",
     "write_state_dashboard_html",
+    "write_svg_figure_sheet_html",
+    "write_visual_designs_html",
     "write_weekly_status_html",
 ]

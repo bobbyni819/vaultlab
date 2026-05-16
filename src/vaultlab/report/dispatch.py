@@ -26,6 +26,12 @@ Detection rules (first match wins):
     a ``groups`` key whose entries look like FlagGroup tuples).
   * ``approaches-compare`` — :class:`ApproachesCompare` (or a dict with
     ``approaches`` + ``decision_rationale`` keys).
+  * ``visual-designs`` — :class:`VisualDesigns` (or a dict with
+    ``title`` + ``options`` keys and no ``slides``).
+  * ``component-variants`` — :class:`ComponentInventory` (or a dict
+    with ``title`` + ``variants`` keys).
+  * ``svg-figure-sheet`` — :class:`FigureSheet` (or a dict with
+    ``title`` + ``schematics`` keys).
 
 Raises :class:`UnknownArtifact` if no rule matches.
 """
@@ -48,6 +54,9 @@ ArtifactKind = Literal[
     "state-dashboard",
     "feature-flag-editor",
     "approaches-compare",
+    "visual-designs",
+    "component-variants",
+    "svg-figure-sheet",
 ]
 
 
@@ -62,8 +71,11 @@ def _detect_kind(data: dict[str, Any] | Any) -> ArtifactKind:
     if not isinstance(data, dict):
         # Local imports to avoid circular import at module load.
         from vaultlab.report.approaches_compare_html import ApproachesCompare
+        from vaultlab.report.component_variants_html import ComponentInventory
         from vaultlab.report.feature_flag_editor import FeatureFlagConfig
         from vaultlab.report.state_dashboard_html import StateDashboard
+        from vaultlab.report.svg_figure_sheet_html import FigureSheet
+        from vaultlab.report.visual_designs_html import VisualDesigns
         from vaultlab.report.weekly_status_html import WeeklyStatusReport
 
         if isinstance(data, WeeklyStatusReport):
@@ -74,6 +86,12 @@ def _detect_kind(data: dict[str, Any] | Any) -> ArtifactKind:
             return "feature-flag-editor"
         if isinstance(data, ApproachesCompare):
             return "approaches-compare"
+        if isinstance(data, VisualDesigns):
+            return "visual-designs"
+        if isinstance(data, ComponentInventory):
+            return "component-variants"
+        if isinstance(data, FigureSheet):
+            return "svg-figure-sheet"
 
     # Dataclass support: check attributes too.
     has = lambda k: (k in data) if isinstance(data, dict) else hasattr(data, k)  # noqa: E731
@@ -103,6 +121,14 @@ def _detect_kind(data: dict[str, Any] | Any) -> ArtifactKind:
         # Distinguish a FeatureFlagConfig from a deck plan: deck plans
         # always have a 'slides' key, FeatureFlagConfig never does.
         return "feature-flag-editor"
+    if has("options") and has("title") and not has("slides"):
+        # VisualDesigns: title + options. ApproachesCompare also has
+        # 'approaches' but it doesn't use 'options'.
+        return "visual-designs"
+    if has("variants") and has("title"):
+        return "component-variants"
+    if has("schematics") and has("title"):
+        return "svg-figure-sheet"
     if has("plan") and has("audit"):
         return "deck-audit"
     # Bare deck audit: a plan that has slides + passed at the top level
@@ -209,6 +235,33 @@ def render_artifact_html(
 
         comp = data if isinstance(data, ApproachesCompare) else ApproachesCompare(**data)
         return build_approaches_compare_html(comp)
+
+    if resolved_kind == "visual-designs":
+        from vaultlab.report.visual_designs_html import (
+            VisualDesigns,
+            build_visual_designs_html,
+        )
+
+        designs = data if isinstance(data, VisualDesigns) else VisualDesigns(**data)
+        return build_visual_designs_html(designs)
+
+    if resolved_kind == "component-variants":
+        from vaultlab.report.component_variants_html import (
+            ComponentInventory,
+            build_component_variants_html,
+        )
+
+        inv = data if isinstance(data, ComponentInventory) else ComponentInventory(**data)
+        return build_component_variants_html(inv)
+
+    if resolved_kind == "svg-figure-sheet":
+        from vaultlab.report.svg_figure_sheet_html import (
+            FigureSheet,
+            build_svg_figure_sheet_html,
+        )
+
+        sheet = data if isinstance(data, FigureSheet) else FigureSheet(**data)
+        return build_svg_figure_sheet_html(sheet)
 
     raise UnknownArtifact(f"No renderer for kind: {resolved_kind!r}")
 
