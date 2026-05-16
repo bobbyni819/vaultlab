@@ -4,7 +4,57 @@ All notable changes to vaultlab. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-## [0.0.5] — 2026-05-15
+## [0.0.6] — 2026-05-15
+
+Patch release rolling up 12 commits of post-v0.0.5 follow-up work shipped on the same day. Test count grew 2040 → 2196. HTML pattern coverage matrix now closed at 18/20 ✅ (2 intentionally out-of-scope).
+
+### Added — HTML pattern coverage closure (6 new consumers)
+
+- **`vaultlab.report.pr_writeup_html`** — pattern #5. Release notes / iterate-session summaries with file-by-file table + before/after compare.
+- **`vaultlab.report.flowchart_html`** — pattern #12. Annotated flowchart for pipeline phase explainers + KB ingest viz.
+- **`vaultlab.report.incident_timeline_html`** — pattern #17. Postmortem timeline with log excerpts + followup checklist.
+- **`vaultlab.report.visual_designs_html`** — pattern #2. Palette + layout swatches for figure-contract draft mode.
+- **`vaultlab.report.component_variants_html`** — pattern #8. Contact-sheet of slide layouts / report primitives, grouped by tag.
+- **`vaultlab.report.svg_figure_sheet_html`** — pattern #11. Copyable inline-SVG schematic library for architecture diagrams.
+
+Each writes provenance sidecars per Red Line #2. Coverage doc updated; KB mirror synced.
+
+### Added — Phase 7.3 finish
+
+- **`vaultlab.slides.time_budget.audit_time_budget`** — per-slide and total presentation time estimation; flags over-budget decks. Heuristics keyed on slide kind.
+- **`vaultlab.slides.qa_anticipator.anticipate_qa`** — LLM-driven with heuristic fallback; surfaces likely audience questions per slide.
+- **`vaultlab.slides.version_diff.diff_decks`** — slide-level diff between two .pptx versions with field-level change records.
+
+`self_review.review_deck` integrated to optionally call all three.
+
+### Added — Composability + crosstalk + audit polish
+
+- **Workflow Provenance unification** — `vaultlab.workflows._provenance.Provenance` gains a `params: dict[str, Any]` field, unifying receipt shape with `vaultlab.provenance.ProvenanceRecord`. Deep-think crosstalk wiring migrated to use the new `params` dict (legacy tags/notes retained for back-compat).
+- **Deep-think crosstalk wiring** — `should_invoke` gate wired into `plan_deep_think_round`, `plan_deep_think_with_ensemble_critic`, and `run_deep_think_with_ensemble_critic`. Decisions recorded in provenance manifests.
+- **Speaker-notes structure audit** — `self_review` flags empty-notes-on-figure-slide (critical), missing mental-map heading (warning), <100-word or >500-word scripts (warning). Title/divider slides exempt.
+- **WCAG color-contrast check** — `self_review` per text shape; <3.0 → critical, 3.0-4.5 → warning. Conservative on themed colors.
+- **Inset-axes detection** — `vaultlab.figures.understand.whitespace.classify_panel_layout` now returns `single_plot_with_inset` for corner-inset figures; layout dispatch routes them to single-plot layouts.
+- **Dispatch wiring for new consumers** — `vaultlab.report.dispatch._detect_kind` recognizes `WeeklyStatusReport`, `StateDashboard`, `FeatureFlagConfig`, `ApproachesCompare`, `PRWriteup`, `Flowchart`, `IncidentReport`, `VisualDesigns`, `ComponentInventory`, `FigureSheet`.
+
+### Added — Slash commands for v0.0.5 primitives
+
+`/full-reader`, `/run-analysis`, `/state-dashboard`, `/review-deck`, `/triage-citations`. `/polish`, `/respond`, `/das-audit` updated to write provenance sidecars per Red Line #2. Auto-copied to claude-config KB.
+
+### Added — KB enrichment
+
+- 6 new Wiki/Concepts pages: `audit-manifest-contract`, `nature-reader-absorption`, `html-output-system` (rewritten), `crosstalk-and-dispatch`, `kb-primitives`, `v0.0.5-release`. Bidirectional wikilinks. KB indexes regenerated via `vaultlab.kb.build_indexes`.
+- Master state doc `Sources/Notes/system-state-2026-05-15.md` written.
+
+### Added — Test coverage
+
+- **Crosstalk no-lit-search tests** (task #117) — 12 new no-arc tests in `tests/test_vaultlab_workflows/test_crosstalk_no_lit_search.py`. Verifies crosstalk fires without prior lineage_result; covers policy + plan-build + e2e execution + provenance + cross-primitive composition.
+- **Test-suite memory pressure fix** — `tests/test_vaultlab_slides/conftest.py` adds an autouse `gc.collect()` after every slides test, breaking the python-pptx ↔ lxml reference cycle that caused `zipfile.MemoryError` on Windows under suite-level memory pressure.
+
+### Changed
+
+- README: refreshed for v0.0.5 with a "What's new" highlights block + "Simpler install (recommended)" subsection.
+
+
 
 Big release. Bundles the previously in-flight v0.0.4 work (HTML output system, nature-skills absorption, manuscript subpackages, two-way editors) with 19 north-star plan sub-goals shipped on 2026-05-14/15. All 4 red lines (no fabrication, no silent failures, no user-data loss, no vendor lock-in) are now mechanically enforced by an always-on CI invariant suite. Test count grew from 1734 → 2040.
 
