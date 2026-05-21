@@ -157,6 +157,18 @@ def build_citation_triage_editor(
         bucket = status_to_bucket.get(cit.get("status", ""), "Pending")
         items[bucket].append(label)
 
+    pile_legend = [
+        ("Pending", "neutral", "Not yet triaged — the default landing pile."),
+        ("Accept", "pass", "Verified — safe to cite as written."),
+        ("Reject", "fail", "Contradicted or wrong — drop the claim."),
+        ("Needs review", "info", "Plausible but unconfirmed — a human should look."),
+        ("Flag for plagiarism", "flag", "Suspected fabrication or text overlap."),
+    ]
+    legend_rows = [
+        [c.status_chip(name, lvl), meaning] for name, lvl, meaning in pile_legend
+    ]
+
+    counts = {col: len(items[col]) for col in columns}
     sections_out = [
         c.section(
             None,
@@ -169,18 +181,43 @@ def build_citation_triage_editor(
                     "manual review before final export.",
                 ]
             ),
+            c.stats_row(
+                [
+                    ("Candidates", str(len(citations))),
+                    ("Pending", str(counts["Pending"])),
+                    ("Accepted", str(counts["Accept"])),
+                    ("Flagged", str(counts["Flag for plagiarism"])),
+                ]
+            ),
         ),
         c.section(
-            None,
-            c.kanban_board(columns, items),
+            "Triage board",
+            c.kanban_board(
+                columns,
+                items,
+                hint="Drag each citation into its verdict pile, then "
+                "Copy as JSON to paste the verdict map into your next prompt.",
+            ),
+            number=1,
+        ),
+        c.section(
+            "Pile reference",
+            c.matrix_table(["Pile", "Meaning"], legend_rows),
+            number=2,
         ),
     ]
 
     return render_report(
         title=title,
-        eyebrow="vaultlab · citation triage editor",
-        subtitle=f"{len(citations)} candidates",
+        breadcrumb=["vaultlab", "editors", "citation triage"],
+        screen_label="Citation triage",
+        subtitle=f"{len(citations)} candidate citations awaiting a verdict.",
         meta="drag-drop · two-way HTML",
+        chips=[
+            c.status_chip(f"{len(citations)} candidates", "info"),
+            c.status_chip(f"{counts['Pending']} pending", "neutral"),
+            c.status_chip(f"{counts['Flag for plagiarism']} flagged", "flag"),
+        ],
         sections=sections_out,
     )
 
