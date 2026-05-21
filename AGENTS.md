@@ -212,7 +212,7 @@ When confidence is low, say so explicitly: *"Confidence is low because [reason].
 
 When sources are unavailable: *"I cannot verify this against literature in the current KB."*
 
-The `vaultlab.roles._guardrails.enforce_hedge()` checker flags assertions that should be hedged. Do not disable it.
+A `vaultlab.roles._guardrails.enforce_hedge()` checker — to flag assertions that should be hedged — is **planned but not yet implemented** (see `NEXT_STEPS.md`). Until it exists, hedged voice is enforced only by role-prompt instruction and the `rigor_auditor` LLM pass; do not disable those.
 
 ### Anti-laziness on semantic reading
 
@@ -277,7 +277,7 @@ Do not break these without an issue + version bump discussion.
 - **No real LLM calls in CI** by default. Mark tests that hit real APIs with `@pytest.mark.llm`; CI runs `pytest -m "not llm"`.
 - **Mocked LLM responses:** use `tests/fixtures/mock_responses/` snapshots
 - **Golden eval suites:** `tests/fixtures/{hallucination,cluster_naming,figure_caption}_test_set.json` — snapshot-tested with `temperature=0`
-- **Every recipe / role / data modality template** ships with a unit test scaffold
+- **Every role / data modality template** ships with a unit test scaffold. Recipe unit tests are an intended requirement but are not yet present (see `NEXT_STEPS.md`)
 
 ---
 
