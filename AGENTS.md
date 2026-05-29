@@ -108,7 +108,7 @@ Do not blend these modes. Do not introduce a "hybrid" mode without explicit desi
 
 ### Invariant 3 — KB-mediated summaries
 
-Full transcripts go to `<kb>/Output/<project>/runs/<run_id>/`. Only **compact summaries** (max 2000 tokens) pass between agents in a meeting. The full transcript is the audit trail; the summary is the working state.
+Full transcripts go to `<kb>/Output/<project>/runs/<run_id>/`; they are the audit trail. Context passed between agents in a meeting is the working state — full-text passing is intended and there is no fixed token cap (see issue #2).
 
 ### Invariant 4 — ChainLink provenance
 
@@ -212,7 +212,7 @@ When confidence is low, say so explicitly: *"Confidence is low because [reason].
 
 When sources are unavailable: *"I cannot verify this against literature in the current KB."*
 
-The `vaultlab.roles._guardrails.enforce_hedge()` checker flags assertions that should be hedged. Do not disable it.
+The `vaultlab.roles._guardrails.enforce_hedge()` checker flags assertions that should be hedged. It is wired into the `vaultlab.analysis` interpretation pass (`run_pipeline`); it is NOT yet auto-applied to every role output, so authors must still self-check hedging in role-drafted prose (see issue #2). Do not disable it where it is wired.
 
 ### Anti-laziness on semantic reading
 
