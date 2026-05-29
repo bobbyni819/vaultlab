@@ -215,6 +215,22 @@ class TestLoadRole:
         with pytest.raises(RoleNotFoundError):
             load_role("nonexistent_role")
 
+    def test_rigor_auditor_has_descriptive_carveout(self) -> None:
+        """B014 fix: descriptive arithmetic must be exempt from citation."""
+        from vaultlab.roles import load_role
+
+        prompt = load_role("rigor_auditor").system_prompt
+        # The carve-out is present and names descriptive stats.
+        assert "Descriptive-arithmetic carve-out" in prompt
+        assert "statistical_summary_without_method_citation" in prompt
+        # The inferential boundary is preserved (not a blanket stats pass).
+        assert "INFERENTIAL results still require grounding" in prompt
+        assert "significant" in prompt
+        # The inline-method grounding is scoped to the pipeline's own
+        # recomputed lines and must NOT generalize to manuscript prose.
+        assert "Scope of inline-method grounding (NARROW)" in prompt
+        assert "It does NOT generalize" in prompt
+
 
 class TestRoundTrip:
     """Each lifted prompt must contain the signature substrings of its source.

@@ -633,8 +633,10 @@ def adversarial_deck_plan_meeting(
 def rigor_audit(
     *,
     document: str,
+    document_path: str | None = None,
     summaries: dict[str, PaperSummary] | None = None,
     audit_kind: str = "deck",
+    producer_kind: str = "",
     runner_callback: RunnerCallback | None = None,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
@@ -654,8 +656,21 @@ def rigor_audit(
     callback failure, returns ``passed=True`` with a single ``minor``
     issue noting the audit was skipped).
     """
-    if audit_kind not in {"arc", "deck", "report"}:
-        raise ValueError(f"audit_kind must be 'arc', 'deck', or 'report', got {audit_kind!r}")
+    if audit_kind not in {"arc", "deck", "report", "methods"}:
+        raise ValueError(
+            "audit_kind must be 'arc', 'deck', 'report', or 'methods', "
+            f"got {audit_kind!r}"
+        )
+
+    # Resolve producer_kind from the document's provenance sidecar when not
+    # explicitly supplied (explicit arg wins). Lets the auditor distinguish
+    # template-only output from LLM-drafted prose (issues 9-11).
+    if not producer_kind and document_path:
+        from vaultlab.provenance import read_receipt
+
+        rec = read_receipt(document_path)
+        if rec is not None and rec.producer:
+            producer_kind = rec.producer
 
     summaries = summaries or {}
 
@@ -712,8 +727,23 @@ def rigor_audit(
         rules=rules,
     )
 
+    # producer_kind names what generated the document (template-only primitive
+    # vs. LLM pass). For template-only output we inject a short directive that
+    # triggers the rigor_auditor's template-only downgrade (the rule itself
+    # lives in roles/rigor_auditor/prompt.md Task 5 — META PRINCIPLE #1).
+    producer_line = f"PRODUCER KIND: {producer_kind or '(unspecified)'}\n\n"
+    downgrade_line = ""
+    if producer_kind == "template-only":
+        downgrade_line = (
+            "TEMPLATE-ONLY DOWNGRADE: apply rigor_auditor Task 5's template-only "
+            "path — skip Tasks 1-3 (claim grounding, page markers, references) "
+            "and grade only Task 4 (overclaiming) at minor severity. Hedged "
+            'verification lines ("appears to … p=…") are acceptable.\n\n'
+        )
     session_context = (
         f"AUDIT KIND: {audit_kind}\n\n"
+        f"{producer_line}"
+        f"{downgrade_line}"
         f"PER-PAPER SUMMARIES (for cross-reference):\n{summaries_md}\n\n"
         f"DOCUMENT TO AUDIT:\n{document}"
     )

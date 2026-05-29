@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from vaultlab.roles._guardrails import enforce_hedge
 from vaultlab.roles._loader import (
     RoleNotFoundError,
     list_roles,
@@ -146,6 +147,7 @@ __all__ = [
     "ROLE_TEMPLATES",
     "Role",
     "RoleNotFoundError",
+    "enforce_hedge",
     "list_roles",
     "load_all_roles",
     "load_role",

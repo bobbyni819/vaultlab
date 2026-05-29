@@ -23,17 +23,26 @@ from vaultlab.analysis.pipeline import (
     RAW_DATA_EXTENSIONS,
     TIDY_RESULT_EXTENSIONS,
     AnalysisResult,
+    PreflightResult,
     run_pipeline,
+    state_aware_preflight,
 )
-from vaultlab.analysis.stats import summarize_column, summarize_dataframe
+from vaultlab.analysis.stats import (
+    compare_two_groups,
+    summarize_column,
+    summarize_dataframe,
+)
 from vaultlab.analysis.methods import compose_methods_paragraph
 
 __all__ = [
     "RAW_DATA_EXTENSIONS",
     "TIDY_RESULT_EXTENSIONS",
     "AnalysisResult",
+    "PreflightResult",
+    "compare_two_groups",
     "compose_methods_paragraph",
     "run_pipeline",
+    "state_aware_preflight",
     "summarize_column",
     "summarize_dataframe",
 ]

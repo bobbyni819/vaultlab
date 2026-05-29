@@ -64,6 +64,7 @@ from vaultlab.runner.models import (
     Mode,
     Role,
 )
+from vaultlab.runner.verifiers import verify_numeric
 
 __all__ = [
     # Runner surface
@@ -92,4 +93,6 @@ __all__ = [
     "MeetingTurn",
     "Mode",
     "Role",
+    # Internal verifiers
+    "verify_numeric",
 ]

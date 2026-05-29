@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import pandas as pd
 
-__all__ = ["summarize_column", "summarize_dataframe"]
+__all__ = ["compare_two_groups", "summarize_column", "summarize_dataframe"]
 
 
 def summarize_dataframe(df: "pd.DataFrame") -> dict[str, dict[str, Any]]:
@@ -81,6 +81,71 @@ def summarize_column(series: "pd.Series") -> dict[str, Any]:
             summary["top_values"] = []
 
     return summary
+
+
+def compare_two_groups(
+    df: "pd.DataFrame",
+    group_col: str,
+    value_col: str,
+    group_a: Any,
+    group_b: Any,
+) -> dict[str, Any]:
+    """Welch's two-sample t-test between two groups of a tidy result table.
+
+    Verification-only. This is for the pipeline interpretation pass on
+    already-tidy two-group result tables (e.g. treated vs. control) — a
+    faithfulness check that the direction/significance a methods paragraph
+    states is actually supported by the numbers. It is NOT a substitute
+    for upstream analysis (FASTQ → counts → DE); that carve-out from the
+    "consumes not computes" doctrine is deliberate and narrow.
+
+    Subsets ``df`` to rows where ``group_col`` is ``group_a`` or
+    ``group_b``, drops NaNs in ``value_col``, and runs
+    ``scipy.stats.ttest_ind(equal_var=False)``.
+
+    Returns ``{mean_a, mean_b, n_a, n_b, t_stat, p_value, direction}`` —
+    all plain Python scalars so the dict is ``json.dumps``-able.
+    ``direction`` is ``"a>b"`` / ``"a<b"`` / ``"a==b"`` (mean comparison),
+    or ``"indeterminate"`` when either group has zero matching rows (so a
+    missing group is not silently read as equal means).
+    ``t_stat`` / ``p_value`` are ``None`` when either group has < 2 values.
+    """
+    from scipy import stats as scipy_stats  # lazy: scipy is an optional extra
+
+    a_vals = df.loc[df[group_col] == group_a, value_col].dropna()
+    b_vals = df.loc[df[group_col] == group_b, value_col].dropna()
+
+    n_a = int(a_vals.shape[0])
+    n_b = int(b_vals.shape[0])
+    mean_a = _safe_float(a_vals.mean()) if n_a else None
+    mean_b = _safe_float(b_vals.mean()) if n_b else None
+
+    if n_a >= 2 and n_b >= 2:
+        res = scipy_stats.ttest_ind(a_vals, b_vals, equal_var=False)
+        t_stat = _safe_float(res.statistic)
+        p_value = _safe_float(res.pvalue)
+    else:
+        t_stat = None
+        p_value = None
+
+    if mean_a is None or mean_b is None:
+        direction = "indeterminate"
+    elif mean_a > mean_b:
+        direction = "a>b"
+    elif mean_a < mean_b:
+        direction = "a<b"
+    else:
+        direction = "a==b"
+
+    return {
+        "mean_a": mean_a,
+        "mean_b": mean_b,
+        "n_a": n_a,
+        "n_b": n_b,
+        "t_stat": t_stat,
+        "p_value": p_value,
+        "direction": direction,
+    }
 
 
 # ---------------------------------------------------------------------------

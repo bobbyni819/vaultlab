@@ -25,6 +25,7 @@ def compose_methods_paragraph(
     stats_summary: dict[str, dict[str, dict[str, Any]]],
     *,
     figure_entries: list[dict[str, Any]] | None = None,
+    per_figure_interpretations: dict[str, str] | None = None,
     project_meta: dict[str, Any] | None = None,
 ) -> str:
     """Compose a draft methods paragraph.
@@ -38,6 +39,12 @@ def compose_methods_paragraph(
         Optional list of figure plan entries (``{name, kind, x, y, source,
         path}``) so the methods paragraph can name each figure and the
         columns it cites.
+    per_figure_interpretations
+        Optional ``{figure_name: sentence}`` map of hedged, verification-only
+        interpretive sentences (e.g. a recomputed Welch's t-test on a
+        two-group bar figure). Each sentence is appended to its figure's
+        bullet. Empty by default so callers that pass only descriptives are
+        unaffected.
     project_meta
         Optional ``{project_name, code_version, ...}`` for the header.
 
@@ -49,6 +56,7 @@ def compose_methods_paragraph(
     """
     project_meta = project_meta or {}
     figure_entries = figure_entries or []
+    per_figure_interpretations = per_figure_interpretations or {}
 
     project_name = project_meta.get("project_name", "this project")
     code_version = project_meta.get("code_version", "")
@@ -95,17 +103,23 @@ def compose_methods_paragraph(
         lines.append("## Figures")
         lines.append("")
         for entry in figure_entries:
-            lines.append(f"- {_describe_figure(entry, stats_summary)}")
+            interpretation = per_figure_interpretations.get(entry.get("name", ""))
+            lines.append(
+                f"- {_describe_figure(entry, stats_summary, interpretation)}"
+            )
         lines.append("")
 
     # 4. Hedged closing — per AGENTS.md "Hedged voice" quality bar.
     lines.append("## Interpretation note")
     lines.append("")
     lines.append(
-        "The summaries above describe the structure of the supplied result "
-        "tables and may indicate where downstream interpretation is warranted; "
-        "they are consistent with the columns reported by the upstream analysis "
-        "and do not constitute new statistical inference."
+        "The column summaries above describe the structure of the supplied "
+        "result tables. Where a two-group bar figure was supplied, a Welch's "
+        "t-test was recomputed on the already-tidy values as a faithfulness "
+        "check and reported with hedged voice alongside that figure. These "
+        "recomputed comparisons verify the supplied results and may indicate "
+        "where interpretation is warranted; they are consistent with the "
+        "upstream analysis and are a verification step, not a substitute for it."
     )
     lines.append("")
 
@@ -161,6 +175,7 @@ def _describe_column(name: str, summary: dict[str, Any]) -> str:
 def _describe_figure(
     entry: dict[str, Any],
     stats_summary: dict[str, dict[str, dict[str, Any]]],
+    interpretation: str | None = None,
 ) -> str:
     name = entry.get("name", "<unnamed>")
     kind = entry.get("kind", "<unknown kind>")
@@ -169,6 +184,10 @@ def _describe_figure(
     source = entry.get("source")
     path = entry.get("path")
     path_clause = f" → `{path}`" if path else ""
+    # Fail loud: when the figure rendered but its provenance sidecar failed,
+    # the pipeline sets verified=False — surface it instead of asserting the
+    # figure as if it were fully receipted. Absent key → assume verified.
+    verify_clause = "" if entry.get("verified", True) else " [sidecar: missing]"
 
     # Look up n for the cited columns when available.
     n_clause = ""
@@ -178,19 +197,17 @@ def _describe_figure(
             n_clause = f", n={stats_summary[source][target_col].get('n', '?')}"
 
     if kind == "histogram":
-        return (
-            f"`{name}` — histogram of `{x}` from `{source}`{n_clause}{path_clause}."
-        )
-    if kind == "scatter":
-        return (
-            f"`{name}` — scatter of `{y}` vs `{x}` from `{source}`{n_clause}{path_clause}."
-        )
-    if kind == "bar":
-        return (
-            f"`{name}` — bar plot of `{y}` by `{x}` from `{source}`{n_clause}{path_clause}."
-        )
-    if kind == "line":
-        return (
-            f"`{name}` — line plot of `{y}` over `{x}` from `{source}`{n_clause}{path_clause}."
-        )
-    return f"`{name}` — {kind} figure from `{source}`{n_clause}{path_clause}."
+        base = f"`{name}` — histogram of `{x}` from `{source}`{n_clause}{path_clause}."
+    elif kind == "scatter":
+        base = f"`{name}` — scatter of `{y}` vs `{x}` from `{source}`{n_clause}{path_clause}."
+    elif kind == "bar":
+        base = f"`{name}` — bar plot of `{y}` by `{x}` from `{source}`{n_clause}{path_clause}."
+    elif kind == "line":
+        base = f"`{name}` — line plot of `{y}` over `{x}` from `{source}`{n_clause}{path_clause}."
+    else:
+        base = f"`{name}` — {kind} figure from `{source}`{n_clause}{path_clause}."
+
+    base = f"{base}{verify_clause}"
+    if interpretation:
+        return f"{base} {interpretation}"
+    return base

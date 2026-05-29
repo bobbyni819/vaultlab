@@ -188,7 +188,7 @@ src/vaultlab/                       # The package
   cli/                              # CLI entry point — one .py + .md per subcommand
   meetings.py                       # Meeting, Agenda, Mode, Role
   roles/<role>/{role.py, prompt.md} # Agent role definitions
-  runner/                           # ClaudeCodeRunner, bounded_loop, verifiers
+  runner/                           # ClaudeCodeRunner, build_meeting, reflection, verifiers (verify_numeric)
   workflows/                        # Multi-agent workflow types (one .py + .md per type)
   research/                         # Literature: papers + sources + paperclip + smart_search + extract
   citations/                        # NotebookLM-style citation verification
@@ -197,7 +197,7 @@ src/vaultlab/                       # The package
   slides/                           # Deck generation (FLAGSHIP): layouts, themes, understand, annotate
   manuscript/                       # ManuscriptProject; markdown-persisted state
   data/<modality>/                  # Wet-lab data: codex, maldi, scrnaseq, spatial, imaging, flow
-  stats/                            # Statistical wrappers (scanpy/scipy/statsmodels with hedged voice)
+  analysis/                         # Result-analysis pipeline + stats.py (descriptive + verification-only compare)
   plan/                             # Pre-registration drafting
   evaluate/                         # Benchmarks: hallucinations, cluster_naming, figure_captions
   context/                          # Research-companion CONTEXT pipes (NEW for companion mode):
@@ -254,6 +254,14 @@ tests/                              # pytest
 ## Best-practice rules for Claude Code sessions on this repo
 
 These are non-obvious rules that prevent confusing failure modes. Follow them.
+
+### Independent diff-scoped review on substantive code changes
+
+For any non-trivial source change (new function, behavior change, multi-file edit), after implementing + running the targeted tests, dispatch a **fresh-context reviewer subagent scoped to that diff only** (e.g. `Agent(subagent_type="claude", model="sonnet")` told to `git diff <files>` and check correctness against an explicit requirements list). It has caught real bugs forward-implementation missed — e.g. a JSON-string-vs-numeric-dtype mismatch in two-group comparison, and an LLM-prompt rule that over-generalized "inline method = grounded" into excusing uncited p-values in manuscripts. Apply the reviewer's correctness findings (and tighten any weak test it flags) before reporting done. This is the generate-then-review loop; the review pass is not optional for behavior changes.
+
+### Verification-only recompute is a sanctioned carve-out from "consumes, not computes"
+
+`vaultlab.analysis` consumes tidy results and does NOT re-run upstream analysis — EXCEPT that recomputing a **verification** statistic on already-tidy two-group result tables (e.g. `stats.compare_two_groups` → Welch's t-test, surfaced as a hedged interpretive line by `run_pipeline`) is explicitly allowed. It is a faithfulness check on the supplied numbers, not a substitute for upstream DE/processing. Keep this boundary precise: descriptive arithmetic and two-group verification are fine; fitting models / processing raw data is not.
 
 ### One KB per chat session
 

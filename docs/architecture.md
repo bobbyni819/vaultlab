@@ -30,7 +30,7 @@ vaultlab/                        # The Python package
   # Orchestration core
   meetings.py                    # Meeting, Agenda, Mode, Role
   roles/<role>/                  # role.py + prompt.md per role
-  runner/                        # ClaudeCodeRunner, bounded_loop, verifiers
+  runner/                        # ClaudeCodeRunner, build_meeting, reflection, verifiers
   workflows/                     # one .py + .md per workflow type
   patterns.py                    # EvidenceBundle, CascadeWatchdog
   provenance/                    # write .provenance.json + method.md
@@ -51,7 +51,7 @@ vaultlab/                        # The Python package
   slides/                        # Deck generation: layouts, themes, understand, annotate
   manuscript/                    # ManuscriptProject; markdown-persisted state
   data/                          # codex, maldi, scrnaseq, spatial, imaging, flow
-  stats/                         # de, power, effect, blind (scanpy/scipy wrappers)
+  analysis/                      # result-analysis pipeline + stats.py (descriptive + verification-only)
   plan/                          # Pre-registration drafting
   evaluate/                      # Benchmarks: hallucinations, cluster_naming, captions
 
