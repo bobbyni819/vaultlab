@@ -58,7 +58,7 @@ The table is grouped by capability area, and the order reflects vaultlab's three
 | "do a deeper literature search" / "make sure you cover the field" | `/lit-arc <topic> --depth=thorough` (reads 200-400 abstracts in batched LLM call before ranking) | Recall the field from training |
 | "summarize this paper at <DOI>" | `vaultlab.research.summarize` reader callback (returns structured JSON with `[pN]` page-marker citations) | Write a free-form prose summary |
 | "compare papers A, B, C" / "what do these three papers say differently" | `vaultlab.research.batched_reader` (≥2 PDFs in one LLM call, leverages 1M-context for cross-paper synthesis) | Read each separately |
-| "verify these citations" / "audit this draft for hallucinated refs" | `/cite audit <draft.md>` (refuses to ship if any citation is unsupported) | Spot-check a few |
+| "verify these citations" / "audit this draft for hallucinated refs" / "verify these against the actual PDFs" | `/cite audit <draft.md>` (PDF-grounded loop: inventory have-PDF vs no-PDF, ground claims against actual PDF page images with an identity check, harvest a clickable link list for missing PDFs, mark no-PDF citations UNVERIFIED; refuses to ship if any citation is unsupported) | Spot-check a few, or verify from an abstract/snippet |
 | "explore citations of <DOI>" / "who cites this / what does this cite" | `/dig-deeper <doi>` (forward + backward citation network) | Manual graph |
 
 ### Data analysis + methodology critique (your most-used path for wet-lab work)
@@ -85,6 +85,13 @@ The table is grouped by capability area, and the order reflects vaultlab's three
 | "build a multi-panel figure" / "compose panels A-D" | `vaultlab.figures.panel` + `vaultlab.figures.collage` | DIY axes |
 | "caption this figure" | Recipe metadata → auto-caption referencing the source method paper | Write from scratch |
 | "explore which figure to use for this claim" | `figure_picker` (aspect-aware, tries multiple panels, reads pixels) | Guess |
+
+### Manuscript writing + citation grounding (thesis / proposal / grant prose)
+
+| If the user says... | Invoke... | Don't... |
+|---|---|---|
+| "write / edit my thesis / proposal / grant" / "polish this prose" / "check my writing style" | `/style-check <draft.md>` (Bobby's hard rules: no em-dashes, no arrows, no filler, no rhetorical questions, define abbreviations, US English, capabilities-only honesty, anti-AI-tell flow). Canonical rules: `docs/writing-and-citation-practices.md`. For Nature-family journal house-style instead, use `/polish`. | Free-edit prose with your own style defaults |
+| "verify my citations against the PDFs" / "ground every claim" / "zero-hallucination citation audit" | `/cite audit <draft.md>` (the PDF-grounded inventory → ground page-images → harvest-missing-links loop) | Verify from abstracts, snippets, or memory |
 
 ### Slide decks (output format — comes AFTER the analysis)
 
@@ -155,6 +162,7 @@ Every "shippable" doc gets the appropriate role pass before you consider it done
 | Lineage arc / lit-arc narrative | `methods_critic` + `literature_critic` | both |
 | Figure plan | `figure_lead` → `methods_critic` | per-panel review |
 | Deck plan before .pptx ship | Built into `/build-deck` rigor_audit step | inline |
+| Thesis / proposal / grant prose | `/style-check` (form: no em-dashes/arrows/filler, US English, hedged) THEN `/cite audit` (PDF-grounded, zero-hallucination citations) | `<kb>/Output/<project>/style-check-<target>-<date>.md` + `VERIFICATION_LEDGER.md` |
 
 Mechanics: read `src/vaultlab/roles/<name>/prompt.md` and execute the role's TASKS contract verbatim. Output per the role's mandated schema (e.g., `rigor_auditor` MUST output JSON `{passed, issues[]}`; `methods_critic` MUST output per-finding rating + a specific test for any NEEDS_VALIDATION items).
 

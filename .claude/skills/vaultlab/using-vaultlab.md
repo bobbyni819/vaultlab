@@ -27,6 +27,11 @@ Before doing anything else, read in this order:
 
 6. **Provenance receipts** are written automatically by `vaultlab.provenance`. Don't bypass them.
 
+7. **Writing + PDF-citation practices.** For thesis, proposal, or grant prose and for zero-hallucination
+   citation work, follow [`docs/writing-and-citation-practices.md`](../../../docs/writing-and-citation-practices.md)
+   (consumed by `/style-check` and `/cite`). No em-dashes, no arrows, no filler, US English, capabilities-only
+   honesty; every citation read from its actual PDF page images, no-PDF means UNVERIFIED.
+
 ## When the user asks you to extend vaultlab
 
 Always:
