@@ -189,7 +189,7 @@ def plan_deep_think_round(
     )
     # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy and
     # record the decision on the workflow's provenance. The classic
-    # round-table (Analyst → Expert → Critic → Synthesizer) is a
+    # adversarial cycle (Analyst → Expert → Critic → Synthesizer) is a
     # cross-evidence reasoning task → 'deep_think'.
     _record_crosstalk_decision(
         prov,

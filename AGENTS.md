@@ -277,7 +277,7 @@ Do not break these without an issue + version bump discussion.
 - **No real LLM calls in CI** by default. Mark tests that hit real APIs with `@pytest.mark.llm`; CI runs `pytest -m "not llm"`.
 - **Mocked LLM responses:** use `tests/fixtures/mock_responses/` snapshots
 - **Golden eval suites:** `tests/fixtures/{hallucination,cluster_naming,figure_caption}_test_set.json` — snapshot-tested with `temperature=0`
-- **Every recipe / role / data modality template** ships with a unit test scaffold
+- **Every role / data modality template** ships with a unit test scaffold. Recipe unit tests are an intended requirement but are not yet present (see `NEXT_STEPS.md`)
 
 ---
 

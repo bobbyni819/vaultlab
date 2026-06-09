@@ -82,7 +82,7 @@ Every LLM call must REQUIRE quoted evidence. Surface-skim is the enemy. Multi-pa
 
 ### 3. Result-oriented agentic loop
 
-User says *"draft methods"* → vaultlab plans + runs internal meetings/critiques/verifications → returns finished result. Bounded loop (max 3 iterations) with internal verifiers (citation, numeric, cross-doc, hedge enforcement).
+User says *"draft methods"* → vaultlab plans + runs internal meetings/critiques/verifications → returns finished result. Bounded loops cap iteration — currently three independent caps (crosstalk meetings 5 rounds, reflection loop 3, deep-think 4), not one unified "max 3". Internal verifiers: citation and cross-doc/claim verification are implemented; numeric and hedge-enforcement verifiers are **planned, not yet built** (see `NEXT_STEPS.md`).
 
 ### 4. KB is the smartness
 
@@ -117,7 +117,7 @@ Every vaultlab primitive READS existing KB state before writing. Defaults to ext
 
 2. **Maximum context per invocation.** Even when the task is "refactor this script" — which seems literature-orthogonal — the primitive scans `<kb>/Wiki/Summaries/` for any paper that mentions a relevant analytical pattern, scans `<project>/decisions-log.md` for prior conventions, scans recent commits for related work. Side context surfaces unique vaultlab value: *"Your manuscript draft references this function; Schurch 2020 uses a similar pattern."*
 
-**Implementation rule:** every artifact-producing primitive (`run_lit_arc`, `build_deck`, `figure_from_data`, `plan_deep_think_round`, `cite_audit`, `code_review`, `eda`) starts with a `state_aware_preflight()` call that returns the cross-domain context. The primitive's mode (`--fresh` / `--extend` / etc.) is then a function of that state, not a user-supplied default.
+**Implementation rule (target — not yet universal):** every artifact-producing primitive (`run_lit_arc`, `build_deck`, `figure_from_data`, `plan_deep_think_round`, `cite_audit`, `code_review`, `eda`) *should* start with a `state_aware_preflight()` call that returns the cross-domain context, with the primitive's mode (`--fresh` / `--extend` / etc.) a function of that state. As of v0.0.6 this is not yet universal — e.g. the `/run-analysis` pipeline does not perform the preflight (see `NEXT_STEPS.md`).
 
 **Anti-pattern to avoid:** stateless primitives that fan out work without checking what's already in the KB. The metabolism dogfood run hit this — friction #3 (resolver picked default KB), friction #7 (collaborator commits silently missed), and the core dispatch failure mode (writing a free-form doc when an existing concept doc covered the question) all trace to "didn't read state first."
 
@@ -186,9 +186,8 @@ When extending VaultLab, every new feature must answer: *"How does this read fro
 src/vaultlab/                       # The package
   __init__.py                       # Slim barrel (~10 symbols)
   cli/                              # CLI entry point — one .py + .md per subcommand
-  meetings.py                       # Meeting, Agenda, Mode, Role
   roles/<role>/{role.py, prompt.md} # Agent role definitions
-  runner/                           # ClaudeCodeRunner, build_meeting, reflection, verifiers (verify_numeric)
+  runner/                           # ClaudeCodeRunner; runner/meetings.py holds Meeting, Agenda, Mode, Role; reflection loop; verifiers (verify_numeric)
   workflows/                        # Multi-agent workflow types (one .py + .md per type)
   research/                         # Literature: papers + sources + paperclip + smart_search + extract
   citations/                        # NotebookLM-style citation verification
@@ -198,6 +197,7 @@ src/vaultlab/                       # The package
   manuscript/                       # ManuscriptProject; markdown-persisted state
   data/<modality>/                  # Wet-lab data: codex, maldi, scrnaseq, spatial, imaging, flow
   analysis/                         # Result-analysis pipeline + stats.py (descriptive + verification-only compare)
+  stats/                            # PLANNED — statistical wrappers; currently a placeholder (descriptive stats live in analysis/stats.py)
   plan/                             # Pre-registration drafting
   evaluate/                         # Benchmarks: hallucinations, cluster_naming, figure_captions
   context/                          # Research-companion CONTEXT pipes (NEW for companion mode):
@@ -230,10 +230,11 @@ tests/                              # pytest
 ## Common tasks
 
 ### Add a new figure recipe
-1. Copy `templates/recipe/` to `src/vaultlab/figures/recipes/<new_recipe>/`
-2. Fill in `<new_recipe>.py` (Python implementation) and `<new_recipe>.md` (description + ≥3 paper references)
-3. Add the recipe's `corpus/sources.json` entry under the recipe name
-4. Add a unit test in `tests/test_vaultlab_figures/`
+Recipes are **flat file pairs** in `src/vaultlab/figures/recipes/` — `<new_recipe>.py` + `<new_recipe>.md` (not subdirectories).
+1. Add `src/vaultlab/figures/recipes/<new_recipe>.py` (Python implementation, with a `RECIPE_VERSION` constant + `ANCHOR_PAPERS` tuple) and `<new_recipe>.md` (description + ≥3 paper references)
+2. Register `<new_recipe>` in `src/vaultlab/figures/recipes/__init__.py`
+3. Add a unit test in `tests/test_vaultlab_figures/`
+4. PLANNED: a `corpus/sources.json` registry — not yet built (see `NEXT_STEPS.md`). Until it exists, anchor papers live in the recipe's `ANCHOR_PAPERS` tuple + its `.md`.
 
 ### Add a new agent role
 1. Copy `templates/role/` to `src/vaultlab/roles/<new_role>/`

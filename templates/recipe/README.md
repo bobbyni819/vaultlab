@@ -1,20 +1,26 @@
 # Template: figure recipe
 
+Recipes are **flat file pairs** in `src/vaultlab/figures/recipes/` —
+`<recipe_name>.py` + `<recipe_name>.md`, not subdirectories.
+
 To add a new figure recipe to vaultlab:
 
-1. Copy this directory to `src/vaultlab/figures/recipes/<recipe_name>/`
-2. Fill in `<recipe_name>.py` (the renderer) and `<recipe_name>.md` (description + ≥3 paper references)
-3. Add corpus entry to `vaultlab.figures.corpus/sources.json`
-4. Add a unit test in `tests/test_vaultlab_figures/`
-5. Run `vaultlab claude validate` and `pytest tests/test_vaultlab_figures/`
+1. Create `src/vaultlab/figures/recipes/<recipe_name>.py` (the renderer) and
+   `<recipe_name>.md` (description + ≥3 paper references)
+2. Register `<recipe_name>` in `src/vaultlab/figures/recipes/__init__.py`
+3. Add a unit test in `tests/test_vaultlab_figures/`
+4. Run `vaultlab claude validate` and `pytest tests/test_vaultlab_figures/`
 
-> **Status:** template scaffold. Files will be added in migration commits.
+> **Status:** template scaffold — the scaffold files themselves are not yet
+> written (see `NEXT_STEPS.md`). The `corpus/sources.json` registry referenced
+> in older docs is also not yet built; until it exists, anchor papers live in
+> the recipe's `ANCHOR_PAPERS` tuple and its `.md` file.
 
-## Required files in each recipe
+## Required files for each recipe
 
 ```
-<recipe_name>/
-  <recipe_name>.py            # Recipe class + render()
+recipes/
+  <recipe_name>.py            # render() function + RECIPE_VERSION + ANCHOR_PAPERS
   <recipe_name>.md            # Description, when to use, references
 ```
 
@@ -54,4 +60,6 @@ references_required: 3
 (any failure modes to call out)
 ```
 
-Recipes without 3+ references fail review (per AGENTS.md).
+Recipes are expected to cite ≥3 references (per AGENTS.md). Note: this is a
+manual review expectation — there is no automated check counting references
+yet (see `NEXT_STEPS.md`).

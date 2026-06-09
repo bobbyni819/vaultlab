@@ -16,7 +16,7 @@ These four commitments shape every architectural decision:
 
 2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence. Surface-skim is the enemy. Multi-pass reading for complex tasks. Hedged voice always — *"consistent with X"* never *"is X."*
 
-3. **Result-oriented agentic loop.** User describes a goal; vaultlab plans + verifies + refines internally; user sees the finished result. Bounded loop (max 3 iterations) with internal verifiers (citation, numeric, cross-doc, hedge enforcement).
+3. **Result-oriented agentic loop.** User describes a goal; vaultlab plans + verifies + refines internally; user sees the finished result. Bounded loops cap iteration — three independent caps today (crosstalk 5, reflection 3, deep-think 4), not one unified "max 3". Internal verifiers: citation and cross-doc/claim are implemented; numeric and hedge-enforcement verifiers are planned, not yet built (see `NEXT_STEPS.md`).
 
 4. **KB is the smartness.** Every analysis writes to KB; every analysis reads from KB. Cross-project reasoning emerges via retrieval over a growing markdown corpus. **No vector DBs**, no proprietary memory layers — just markdown that grows with your work.
 
@@ -28,9 +28,8 @@ vaultlab/                        # The Python package
   cli/                           # CLI entry — one .py + .md per subcommand
 
   # Orchestration core
-  meetings.py                    # Meeting, Agenda, Mode, Role
   roles/<role>/                  # role.py + prompt.md per role
-  runner/                        # ClaudeCodeRunner, build_meeting, reflection, verifiers
+  runner/                        # ClaudeCodeRunner; runner/meetings.py (Meeting, Agenda, Mode, Role); reflection loop; verifiers
   workflows/                     # one .py + .md per workflow type
   patterns.py                    # EvidenceBundle, CascadeWatchdog
   provenance/                    # write .provenance.json + method.md
@@ -52,6 +51,7 @@ vaultlab/                        # The Python package
   manuscript/                    # ManuscriptProject; markdown-persisted state
   data/                          # codex, maldi, scrnaseq, spatial, imaging, flow
   analysis/                      # result-analysis pipeline + stats.py (descriptive + verification-only)
+  stats/                         # PLANNED — de/power/effect/blind wrappers; placeholder (descriptive stats live in analysis/stats.py)
   plan/                          # Pre-registration drafting
   evaluate/                      # Benchmarks: hallucinations, cluster_naming, captions
 
@@ -120,7 +120,7 @@ The KB sits at the center: every capability writes to it, every capability reads
 ## Per-package architectural sketches
 
 ### `vaultlab.runner`
-The orchestration heart. Implements the **result-oriented bounded loop** pattern: user task → plan → execute → verify → refine (max 3 iterations) → return result. Internal verifiers run citation audit, numeric audit, cross-doc consistency, self-critique, hedged-voice enforcement before any output is marked complete.
+The orchestration heart. Implements the **result-oriented bounded loop** pattern: user task → plan → execute → verify → refine → return result, with bounded iteration caps. Internal verifiers: citation audit and cross-doc/claim consistency are implemented; numeric audit and hedged-voice enforcement are planned, not yet built (see `NEXT_STEPS.md`).
 
 Key contract: callers don't see meeting-by-meeting state; they see goals + finished results. State lives on disk as ChainLink records in the KB so future sessions can resume.
 
