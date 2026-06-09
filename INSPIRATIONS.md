@@ -113,6 +113,19 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 - **Where in vaultlab:** `vaultlab.citations.evidence.EvidenceRecord`, `vaultlab.manuscript.draft_mode_render` / `final_mode_render` (planned), file 04 in the architecture grill.
 - **Attribution:** `vaultlab.citations.evidence.md` + this file.
 
+### Persistent papers index / corpus manifest
+
+- **What we took:** the concept of a per-project, persisted corpus manifest recording, per paper,
+  identity + local-PDF presence/readability + read-depth + verification status, so multi-run fetching is
+  idempotent and a later agent reads the index instead of re-reading the corpus. It generalizes
+  vaultlab's own acquisition cache-status (`research/acquisition.py` `cache_hit` + `_looks_like_pdf`) and
+  the per-project `VERIFICATION_LEDGER.md`, unifying their split state into one queryable file. The
+  "read once, persist a card, reuse forever" framing echoes Zotero's library database and HuggingFace
+  dataset cards.
+- **How:** `CONCEPT` — no external code copied; internal generalization plus a widely-used manifest idiom.
+- **Where in vaultlab:** `src/vaultlab/research/papers_index.py`, `.claude/commands/papers-index.md`.
+- **Attribution:** module docstring + this file.
+
 ---
 
 ## Wet-lab data analysis
