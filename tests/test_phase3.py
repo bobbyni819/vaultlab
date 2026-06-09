@@ -15,6 +15,15 @@ import sys
 from pathlib import Path
 
 KB = Path("/Users/arnav/vaultlab-kb/elife-91157-stress")
+
+import pytest
+
+# Skip this eLife-91157 stress-test QA gate when its fixture is absent (it lives on Arnav's
+# local machine). Keeps CI green off-fixture; the gate still runs where the data exists.
+pytestmark = pytest.mark.skipif(
+    not KB.exists(),
+    reason="eLife-91157 stress-test fixture not present (Arnav Dhar's local KB)",
+)
 RUN = KB / "Output" / "run-2026-05-26"
 RUBRIC = RUN / "rubric-scores.json"
 AGGREGATE_PY = RUN / "aggregate.py"
