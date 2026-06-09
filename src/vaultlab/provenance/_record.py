@@ -53,6 +53,7 @@ class ProvenanceRecord:
 
     # Classification
     kind: str = ""  # "figure", "manuscript_section", "slide_deck", ...
+    producer: str = ""  # machine-readable generator, e.g. "template-only"
     tags: list[str] = field(default_factory=list)
 
     # Free-form
@@ -85,6 +86,7 @@ class ProvenanceRecord:
             "related_outputs",
             "finding_ids",
             "kind",
+            "producer",
             "tags",
             "notes",
         ):
@@ -113,6 +115,7 @@ class ProvenanceRecord:
             related_outputs=list(d.get("related_outputs", [])),
             finding_ids=list(d.get("finding_ids", [])),
             kind=str(d.get("kind", "")),
+            producer=str(d.get("producer", "")),
             tags=list(d.get("tags", [])),
             notes=str(d.get("notes", "")),
         )

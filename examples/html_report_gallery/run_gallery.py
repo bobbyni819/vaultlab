@@ -515,34 +515,135 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
 
-    # Index page linking to all of the above
-    index_cards = [
-        c.severity_card(
-            label,
-            body=f"<code>{path.name}</code> · open in browser to inspect",
-            actions=[("Copy path", str(path))],
+    # Index page linking to all of the above ─────────────────────────────
+    # Per-consumer card metadata: kind eyebrow, filter key, one-line summary.
+    _CARD_META = {
+        "Deck audit": (
+            "Audit · deck", "audit",
+            "Slide-by-slide rigor critique — flags blockers, overclaims, "
+            "and missing citations.",
+        ),
+        "Lit-arc narrative": (
+            "Literature · arc", "literature",
+            "A cited narrative arc across the paper corpus, with a citation graph.",
+        ),
+        "Reasoning chain": (
+            "Reasoning · chain", "reasoning",
+            "The full multi-agent reasoning transcript — every round, role, "
+            "and verdict.",
+        ),
+        "Citation audit": (
+            "Citations · audit", "citations",
+            "Per-citation verification status, risk level, and hallucination flags.",
+        ),
+        "Project dossier": (
+            "Project · dossier", "project",
+            "The standing project mental model — origin, current state, frontier.",
+        ),
+        "Keynav deck preview": (
+            "Slides · preview", "slides",
+            "Arrow-key slide preview of a deck plan, with figures inline.",
+        ),
+        "Reviewer response letter": (
+            "Manuscript · response", "manuscript",
+            "Point-by-point reviewer response with a suggested action per comment.",
+        ),
+        "Dispatched (auto-detect)": (
+            "Reasoning · dispatched", "reasoning",
+            "The universal dispatcher routing an artifact to its renderer by shape.",
+        ),
+        "Slide reorder editor": (
+            "Editor · slides", "editor",
+            "Drag slides between sections, then export the reordered plan.",
+        ),
+        "Citation triage editor": (
+            "Editor · citations", "editor",
+            "Drag citations into verdict piles, then export the verdict map.",
+        ),
+        "Deck-plan tuner": (
+            "Editor · template", "editor",
+            "Edit a slide-plan template with live preview against sample papers.",
+        ),
+    }
+
+    def _kb(path: Path) -> str:
+        return f"{max(1, round(path.stat().st_size / 1024))} kb"
+
+    def _card(label: str, path: Path) -> str:
+        kind, fkey, summary = _CARD_META.get(
+            label, ("Output", "all", "A generated vaultlab HTML artifact.")
         )
-        for label, path in written
-    ]
+        return c.severity_card(
+            label,
+            kind=kind,
+            href=path.name,
+            body=summary,
+            filename=(path.name, _kb(path)),
+            filter_key=fkey,
+        )
+
+    report_entries = written[:8]
+    editor_entries = written[8:]
+    total_kb = round(sum(p.stat().st_size for _, p in written) / 1024)
+
     index_html = render_report(
-        title="vaultlab.report — HTML gallery",
-        eyebrow="vaultlab · gallery · smoke test",
-        subtitle="All 6 consumers + 3 editors running on realistic-shaped sample data.",
-        meta=f"Generated {datetime.now():%Y-%m-%d %H:%M} · output dir: <code>{out_dir}</code>",
+        title="Report gallery",
+        breadcrumb=["vaultlab", "gallery"],
+        subtitle=(
+            "A binder of self-contained HTML artifacts — every report and editor "
+            "below opens offline, prints cleanly, and is safe to email."
+        ),
+        meta=f"Generated {datetime.now():%Y-%m-%d %H:%M} · output dir <code>{out_dir}</code>",
+        version="v0.0.6",
+        screen_label="01 Gallery",
+        chips=[
+            c.status_chip("v0.0.6", "neutral"),
+            c.status_chip(f"{len(written)} outputs", "info"),
+            c.status_chip("smoke test passed", "pass"),
+        ],
         sections=[
             c.section(
                 None,
                 c.tldr_box(
                     [
-                        f"{len(written)} HTML outputs generated.",
-                        "Open each file in a browser to inspect. They're self-contained — "
-                        "share, archive, or open offline.",
-                        "Use this script as a reference when wiring vaultlab.report into a "
-                        "new consumer or testing locally after edits.",
+                        f"{len(written)} HTML outputs generated against realistic "
+                        f"sample data — {len(report_entries)} reports, "
+                        f"{len(editor_entries)} interactive editors.",
+                        "Each file is fully self-contained. Open in a browser, share "
+                        "over email, or archive — no server, no fonts, no build step.",
+                        "Use this page as a reference when wiring a new consumer; "
+                        "the visual system is shared.",
+                    ]
+                ),
+                c.stats_row(
+                    [
+                        ("Outputs", str(len(written))),
+                        ("Reports", str(len(report_entries))),
+                        ("Editors", str(len(editor_entries))),
+                        ("Total size", f"{total_kb}|kb"),
                     ]
                 ),
             ),
-            c.section("Outputs", c.card_grid(index_cards)),
+            c.section(
+                "Reports",
+                c.filter_bar(
+                    [
+                        ("All", "all"),
+                        ("Audit", "audit"),
+                        ("Literature", "literature"),
+                        ("Reasoning", "reasoning"),
+                        ("Project", "project"),
+                    ],
+                    target_selector=".vl-card[data-filter-key]",
+                ),
+                c.card_grid([_card(lbl, p) for lbl, p in report_entries]),
+                number=1,
+            ),
+            c.section(
+                "Editors",
+                c.card_grid([_card(lbl, p) for lbl, p in editor_entries]),
+                number=2,
+            ),
         ],
     )
     index_path = out_dir / "index.html"

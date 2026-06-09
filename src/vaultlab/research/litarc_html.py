@@ -269,11 +269,11 @@ def build_litarc_report_html(
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin:14px 0;">{"".join(summary_chips)}</div>',
         ),
         c.section(
             "Arc narrative",
             f'<div class="vl-narrative">{_md_paragraphs(narrative)}</div>',
+            number=1,
         ),
         c.section(
             "Cumulative paper corpus",
@@ -282,6 +282,7 @@ def build_litarc_report_html(
                 target_selector=".vl-cards .vl-card",
             ),
             c.card_grid(paper_cards) if paper_cards else "<p>No papers in corpus.</p>",
+            number=2,
         ),
     ]
 
@@ -296,6 +297,7 @@ def build_litarc_report_html(
                     "Nodes are papers (labelled by year); edges are citations from corpus. "
                     "Layout is circular — not chronological.</p>",
                     graph,
+                    number=3,
                 )
             )
 
@@ -304,6 +306,7 @@ def build_litarc_report_html(
         eyebrow=f"vaultlab · lit-arc · {scope}",
         subtitle=topic,
         meta=f"{len(papers)} papers · {len(citations or [])} citation edges",
+        chips=summary_chips,
         sections=sections,
     )
 

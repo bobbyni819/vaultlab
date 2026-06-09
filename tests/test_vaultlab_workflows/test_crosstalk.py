@@ -407,6 +407,106 @@ def test_rigor_audit_invalid_audit_kind_raises() -> None:
         )
 
 
+def test_rigor_audit_methods_kind_accepted() -> None:
+    """audit_kind='methods' is accepted and routes through a real audit path."""
+    captured: dict = {}
+    rigor_audit(
+        document="methods paragraph",
+        summaries={},
+        audit_kind="methods",
+        producer_kind="vaultlab.analysis.run_pipeline",
+        runner_callback=_capture_context_runner(captured),
+    )
+    # No ValueError, and the meeting context is actually assembled for "methods".
+    assert "AUDIT KIND: methods" in captured["context"]
+    # A non-template producer_kind must NOT trigger the downgrade.
+    assert "TEMPLATE-ONLY DOWNGRADE" not in captured["context"]
+
+
+def _capture_context_runner(captured: dict) -> object:
+    def _runner(meeting, roles):
+        captured["context"] = meeting.session_context
+        return [{"output": json.dumps({"passed": True, "issues": []})}]
+
+    return _runner
+
+
+def test_rigor_audit_reads_producer_from_sidecar(tmp_path) -> None:
+    """rigor_audit populates producer_kind from the document's sidecar."""
+    from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+    doc = tmp_path / "methods.md"
+    doc.write_text("methods text", encoding="utf-8")
+    write_receipts(
+        doc,
+        ProvenanceRecord(
+            generated_by="vaultlab.analysis.run_pipeline",
+            kind="methods_section",
+            producer="template-only",
+        ),
+    )
+
+    captured: dict = {}
+    rigor_audit(
+        document="methods text",
+        document_path=str(doc),
+        audit_kind="methods",
+        runner_callback=_capture_context_runner(captured),
+    )
+    assert "PRODUCER KIND: template-only" in captured["context"]
+
+
+def test_rigor_audit_explicit_producer_kind_wins(tmp_path) -> None:
+    """An explicit producer_kind arg overrides the sidecar value."""
+    from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+    doc = tmp_path / "methods.md"
+    doc.write_text("methods text", encoding="utf-8")
+    write_receipts(
+        doc,
+        ProvenanceRecord(generated_by="x", kind="methods_section", producer="template-only"),
+    )
+
+    captured: dict = {}
+    rigor_audit(
+        document="methods text",
+        document_path=str(doc),
+        audit_kind="methods",
+        producer_kind="explicit-wins",
+        runner_callback=_capture_context_runner(captured),
+    )
+    assert "PRODUCER KIND: explicit-wins" in captured["context"]
+    assert "template-only" not in captured["context"]
+
+
+def test_template_only_injects_downgrade_directive() -> None:
+    """producer_kind='template-only' injects the Task-5 downgrade directive."""
+    captured: dict = {}
+    rigor_audit(
+        document="`y` appears higher in `a` than `b`; recomputed p=0.01.",
+        audit_kind="methods",
+        producer_kind="template-only",
+        runner_callback=_capture_context_runner(captured),
+    )
+    ctx = captured["context"]
+    assert "TEMPLATE-ONLY DOWNGRADE" in ctx
+    assert "skip Tasks 1-3" in ctx
+    assert "Task 4" in ctx
+
+
+def test_non_template_no_downgrade_directive() -> None:
+    """Empty producer_kind keeps full grading — no downgrade injected."""
+    captured: dict = {}
+    rigor_audit(
+        document="Smith showed X.",
+        audit_kind="report",
+        runner_callback=_capture_context_runner(captured),
+    )
+    ctx = captured["context"]
+    assert "TEMPLATE-ONLY DOWNGRADE" not in ctx
+    assert "PRODUCER KIND: (unspecified)" in ctx
+
+
 def test_rigor_audit_overrides_passed_when_blockers_present() -> None:
     """If auditor incorrectly says passed=True but blockers exist, override."""
 

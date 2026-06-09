@@ -171,19 +171,22 @@ def build_citation_audit_html(
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin:14px 0;">{"".join(summary_chips)}</div>',
         ),
     ]
+    _n = 0  # running section number
 
     if actions:
+        _n += 1
         action_rows = [[_safe(item)] for item in actions]
         sections.append(
             c.section(
                 "Action items",
                 c.matrix_table(["Recommended next step"], action_rows),
+                number=_n,
             )
         )
 
+    _n += 1
     sections.append(
         c.section(
             "Citations",
@@ -192,15 +195,18 @@ def build_citation_audit_html(
                 target_selector=".vl-cards .vl-card",
             ),
             c.card_grid(citation_cards) if citation_cards else "<p>No citations audited.</p>",
+            number=_n,
         ),
     )
 
     if flags:
+        _n += 1
         flag_rows = [[_safe(f)] for f in flags]
         sections.append(
             c.section(
                 "Hallucination flag patterns",
                 c.matrix_table(["Pattern"], flag_rows),
+                number=_n,
             )
         )
 
@@ -209,6 +215,7 @@ def build_citation_audit_html(
         eyebrow="vaultlab · citation audit",
         subtitle=(", ".join(source_files[:3]) + (" …" if len(source_files) > 3 else "")) or None,
         meta=f"{total} citations · audited {audit_date}" if audit_date else None,
+        chips=summary_chips,
         sections=sections,
     )
 

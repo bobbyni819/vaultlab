@@ -176,24 +176,35 @@ def build_dossier_report_html(
         source_block = ""
         if sources:
             source_list = "".join(f"<li><code>{_safe(str(s))}</code></li>" for s in sources[:6])
+            # A <details> placed directly in a .vl-tab-pane is styled by the
+            # shared CSS — no inline styling needed.
             source_block = (
-                '<details style="margin-top:14px;border-top:1px solid var(--line-soft);padding-top:10px;">'
-                '<summary style="cursor:pointer;font-size:12px;color:var(--muted);">'
-                f"Sources ({len(sources)})</summary>"
-                f'<ul style="font-size:12px;color:var(--ink-soft);margin:6px 0;padding-left:20px;">{source_list}</ul>'
+                "<details>"
+                f"<summary>Sources ({len(sources)})</summary>"
+                f"<ul>{source_list}</ul>"
                 "</details>"
             )
         tabs[sec_title] = body_html + source_block
+
+    stats = c.stats_row(
+        [
+            ("Sections", str(len(sections_raw))),
+            ("Sources", str(len({str(s) for s in all_sources}))),
+            ("Compiled", f"{compiled_at:%Y-%m-%d}"),
+            ("Freshness", freshness_label),
+        ]
+    )
 
     sections_out = [
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin:14px 0;">{"".join(summary_chips)}</div>',
+            stats,
         ),
         c.section(
             "Dossier sections",
             c.tabbed_block(tabs) if tabs else "<p>No sections compiled.</p>",
+            number=1,
         ),
     ]
 
@@ -205,6 +216,7 @@ def build_dossier_report_html(
             c.section(
                 "All source files referenced",
                 c.matrix_table(["Path"], source_rows),
+                number=2,
             )
         )
 
@@ -214,8 +226,10 @@ def build_dossier_report_html(
 
     return render_report(
         title=report_title,
-        eyebrow=f"vaultlab · dossier · {project_slug}",
+        breadcrumb=["vaultlab", "dossier", str(project_slug)],
+        screen_label="Dossier",
         meta=meta_html,
+        chips=summary_chips,
         sections=sections_out,
     )
 

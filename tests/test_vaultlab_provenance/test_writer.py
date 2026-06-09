@@ -63,6 +63,19 @@ class TestProvenanceRecord:
         assert r2.seed == 42
         assert r2.model == "claude-sonnet"
 
+    def test_producer_round_trips(self) -> None:
+        r = ProvenanceRecord(generated_by="x", producer="template-only")
+        d = r.to_dict()
+        assert d["producer"] == "template-only"
+        assert ProvenanceRecord.from_dict(d).producer == "template-only"
+
+    def test_producer_omitted_when_empty_and_legacy_loads(self) -> None:
+        # Empty producer is omitted from the dict (additive optional)...
+        assert "producer" not in ProvenanceRecord(generated_by="x").to_dict()
+        # ...and a legacy JSON without the key still loads, defaulting to "".
+        legacy = {"generated_by": "x", "kind": "figure"}
+        assert ProvenanceRecord.from_dict(legacy).producer == ""
+
 
 # ---------------------------------------------------------------------------
 # write_receipts — sidecar emission
@@ -147,6 +160,28 @@ class TestWriteReceipts:
         assert "F001" in text
         assert "## Notes" in text
         assert "Generated for round 2 review." in text
+
+    def test_method_md_renders_full_sha256(self, tmp_path: Path) -> None:
+        """B016: the .method.md hash must be the full, verifiable 64-char digest."""
+        data = tmp_path / "in.csv"
+        data.write_text("a,b\n1,2\n", encoding="utf-8")
+        digests = hash_inputs([str(data)])
+        full = digests[str(data)]
+        assert len(full) == 64
+
+        out = tmp_path / "fig.png"
+        record = ProvenanceRecord(
+            generated_by="x", kind="figure", inputs=[str(data)], input_hashes=digests
+        )
+        json_path, method_path = write_receipts(out, record)
+
+        text = method_path.read_text(encoding="utf-8")
+        # Full digest present, and NOT the old truncated/ellipsis form.
+        assert f"sha256:{full}" in text
+        assert "…" not in text
+        # The narrative matches the machine-readable sidecar.
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        assert payload["input_hashes"][str(data)] == full
 
     def test_method_md_omits_empty_sections(self, tmp_path: Path) -> None:
         out = tmp_path / "x.png"

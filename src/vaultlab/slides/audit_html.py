@@ -225,7 +225,6 @@ def build_audit_report_html(
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin: 14px 0;">{"".join(summary_chips)}</div>',
         ),
         c.section(
             "Per-slide verdicts",
@@ -240,6 +239,7 @@ def build_audit_report_html(
                 target_selector=".vl-cards .vl-card",
             ),
             c.card_grid(slide_cards) if slide_cards else "<p>No slides in plan.</p>",
+            number=1,
         ),
     ]
 
@@ -260,6 +260,7 @@ def build_audit_report_html(
             c.section(
                 "Global / unattributed issues",
                 c.matrix_table(["Location", "Severity", "Kind", "Fix"], rows),
+                number=2,
             )
         )
 
@@ -273,6 +274,7 @@ def build_audit_report_html(
         title=report_title,
         eyebrow="vaultlab · slide audit",
         meta=meta_html,
+        chips=summary_chips,
         sections=sections,
     )
 

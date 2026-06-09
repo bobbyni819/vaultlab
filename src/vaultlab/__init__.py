@@ -17,8 +17,7 @@ This is the slim public barrel. The full surface is at submodule level:
 
 For the orchestration core (meetings, roles, runner, workflows), see:
 
-    from vaultlab.meetings import build_meeting, Agenda
-    from vaultlab.runner import ClaudeCodeRunner, bounded_loop
+    from vaultlab.runner import build_meeting, Agenda, ClaudeCodeRunner
     from vaultlab.workflows import run_workflow
 
 See README.md, CLAUDE.md, and AGENTS.md.

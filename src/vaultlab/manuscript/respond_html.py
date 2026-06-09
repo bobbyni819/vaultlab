@@ -168,18 +168,21 @@ def build_response_letter_html(
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin:14px 0;">{"".join(summary_chips)}</div>',
         ),
     ]
+    _n = 0  # running section number
 
     if opening:
+        _n += 1
         sections.append(
             c.section(
                 "Opening",
                 f'<p style="line-height:1.55;">{_safe(opening)}</p>',
+                number=_n,
             )
         )
 
+    _n += 1
     sections.append(
         c.section(
             "Comments + responses",
@@ -188,14 +191,17 @@ def build_response_letter_html(
                 target_selector=".vl-cards .vl-card",
             ),
             c.card_grid(comment_cards) if comment_cards else "<p>No comments.</p>",
+            number=_n,
         ),
     )
 
     if closing:
+        _n += 1
         sections.append(
             c.section(
                 "Closing",
                 f'<p style="line-height:1.55;">{_safe(closing)}</p>',
+                number=_n,
             )
         )
 
@@ -203,6 +209,7 @@ def build_response_letter_html(
         title=report_title,
         eyebrow=f"vaultlab · reviewer response · R{reviewer}",
         subtitle=f"{len(comments)} comments · {open_questions} need author input",
+        chips=summary_chips,
         sections=sections,
     )
 

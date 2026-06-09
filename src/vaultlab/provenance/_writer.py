@@ -178,13 +178,13 @@ def _render_method_markdown(output: Path, record: ProvenanceRecord) -> str:
         for inp in record.inputs:
             digest = record.input_hashes.get(inp)
             if digest:
-                lines.append(f"- `{inp}` — sha256:{digest[:12]}…")
+                lines.append(f"- `{inp}` — sha256:{digest}")
             else:
                 lines.append(f"- `{inp}`")
         # input_hashes entries that weren't in inputs (rare but possible)
         for path, digest in record.input_hashes.items():
             if path not in record.inputs:
-                lines.append(f"- `{path}` — sha256:{digest[:12]}…")
+                lines.append(f"- `{path}` — sha256:{digest}")
         lines.append("")
 
     if record.params:

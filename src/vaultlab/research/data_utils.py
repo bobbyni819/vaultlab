@@ -96,7 +96,10 @@ def detect_data_format(filepath: str) -> dict:
 
     elif fmt == "xlsx":
         result["library"] = "pandas"
-        result["load_command"] = f"pd.read_excel('{fp_escaped}')"
+        # header=None: these sheets often have stacked multi-row headers, so
+        # we peek raw. Stacked-header sheets need walk-up conversion (see
+        # scripts/xlsx_to_tidy.py) into a tidy CSV before analysis.
+        result["load_command"] = f"pd.read_excel('{fp_escaped}', header=None)"
         _try_excel(filepath, result)
 
     elif fmt == "json":
@@ -169,16 +172,26 @@ def _try_h5ad(filepath: str, result: dict) -> None:
 
 
 def _try_excel(filepath: str, result: dict) -> None:
-    """Try to peek at an Excel file."""
+    """Try to peek at an Excel file.
+
+    Read with ``header=None`` so multi-row-header sheets (common in
+    published supplementary data: stacked condition/cell-type headers,
+    blank-row separators) report their raw row-0 values instead of pandas'
+    mangled ``Unnamed: N`` labels. Such sheets need walk-up conversion
+    (see ``scripts/xlsx_to_tidy.py``) into a tidy CSV before analysis.
+    """
     try:
         import pandas as pd
 
-        df = pd.read_excel(filepath, nrows=0)
-        result["cols"] = len(df.columns)
-        result["columns"] = list(df.columns[:20])
+        df = pd.read_excel(filepath, header=None, nrows=5)
+        result["cols"] = df.shape[1]
+        result["columns"] = (
+            [str(v) for v in df.iloc[0].tolist()[:20]] if not df.empty else []
+        )
 
-        # Get row count from full read (Excel doesn't support lazy count)
-        df_full = pd.read_excel(filepath)
+        # Get row count from full read (Excel doesn't support lazy count).
+        # No header subtraction — with header=None every row is data.
+        df_full = pd.read_excel(filepath, header=None)
         result["rows"] = len(df_full)
     except ImportError:
         logger.debug("pandas/openpyxl not installed; cannot peek at Excel")

@@ -195,12 +195,12 @@ def build_reasoning_report_html(
         c.section(
             None,
             c.tldr_box(tldr_items),
-            f'<div style="margin:14px 0;">{"".join(summary_chips)}</div>',
             f'<div style="margin:14px 0;font-size:13px;">{role_chips_block}</div>',
         ),
         c.section(
             "Final synthesized output",
             _final_output_block(final),
+            number=1,
         ),
         c.section(
             "Agent rounds (chronological)",
@@ -213,6 +213,7 @@ def build_reasoning_report_html(
             )
             if rounds
             else "<p>No rounds recorded.</p>",
+            number=2,
         ),
     ]
 
@@ -221,6 +222,7 @@ def build_reasoning_report_html(
         eyebrow=f"vaultlab · reasoning chain · {purpose or 'investigation'}",
         subtitle=topic,
         meta=f"status: {status} · {len(rounds)} turns · {runtime:.1f}s runtime",
+        chips=summary_chips,
         sections=sections,
     )
 
