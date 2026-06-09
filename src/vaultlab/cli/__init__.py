@@ -469,6 +469,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_paperclip_sql(rest)
     if cmd == "claude-setup":
         return _cmd_claude_setup(rest)
+    if cmd == "claude":
+        from vaultlab.cli.claude import main as _claude_main
+
+        return _claude_main(rest)
     if cmd == "slides":
         return _cmd_slides(rest)
 
@@ -487,6 +491,7 @@ def _print_usage(stream: object = None) -> None:
         "  vaultlab demo [--out-dir <path>]          First-run audit-clean artifact (<5 min)\n"
         "  vaultlab init [<kb-root-path>]            Configure KB root (one-time)\n"
         "  vaultlab claude-setup [--dry-run]         Wire slash commands + global CLAUDE.md\n"
+        "  vaultlab claude validate [--list]         Lint .claude/commands/*.md frontmatter\n"
         "  vaultlab list-policy-skipped <project>    Show LLM-refused papers\n"
         "  vaultlab fetch-list paywalled <log>       Manual-fetch shopping list\n"
         "  vaultlab slides review <pptx> [--html <o>] Self-review a rendered deck\n"

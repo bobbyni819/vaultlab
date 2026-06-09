@@ -31,7 +31,7 @@ of the following:
 | --- | --- |
 | Only the abstract | `vaultlab.research.abstract_recall.get_abstract_for_doi` |
 | A short TL;DR / structured summary | `vaultlab.research.summarize.summarize_paper` |
-| Batched cross-paper synthesis (5-15 PDFs in one LLM call) | `vaultlab.research.batched_reader` (planned re-introduction) |
+| Batched cross-paper synthesis (5-15 PDFs in one LLM call) | `vaultlab.research.batched_reader` — **planned / not yet implemented (not on disk)** |
 | Citation / DOI verification | `vaultlab.citations` |
 | Slide deck output | `vaultlab.slides` |
 

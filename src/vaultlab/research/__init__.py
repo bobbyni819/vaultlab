@@ -33,6 +33,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from vaultlab.research.abstract_recall import get_abstract_for_doi
 from vaultlab.research.acquisition import (
     AcquisitionResult,
     acquire_pdf,
@@ -170,6 +171,7 @@ __all__ = [
     "extract_figures",
     # PDF extraction
     "extract_text",
+    "get_abstract_for_doi",
     "get_citations_via_s2",
     "get_influential_count_via_s2",
     "get_paper",

@@ -74,6 +74,7 @@ from pathlib import Path
 from typing import Any
 
 from vaultlab.provenance import ProvenanceRecord, write_receipts
+from vaultlab.research.sources.paperclip import PaperclipClient
 from vaultlab.workflows.task_weight import (
     TaskSpec,
     Weight,
@@ -171,10 +172,96 @@ def _extract_paper_content(
     * paperclip MCP for the 8M-paper corpus
     * :func:`vaultlab.figures.acquisition.acquire_figures` for figures
     """
-    raise NotImplementedError(
-        "vaultlab.research.full_reader._extract_paper_content has no default "
-        "implementation. Wire it to read_paper_sections / paperclip / "
-        "figure-acquisition for production use, or monkeypatch in tests."
+    # Resolution policy: "ID required, DOI falls back"
+    pid = paperclip_id or source
+
+    client = PaperclipClient()
+
+    # Helper: does source look like a DOI?
+    def _is_doi(s: str) -> bool:
+        return s.startswith("10.") or s.startswith("https://doi.org/")
+
+    # --- Structured path: paperclip exposes named sections ---
+    sections = client.list_sections(pid)
+    if sections:
+        sections_lower = {s.lower(): s for s in sections}
+
+        # Resolve DOI metadata once (single subprocess) when source is a DOI.
+        doi_paper = client.lookup_doi(source) if _is_doi(source) else None
+
+        # Title
+        if "title" in sections_lower:
+            title = client.get_section(pid, sections_lower["title"]).strip()
+        else:
+            title = doi_paper.title if doi_paper else ""
+
+        # Abstract
+        abstract: str | None = None
+        if "abstract" in sections_lower:
+            raw_abstract = client.get_section(pid, sections_lower["abstract"]).strip()
+            abstract = raw_abstract if raw_abstract else None
+
+        # DOI
+        if doi_paper:
+            doi = doi_paper.doi
+        elif _is_doi(source):
+            doi = source
+        else:
+            doi = ""
+
+        # Body: all sections except Title/Authors/Abstract/References (case-insensitive)
+        _SKIP = {"title", "authors", "author", "abstract", "references", "reference"}
+        body_blocks: list[Block] = []
+        for sec_name in sections:
+            if sec_name.lower() in _SKIP:
+                continue
+            text = client.get_section(pid, sec_name).strip()
+            body_blocks.append(Block(kind="body", label=sec_name, text=text))
+
+        # Figures: no captions from paperclip, text="" is honest
+        figure_filenames = client.list_figures(pid)
+        figure_blocks: list[Block] = [
+            Block(kind="figure", label=f"Figure {n}", asset=fname, text="")
+            for n, fname in enumerate(figure_filenames, start=1)
+        ]
+
+        return PaperContent(
+            title=title,
+            doi=doi,
+            source=source,
+            abstract=abstract,
+            body=body_blocks,
+            figures=figure_blocks,
+            tables=[],
+        )
+
+    # --- Fallback path: no sections, try raw full text ---
+    text = client.get_paper_text(pid)
+    if text.strip():
+        title = ""
+        abstract = None
+        doi = ""
+        if _is_doi(source):
+            paper = client.lookup_doi(source)
+            if paper:
+                title = paper.title
+                abstract = paper.abstract if paper.abstract else None
+                doi = paper.doi
+
+        return PaperContent(
+            title=title,
+            doi=doi,
+            source=source,
+            abstract=abstract,
+            body=[Block(kind="body", label="Body", text=text)],
+            figures=[],
+            tables=[],
+        )
+
+    # --- Both paths empty: fail loud (Red Line #2) ---
+    raise RuntimeError(
+        f"paperclip returned no content for '{pid}': list_sections was empty "
+        f"and get_paper_text returned nothing. Cannot produce paper.md."
     )
 
 

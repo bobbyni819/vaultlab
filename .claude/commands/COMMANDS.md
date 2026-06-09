@@ -40,7 +40,8 @@ For v0.0.1, most commands print "not yet implemented." See [Roadmap](../README.m
 ### Figures
 - `/figure-gen <recipe>` — render a figure from a recipe
 - `/figure-suggest` — recommend recipes for current data
-- `/figure-audit` — audit figure coverage + manifest verdict
+- `/figure-audit <figure-path> "<claim>"` — **Built.** Semantic figure-vs-claim verifier (SUPPORTED/PARTIAL/UNSUPPORTED/FABRICATED + evidence anchors). Discrete reviewer-invoked path; not the inline /lit-arc pass. Backed by `vaultlab.figures.verify_semantic`.
+- `/figure-coverage` — _Placeholder (unbuilt)._ Audit figure coverage + manifest verdict (does every expected figure exist; is the manifest complete). Displaced from the old `/figure-audit` slot when the semantic verifier took that name.
 
 ### Manuscript
 - `/manuscript-status` — manifest table for current manuscript

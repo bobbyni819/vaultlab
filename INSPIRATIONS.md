@@ -313,9 +313,36 @@ When you take from a source, make sure it appears in at least 2 of those (this f
 - `nature-data` → `src/vaultlab/manuscript/data_availability.py`: 15-repository registry with regex identifier formats + URL templates + DAS citation prose, 14-item FAIR checklist, 6 statement-pattern templates, heuristic DAS auditor.
 - `nature-citation` → `src/vaultlab/citations/export.py`: ENW / RIS / Zotero RDF exporters with author-string normalization, HTML-escaped RDF, no-fabrication rule (empty fields stay empty).
 
-Two of the 7 skills (`nature-reader`, `nature-citation`-screening-page) were deferred — vaultlab has overlapping primitives in `research.batched_reader` and `citations.auditor` already.
+Two of the 7 skills (`nature-reader`, `nature-citation`-screening-page) were deferred — vaultlab has overlapping primitives in `citations.auditor` already; `research.batched_reader` is planned but not yet implemented.
 
 **License compatibility:** Source is MIT-licensed. vaultlab does not import or vendor any of the original code; the rules and taxonomies were re-implemented from scratch in Python so they could be tested, versioned, and queried. Attribution remains required and is given here + in module docstrings.
+
+---
+
+## abstract_recall (PaperQA2 metadata-recall step)
+
+- **Source:** PaperQA2 (FutureHouse) — https://github.com/Future-House/paper-qa
+- **How:** `PATTERN` — thin recall wrapper over the federated `get_paper`; fetch abstract before deciding whether to retrieve full text, mirroring PaperQA2's metadata-recall step.
+- **Where in vaultlab:** `src/vaultlab/research/abstract_recall.py`
+
+---
+
+## verify_semantic (figure-vs-claim semantic verifier — prototype)
+
+- **Source:** `methods_critic` semantic-figure-audit pattern, documented in
+  `Output/round15-vaultlab-pipeline-vetting/semantic-figure-audit-2026-05-11.md` (the
+  K=100-vs-K=25 argmax inversion and the fig5C +0.32→+0.38 drift it caught). Conceptual
+  kin: NotebookLM hover-to-quote evidence grounding (cite concrete figure elements, not prose).
+- **How:** `PATTERN` — promotes the methods_critic catch into a measurable primitive. A
+  vision model judges whether a figure visually supports a claim and returns a fixed schema
+  (`verdict ∈ SUPPORTED|PARTIAL|UNSUPPORTED|FABRICATED`, `evidence_anchors`, `confidence`).
+  Layers ON TOP of the deterministic text verifiers (`enforce_hedge`, `verify_numeric`,
+  `compare_two_groups`) — it catches semantic claim↔figure mismatch, not lexical/numeric
+  lies in text. Prompt text lives in a sibling `prompt.md` (META PRINCIPLE #1).
+- **Where in vaultlab:** `src/vaultlab/figures/verify_semantic/{verifier.py, prompt.md}`.
+  Prototype only — NOT wired into `/lit-arc` or `/figure-audit`; benchmark + measured
+  accuracy + invocation recommendation in
+  `<kb>/elife-91157-stress/Output/figure-claim-verifier-2026-06-09/`.
 
 ---
 

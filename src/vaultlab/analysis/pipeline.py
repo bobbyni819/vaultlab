@@ -714,6 +714,23 @@ def _resolve_figures_config(
 # ---------------------------------------------------------------------------
 
 
+def _xtick_rotation(labels: list[str]) -> int | None:
+    """Degrees to rotate bar-chart x tick labels so they don't overprint.
+
+    Driven by BOTH the number of bars AND the longest label: long composite
+    labels (e.g. ``"S. aureus | (R)-DI-87 | WT"``) overprint and become
+    illegible even at low bar counts. The earlier rule rotated only when there
+    were >6 bars, which left 4-bar panels with long labels unreadable — a
+    rendering defect that also defeats downstream figure readers/verifiers.
+
+    Returns ``None`` when no rotation is needed (few, short labels).
+    """
+    longest = max((len(s) for s in labels), default=0)
+    if len(labels) > 6 or longest > 12:
+        return 45 if (len(labels) > 10 or longest > 24) else 30
+    return None
+
+
 def _render_figure(
     df: "pd.DataFrame", fig_cfg: dict[str, Any], out_path: Path
 ) -> None:
@@ -769,11 +786,20 @@ def _render_figure(
                     f"got x={x!r} y={y!r}"
                 )
             grouped = df.groupby(x)[y].mean()
-            ax.bar(grouped.index.astype(str), grouped.values, color=color)
+            labels = [str(i) for i in grouped.index]
+            ax.bar(labels, grouped.values, color=color)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(f"mean({ylabel})")
-            if len(grouped) > 6:
-                plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+            # Rotate x tick labels when they would overlap (see _xtick_rotation).
+            rotation = _xtick_rotation(labels)
+            if rotation is not None:
+                plt.setp(
+                    ax.get_xticklabels(),
+                    rotation=rotation,
+                    ha="right",
+                    rotation_mode="anchor",
+                    fontsize=7,
+                )
         elif kind == "line":
             if not x or not y or x not in df.columns or y not in df.columns:
                 raise ValueError(
