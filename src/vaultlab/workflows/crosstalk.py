@@ -365,7 +365,7 @@ def adversarial_picker_meeting(
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
-    kb_root: "Path | str | None" = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst proposes top-N picks; literature_critic
     challenges (missing seminal works? off-topic?); synthesizer picks final.
@@ -445,7 +445,7 @@ def adversarial_arc_meeting(
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
-    kb_root: "Path | str | None" = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst drafts arc; methods_critic challenges
     field-development claims; literature_critic flags missing strands;
@@ -547,7 +547,7 @@ def adversarial_deck_plan_meeting(
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
-    kb_root: "Path | str | None" = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: narrator proposes story arc; figure_lead picks
     figures; methods_critic flags overclaiming; synthesizer integrates.
@@ -656,7 +656,7 @@ def rigor_audit(
     runner_callback: RunnerCallback | None = None,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     project_slug: str | None = None,
-    kb_root: "Path | str | None" = None,
+    kb_root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Final-gate review by the new ``rigor_auditor`` role.
 

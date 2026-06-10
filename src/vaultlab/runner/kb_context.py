@@ -425,12 +425,16 @@ def prepend_preamble(
     try:
         preamble = compose_preamble(project_slug, kb_root=kb_root, role=role)
     except Exception as exc:  # KbStateUnreadable / KbRootNotConfigured / OSError
+        # exc_info so an UNEXPECTED failure (a real bug, not the expected
+        # not-onboarded/unresolvable cases) leaves a traceback instead of hiding
+        # in WARNING noise — we degrade gracefully but don't go silent.
         logger.warning(
             "KB context preamble unavailable for project %s: %s — proceeding "
             "WITHOUT it (spawned sub-agents may lack prior-work context, "
             "CLAUDE.md commitment #7)",
             project_slug,
             exc,
+            exc_info=True,
         )
         return session_context
     if not session_context:

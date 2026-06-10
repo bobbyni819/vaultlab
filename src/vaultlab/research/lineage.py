@@ -2386,6 +2386,8 @@ def run_lit_arc(
                 abstracts_md=abstracts_md,
                 n_rounds=crosstalk_n_rounds,
                 runner_callback=crosstalk_runner,
+                project_slug=project_slug,  # commitment #7: roles see prior KB state
+                kb_root=kb_root,
             )
             crosstalk_picker_result = ct_result
             if run_dir is not None:
@@ -2567,6 +2569,8 @@ def run_lit_arc(
             metrics=metrics,
             n_rounds=crosstalk_n_rounds,
             runner_callback=crosstalk_runner,
+            project_slug=project_slug,  # commitment #7: roles see prior KB state
+            kb_root=kb_root,
         )
         crosstalk_arc_result = ct_arc
         if run_dir is not None:
