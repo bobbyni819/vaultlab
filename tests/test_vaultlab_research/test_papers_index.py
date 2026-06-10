@@ -195,3 +195,21 @@ def test_needs_summary_rejects_unknown_depth(kb: Path):
     e = pidx.scan_corpus(kb).entry_for_doi(DOI_FULL)
     with pytest.raises(ValueError):
         pidx.needs_summary(e, target_depth="skimmed")
+
+
+def test_readability_floor_mirrors_acquisition(tmp_path: Path):
+    # The ledger's readability floor must be IDENTICAL to the fetcher's, or a PDF the
+    # fetcher accepts reads as unreadable here and gets trapped in a re-fetch loop.
+    from vaultlab.research.acquisition import _MIN_PDF_BYTES as ACQ_MIN
+
+    assert pidx._MIN_PDF_BYTES == ACQ_MIN
+    assert pidx._PDF_MAGIC == b"%PDF-"
+
+    # Exactly at the floor (magic + >=1000 bytes) is readable; one byte short is not.
+    at_floor = b"%PDF-" + b"x" * (ACQ_MIN - 5)
+    assert len(at_floor) == ACQ_MIN
+    below = at_floor[:-1]
+    pdf_ok = _write_pdf(tmp_path, DOI_FULL, at_floor)
+    assert pidx._pdf_readable(pdf_ok) is True
+    pdf_bad = _write_pdf(tmp_path, DOI_BARE, below)
+    assert pidx._pdf_readable(pdf_bad) is False

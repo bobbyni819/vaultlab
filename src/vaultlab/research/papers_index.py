@@ -47,8 +47,11 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 # Mirrors acquisition._looks_like_pdf so the readability verdict here agrees with the fetcher.
+# Keep BOTH constants identical to acquisition.py (magic + 1000-byte floor); a mismatch would
+# let a PDF the fetcher accepts read as "unreadable" here, trapping it in a permanent re-fetch
+# / re-read loop (it would never be hashed, so summary_current would never become True).
 _PDF_MAGIC = b"%PDF-"
-_MIN_PDF_BYTES = 1024
+_MIN_PDF_BYTES = 1000
 
 # The read-depth ladder (decision 2026-06-10: tiered + idempotent reading).
 READ_DEPTHS = ("none", "abstract", "full", "grounded")
@@ -325,6 +328,12 @@ def scan_corpus(kb_root: Path, *, hash_pdfs: bool = True) -> PapersIndex:
     reading backlog rather than hiding it.
 
     Set ``hash_pdfs=False`` to skip content hashing (faster; disables the summary-currency check).
+
+    Note: the ledger hashes ``Sources/Papers/<slug>.pdf`` and compares to the summary's recorded
+    ``source_pdf_sha256``. The summarizer records the hash of whatever ``pdf_cache_dir`` it read
+    from, so for ``summary_current`` to agree the summarizer must read from ``Sources/Papers``
+    (the lit-arc pipeline does — ``lineage.pdf_cache_dir`` resolves there). A summarizer pointed at
+    a different cache dir stays internally idempotent, but the ledger's currency verdict may differ.
     """
     kb_root = Path(kb_root)
     papers_dir = kb_root / "Sources" / "Papers"
