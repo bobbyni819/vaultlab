@@ -120,7 +120,11 @@ def verify_citation(
         elif claim_match.supported == "partial":
             citation.status = VerificationStatus.VERIFIED_ABSTRACT
         else:
-            citation.status = VerificationStatus.API_CONFIRMED
+            # We had text and ran the match, but it could neither support nor refute the
+            # claim ("unrelated" / "unverifiable"). That is NOT a confirmation — record it
+            # honestly as UNVERIFIED rather than the optimistic API_CONFIRMED.
+            # (Decision 2026-06-10: an unchecked claim must never read as verified.)
+            citation.status = VerificationStatus.UNVERIFIED
 
         # Cache the result
         if evidence_index and (citation.doi or citation.pmid):
@@ -133,7 +137,14 @@ def verify_citation(
                 confidence=claim_match.confidence,
                 source_file=citation.source_file,
             )
+    elif citation.claim:
+        # The paper was located, but we had NO text to check the claim against (no abstract
+        # and no KB full text). Existence is confirmed; the claim is not. Decision 2026-06-10:
+        # surface this as UNVERIFIED, not API_CONFIRMED, so an unread-paper citation never
+        # masquerades as verified in a manuscript. This is the reading backlog made visible.
+        citation.status = VerificationStatus.UNVERIFIED
     else:
+        # No claim attached — confirming the paper exists is all that was asked of us.
         citation.status = VerificationStatus.API_CONFIRMED
 
     # Step 4: Assign risk level
@@ -181,6 +192,11 @@ def _assign_risk(citation: Citation) -> RiskLevel:
         return RiskLevel.HIGH
     if citation.status in (VerificationStatus.SUSPECT, VerificationStatus.CONTRADICTED):
         return RiskLevel.HIGH
+
+    # MEDIUM (never LOW): the paper may exist, but its claim was never checked against
+    # text. An unverified claim must read as "not yet verified", not "confirmed".
+    if citation.status == VerificationStatus.UNVERIFIED and citation.claim:
+        return RiskLevel.MEDIUM
 
     # LOW: API confirmed with no claim to check
     if citation.status == VerificationStatus.API_CONFIRMED and not citation.claim:

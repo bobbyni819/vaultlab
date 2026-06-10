@@ -100,6 +100,17 @@ if TYPE_CHECKING:
         VerificationResult,
     )
 from vaultlab.research.paper import Paper
+from vaultlab.research.papers_index import (
+    PaperEntry,
+    PapersIndex,
+    build_and_save,
+    load_index,
+    needs_fetch,
+    needs_summary,
+    save_index,
+    scan_corpus,
+    summary_is_current,
+)
 from vaultlab.research.pdf import batch_extract, extract_and_save, extract_text
 from vaultlab.research.session import Finding, FindingStatus, ResearchSession
 from vaultlab.research.summarize import (
@@ -136,7 +147,9 @@ __all__ = [
     "FindingStatus",
     "LineageRunResult",
     "Paper",
+    "PaperEntry",
     "PaperSummary",
+    "PapersIndex",
     "PickerCallback",
     "PickerTask",
     "RateLimitError",
@@ -158,6 +171,7 @@ __all__ = [
     "assign_buckets_with_llm",
     "batch_extract",
     "binning_response_schema",
+    "build_and_save",
     "build_corpus_from_seeds",
     "build_section_prompt",
     "compute_metrics",
@@ -174,6 +188,9 @@ __all__ = [
     "get_influential_count_via_s2",
     "get_paper",
     "get_references_via_crossref",
+    "load_index",
+    "needs_fetch",
+    "needs_summary",
     "pick_top_n_content_aware",
     "picker_response_schema",
     "prepare_arc_task",
@@ -188,10 +205,13 @@ __all__ = [
     "render_summary_from_response",
     "run_lit_arc",
     "run_lit_report",
+    "save_index",
+    "scan_corpus",
     "search_papers",
     "section_response_schema",
     "summarize_corpus",
     "summarize_paper",
+    "summary_is_current",
     "summary_response_schema",
     "write_figure_notes",
     "write_summary_to_kb",

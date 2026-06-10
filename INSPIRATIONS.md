@@ -113,6 +113,16 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 - **Where in vaultlab:** `vaultlab.citations.evidence.EvidenceRecord`, `vaultlab.manuscript.draft_mode_render` / `final_mode_render` (planned), file 04 in the architecture grill.
 - **Attribution:** `vaultlab.citations.evidence.md` + this file.
 
+### Persistent papers-index ledger (corpus state)
+
+- **Lineage:** two established patterns combined, no code copied.
+  - **Content-hash-gated incremental rebuild** — the Make/Bazel/`ccache` discipline of "only redo work when an input's content hash changed." Here the gate is the PDF's SHA-256 recorded in each summary's `source_pdf_sha256` frontmatter: a paper is re-read only when its PDF hash differs. This is what makes multi-run summarization delta-only.
+  - **One index an agent reads to understand a whole corpus** — the repo-map idea from Aider (Paul Gauthier) and the LLM-maintained wiki from Karpathy's gist: a single, regenerated-from-source manifest the model consults instead of re-reading every file.
+- **How:** `PATTERN` / `CONCEPT` — reimplemented in Python; the readability verdict deliberately mirrors vaultlab's own `acquisition._looks_like_pdf` (`%PDF-` magic + min-bytes) so the ledger and the fetcher agree. PaperQA2's "per-paper grounded state" framing (above) informs the read-depth ladder (`none`/`abstract`/`full`/`grounded`).
+- **Where in vaultlab:** `src/vaultlab/research/papers_index.py` (`scan_corpus`, `needs_fetch`, `needs_summary`, `summary_is_current`), `vaultlab.kb.paths.papers_index_path`, hash-gate in `vaultlab.research.summarize.summarize_corpus`.
+- **License compatibility:** MIT-clean — patterns only (Make/Bazel/ccache and Aider are themselves Apache-2.0/MIT; no source taken).
+- **Attribution:** module docstring + `docs/papers-spine-build-plan.md` + this file.
+
 ---
 
 ## Wet-lab data analysis
