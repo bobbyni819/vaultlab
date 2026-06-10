@@ -33,7 +33,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["KbContextBundle", "KbStateUnreadable", "compose_preamble"]
+__all__ = ["KbContextBundle", "KbStateUnreadable", "compose_preamble", "prepend_preamble"]
 
 
 _TOKEN_CHARS_RATIO = 4  # approx — 4 chars per token for English
@@ -392,3 +392,47 @@ def compose_preamble(
             truncated=truncated_any,
         )
     return preamble
+
+
+def prepend_preamble(
+    session_context: str,
+    project_slug: str | None,
+    *,
+    kb_root: Path | str | None = None,
+    role: str | None = None,
+) -> str:
+    """Prepend the KB-context preamble to a meeting's ``session_context``.
+
+    This is the one-line hook orchestrators (crosstalk meetings, deep-think
+    rounds) use to satisfy CLAUDE.md commitment #7: every spawned analyst /
+    critic / synthesizer sub-agent should receive the project's prior-work
+    context, not just the role's task description.
+
+    Opt-in + safe-by-default:
+
+    * ``project_slug`` falsy → returns ``session_context`` unchanged (callers
+      that aren't project-scoped see no behaviour change).
+    * project not onboarded / state unreadable / KB unresolvable → logs a
+      WARNING and returns ``session_context`` unchanged. The preamble is
+      additive context; a meeting must not die because it couldn't be
+      assembled. This matches ``prepare_audit``'s log-and-continue precedent.
+
+    When the preamble composes, it is prepended above a ``---`` rule so the
+    role's existing task context still reads cleanly below it.
+    """
+    if not project_slug:
+        return session_context
+    try:
+        preamble = compose_preamble(project_slug, kb_root=kb_root, role=role)
+    except Exception as exc:  # KbStateUnreadable / KbRootNotConfigured / OSError
+        logger.warning(
+            "KB context preamble unavailable for project %s: %s — proceeding "
+            "WITHOUT it (spawned sub-agents may lack prior-work context, "
+            "CLAUDE.md commitment #7)",
+            project_slug,
+            exc,
+        )
+        return session_context
+    if not session_context:
+        return preamble
+    return f"{preamble}\n\n---\n\n{session_context}"
