@@ -488,6 +488,28 @@ def run_pipeline(
     stats_path = out / "stats_summary.json"
     stats_path.write_text(json.dumps(stats_summary, indent=2), encoding="utf-8")
 
+    # ---- 7. Context-preservation: keep the project's START_HERE current ----
+    # CLAUDE.md commitment #7 — every artifact-producing primitive records what it
+    # did so the next session resumes cleanly. No-op (returns None) when the project
+    # isn't onboarded; best-effort so a START_HERE hiccup never fails the analysis.
+    try:
+        resolved_kb = _safe_resolve_kb_root(kb_root)
+        if resolved_kb is not None:
+            from vaultlab.kb.paths import slugify_topic
+            from vaultlab.kb.start_here import update_start_here
+
+            files_next = [p for p in (methods_md_path, stats_path) if p is not None]
+            update_start_here(
+                resolved_kb,
+                slugify_topic(project_name),
+                f"Ran analysis pipeline (mode={mode}): {len(figure_paths)} figure(s), "
+                f"methods {'drafted' if methods_md_path else 'not drafted'}, "
+                f"{len(inputs)} input table(s).",
+                files_to_read_next=files_next,
+            )
+    except Exception:  # pragma: no cover - START_HERE update is best-effort
+        logger.warning("run_pipeline: START_HERE update failed (non-fatal)", exc_info=True)
+
     return AnalysisResult(
         project_dir=project,
         out_dir=out,

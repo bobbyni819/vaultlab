@@ -149,11 +149,10 @@ def _read_decisions_log(
 
 
 def _list_recent_outputs(
-    project_dir: Path,
+    output_dir: Path,
     *,
     n: int = _DEFAULT_RECENT_OUTPUTS_N,
 ) -> list[tuple[str, str]]:
-    output_dir = project_dir / "Output"
     if not output_dir.exists():
         return []
     md_files = sorted(
@@ -284,27 +283,48 @@ def compose_preamble(
     Raises
     ------
     KbStateUnreadable
-        When ``<kb_root>/<project_slug>/START_HERE.md`` is missing or
-        unreadable. Callers MUST refuse to spawn sub-agents in this
-        case (per CLAUDE.md commitment #7).
+        When ``<kb_root>/Wiki/Projects/<project_slug>/START_HERE.md`` is
+        missing or unreadable (with a legacy flat ``<kb_root>/<project_slug>/``
+        fallback). Callers MUST refuse to spawn sub-agents in this case
+        (per CLAUDE.md commitment #7).
     """
     kb_root_path = _resolve_kb_root(kb_root)
-    project_dir = kb_root_path / project_slug
-    if not project_dir.exists():
-        raise KbStateUnreadable(
-            f"Project directory not found: {project_dir}. "
-            f"Run /onboard-me or /onboard-project first."
-        )
 
-    start_here = _read_start_here(project_dir)
-    decisions = _read_decisions_log(project_dir)
-    topic_keywords = _project_topic_keywords(project_dir)
+    # Resolve the project's state directory the SAME way onboarding +
+    # update_start_here write it: <kb>/Wiki/Projects/<slug>/ (the parent of the
+    # canonical project_state_path). Reading <kb>/<slug>/ instead — as this did
+    # before — meant a correctly-onboarded project raised KbStateUnreadable on
+    # every spawn (CLAUDE.md commitment #7 was unenforceable). A flat
+    # <kb>/<slug>/ layout is still honoured as a fallback when it is the folder
+    # that actually holds START_HERE.md; otherwise the canonical path drives the
+    # error message.
+    from vaultlab.kb.paths import project_dir as _kb_output_dir
+    from vaultlab.kb.paths import project_state_path
+
+    canonical_dir = project_state_path(kb_root_path, project_slug).parent
+    legacy_dir = kb_root_path / project_slug
+    if (canonical_dir / "START_HERE.md").exists():
+        state_dir = canonical_dir
+    elif (legacy_dir / "START_HERE.md").exists():
+        state_dir = legacy_dir
+    else:
+        state_dir = canonical_dir  # canonical path drives the KbStateUnreadable message
+
+    # Outputs live at <kb>/Output/<slug>/ canonically; fall back to a flat
+    # <state_dir>/Output/ for legacy-layout projects.
+    output_dir = _kb_output_dir(kb_root_path, project_slug)
+    if not output_dir.exists():
+        output_dir = state_dir / "Output"
+
+    start_here = _read_start_here(state_dir)
+    decisions = _read_decisions_log(state_dir)
+    topic_keywords = _project_topic_keywords(state_dir)
     tier_a = _list_tier_a_summaries(
         kb_root_path,
         project_slug=project_slug,
         topic_keywords=topic_keywords,
     )
-    recent_outputs = _list_recent_outputs(project_dir)
+    recent_outputs = _list_recent_outputs(output_dir)
 
     # Section budgets (approximate split of total budget)
     sh_budget = max_tokens // 3

@@ -432,6 +432,53 @@ class TestScopeDiscipline:
         with pytest.raises(ValueError):
             run_pipeline(proj, figures_config={})
 
+
+class TestContextPreservation:
+    """run_pipeline must keep the project's START_HERE current (commitment #7)."""
+
+    _START_HERE = (
+        "---\nproject: myproj\nversion: 1\n---\n"
+        "# START_HERE — myproj\n\n"
+        "## Recent activity\n\n"
+        "## Files to read first if resuming\n\n"
+        "## Open questions\n"
+    )
+
+    def test_run_pipeline_updates_start_here_when_onboarded(self, tmp_path: Path) -> None:
+        from vaultlab.kb.paths import project_state_path
+
+        kb = tmp_path / "kb"
+        sh = project_state_path(kb, "myproj")
+        sh.parent.mkdir(parents=True, exist_ok=True)
+        sh.write_text(self._START_HERE, encoding="utf-8")
+
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        _make_tidy_csv(proj / "results.csv")
+
+        run_pipeline(proj, figures_config={}, project_name="myproj", kb_root=kb)
+
+        body = sh.read_text(encoding="utf-8")
+        assert "Ran analysis pipeline" in body  # activity recorded under Recent activity
+
+    def test_run_pipeline_noop_start_here_when_not_onboarded(self, tmp_path: Path) -> None:
+        # No START_HERE on disk -> update_start_here returns None; pipeline still succeeds.
+        kb = tmp_path / "kb"
+        kb.mkdir()
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        _make_tidy_csv(proj / "results.csv")
+
+        result = run_pipeline(proj, figures_config={}, project_name="ghost", kb_root=kb)
+        assert isinstance(result, AnalysisResult)  # no crash, no START_HERE written
+        assert not (project_state_path_for(kb, "ghost")).exists()
+
+
+def project_state_path_for(kb: Path, slug: str) -> Path:
+    from vaultlab.kb.paths import project_state_path
+
+    return project_state_path(kb, slug)
+
     def test_rejects_bam(self, tmp_path: Path) -> None:
         proj = tmp_path / "raw5"
         proj.mkdir()
