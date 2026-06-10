@@ -240,6 +240,58 @@ def test_adversarial_arc_meeting_with_stub_runner() -> None:
     assert result.purpose == "arc"
 
 
+def _capturing_arc_runner(seen: dict):
+    """An arc runner that records the meeting's session_context then completes."""
+
+    def _runner(meeting, roles):
+        seen["ctx"] = meeting.session_context
+        out = []
+        for r in roles:
+            if r.id == "synthesizer":
+                out.append(
+                    {"output": json.dumps({"history": "h", "development": "d", "sota": "s"})}
+                )
+            else:
+                out.append({"output": "x"})
+        return out
+
+    return _runner
+
+
+def test_arc_meeting_injects_kb_preamble_when_project_given(tmp_path) -> None:
+    """Commitment #7: with project_slug, spawned roles see the project's KB context."""
+    from vaultlab.kb.paths import project_state_path
+
+    sh = project_state_path(tmp_path, "spatial-proj")
+    sh.parent.mkdir(parents=True, exist_ok=True)
+    sh.write_text("# START_HERE\n\nPrior work: built the CN pipeline.\n", encoding="utf-8")
+
+    seen: dict = {}
+    result = adversarial_arc_meeting(
+        topic="spatial",
+        summaries=_make_summaries(),
+        n_rounds=1,
+        runner_callback=_capturing_arc_runner(seen),
+        project_slug="spatial-proj",
+        kb_root=tmp_path,
+    )
+    assert "Prior work: built the CN pipeline." in seen["ctx"]  # preamble reached the meeting
+    assert "Project context preamble" in seen["ctx"]
+    assert result.crosstalk_status == "complete"
+
+
+def test_arc_meeting_no_preamble_without_project_slug(tmp_path) -> None:
+    """Default (no project_slug) is unchanged — no preamble, backward compatible."""
+    seen: dict = {}
+    adversarial_arc_meeting(
+        topic="spatial",
+        summaries=_make_summaries(),
+        n_rounds=1,
+        runner_callback=_capturing_arc_runner(seen),
+    )
+    assert "Project context preamble" not in seen["ctx"]
+
+
 # ---------------------------------------------------------------------------
 # adversarial_deck_plan_meeting
 # ---------------------------------------------------------------------------

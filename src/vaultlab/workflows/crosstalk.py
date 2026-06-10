@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING, Any
 from vaultlab.kb.paths import (
     ensure_parent,
 )
+from vaultlab.runner.kb_context import prepend_preamble
 from vaultlab.runner.meetings import (
     adversarial_inject,
     build_meeting,
@@ -363,6 +364,8 @@ def adversarial_picker_meeting(
     n_rounds: int = 3,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
+    project_slug: str | None = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst proposes top-N picks; literature_critic
     challenges (missing seminal works? off-topic?); synthesizer picks final.
@@ -407,6 +410,9 @@ def adversarial_picker_meeting(
         f"CANDIDATE DOIS ({len(candidates)}): {candidate_dois}\n\n"
         f"CANDIDATES WITH ABSTRACTS:\n{abstracts_md}"
     )
+    session_context = prepend_preamble(
+        session_context, project_slug, kb_root=kb_root, role="literature_surveyor"
+    )
 
     # data_analyst proposes; literature_critic challenges; synthesizer picks.
     meeting = build_meeting(
@@ -438,6 +444,8 @@ def adversarial_arc_meeting(
     n_rounds: int = 3,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
+    project_slug: str | None = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst drafts arc; methods_critic challenges
     field-development claims; literature_critic flags missing strands;
@@ -503,6 +511,9 @@ def adversarial_arc_meeting(
         f"CORPUS SHAPE: {n_total} papers ({n_tier_a} Tier-A)\n\n"
         f"BUCKETED SUMMARIES:\n{bucket_md}\n"
     )
+    session_context = prepend_preamble(
+        session_context, project_slug, kb_root=kb_root, role="data_analyst"
+    )
 
     meeting = build_meeting(
         topic=topic,
@@ -535,6 +546,8 @@ def adversarial_deck_plan_meeting(
     n_rounds: int = 3,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
     runner_callback: RunnerCallback | None = None,
+    project_slug: str | None = None,
+    kb_root: Path | str | None = None,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: narrator proposes story arc; figure_lead picks
     figures; methods_critic flags overclaiming; synthesizer integrates.
@@ -590,6 +603,9 @@ def adversarial_deck_plan_meeting(
         + "\n\nAVAILABLE FIGURES:\n"
         + ("\n".join(fig_lines) if fig_lines else "(none)")
     )
+    session_context = prepend_preamble(
+        session_context, project_slug, kb_root=kb_root, role="narrator"
+    )
 
     # G-1 fix: explicitly select narrator + figure_lead + methods_critic +
     # synthesizer instead of riding the Mode.DATA_ANALYSIS default
@@ -639,6 +655,8 @@ def rigor_audit(
     producer_kind: str = "",
     runner_callback: RunnerCallback | None = None,
     timeout_seconds: int = MEETING_TIMEOUT_SECONDS,
+    project_slug: str | None = None,
+    kb_root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Final-gate review by the new ``rigor_auditor`` role.
 
@@ -746,6 +764,9 @@ def rigor_audit(
         f"{downgrade_line}"
         f"PER-PAPER SUMMARIES (for cross-reference):\n{summaries_md}\n\n"
         f"DOCUMENT TO AUDIT:\n{document}"
+    )
+    session_context = prepend_preamble(
+        session_context, project_slug, kb_root=kb_root, role="rigor_auditor"
     )
 
     meeting = Meeting(

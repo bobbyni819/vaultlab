@@ -18,6 +18,7 @@ from vaultlab.runner.kb_context import (
     KbContextBundle,
     KbStateUnreadable,
     compose_preamble,
+    prepend_preamble,
 )
 
 SLUG = "cancer-spatial"
@@ -69,3 +70,42 @@ def test_preamble_legacy_flat_layout_fallback(tmp_path: Path):
     _write(tmp_path / SLUG / "START_HERE.md", "# START_HERE\n\nLegacy flat layout brief.\n")
     text = compose_preamble(SLUG, kb_root=tmp_path)
     assert "Legacy flat layout brief." in text
+
+
+# ---------------------------------------------------------------------------
+# prepend_preamble — the orchestrator hook (commitment #7)
+# ---------------------------------------------------------------------------
+
+
+def test_prepend_none_slug_is_passthrough(tmp_path: Path):
+    # Not project-scoped -> no behaviour change for the caller.
+    assert prepend_preamble("ORIGINAL CTX", None, kb_root=tmp_path) == "ORIGINAL CTX"
+    assert prepend_preamble("ORIGINAL CTX", "", kb_root=tmp_path) == "ORIGINAL CTX"
+
+
+def test_prepend_onboarded_prepends_above_rule(tmp_path: Path):
+    _onboard_canonical(tmp_path)
+    out = prepend_preamble("ORIGINAL CTX BODY", SLUG, kb_root=tmp_path)
+    assert "Daily brief: spatial CODEX tonsil run." in out  # the preamble landed
+    assert "ORIGINAL CTX BODY" in out  # the caller's context is preserved
+    assert "\n\n---\n\n" in out  # separated by a rule
+    assert out.index("Daily brief") < out.index("ORIGINAL CTX BODY")  # preamble first
+
+
+def test_prepend_unonboarded_logs_and_passes_through(tmp_path: Path, caplog):
+    # Project not onboarded -> log a warning and proceed WITHOUT the preamble
+    # (a meeting must not die because context couldn't be assembled).
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        out = prepend_preamble("ORIGINAL CTX", SLUG, kb_root=tmp_path)
+    assert out == "ORIGINAL CTX"
+    assert any("preamble unavailable" in r.message.lower() or "without it" in r.message.lower()
+               for r in caplog.records)
+
+
+def test_prepend_empty_context_returns_bare_preamble(tmp_path: Path):
+    _onboard_canonical(tmp_path)
+    out = prepend_preamble("", SLUG, kb_root=tmp_path)
+    assert "Daily brief: spatial CODEX tonsil run." in out
+    assert not out.startswith("\n\n---")  # no dangling separator when context is empty

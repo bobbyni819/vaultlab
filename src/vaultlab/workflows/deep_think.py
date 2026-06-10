@@ -30,6 +30,7 @@ from datetime import date
 
 from vaultlab.roles import load_role
 from vaultlab.runner import ClaudeCodeRunner, build_meeting
+from vaultlab.runner.kb_context import prepend_preamble
 from vaultlab.runner.models import Agenda, InvestigationMode, Mode
 from vaultlab.workflows._models import DeepThinkEnsembleBundle, WorkflowPlan
 from vaultlab.workflows._provenance import Provenance
@@ -163,6 +164,9 @@ def plan_deep_think_round(
         agenda.investigation_mode = investigation_mode or agenda.investigation_mode
 
     ctx = cfg.context_summary() + "\n\n" + _session_summary_if_exists(cfg)
+    # Commitment #7: spawned analyst/critic/synthesizer sub-agents get the project's
+    # KB context (no-op when the project isn't onboarded; uses the cfg already in hand).
+    ctx = prepend_preamble(ctx, getattr(cfg, "name", None), kb_root=getattr(cfg, "kb_path", None))
     meeting = build_meeting(
         topic=topic,
         meeting_type="deep_think",
@@ -325,6 +329,9 @@ def plan_deep_think_with_ensemble_critic(
     )
     analyst_id = "data_analyst" if mode == Mode.DATA_ANALYSIS else "literature_surveyor"
     ctx = cfg.context_summary() + "\n\n" + _session_summary_if_exists(cfg)
+    # Commitment #7: spawned analyst/critic/synthesizer sub-agents get the project's
+    # KB context (no-op when the project isn't onboarded; uses the cfg already in hand).
+    ctx = prepend_preamble(ctx, getattr(cfg, "name", None), kb_root=getattr(cfg, "kb_path", None))
     # Build a reasoning meeting (Analyst + Expert + Critic) but drop the Critic
     # role to isolate the pre-critic outputs as a self-contained phase
     pre_meeting = build_meeting(
