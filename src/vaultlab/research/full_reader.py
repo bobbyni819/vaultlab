@@ -235,6 +235,10 @@ def _extract_paper_content(
             "Refusing to write an empty paper.md (Red Line #2: no silent failures)."
         )
 
+    # Today the local-PDF path always yields a single {"all": text} section (PDFs aren't
+    # semantically sectioned). The "abstract" + named-section branches below are
+    # forward-looking: they activate once the paperclip path (which returns real named
+    # sections) is wired into this seam. Both are kept so that wiring is a one-line change.
     abstract: str | None = None
     body: list[Block] = []
     for name, text in sections.items():

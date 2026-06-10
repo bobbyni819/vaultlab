@@ -1014,7 +1014,7 @@ def _write_project_view(
     crosstalk: str = "none",
     timestamp: str | None = None,
     pdfs_acquired: int | None = None,
-) -> dict[str, Path]:
+) -> dict[str, Path | None]:
     """Write ``Wiki/Projects/<slug>/{START_HERE,papers,lineage,decisions-log}.md``.
 
     Idempotent: re-running for the same project APPENDS a new entry to
