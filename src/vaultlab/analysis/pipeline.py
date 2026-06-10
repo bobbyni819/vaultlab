@@ -492,6 +492,9 @@ def run_pipeline(
     # CLAUDE.md commitment #7 — every artifact-producing primitive records what it
     # did so the next session resumes cleanly. No-op (returns None) when the project
     # isn't onboarded; best-effort so a START_HERE hiccup never fails the analysis.
+    # The slug derives from project_name (the project folder name); if that differs
+    # from the slug onboarding used (its intake topic), the update simply no-ops —
+    # harmless, but pass a matching project_name to have the run recorded.
     try:
         resolved_kb = _safe_resolve_kb_root(kb_root)
         if resolved_kb is not None:
