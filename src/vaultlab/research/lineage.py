@@ -1154,11 +1154,25 @@ def _write_project_view(
             encoding="utf-8",
         )
 
+    # 5. _papers_index.{json,md} — refresh the KB-level papers ledger now that every
+    # summary + PDF for this run is on disk. The ledger is the corpus source-of-truth an
+    # agent reads to understand what's been fetched/read/verified, and the gate that makes
+    # the NEXT run's fetch + summarization idempotent. Additive (two files in
+    # Wiki/Summaries/); never fails the lit-arc run if the scan hits an error.
+    papers_index_p: Path | None = None
+    try:
+        from vaultlab.research import papers_index as _papers_index
+
+        _, papers_index_p, _ = _papers_index.build_and_save(kb_root)
+    except Exception as exc:  # pragma: no cover - defensive; ledger is best-effort
+        logger.warning("papers-index ledger refresh failed (non-fatal): %s", exc)
+
     return {
         "start_here": start_here_p,
         "papers": papers_p,
         "lineage": lineage_p,
         "decisions_log": decisions_p,
+        "papers_index": papers_index_p,
     }
 
 
