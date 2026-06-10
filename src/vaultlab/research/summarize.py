@@ -52,6 +52,7 @@ The Claude-Code-callable path needs no key.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -153,6 +154,8 @@ class PaperSummary:
     extracted_via: str = "claude"
     extracted_at: str = ""  # ISO 8601 timestamp
     source_pdf: str = ""  # KB-relative path (e.g. "Sources/Papers/<slug>.pdf")
+    source_pdf_sha256: str = ""  # content hash of the PDF this summary was read from;
+    # the gate for idempotent re-summarization (re-read only when the PDF changes).
     acquisition_source: str = ""  # waterfall tier (unpaywall / pmc / ...)
     acquisition_license: str = ""  # license string from the waterfall
 
@@ -993,6 +996,11 @@ def summarize_paper(
 
     summary.tier = "A"
     summary.source_pdf = f"Sources/Papers/{slugify_doi(doi)}.pdf"
+    # Record the content hash of the PDF we are about to read. This is the gate that
+    # makes corpus summarization idempotent: a later run skips the LLM read when the
+    # on-disk PDF still hashes to this value. Mirrors papers_index.pdf_sha256 (chunked
+    # SHA-256 of the same bytes), so the verdicts agree.
+    summary.source_pdf_sha256 = hashlib.sha256(Path(pdf_path).read_bytes()).hexdigest()
 
     # Build the prompt and call Claude.
     prompt = build_summary_prompt(
@@ -1208,6 +1216,7 @@ def summarize_corpus(
     api_key: str | None = None,
     model: str = DEFAULT_MODEL,
     overwrite: bool = False,
+    idempotent: bool = True,
     progress: Callable[[str, int, int], None] | None = None,
     reader: SummaryReader | None = None,
     tier_a_dois: set[str] | frozenset[str] | None = None,
@@ -1243,6 +1252,15 @@ def summarize_corpus(
         model: Anthropic model id (SDK mode only).
         overwrite: If False, existing summary files are kept (with a regen
             marker appended).
+        idempotent: If True (default), a Tier-A paper whose summary already
+            exists AND was read from the *same* PDF (matching SHA-256 in the
+            summary's ``source_pdf_sha256`` frontmatter) is skipped WITHOUT an
+            LLM read — the existing rich summary is left untouched and a
+            metrics-only summary is returned for the in-memory corpus view.
+            A paper is re-read only when it has no summary or its PDF changed.
+            Set False (or ``overwrite=True``) to force a re-read of every
+            Tier-A paper. This is the gate that makes multi-run fetching
+            delta-only instead of re-spending tokens on already-read papers.
         progress: ``progress(doi, done, total)`` callback.
         reader: Optional Claude-Code-side callback. When given,
             replaces the SDK call. Receives a :class:`SummarizationTask`
@@ -1254,6 +1272,7 @@ def summarize_corpus(
     """
     from concurrent.futures import ThreadPoolExecutor
 
+    from vaultlab.research import papers_index as _pidx
     from vaultlab.research.acquisition import cache_path_for
 
     pdf_cache_dir = Path(pdf_cache_dir)
@@ -1263,6 +1282,46 @@ def summarize_corpus(
     dois = [d for d in corpus.papers if d]
     total = len(dois)
     results: dict[str, PaperSummary] = {}
+
+    def _current_pdf_sha(doi: str, pdf_path: Path | None) -> str | None:
+        """The PDF's hash when an up-to-date summary already exists; else ``None``.
+
+        Returns the on-disk PDF SHA-256 only when idempotent mode is on, we are not
+        force-overwriting, the PDF exists, and an existing summary records that exact
+        same hash. A non-``None`` result means "the read can be skipped."
+        """
+        if not idempotent or overwrite:
+            return None
+        if pdf_path is None or not Path(pdf_path).exists():
+            return None
+        current = _pidx.pdf_sha256(Path(pdf_path))
+        recorded = _pidx.existing_summary_pdf_sha(kb_root, doi)
+        return current if (current and recorded == current) else None
+
+    def _skip_read_summary(doi: str, paper, pdf_sha: str) -> PaperSummary:
+        """A metrics-only Tier-A summary for a paper whose read we skipped (PDF unchanged).
+
+        The rich existing ``Wiki/Summaries/<slug>.md`` is left in place; this object only
+        feeds the in-memory corpus view (papers.md ranking, etc.)."""
+        summary = _build_base_summary(
+            doi=doi,
+            paper_metadata={
+                "title": paper.title,
+                "authors": paper.authors,
+                "year": paper.year,
+                "journal": paper.journal,
+                "doi": paper.doi,
+                "citation_count": paper.citation_count,
+            },
+            corpus_metrics=metrics,
+            corpus=corpus,
+            acquisition_source="",
+            acquisition_license="",
+        )
+        summary.tier = "A"
+        summary.source_pdf = f"Sources/Papers/{slugify_doi(doi)}.pdf"
+        summary.source_pdf_sha256 = pdf_sha
+        return summary
 
     # Closes L4 audit bug #1: log the Tier-A budget so a silently-empty
     # set is easier to spot, and so the SDK path's enforcement (below)
@@ -1286,6 +1345,10 @@ def summarize_corpus(
         # we don't ask the reader to summarize 100+ peripheral papers.
         if tier_a_dois is not None and doi not in tier_a_dois:
             pdf_path = Path("/__force_tier_c__")  # nonexistent → Tier-C stub
+        _gate_sha = _current_pdf_sha(doi, pdf_path)
+        if _gate_sha is not None:
+            logger.info("summarize_corpus: %s summary up-to-date (PDF unchanged) — skipped read", doi)
+            return doi, _skip_read_summary(doi, paper, _gate_sha)
         if not pdf_path.exists():
             # Tier C: build a stub and skip the reader.
             summary = _build_base_summary(
@@ -1331,6 +1394,8 @@ def summarize_corpus(
             corpus_metrics=metrics,
             corpus=corpus,
         )
+        # Record which PDF this read was built from, so the next run can hash-gate it.
+        summary.source_pdf_sha256 = _pidx.pdf_sha256(pdf_path)
         write_summary_to_kb(summary, kb_root, overwrite=overwrite)
         return doi, summary
 
@@ -1348,6 +1413,10 @@ def summarize_corpus(
         # summarize_paper.
         if tier_a_dois is not None and doi not in tier_a_dois:
             pdf_path = None
+        _gate_sha = _current_pdf_sha(doi, pdf_path)
+        if _gate_sha is not None:
+            logger.info("summarize_corpus: %s summary up-to-date (PDF unchanged) — skipped read", doi)
+            return doi, _skip_read_summary(doi, paper, _gate_sha)
         # CrossRef gives us refs unless the entry exists with empty list.
         refs_missing = doi in corpus.references and not corpus.references.get(doi)
         summary = summarize_paper(

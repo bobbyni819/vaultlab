@@ -979,10 +979,19 @@ def test_write_project_view_writes_all_four_files(tmp_path: Path) -> None:
         timestamp="2026-04-29T12:00:00",
     )
 
-    # All four files were written.
-    assert set(out.keys()) == {"start_here", "papers", "lineage", "decisions_log"}
+    # All four project files + the refreshed KB papers-index ledger were written.
+    assert set(out.keys()) == {
+        "start_here",
+        "papers",
+        "lineage",
+        "decisions_log",
+        "papers_index",
+    }
     for kind, p in out.items():
-        assert p.exists(), f"{kind} not written"
+        assert p is not None and p.exists(), f"{kind} not written"
+    # The ledger landed in Wiki/Summaries as the machine-readable JSON.
+    assert out["papers_index"].name == "_papers_index.json"
+    assert out["papers_index"].parent.name == "Summaries"
 
     # Paths route through vaultlab.kb.paths.
     assert out["start_here"] == project_state_path(tmp_path, "codex-cn-test")

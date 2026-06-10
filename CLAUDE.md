@@ -82,7 +82,7 @@ Every LLM call must REQUIRE quoted evidence. Surface-skim is the enemy. Multi-pa
 
 ### 3. Result-oriented agentic loop
 
-User says *"draft methods"* → vaultlab plans + runs internal meetings/critiques/verifications → returns finished result. Bounded loops cap iteration — currently three independent caps (crosstalk meetings 5 rounds, reflection loop 3, deep-think 4), not one unified "max 3". Internal verifiers: citation and cross-doc/claim verification are implemented; numeric and hedge-enforcement verifiers are **planned, not yet built** (see `NEXT_STEPS.md`).
+User says *"draft methods"* → vaultlab plans + runs internal meetings/critiques/verifications → returns finished result. Bounded loops cap iteration — currently three independent caps (crosstalk meetings 5 rounds, reflection loop 3, deep-think 4), not one unified "max 3". Internal verifiers: citation, cross-doc/claim, numeric (`runner.verifiers.verify_numeric`), and hedge-enforcement (`roles._guardrails.enforce_hedge`) verifiers are **implemented and wired into the analysis interpretation pass**; **page-image** citation grounding remains planned (see `NEXT_STEPS.md`). Citation trust is honest: a cited paper whose claim was never checked against text is marked `UNVERIFIED`, not `API_CONFIRMED`.
 
 ### 4. KB is the smartness
 
@@ -189,7 +189,7 @@ src/vaultlab/                       # The package
   roles/<role>/{role.py, prompt.md} # Agent role definitions
   runner/                           # ClaudeCodeRunner; runner/meetings.py holds Meeting, Agenda, Mode, Role; reflection loop; verifiers (verify_numeric)
   workflows/                        # Multi-agent workflow types (one .py + .md per type)
-  research/                         # Literature: papers + sources + paperclip + smart_search + extract
+  research/                         # Literature: search (unified_search) + sources + acquisition (PDF waterfall) + summarize + papers_index (corpus ledger) + lineage (lit-arc) + full_reader
   citations/                        # NotebookLM-style citation verification
   kb/                               # Knowledge base + Obsidian setup + ingest + semantic search
   figures/                          # Construction from your data: panel, collage, recipes, corpus

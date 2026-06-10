@@ -16,7 +16,7 @@ These four commitments shape every architectural decision:
 
 2. **Anti-laziness on semantic reading.** Every LLM call requires quoted evidence. Surface-skim is the enemy. Multi-pass reading for complex tasks. Hedged voice always — *"consistent with X"* never *"is X."*
 
-3. **Result-oriented agentic loop.** User describes a goal; vaultlab plans + verifies + refines internally; user sees the finished result. Bounded loops cap iteration — three independent caps today (crosstalk 5, reflection 3, deep-think 4), not one unified "max 3". Internal verifiers: citation and cross-doc/claim are implemented; numeric and hedge-enforcement verifiers are planned, not yet built (see `NEXT_STEPS.md`).
+3. **Result-oriented agentic loop.** User describes a goal; vaultlab plans + verifies + refines internally; user sees the finished result. Bounded loops cap iteration — three independent caps today (crosstalk 5, reflection 3, deep-think 4), not one unified "max 3". Internal verifiers: citation, cross-doc/claim, numeric (`verify_numeric`), and hedge-enforcement (`enforce_hedge`) are implemented and wired into the analysis pass; **page-image** citation grounding remains planned (see `NEXT_STEPS.md`).
 
 4. **KB is the smartness.** Every analysis writes to KB; every analysis reads from KB. Cross-project reasoning emerges via retrieval over a growing markdown corpus. **No vector DBs**, no proprietary memory layers — just markdown that grows with your work.
 
@@ -43,7 +43,7 @@ vaultlab/                        # The Python package
   cache/                         # Content-addressable caches
 
   # Capability subpackages
-  research/                      # Literature: papers + sources + paperclip + smart_search
+  research/                      # Literature: search + sources + acquisition + summarize + papers_index + lineage + full_reader
   citations/                     # NotebookLM-style citation verification
   kb/                            # KB + Obsidian setup + ingest + semantic search
   figures/                       # Construct from data: panel, collage, recipes, corpus
@@ -120,7 +120,7 @@ The KB sits at the center: every capability writes to it, every capability reads
 ## Per-package architectural sketches
 
 ### `vaultlab.runner`
-The orchestration heart. Implements the **result-oriented bounded loop** pattern: user task → plan → execute → verify → refine → return result, with bounded iteration caps. Internal verifiers: citation audit and cross-doc/claim consistency are implemented; numeric audit and hedged-voice enforcement are planned, not yet built (see `NEXT_STEPS.md`).
+The orchestration heart. Implements the **result-oriented bounded loop** pattern: user task → plan → execute → verify → refine → return result, with bounded iteration caps. Internal verifiers: citation audit, cross-doc/claim consistency, numeric audit (`verify_numeric`), and hedged-voice enforcement (`enforce_hedge`) are implemented and wired into the analysis pass; page-image citation grounding remains planned (see `NEXT_STEPS.md`).
 
 Key contract: callers don't see meeting-by-meeting state; they see goals + finished results. State lives on disk as ChainLink records in the KB so future sessions can resume.
 
@@ -128,7 +128,7 @@ Key contract: callers don't see meeting-by-meeting state; they see goals + finis
 14 specialized agent roles, each with `role.py` (thin Python loader) + `prompt.md` (the actual prompt content). Examples: `data_analyst`, `methods_critic`, `literature_surveyor`, `cluster_annotator`, `figure_lead`, `manuscript_drafter`, `coverage_auditor`. Each role's prompt enforces anti-laziness rules (REQUIRE quoted evidence) and hedged voice (NEVER assert; always *"consistent with"*).
 
 ### `vaultlab.research`
-Literature search + paper retrieval + figure extraction. Wraps PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, plus paperclip MCP (8M-paper corpus). `MultiSource` aggregates; `smart_search` adds Claude-driven query expansion + dedup + re-rank. `extract.py` pulls figures from PDFs (NOT moved to `figures` — different lifecycle: extraction is research, generation is figures).
+Literature search + paper retrieval + reading. Wraps PubMed, Semantic Scholar, CrossRef, bioRxiv, Springer, Elsevier, plus paperclip MCP (8M-paper corpus). `search.unified_search` aggregates + dedups by DOI; `acquisition` runs the most-open-first PDF waterfall with `%PDF-` validation and a cached-PDF short-circuit; `summarize` writes per-paper Tier-A/C summaries; `papers_index` is the **corpus ledger** (PDFs JOINed to summaries on DOI-slug) that makes multi-run fetch + read idempotent and is the one file an agent reads to understand the corpus; `lineage.run_lit_arc` drives the end-to-end lit-arc and refreshes the ledger; `full_reader` produces a bilingual figure-aware `paper.md`. `research.figures` pulls figures from PDFs (NOT moved to `figures` — different lifecycle: extraction is research, generation is figures).
 
 ### `vaultlab.citations`
 NotebookLM-style citation verification. Every `[N]` citation has an `EvidenceRecord` with rich passage_text + location + verdict + confidence + LLM judgment. Three-tier integrity: Tier 1 (DOI/PMID exists) → Tier 2 (semantic abstract match) → Tier 3 (exact quote + page). Hallucinated citations get verdict `HALLUCINATED`; verifier refuses to ship if any unresolved.

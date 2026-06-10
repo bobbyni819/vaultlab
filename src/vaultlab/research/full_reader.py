@@ -69,6 +69,7 @@ True
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -151,30 +152,120 @@ class PaperContent:
 # ---------------------------------------------------------------------------
 
 
+def _looks_like_doi(s: str) -> bool:
+    """True for a bare DOI string like ``10.1038/s41586-023-05915-x``."""
+    return s.lower().startswith("10.") and "/" in s
+
+
+def _split_paragraphs(text: str, *, max_blocks: int = 300, min_len: int = 40) -> list[str]:
+    """Split a flat text extract into paragraph blocks.
+
+    Splits on blank lines, normalises whitespace, and drops trivially short
+    fragments (page numbers, running headers). Capped at ``max_blocks`` so a
+    huge PDF cannot explode ``paper.md``. If no blank-line structure exists,
+    the whole extract is kept as a single block (better one big block than
+    nothing — Red Line #2).
+    """
+    paras: list[str] = []
+    for chunk in re.split(r"\n\s*\n", text):
+        chunk = " ".join(chunk.split())
+        if len(chunk) >= min_len:
+            paras.append(chunk)
+        if len(paras) >= max_blocks:
+            break
+    if not paras:
+        whole = " ".join(text.split())
+        if whole:
+            paras = [whole]
+    return paras
+
+
 def _extract_paper_content(
     source: str,
     paperclip_id: str | None = None,
 ) -> PaperContent:
     """Pull structured content from a paper source.
 
-    This is the integration seam for real PDF parsing / paperclip access /
-    publisher HTML scraping. The default implementation refuses — the
-    extraction layer is opt-in and must be supplied by the caller (or
-    monkeypatched in tests). Returning an empty :class:`PaperContent` here
-    would silently produce a useless ``paper.md``, which would violate
-    Red Line #2 (no silent failures).
+    Wired (decision 2026-06-10) to the canonical reader
+    :func:`vaultlab.research.read_paper.read_paper_sections`: a **local PDF**
+    path is presented as a cache hit and read through the same
+    ``pdf.extract_text`` path the rest of vaultlab uses, then split into
+    section/paragraph :class:`Block` s. This makes ``/full-reader <pdf>`` work
+    on real papers instead of crashing.
 
-    Production callers monkeypatch this with a real implementation that
-    dispatches through:
+    Still a documented follow-on (raises a clear error rather than guessing):
 
-    * :func:`vaultlab.research.read_paper.read_paper_sections` for PDFs
-    * paperclip MCP for the 8M-paper corpus
-    * :func:`vaultlab.figures.acquisition.acquire_figures` for figures
+    * **Bare DOI / arXiv ID / URL** — acquire the PDF first
+      (:func:`vaultlab.research.acquire_pdf` or ``/lit-arc``) and pass the
+      resulting ``Sources/Papers/<slug>.pdf`` path here.
+    * **Paperclip corpus** — section/figure access via the paperclip client.
+    * **Figure extraction** — figures are left empty here; run
+      :mod:`vaultlab.research.figures` separately.
+
+    Returning an empty :class:`PaperContent` would silently produce a useless
+    ``paper.md`` (Red Line #2 violation), so an unreadable source raises.
+    Tests may still monkeypatch this seam for determinism.
     """
-    raise NotImplementedError(
-        "vaultlab.research.full_reader._extract_paper_content has no default "
-        "implementation. Wire it to read_paper_sections / paperclip / "
-        "figure-acquisition for production use, or monkeypatch in tests."
+    from vaultlab.research.acquisition import AcquisitionResult
+    from vaultlab.research.read_paper import read_paper_sections
+
+    src = (source or "").strip()
+    if not src:
+        raise ValueError("full_reader._extract_paper_content: empty source.")
+
+    p = Path(src)
+    if not (p.exists() and p.suffix.lower() == ".pdf"):
+        hint = (
+            "acquire it first (vaultlab.research.acquire_pdf or /lit-arc) and pass the "
+            "Sources/Papers/<slug>.pdf path"
+            if _looks_like_doi(src)
+            else "pass a path to a local .pdf file"
+        )
+        raise ValueError(
+            f"full_reader currently reads a local PDF; got {source!r}. {hint}. "
+            "DOI / paperclip auto-acquisition is a documented follow-on."
+        )
+
+    # Present the local PDF as a cache hit so we reuse the canonical reader path.
+    result = AcquisitionResult(doi="", pdf_path=p, source="cache", license=None)
+    sections = read_paper_sections(result)
+    if not sections:
+        raise ValueError(
+            f"No readable text extracted from {source!r} (empty or image-only PDF). "
+            "Refusing to write an empty paper.md (Red Line #2: no silent failures)."
+        )
+
+    # Today the local-PDF path always yields a single {"all": text} section (PDFs aren't
+    # semantically sectioned). The "abstract" + named-section branches below are
+    # forward-looking: they activate once the paperclip path (which returns real named
+    # sections) is wired into this seam. Both are kept so that wiring is a one-line change.
+    abstract: str | None = None
+    body: list[Block] = []
+    for name, text in sections.items():
+        text = (text or "").strip()
+        if not text:
+            continue
+        if name.lower() == "abstract":
+            abstract = text
+        elif name == "all":
+            # Flat PDF extract — recover paragraph structure for anchors.
+            body.extend(Block(kind="body", text=para) for para in _split_paragraphs(text))
+        else:
+            body.append(Block(kind="body", text=text, label=name))
+
+    if abstract is None and not body:
+        raise ValueError(
+            f"Extracted text from {source!r} held no usable abstract or body."
+        )
+
+    return PaperContent(
+        title=p.stem,
+        doi=src if _looks_like_doi(src) else "",
+        source=src,
+        abstract=abstract,
+        body=body,
+        figures=[],
+        tables=[],
     )
 
 

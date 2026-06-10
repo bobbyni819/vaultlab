@@ -889,3 +889,115 @@ def test_summarize_corpus_sdk_honors_tier_a_dois(tmp_path):
     # And the LLM was only ever invoked for the budgeted paper.
     assert len(seen_llm_calls) == 1
     assert "10.1126/science.1225829" in seen_llm_calls[0]
+
+
+# ---------------------------------------------------------------------------
+# Idempotent summarization (hash-gated re-reads) — decision 2026-06-10
+# ---------------------------------------------------------------------------
+
+
+def _counting_llm(payload: dict[str, Any]):
+    """A fake LLM caller that counts invocations."""
+    calls = {"n": 0}
+
+    def _caller(*, pdf_bytes, prompt, api_key, model, **_):
+        calls["n"] += 1
+        return payload, 1, 1
+
+    return _caller, calls
+
+
+_IDEMP_PAYLOAD = {
+    "tldr": "a. b. c.",
+    "why_it_matters": ["m"],
+    "methods_summary": "ms",
+    "key_findings": ["a [p1]", "b [p2]", "c [p3]"],
+    "extracted_references": [],
+}
+_DOI = "10.1126/science.1225829"
+
+
+def _summarize_once(corpus, pdf_cache, kb_root, caller, *, idempotent=True):
+    return summarize_corpus(
+        corpus,
+        pdf_cache_dir=pdf_cache,
+        kb_root=kb_root,
+        parallel=1,
+        idempotent=idempotent,
+        tier_a_dois={_DOI},  # keep the LLM-call count to a single paper
+        _llm=caller,
+    )
+
+
+def test_summarize_corpus_records_pdf_hash_in_frontmatter(tmp_path):
+    from vaultlab.research import papers_index as pidx
+    from vaultlab.research.acquisition import cache_path_for
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+    pdf = cache_path_for(_DOI, pdf_cache)
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+
+    caller, _ = _counting_llm(_IDEMP_PAYLOAD)
+    _summarize_once(corpus, pdf_cache, kb_root, caller)
+
+    recorded = pidx.existing_summary_pdf_sha(kb_root, _DOI)
+    assert recorded == pidx.pdf_sha256(pdf)  # frontmatter hash matches the PDF read
+
+
+def test_summarize_corpus_idempotent_skips_unchanged_pdf(tmp_path):
+    from vaultlab.research.acquisition import cache_path_for
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+    cache_path_for(_DOI, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    caller, calls = _counting_llm(_IDEMP_PAYLOAD)
+
+    # First run reads.
+    _summarize_once(corpus, pdf_cache, kb_root, caller)
+    assert calls["n"] == 1
+
+    # Second run with the same PDF skips the LLM read entirely.
+    out = _summarize_once(corpus, pdf_cache, kb_root, caller)
+    assert calls["n"] == 1  # not re-read
+    assert out[_DOI].tier == "A"  # still presented as a full read
+
+
+def test_summarize_corpus_rereads_when_pdf_changes(tmp_path):
+    from vaultlab.research.acquisition import cache_path_for
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+    pdf = cache_path_for(_DOI, pdf_cache)
+    pdf.write_bytes(_FAKE_PDF_BYTES)
+
+    caller, calls = _counting_llm(_IDEMP_PAYLOAD)
+    _summarize_once(corpus, pdf_cache, kb_root, caller)
+    assert calls["n"] == 1
+
+    # The PDF content changes (e.g. a better OA version replaced a stub) -> re-read.
+    pdf.write_bytes(b"%PDF-1.7\n" + b"z" * 6000)
+    _summarize_once(corpus, pdf_cache, kb_root, caller)
+    assert calls["n"] == 2
+
+
+def test_summarize_corpus_idempotent_false_always_rereads(tmp_path):
+    from vaultlab.research.acquisition import cache_path_for
+
+    corpus = _make_corpus_with_metrics()
+    pdf_cache = tmp_path / "_cache"
+    pdf_cache.mkdir()
+    kb_root = tmp_path / "kb"
+    cache_path_for(_DOI, pdf_cache).write_bytes(_FAKE_PDF_BYTES)
+
+    caller, calls = _counting_llm(_IDEMP_PAYLOAD)
+    _summarize_once(corpus, pdf_cache, kb_root, caller, idempotent=False)
+    _summarize_once(corpus, pdf_cache, kb_root, caller, idempotent=False)
+    assert calls["n"] == 2  # idempotency disabled -> read both times

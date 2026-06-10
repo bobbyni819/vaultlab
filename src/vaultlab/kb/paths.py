@@ -343,6 +343,31 @@ def summary_path(kb_root: Path, doi: str) -> Path:
     return Path(kb_root) / "Wiki" / "Summaries" / f"{slugify_doi(doi)}.md"
 
 
+def papers_index_path(kb_root: Path) -> Path:
+    """``Wiki/Summaries/_papers_index.json`` — the KB's papers ledger (machine).
+
+    The single source of truth for "what papers does this KB hold, and what is
+    their state": one row per DOI-slug recording PDF presence/readability/hash,
+    summary presence + read-depth, verification status, and acquisition outcome.
+    Built by :func:`vaultlab.research.papers_index.scan_corpus`, which enumerates
+    ``Sources/Papers/*.pdf`` JOINed to ``Wiki/Summaries/*.md`` on the shared
+    DOI-slug. Lives in ``Wiki/Summaries/`` so it sits with the summaries it
+    indexes; the leading underscore keeps it out of the per-paper glob.
+    """
+    return Path(kb_root) / "Wiki" / "Summaries" / "_papers_index.json"
+
+
+def papers_index_md_path(kb_root: Path) -> Path:
+    """``Wiki/Summaries/_papers_index.md`` — the papers ledger (agent/human readable).
+
+    A status table + per-paper digests + a reading-backlog section, rendered from
+    the same scan as :func:`papers_index_path`. An agent reads THIS to understand
+    the corpus instead of re-reading every summary; open a per-paper note only for
+    the detail you actually need.
+    """
+    return Path(kb_root) / "Wiki" / "Summaries" / "_papers_index.md"
+
+
 def concept_path(
     kb_root: Path,
     topic: str,

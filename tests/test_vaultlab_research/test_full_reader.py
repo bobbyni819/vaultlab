@@ -80,6 +80,74 @@ def _stub_extract(content: PaperContent, source: str) -> PaperContent:
 
 
 # ---------------------------------------------------------------------------
+# _extract_paper_content — the real default wired to read_paper_sections
+# ---------------------------------------------------------------------------
+
+
+def test_extract_paper_content_reads_local_pdf_flat_text(tmp_path: Path, monkeypatch):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+    # Flat PDF extract -> {"all": text}; default splits into paragraph blocks.
+    monkeypatch.setattr(
+        "vaultlab.research.read_paper.read_paper_sections",
+        lambda *a, **k: {"all": "First paragraph is long enough to keep here.\n\n"
+                                 "Second paragraph also clears the minimum length bar."},
+    )
+    content = full_reader._extract_paper_content(str(pdf))
+    assert content.title == "paper"
+    assert content.abstract is None
+    assert len(content.body) == 2
+    assert all(b.kind == "body" for b in content.body)
+    assert "First paragraph" in content.body[0].text
+
+
+def test_extract_paper_content_named_sections(tmp_path: Path, monkeypatch):
+    pdf = tmp_path / "p.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+    monkeypatch.setattr(
+        "vaultlab.research.read_paper.read_paper_sections",
+        lambda *a, **k: {"Abstract": "the abstract", "Introduction": "intro text here"},
+    )
+    content = full_reader._extract_paper_content(str(pdf))
+    assert content.abstract == "the abstract"
+    labels = [b.label for b in content.body]
+    assert "Introduction" in labels
+
+
+def test_extract_paper_content_rejects_bare_doi():
+    with pytest.raises(ValueError) as exc:
+        full_reader._extract_paper_content("10.1038/s41586-023-05915-x")
+    assert "acquire" in str(exc.value).lower()
+
+
+def test_extract_paper_content_raises_on_empty_extract(tmp_path: Path, monkeypatch):
+    pdf = tmp_path / "blank.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+    monkeypatch.setattr(
+        "vaultlab.research.read_paper.read_paper_sections", lambda *a, **k: {}
+    )
+    with pytest.raises(ValueError) as exc:
+        full_reader._extract_paper_content(str(pdf))
+    assert "empty" in str(exc.value).lower() or "no readable" in str(exc.value).lower()
+
+
+def test_build_paper_reader_end_to_end_with_real_default(tmp_path: Path, monkeypatch):
+    """The flagship path: a local PDF -> paper.md, using the REAL _extract_paper_content
+    (only read_paper_sections is stubbed, standing in for the PDF parser)."""
+    pdf = tmp_path / "real.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+    monkeypatch.setattr(
+        "vaultlab.research.read_paper.read_paper_sections",
+        lambda *a, **k: {"all": "A substantial body paragraph that survives the length filter."},
+    )
+    out = build_paper_reader(str(pdf), out_dir=tmp_path / "reading", target_lang="zh-CN")
+    assert out.exists()
+    md = out.read_text(encoding="utf-8")
+    assert "substantial body paragraph" in md
+    assert 'id="S001"' in md  # got a real anchored body block
+
+
+# ---------------------------------------------------------------------------
 # render_paper_md unit tests
 # ---------------------------------------------------------------------------
 
