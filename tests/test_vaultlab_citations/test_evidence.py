@@ -239,3 +239,51 @@ def test_list_all_two_dois_sorted(tmp_path: Path) -> None:
     # list_all sorts by doi key
     assert entries[0]["doi"] == "10.5/aaa"
     assert entries[1]["doi"] == "10.5/zzz"
+
+
+# ---------------------------------------------------------------------------
+# 8. Normalization edge: punctuation is NOT normalized (exact-match brittleness)
+# ---------------------------------------------------------------------------
+
+def test_normalization_does_not_strip_punctuation(tmp_path: Path) -> None:
+    # evidence.py normalizes only case + surrounding whitespace (.strip().lower()).
+    # It does NOT strip internal/trailing punctuation, so a claim differing only by
+    # a trailing period is a MISS. This pins the exact-match limitation the audit
+    # measures — a behavior contract, not an aspiration.
+    idx = _make_index(tmp_path)
+    _store_one(idx, doi="10.6/punct", claim="NK cells release ~10% of granules")
+
+    # Control: byte-identical claim hits.
+    assert idx.lookup("10.6/punct", "NK cells release ~10% of granules") is not None
+    # Edge: trailing period -> exact-match fails -> miss (punctuation not normalized).
+    assert idx.lookup("10.6/punct", "NK cells release ~10% of granules.") is None
+    # Edge: internal comma added -> miss.
+    assert idx.lookup("10.6/punct", "NK cells release, ~10% of granules") is None
+
+
+# ---------------------------------------------------------------------------
+# 9. Graceful degradation: corrupt / missing index file must not throw
+# ---------------------------------------------------------------------------
+
+def test_corrupt_index_file_degrades_gracefully(tmp_path: Path) -> None:
+    # A malformed JSON index must not crash construction; it degrades to empty.
+    index_path = tmp_path / "Sources" / ".evidence_index.json"
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    index_path.write_text("{ this is not valid json", encoding="utf-8")
+
+    idx = EvidenceIndex(str(tmp_path))  # must not raise
+    assert idx.lookup("10.1/anything", "Any claim") is None
+    assert idx.stats() == {"total_papers": 0, "total_claims": 0}
+
+
+def test_missing_index_file_is_graceful(tmp_path: Path) -> None:
+    # Fresh dir with no Sources/ at all: construction + lookup must not throw, and
+    # a pure read must not create the index file.
+    index_path = tmp_path / "Sources" / ".evidence_index.json"
+    assert not index_path.exists()
+
+    idx = EvidenceIndex(str(tmp_path))  # must not raise
+    assert idx.lookup("10.1/missing", "Some claim") is None
+    assert idx.stats() == {"total_papers": 0, "total_claims": 0}
+    # Lookups are read-only: no index file should be created by reading.
+    assert not index_path.exists()

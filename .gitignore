@@ -58,6 +58,10 @@ data/
 desktop.ini
 dist/
 embeddings/
+.embeddings/
+tests/benchmarks/figures_filter/corpus/
+__pycache__/
+*.py[cod]
 env/
 htmlcov/
 MANIFEST
