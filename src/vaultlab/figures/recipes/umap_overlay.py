@@ -25,6 +25,7 @@ RECIPE_VERSION = "0.1.0"
 ANCHOR_PAPERS = (
     "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 1C)",
     "Hickey JW et al., Nature 2023;619:572 (intestine atlas UMAPs)",
+    "Becht E et al., Nature Biotechnology 2019;37:38 (UMAP single-cell embeddings)",
 )
 
 

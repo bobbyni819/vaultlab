@@ -25,4 +25,6 @@ is the box variant anchor.
 
 ## Status
 
-🚧 **Stub — not implemented yet.** API documented; render() raises NotImplementedError.
+✅ **Implemented** (v0.1.0). `render()` produces the comparison panel with
+significance brackets (PNG + PDF) and returns the saved path. Structural contract
+enforced by `tests/test_vaultlab_figures/test_recipe_invariants.py`.

@@ -27,6 +27,7 @@ RECIPE_VERSION = "0.1.0"
 ANCHOR_PAPERS = (
     "Sorin M et al., Nature 2023;614:548 (Fig 4)",
     "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 5F)",
+    "Hickey JW et al., Nature 2023;619:572 (cross-region cell-type comparisons)",
 )
 
 

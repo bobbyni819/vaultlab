@@ -23,5 +23,6 @@ is the canonical layout this recipe reproduces.
 
 ## Status
 
-🚧 **Stub — not implemented yet.** API documented; render() raises NotImplementedError.
-Will implement after the 2 anchor recipes (marker_dot_plot, heatmap) settle.
+✅ **Implemented** (v0.1.0). `render()` produces the UMAP overlay (PNG + PDF via
+`save_fig`) and returns the saved path. Structural contract enforced by
+`tests/test_vaultlab_figures/test_recipe_invariants.py`.

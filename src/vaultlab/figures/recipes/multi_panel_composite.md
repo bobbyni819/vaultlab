@@ -25,6 +25,7 @@ composition this recipe reproduces.
 
 ## Status
 
-🚧 **Stub — not implemented yet.** API documented; render() raises NotImplementedError.
-Note: `vaultlab.figures.collage` already exists at the lower level; this recipe
-will wrap it with publication-styling defaults + auto-panel-letter annotation.
+✅ **Implemented** (v0.1.0). `render()` composes the panel files into a labeled grid
+(PNG + PDF) and returns the saved path. (`vaultlab.figures.collage` provides the
+lower-level primitive.) Structural contract enforced by
+`tests/test_vaultlab_figures/test_recipe_invariants.py`.

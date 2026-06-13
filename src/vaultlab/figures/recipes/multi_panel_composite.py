@@ -23,7 +23,11 @@ __all__ = ["ANCHOR_PAPERS", "RECIPE_VERSION", "render"]
 
 RECIPE_VERSION = "0.1.0"
 
-ANCHOR_PAPERS = ("Pentimalli TM et al., Cell Systems 2025;16:101261 (main figures)",)
+ANCHOR_PAPERS = (
+    "Pentimalli TM et al., Cell Systems 2025;16:101261 (main figures)",
+    "Hickey JW et al., Nature 2023;619:572 (multi-panel main figures)",
+    "Sorin M et al., Nature 2023;614:548 (multi-panel composite layouts)",
+)
 
 
 _GRID_BY_VARIANT: dict[str, tuple[int, int]] = {

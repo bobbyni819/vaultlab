@@ -23,5 +23,6 @@ Sorin 2023 IMC overlays.
 
 ## Status
 
-🚧 **Stub — not implemented yet.** API documented; render() raises NotImplementedError.
-Most complex recipe of the 6 due to image-handling + coordinate-system alignment.
+✅ **Implemented** (v0.1.0). `render()` produces the spatial overlay (PNG + PDF) and
+returns the saved path; handles an optional background image + coordinate alignment.
+Structural contract enforced by `tests/test_vaultlab_figures/test_recipe_invariants.py`.
