@@ -150,6 +150,30 @@ elif risk == "needs_human":
     ...  # surface a blocking confirmation per CLAUDE.md
 ```
 
+## Adaptive allocation (critic spread)
+
+`rounds_for_spread(ctx, base_rounds=3, max_rounds=5)` recommends how many rounds
+a follow-up meeting should run, from the *critic spread* of a prior run — the
+disagreement among critic outputs across rounds (`CrosstalkResult.critic_spread`,
+`0` = critics converged, `1` = still changing). Lifted from the AI co-scientist's
+Supervisor, which re-weights compute toward whatever is still productive.
+
+- `critic_spread is None` (default / < 2 critic turns) → `base_rounds` (no change).
+- High spread (critics still raising new objections) → scale up toward `max_rounds`.
+- Low spread → stay at base.
+
+Pure + deterministic. It does NOT change a meeting mid-flight; a caller reads the
+prior run's `critic_spread` into a `CrosstalkContext` and uses the recommendation
+to size the next run. Default behaviour is unchanged unless a caller opts in.
+
+```python
+from vaultlab.workflows.crosstalk_policy import CrosstalkContext, rounds_for_spread
+
+prior = adversarial_arc_meeting(...)           # CrosstalkResult has .critic_spread
+ctx = CrosstalkContext(critic_spread=prior.critic_spread)
+n = rounds_for_spread(ctx, base_rounds=3)      # 3 if converged, more if contested
+```
+
 ## Followups
 
 - The `n_evidence_sources` and `has_human_review_after` fields on

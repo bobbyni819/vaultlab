@@ -131,6 +131,10 @@ class CrosstalkResult:
     runtime_seconds: float = 0.0
     crosstalk_status: str = "complete"
     purpose: str = ""
+    critic_spread: float | None = None
+    """Disagreement among critic outputs across rounds (0=converged, 1=max), or
+    ``None`` with < 2 critic turns. Informational — feeds
+    ``crosstalk_policy.rounds_for_spread`` for adaptive round sizing."""
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +233,29 @@ def _synthesizer_similarity(prev_text: str, curr_text: str) -> float:
     else:
         a, b = prev_text or "", curr_text or ""
     return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+def _compute_critic_spread(turns: list[MeetingTurn]) -> float | None:
+    """Disagreement among the critic's outputs across rounds, in ``[0, 1]``.
+
+    ``0.0`` = the critic repeated itself (converged); ``1.0`` = maximal change
+    between rounds. ``None`` when there are fewer than two critic turns to
+    compare. Consumed by ``crosstalk_policy.rounds_for_spread`` to size a
+    follow-up run — high spread means the critics are still finding new
+    objections, so more rounds may help. (AI co-scientist adaptive allocation.)
+    """
+    critic_outputs = [
+        t.output
+        for t in turns
+        if "critic" in (t.role_id or "") and (t.output or "").strip()
+    ]
+    if len(critic_outputs) < 2:
+        return None
+    diffs = [
+        1.0 - _synthesizer_similarity(critic_outputs[i], critic_outputs[i + 1])
+        for i in range(len(critic_outputs) - 1)
+    ]
+    return sum(diffs) / len(diffs)
 
 
 def _run_adversarial_meeting(
@@ -391,6 +418,7 @@ def _run_adversarial_meeting(
         runtime_seconds=runtime,
         crosstalk_status=round_status,
         purpose=purpose,
+        critic_spread=_compute_critic_spread(all_turns),
     )
 
 

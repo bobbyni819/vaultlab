@@ -239,6 +239,35 @@ def test_early_exit_default_off_runs_all_rounds() -> None:
     assert len(result.rounds) == 12  # 3 rounds x 4 roles, no early exit
 
 
+def test_critic_spread_computed_for_multiround_meeting() -> None:
+    """A multi-round meeting populates critic_spread (0.0 when the stub critic
+    repeats itself identically each round)."""
+    runner = _stub_runner_for_picker(["10.1/found-1990", "10.1/method-2010"])
+    result = adversarial_picker_meeting(
+        topic="t",
+        candidates=_make_candidates(),
+        target_n=2,
+        abstracts_md="",
+        n_rounds=2,
+        runner_callback=runner,
+    )
+    assert result.critic_spread == 0.0
+
+
+def test_critic_spread_none_for_single_round() -> None:
+    """With < 2 critic turns there is nothing to compare → None."""
+    runner = _stub_runner_for_picker(["10.1/found-1990"])
+    result = adversarial_picker_meeting(
+        topic="t",
+        candidates=_make_candidates(),
+        target_n=1,
+        abstracts_md="",
+        n_rounds=1,
+        runner_callback=runner,
+    )
+    assert result.critic_spread is None
+
+
 def test_adversarial_picker_meeting_no_callback_returns_fallback() -> None:
     """Without a runner_callback, status is fallback and final_output empty."""
     result = adversarial_picker_meeting(

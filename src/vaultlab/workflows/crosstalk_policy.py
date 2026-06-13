@@ -38,6 +38,7 @@ __all__ = [
     "NeedsHumanApproval",
     "TaskKind",
     "classify_goal_risk",
+    "rounds_for_spread",
     "should_invoke",
     "skip_reason",
 ]
@@ -112,6 +113,9 @@ class CrosstalkContext:
     n_evidence_sources: int = 0
     n_rounds_budget: int = 0
     has_human_review_after: bool = False
+    critic_spread: float | None = None
+    """Disagreement among critic outputs from a PRIOR run (0..1), or None.
+    Consumed by :func:`rounds_for_spread` for adaptive round sizing."""
 
 
 # ---------------------------------------------------------------------------
@@ -226,3 +230,30 @@ def classify_goal_risk(goal: str) -> GoalRisk:
     if any(phrase in text for phrase in _NEEDS_HUMAN_PHRASES):
         return "needs_human"
     return "low"
+
+
+# ---------------------------------------------------------------------------
+# Adaptive allocation (AI co-scientist — spend compute where critics disagree)
+# ---------------------------------------------------------------------------
+
+
+def rounds_for_spread(
+    ctx: CrosstalkContext, base_rounds: int = 3, max_rounds: int = 5
+) -> int:
+    """Recommend a round count from observed critic spread (adaptive allocation).
+
+    Returns ``base_rounds`` when there is no spread signal
+    (``ctx.critic_spread is None``) — fully backward-compatible. When spread is
+    high (critics still finding new objections), scales linearly up toward
+    ``max_rounds`` so contested findings get more debate; low spread stays at
+    base. Pure + deterministic. Callers pass the ``critic_spread`` from a prior
+    ``CrosstalkResult`` to size a follow-up run.
+
+    (AI co-scientist: the Supervisor re-weights compute toward what is still
+    productive — see INSPIRATIONS.md.)
+    """
+    spread = ctx.critic_spread
+    if spread is None:
+        return base_rounds
+    extra = max(0.0, min(1.0, spread)) * (max_rounds - base_rounds)
+    return min(max_rounds, base_rounds + round(extra))

@@ -13,6 +13,7 @@ from vaultlab.workflows.crosstalk_policy import (
     CrosstalkContext,
     NeedsHumanApproval,
     classify_goal_risk,
+    rounds_for_spread,
     should_invoke,
     skip_reason,
 )
@@ -236,3 +237,35 @@ def test_needs_human_approval_is_exception_with_message() -> None:
     exc = NeedsHumanApproval("goal flagged as unsafe")
     assert isinstance(exc, Exception)
     assert "unsafe" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# Adaptive allocation — rounds_for_spread
+# ---------------------------------------------------------------------------
+
+
+def test_rounds_for_spread_returns_base_when_no_spread() -> None:
+    """No spread signal (default None) → base_rounds, unchanged."""
+    assert rounds_for_spread(CrosstalkContext(), base_rounds=3) == 3
+
+
+def test_rounds_for_spread_returns_max_when_spread_high() -> None:
+    """Maximal disagreement → scale up to max_rounds."""
+    ctx = CrosstalkContext(critic_spread=1.0)
+    assert rounds_for_spread(ctx, base_rounds=3, max_rounds=5) == 5
+
+
+def test_rounds_for_spread_scales_between_base_and_max() -> None:
+    ctx = CrosstalkContext(critic_spread=0.5)
+    # 3 + round(0.5 * (5 - 3)) = 3 + 1 = 4
+    assert rounds_for_spread(ctx, base_rounds=3, max_rounds=5) == 4
+
+
+def test_rounds_for_spread_clamps_out_of_range_spread() -> None:
+    assert rounds_for_spread(CrosstalkContext(critic_spread=2.0), base_rounds=3, max_rounds=5) == 5
+    assert rounds_for_spread(CrosstalkContext(critic_spread=-1.0), base_rounds=3, max_rounds=5) == 3
+
+
+def test_rounds_for_spread_is_deterministic() -> None:
+    ctx = CrosstalkContext(critic_spread=0.7)
+    assert len({rounds_for_spread(ctx) for _ in range(20)}) == 1
