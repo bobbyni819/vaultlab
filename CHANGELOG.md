@@ -4,6 +4,35 @@ All notable changes to vaultlab. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+Post-v0.0.6 work toward **v0.1.0** — figure-recipe subsystem completion, AI-co-scientist orchestration robustness, and figure-quality + flake fixes. All new orchestration features are **default-OFF** (no behavior change unless opted in).
+
+### Added — figure-recipe subsystem (the v0.1.0 gate, NEXT_STEPS B7–B12)
+
+- **≥3-anchor-paper rule ENFORCED** — `tests/test_vaultlab_figures/test_recipe_invariants.py` fails the build if any recipe's `ANCHOR_PAPERS` has < 3 entries (B12). Real verified anchors added to the 4 violators (umap_overlay, stat_test_panel, spatial_map_overlay, multi_panel_composite).
+- **`vaultlab.figures.corpus`** — `build_sources_index` / `save_sources_index` / `load_sources_index` derive a checked-in `sources.json` from the recipes' `ANCHOR_PAPERS`, guarded by a staleness test (B7).
+- **Smoke-render tests for all 11 recipes** — first real render coverage (B8).
+- **`templates/recipe/` scaffold** — copyable `_recipe_name.py` + `_recipe_name.md` (B9).
+- **`vaultlab.figures.publication.save.save_with_optional_contract`** — opt-in path for a recipe to honor a `FigureContract` (validate + SVG/PDF/TIFF triple-export at 600 dpi) without changing the default 300 dpi PNG+PDF (B11).
+
+### Added — orchestration robustness (AI co-scientist; INSPIRATIONS.md lineage)
+
+Six default-OFF patterns from "Towards an AI co-scientist" (Gottweis et al. 2025), independently cross-model reviewed:
+
+- **Critic deep-verification + simulation** — `roles/methods_critic/prompt.md`.
+- **Non-regression guard** — `runner.run_with_reflection(non_regression_guard=True)` adopts a refinement only if it drops no cited DOI and adds no unhedged / numeric-inconsistent claim.
+- **Goal safety gate** — `workflows.crosstalk_policy.classify_goal_risk` + `NeedsHumanApproval` (high-precision; no false-positives on ordinary biology).
+- **Convergence early-exit** — `crosstalk` meetings stop once the synthesizer output stabilises (`early_exit=True`; status `"converged"`).
+- **Adaptive allocation** — `crosstalk_policy.rounds_for_spread` sizes the next run's rounds from `CrosstalkResult.critic_spread`.
+- **Meta-review checklist** — `crosstalk.meta_review_checklist` + `CrosstalkResult.meta_review` surface recurring critic concerns for the next run.
+
+### Fixed
+
+- pandas-3.0 string-dtype (`"str"`) compatibility in the analysis stats test.
+- Windows clock-skew flake — `kb.dossier.dossier_age_hours` clamps at 0 (was 2/5 flaky).
+- **Figure quality (found by visually reviewing the rendered output):** marker_dot_plot size-legend no longer occludes the data column; pseudobulk_volcano labels de-crowded (default 6/side) + legend relocated + white-halo legibility.
+- Parquet inputs raise an actionable error when no engine is installed; `pyarrow` added to the `dev` extra.
+- Doc accuracy: deep_think comments say "crosstalk", not "round-table" (NEXT_STEPS C3).
+
 ## [0.0.6] — 2026-05-15
 
 Patch release rolling up 12 commits of post-v0.0.5 follow-up work shipped on the same day. Test count grew 2040 → 2196. HTML pattern coverage matrix now closed at 18/20 ✅ (2 intentionally out-of-scope).
