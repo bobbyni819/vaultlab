@@ -249,18 +249,28 @@ def _compute_critic_spread(turns: list[MeetingTurn]) -> float | None:
     follow-up run — high spread means the critics are still finding new
     objections, so more rounds may help. (AI co-scientist adaptive allocation.)
     """
-    critic_outputs = [
-        t.output
-        for t in turns
-        if "critic" in (t.role_id or "") and (t.output or "").strip()
-    ]
-    if len(critic_outputs) < 2:
+    from collections import defaultdict
+
+    # Group by critic role_id FIRST, then measure each critic's change across
+    # its own consecutive rounds — so a meeting with two "critic" roles compares
+    # like-for-like (same role across rounds), not one critic vs. another.
+    by_role: dict[str, list[str]] = defaultdict(list)
+    for t in turns:
+        rid = t.role_id or ""
+        if "critic" in rid and (t.output or "").strip():
+            by_role[rid].append(t.output)
+    per_role_spreads: list[float] = []
+    for outputs in by_role.values():
+        if len(outputs) < 2:
+            continue
+        diffs = [
+            1.0 - _synthesizer_similarity(outputs[i], outputs[i + 1])
+            for i in range(len(outputs) - 1)
+        ]
+        per_role_spreads.append(sum(diffs) / len(diffs))
+    if not per_role_spreads:
         return None
-    diffs = [
-        1.0 - _synthesizer_similarity(critic_outputs[i], critic_outputs[i + 1])
-        for i in range(len(critic_outputs) - 1)
-    ]
-    return sum(diffs) / len(diffs)
+    return sum(per_role_spreads) / len(per_role_spreads)
 
 
 def meta_review_checklist(turns: list[MeetingTurn], *, min_recurrence: int = 2) -> list[str]:

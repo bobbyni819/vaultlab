@@ -218,9 +218,9 @@ def test_early_exit_converges_when_synthesizer_output_stable() -> None:
         early_exit=True,
     )
     assert result.crosstalk_status == "converged"
-    # Converged after the 2nd round (round 1 == round 2), so fewer than the full
-    # 4 rounds x 4 roles = 16 turns ran.
-    assert 0 < len(result.rounds) < 16
+    # Converged after the 2nd round (round 1 == round 2): 2 rounds x 4 roles = 8
+    # turns ran (tight bound — a delayed convergence would fail this).
+    assert len(result.rounds) == 8
     assert "picks" in result.final_output
 
 
