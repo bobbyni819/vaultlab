@@ -59,6 +59,21 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
 - **Files to drill into:** `ai_scientist/researchers/base_researcher.py` (task loop), `ai_scientist/templates/` (domain scaffolds), `ai_scientist/literature_retrieval.py` (fallback patterns), `ai_scientist/paper_generation/` (citation embedding).
 - **Attribution:** docstring of `vaultlab.patterns` + `docs/architecture.md`.
 
+### AI co-scientist (Google Research / Google DeepMind, 2025)
+
+- **Repo:** no public code release; the system is described in the paper. Companion validations are open-access (bioRxiv / PMC).
+- **Citation:** Gottweis, Natarajan, et al., "Towards an AI co-scientist," arXiv:2502.18864 (2025); Nature 2026, DOI 10.1038/s41586-026-10644-y. Wet-lab-validated in: cf-PICI "tail piracy" (Penadés/Imperial + DeepMind, *Cell* 2025, bioRxiv 2025.02.19.639094) and liver-fibrosis drug repurposing (Stanford + Google, bioRxiv 2025.04.29.651320).
+- **License:** N/A — no code adopted; pattern/concept only.
+- **What we took:**
+  - **Multi-pass reflection** — explicit *deep-verification* (decompose a claim into independently-tested sub-assumptions) + *simulation* review (step-wise mechanism walk to find the artefact that could fake the result). → `roles/methods_critic/prompt.md` (live).
+  - **Convergence early-exit** — diff successive meeting rounds and stop when stable instead of always running to the cap. → `workflows/crosstalk.py` (planned).
+  - **Meta-review propagation without fine-tuning** — mine recurring critique themes and append them as a STANDING CHECKLIST to later rounds' prompts (in-context, no weight updates). → critic-round planning (planned).
+  - **Additive evolution / non-regression guard** — adopt a refinement only if it drops no cited DOI, hedge, or key finding, so self-improvement can never silently regress. → `runner/reflection.py` (planned).
+  - **Input safety gate** — classify a research goal low / needs-human / block before spending compute. → `workflows/crosstalk_policy.py` (planned).
+- **What we did NOT take:** the Elo tournament as the *primary* self-evaluation metric — the authors themselves flag it as "intrinsically-favored". vaultlab keeps its citation / numeric / hedge verifiers + human-in-the-loop as ground truth; Elo-style pairwise merging is considered only cautiously for the picker (planned).
+- **How:** `PATTERN` / `CONCEPT` — no code copied; reimplemented against vaultlab's role taxonomy and bounded-loop caps.
+- **Where in vaultlab:** `roles/methods_critic/prompt.md` (live); `workflows/crosstalk.py`, `runner/reflection.py`, `workflows/crosstalk_policy.py` (planned — see `Sources/Notes/_pipeline-robustness-plan-2026-06-13.md` in the KB).
+
 ### gstack (Garry Tan's Claude Code setup)
 
 - **Repo:** https://github.com/garrytan/gstack (Bobby has fork: `bobbyni819/gstack`, locally cloned at `~/Downloads/gstack/`)
