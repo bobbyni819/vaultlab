@@ -632,7 +632,17 @@ def _read_tidy(path: Path) -> "pd.DataFrame":
     if ext in (".tsv", ".tab"):
         return pd.read_csv(path, sep="\t")
     if ext in (".parquet", ".pq"):
-        return pd.read_parquet(path)
+        try:
+            return pd.read_parquet(path)
+        except ImportError as exc:
+            # Parquet is an advertised tidy-input format, but pandas needs an
+            # engine (pyarrow / fastparquet) that is not a core dependency.
+            # Fail with an actionable message instead of pandas' opaque one.
+            raise ValueError(
+                f"Reading Parquet ({path.name}) needs a Parquet engine that is not "
+                "installed. Install one with `pip install pyarrow` (or "
+                "`pip install vaultlab[dev]`), or convert the table to CSV / TSV."
+            ) from exc
     raise ValueError(f"Unrecognized tidy extension for {path}")
 
 

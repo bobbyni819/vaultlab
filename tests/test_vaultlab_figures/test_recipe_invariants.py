@@ -36,7 +36,13 @@ MIN_ANCHOR_PAPERS = 3
 
 
 def _module(name: str) -> ModuleType:
-    return getattr(recipes, name)
+    mod = getattr(recipes, name, None)
+    assert mod is not None, (
+        f"{name!r} is in recipes.__all__ but is not importable as a recipes "
+        "attribute — add its `from vaultlab.figures.recipes import <name>` to "
+        "recipes/__init__.py."
+    )
+    return mod
 
 
 def test_registry_nonempty() -> None:
