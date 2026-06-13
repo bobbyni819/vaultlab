@@ -34,7 +34,10 @@ __all__ = [
     "FIRE_KINDS",
     "SKIP_KINDS",
     "CrosstalkContext",
+    "GoalRisk",
+    "NeedsHumanApproval",
     "TaskKind",
+    "classify_goal_risk",
     "should_invoke",
     "skip_reason",
 ]
@@ -151,3 +154,75 @@ def skip_reason(ctx: CrosstalkContext) -> str | None:
     if should_invoke(ctx):
         return None
     return f"task_kind={ctx.task_kind!r} is mechanical/extraction; single-pass suffices"
+
+
+# ---------------------------------------------------------------------------
+# Safety gate (AI co-scientist input safety review — Gottweis et al. 2025)
+# ---------------------------------------------------------------------------
+
+
+class NeedsHumanApproval(Exception):
+    """Raised when a goal must pause for explicit human approval before work
+    proceeds. Carries the human-readable reason. Orchestrators catch this and
+    surface a blocking confirmation rather than proceeding autonomously — see
+    CLAUDE.md "Where blocking confirmation IS still required"."""
+
+
+GoalRisk = Literal["low", "needs_human", "block"]
+
+# HIGH-PRECISION phrase lists (multi-word where possible) so the screen does NOT
+# false-positive on ordinary biology. A goal about "gene deletion", "gain-of-
+# function mutations", "patient cohorts", or a "phi coefficient" stays "low".
+# The screen catches only unambiguous harm-intent or explicit outward actions;
+# it is high-precision / low-recall ON PURPOSE — the real safety net is human
+# oversight, which this supplements, never replaces.
+_BLOCK_PHRASES: tuple[str, ...] = (
+    "bioweapon",
+    "biological weapon",
+    "bioterror",
+    "nerve agent",
+    "chemical weapon",
+    "mass-casualty weapon",
+    "mass casualty weapon",
+    "build a bomb",
+)
+_NEEDS_HUMAN_PHRASES: tuple[str, ...] = (
+    "submit to journal",
+    "submit the manuscript",
+    "send an email",
+    "send email",
+    "post to twitter",
+    "post to x.com",
+    "post publicly",
+    "deploy to production",
+    "issue a press release",
+)
+
+
+def classify_goal_risk(goal: str) -> GoalRisk:
+    """Coarse, deterministic safety pre-screen of a research goal.
+
+    A safety input-review lifted from the AI co-scientist (Gottweis et al.
+    2025): an unsafe goal is flagged on input rather than pursued. This is a
+    phrase scan — NO LLM, no prompt file — so it is fast, auditable, and cannot
+    itself hallucinate.
+
+    Returns:
+
+    - ``"block"`` — unambiguous harm-intent (bioweapon / mass-casualty); the
+      caller should refuse, e.g. ``raise NeedsHumanApproval(reason)``.
+    - ``"needs_human"`` — an explicit outward / irreversible action named in the
+      goal (submit, send, deploy, press release); requires human go-ahead.
+    - ``"low"`` — no known red flag; proceed.
+
+    HIGH-PRECISION BY DESIGN: ordinary biology ("gene deletion", "gain of
+    function", "patient cohort", "phi coefficient") stays ``"low"``. A ``"low"``
+    result is the ABSENCE of a known red flag, not a safety guarantee — human
+    oversight remains the ground truth.
+    """
+    text = (goal or "").lower()
+    if any(phrase in text for phrase in _BLOCK_PHRASES):
+        return "block"
+    if any(phrase in text for phrase in _NEEDS_HUMAN_PHRASES):
+        return "needs_human"
+    return "low"

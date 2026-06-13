@@ -69,7 +69,7 @@ If we copied 50 lines from someone, say so. If we read their README and got an i
   - **Convergence early-exit** — diff successive meeting rounds and stop when stable instead of always running to the cap. → `workflows/crosstalk.py` (planned).
   - **Meta-review propagation without fine-tuning** — mine recurring critique themes and append them as a STANDING CHECKLIST to later rounds' prompts (in-context, no weight updates). → critic-round planning (planned).
   - **Additive evolution / non-regression guard** — adopt a refinement only if it drops no cited DOI, hedge, or key finding, so self-improvement can never silently regress. → `runner/reflection.py` (live, opt-in `non_regression_guard=True`).
-  - **Input safety gate** — classify a research goal low / needs-human / block before spending compute. → `workflows/crosstalk_policy.py` (planned).
+  - **Input safety gate** — classify a research goal low / needs-human / block before spending compute. → `workflows/crosstalk_policy.py` (live, `classify_goal_risk` + `NeedsHumanApproval`; high-precision, default-additive).
 - **What we did NOT take:** the Elo tournament as the *primary* self-evaluation metric — the authors themselves flag it as "intrinsically-favored". vaultlab keeps its citation / numeric / hedge verifiers + human-in-the-loop as ground truth; Elo-style pairwise merging is considered only cautiously for the picker (planned).
 - **How:** `PATTERN` / `CONCEPT` — no code copied; reimplemented against vaultlab's role taxonomy and bounded-loop caps.
 - **Where in vaultlab:** `roles/methods_critic/prompt.md` (live); `workflows/crosstalk.py`, `runner/reflection.py`, `workflows/crosstalk_policy.py` (planned — see `Sources/Notes/_pipeline-robustness-plan-2026-06-13.md` in the KB).

@@ -120,6 +120,36 @@ The `rigor_audit` call inside `vaultlab.slides.deck` runs a single
 auditor role (no round-table) so the policy gate doesn't apply — it
 already IS a single-pass call.
 
+## Safety gate (input screen)
+
+`classify_goal_risk(goal: str) -> "low" | "needs_human" | "block"` is a coarse,
+deterministic pre-screen of a research goal before compute is spent — lifted
+from the AI co-scientist's input safety review (Gottweis et al. 2025,
+arXiv:2502.18864). No LLM, no prompt file: a high-precision phrase scan.
+
+- `"block"` — unambiguous harm-intent (bioweapon / mass-casualty). The caller
+  should refuse, e.g. `raise NeedsHumanApproval(reason)`.
+- `"needs_human"` — an explicit outward / irreversible action named in the goal
+  (submit to journal, send email, deploy, press release). Pause for go-ahead.
+- `"low"` — no known red flag; proceed.
+
+**High-precision by design.** Ordinary biology — "gene deletion",
+"gain-of-function mutation", "patient cohort", "phi coefficient" — stays
+`"low"`. A `"low"` result is the *absence of a known red flag*, NOT a safety
+guarantee; vaultlab's human-in-the-loop remains the ground truth. The screen is
+intentionally low-recall (few false positives) rather than high-recall, and is
+purely additive — no existing caller is gated by it yet.
+
+```python
+from vaultlab.workflows.crosstalk_policy import classify_goal_risk, NeedsHumanApproval
+
+risk = classify_goal_risk(goal)
+if risk == "block":
+    raise NeedsHumanApproval(f"goal flagged as unsafe: {goal!r}")
+elif risk == "needs_human":
+    ...  # surface a blocking confirmation per CLAUDE.md
+```
+
 ## Followups
 
 - The `n_evidence_sources` and `has_human_review_after` fields on
