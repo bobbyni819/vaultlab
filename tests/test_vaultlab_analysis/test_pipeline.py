@@ -83,8 +83,12 @@ class TestSummarizeDataframe:
 
         assert set(summary.keys()) == {"group", "score", "count"}
 
-        # Categorical column reports unique_count + top_values
-        assert summary["group"]["dtype"].startswith("object") or "string" in summary["group"]["dtype"]
+        # Categorical column reports unique_count + top_values.
+        # pandas reports a string column's dtype differently across versions:
+        # "object" (<=2.x default), "string" (StringDtype), "str" (pandas 3.0
+        # default). Accept all so the suite is pandas-version-robust.
+        group_dtype = summary["group"]["dtype"]
+        assert group_dtype in ("object", "str") or "string" in group_dtype
         assert summary["group"]["n"] == 5
         assert summary["group"]["n_missing"] == 0
         assert summary["group"]["unique_count"] == 3

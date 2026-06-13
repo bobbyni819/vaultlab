@@ -217,7 +217,11 @@ def dossier_age_hours(kb_root: Path, project_slug: str) -> float | None:
         return None
     mtime = datetime.fromtimestamp(path.stat().st_mtime)
     delta = datetime.now() - mtime
-    return delta.total_seconds() / 3600.0
+    # Clamp at 0: a just-written file's mtime can read marginally ahead of the
+    # subsequent wall clock (filesystem timestamp resolution / clock skew,
+    # observed on Windows), which would otherwise yield a spuriously negative
+    # age. "Time since compile" is non-negative by definition.
+    return max(0.0, delta.total_seconds() / 3600.0)
 
 
 def load_dossier(kb_root: Path, project_slug: str) -> str:
