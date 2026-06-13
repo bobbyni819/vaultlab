@@ -1,0 +1,91 @@
+{
+  "cci_heatmap": {
+    "papers": [
+      "Jin S et al., Nature Communications 2021;12:1088 (CellChat \u2014 Fig 2 layout)",
+      "Palla G et al., Nature Methods 2022;19:171 (Squidpy \u2014 neighborhood enrichment heatmap)",
+      "scverse/squidpy gallery \u2014 interaction matrix examples"
+    ],
+    "version": "0.1.0"
+  },
+  "heatmap": {
+    "papers": [
+      "Schurch CM et al., Cell 2020;182:1341 (Fig 5, co-occurrence)",
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 4B, niche-ligand)",
+      "Hickey JW et al., Front Immunol 2021;12:727626 (cluster_by_marker)"
+    ],
+    "version": "0.1.0"
+  },
+  "marker_dot_plot": {
+    "papers": [
+      "Hickey JW et al., Front Immunol 2021;12:727626 (Fig 4)",
+      "Schurch CM et al., Cell 2020;182:1341 (Fig 2C)",
+      "Goltsev Y et al., Cell 2018;174:968 (Fig 4)"
+    ],
+    "version": "0.1.0"
+  },
+  "metabolite_pathway_map": {
+    "papers": [
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (lipid pathway abundance overlay)",
+      "decoupler-py docs \u2014 pathway activity inference + visualization (Badia-i-Mompel 2022)",
+      "MetaboAnalyst (Pang 2024) \u2014 pathway impact + abundance heatmaps",
+      "Escher (King 2015) \u2014 KEGG-style metabolic pathway maps"
+    ],
+    "version": "0.1.0"
+  },
+  "multi_panel_composite": {
+    "papers": [
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (main figures)",
+      "Hickey JW et al., Nature 2023;619:572 (multi-panel main figures)",
+      "Sorin M et al., Nature 2023;614:548 (multi-panel composite layouts)"
+    ],
+    "version": "0.1.0"
+  },
+  "pseudobulk_volcano": {
+    "papers": [
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 4)",
+      "scanpy gallery \u2014 sc.tl.rank_genes_groups visualization (default volcano layout)",
+      "decoupler-py docs \u2014 DA volcano standard layout"
+    ],
+    "version": "0.1.0"
+  },
+  "spatial_map_overlay": {
+    "papers": [
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (Figs 3D-F, 4C-E)",
+      "Sorin M et al., Nature 2023;614:548 (IMC overlays)",
+      "Hickey JW et al., Nature 2023;619:572 (CODEX spatial cell maps)"
+    ],
+    "version": "0.1.0"
+  },
+  "spatial_neighborhood": {
+    "papers": [
+      "Palla G et al., Nature Methods 2022;19:171 (Squidpy \u2014 Fig 3 spatial neighborhood enrichment)",
+      "Schurch CM et al., Cell 2020;182:1341 (CCI spatial neighborhoods, Fig 4)",
+      "scverse/squidpy docs \u2014 sq.gr.nhood_enrichment + sq.pl.nhood_enrichment"
+    ],
+    "version": "0.1.0"
+  },
+  "stacked_bar": {
+    "papers": [
+      "Hickey JW et al., Nature Methods 2021;18:1265 (Fig 4 \u2014 immune cell-type frequencies)",
+      "Schurch CM et al., Cell 2020;182:1341 (Fig 2 \u2014 CCI cohort frequencies)",
+      "scanpy gallery \u2014 sc.pl.dotplot + grouped abundance plots"
+    ],
+    "version": "0.1.0"
+  },
+  "stat_test_panel": {
+    "papers": [
+      "Sorin M et al., Nature 2023;614:548 (Fig 4)",
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 5F)",
+      "Hickey JW et al., Nature 2023;619:572 (cross-region cell-type comparisons)"
+    ],
+    "version": "0.1.0"
+  },
+  "umap_overlay": {
+    "papers": [
+      "Pentimalli TM et al., Cell Systems 2025;16:101261 (Fig 1C)",
+      "Hickey JW et al., Nature 2023;619:572 (intestine atlas UMAPs)",
+      "Becht E et al., Nature Biotechnology 2019;37:38 (UMAP single-cell embeddings)"
+    ],
+    "version": "0.1.0"
+  }
+}
