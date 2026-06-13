@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
+    from vaultlab.figures.contract import FigureContract
+
 
 def save_fig(
     fig: Figure,
@@ -99,3 +101,38 @@ def save_fig(
         plt.close(fig)
 
     return written
+
+
+def save_with_optional_contract(
+    fig: Figure,
+    out_path: Path | str,
+    *,
+    contract: FigureContract | None = None,
+    dpi: int = 300,
+) -> Path:
+    """Save a recipe figure, optionally honouring a :class:`FigureContract`.
+
+    Default (``contract is None``): PNG + PDF at ``dpi`` via :func:`save_fig`,
+    returning the PNG path — exactly the existing recipe convention, unchanged.
+
+    With a contract: validate it (``validate_contract`` raises
+    ``ContractViolation`` on hard failures), then triple-export to the
+    contract's formats (SVG + PDF + TIFF) at its DPI (default 600) for
+    camera-ready journal output, returning the PDF path (vector, journal-
+    friendly) or the first written path. This is the opt-in path that lets a
+    recipe satisfy ``vaultlab.figures.contract`` (NEXT_STEPS B11) without
+    changing any recipe's default behaviour.
+    """
+    out = Path(out_path)
+    if contract is None:
+        return save_fig(fig, out, dpi=dpi)[0]
+
+    from vaultlab.figures.contract import triple_export, validate_contract
+
+    validate_contract(contract)  # raises ContractViolation on a hard failure
+    written = triple_export(fig, out.with_suffix(""), contract=contract)
+    # triple_export does not close the figure; match save_fig's close-after-save.
+    import matplotlib.pyplot as plt
+
+    plt.close(fig)
+    return written.get("pdf") or next(iter(written.values()))
