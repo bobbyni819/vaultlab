@@ -203,6 +203,42 @@ def test_adversarial_picker_meeting_with_stub_runner() -> None:
     assert result.purpose == "picker"
 
 
+def test_early_exit_converges_when_synthesizer_output_stable() -> None:
+    """With early_exit, the meeting stops once the synthesizer output stabilises
+    between rounds (the stub emits identical picks every round)."""
+    runner = _stub_runner_for_picker(["10.1/found-1990", "10.1/method-2010"])
+    result = adversarial_picker_meeting(
+        topic="test topic",
+        candidates=_make_candidates(),
+        target_n=2,
+        abstracts_md="abstracts here",
+        n_rounds=4,
+        runner_callback=runner,
+        early_exit=True,
+    )
+    assert result.crosstalk_status == "converged"
+    # Converged after the 2nd round (round 1 == round 2), so fewer than the full
+    # 4 rounds x 4 roles = 16 turns ran.
+    assert 0 < len(result.rounds) < 16
+    assert "picks" in result.final_output
+
+
+def test_early_exit_default_off_runs_all_rounds() -> None:
+    """early_exit defaults False: a stable stub still runs every round, so the
+    new behaviour is strictly opt-in."""
+    runner = _stub_runner_for_picker(["10.1/found-1990", "10.1/method-2010"])
+    result = adversarial_picker_meeting(
+        topic="t",
+        candidates=_make_candidates(),
+        target_n=2,
+        abstracts_md="",
+        n_rounds=3,
+        runner_callback=runner,
+    )
+    assert result.crosstalk_status == "complete"
+    assert len(result.rounds) == 12  # 3 rounds x 4 roles, no early exit
+
+
 def test_adversarial_picker_meeting_no_callback_returns_fallback() -> None:
     """Without a runner_callback, status is fallback and final_output empty."""
     result = adversarial_picker_meeting(

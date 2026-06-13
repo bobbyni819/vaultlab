@@ -120,6 +120,8 @@ class CrosstalkResult:
             * ``"incomplete (timeout)"`` — wall-clock timeout hit.
             * ``"fallback (callback failed)"`` — runner_callback raised
               or returned an unusable shape.
+            * ``"converged"`` — ``early_exit`` stopped the meeting once the
+              synthesizer output stabilised between consecutive rounds.
         purpose: ``"picker"`` | ``"arc"`` | ``"deck-plan"`` |
             ``"rigor-audit"``. Used by the audit-trail writer.
     """
@@ -211,6 +213,24 @@ def _extract_json_blob(text: str) -> dict[str, Any] | None:
     return None
 
 
+def _synthesizer_similarity(prev_text: str, curr_text: str) -> float:
+    """Similarity in ``[0, 1]`` between two synthesizer outputs (for early-exit).
+
+    Compares the parsed JSON when both parse (canonical sorted-key form), else
+    the raw text. ``1.0`` = identical. Used only when ``early_exit`` is enabled.
+    """
+    import difflib
+
+    prev_parsed = _extract_json_blob(prev_text)
+    curr_parsed = _extract_json_blob(curr_text)
+    if isinstance(prev_parsed, dict) and isinstance(curr_parsed, dict):
+        a = json.dumps(prev_parsed, sort_keys=True)
+        b = json.dumps(curr_parsed, sort_keys=True)
+    else:
+        a, b = prev_text or "", curr_text or ""
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
 def _run_adversarial_meeting(
     *,
     meeting: Meeting,
@@ -218,6 +238,8 @@ def _run_adversarial_meeting(
     n_rounds: int,
     timeout_seconds: int,
     purpose: str,
+    early_exit: bool = False,
+    early_exit_threshold: float = 0.95,
 ) -> CrosstalkResult:
     """Execute the ADVERSARIAL meeting with a runner callback.
 
@@ -250,6 +272,7 @@ def _run_adversarial_meeting(
     # _MEETING_TYPE_ROLES["deep_think"] etc.
     all_turns: list[MeetingTurn] = []
     round_status = "complete"
+    prev_synth_output: str | None = None
 
     try:
         for round_idx in range(n_rounds):
@@ -315,6 +338,27 @@ def _run_adversarial_meeting(
             # round's real outputs (no-op for the last round).
             all_turns = list(adversarial_inject(all_turns))
 
+            # Convergence early-exit (opt-in): if this round's synthesizer output
+            # is ~unchanged from the previous round's, the meeting has stopped
+            # producing new signal — stop instead of burning the remaining
+            # rounds. (AI co-scientist: stop when the tournament stabilises.)
+            if early_exit:
+                this_synth = next(
+                    (t for t in reversed(all_turns) if t.role_id == "synthesizer"),
+                    None,
+                )
+                this_output = this_synth.output if this_synth is not None else None
+                if (
+                    this_output
+                    and prev_synth_output is not None
+                    and _synthesizer_similarity(prev_synth_output, this_output)
+                    >= early_exit_threshold
+                ):
+                    round_status = "converged"
+                    break
+                if this_output:
+                    prev_synth_output = this_output
+
             # Timeout check after the round finishes.
             if time.time() - started > timeout_seconds:
                 round_status = "incomplete (timeout)"
@@ -366,6 +410,8 @@ def adversarial_picker_meeting(
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
     kb_root: Path | str | None = None,
+    early_exit: bool = False,
+    early_exit_threshold: float = 0.95,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst proposes top-N picks; literature_critic
     challenges (missing seminal works? off-topic?); synthesizer picks final.
@@ -433,6 +479,8 @@ def adversarial_picker_meeting(
         n_rounds=n_rounds,
         timeout_seconds=timeout_seconds,
         purpose="picker",
+        early_exit=early_exit,
+        early_exit_threshold=early_exit_threshold,
     )
 
 
@@ -446,6 +494,8 @@ def adversarial_arc_meeting(
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
     kb_root: Path | str | None = None,
+    early_exit: bool = False,
+    early_exit_threshold: float = 0.95,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: data_analyst drafts arc; methods_critic challenges
     field-development claims; literature_critic flags missing strands;
@@ -533,6 +583,8 @@ def adversarial_arc_meeting(
         n_rounds=n_rounds,
         timeout_seconds=timeout_seconds,
         purpose="arc",
+        early_exit=early_exit,
+        early_exit_threshold=early_exit_threshold,
     )
 
 
@@ -548,6 +600,8 @@ def adversarial_deck_plan_meeting(
     runner_callback: RunnerCallback | None = None,
     project_slug: str | None = None,
     kb_root: Path | str | None = None,
+    early_exit: bool = False,
+    early_exit_threshold: float = 0.95,
 ) -> CrosstalkResult:
     """ADVERSARIAL meeting: narrator proposes story arc; figure_lead picks
     figures; methods_critic flags overclaiming; synthesizer integrates.
@@ -638,6 +692,8 @@ def adversarial_deck_plan_meeting(
         n_rounds=n_rounds,
         timeout_seconds=timeout_seconds,
         purpose="deck-plan",
+        early_exit=early_exit,
+        early_exit_threshold=early_exit_threshold,
     )
 
 
