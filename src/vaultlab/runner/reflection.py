@@ -48,6 +48,54 @@ def contains_done_signal(text: str, explicit_signal: str = DONE_SIGNAL_DEFAULT) 
     return bool(_DONE_RE.search(text or ""))
 
 
+# --- Non-regression guard (AI co-scientist "additive evolution": a refinement
+# must never silently drop a result; Gottweis et al. 2025, arXiv:2502.18864 —
+# see INSPIRATIONS.md). A refined draft is adopted only if it does not regress
+# vs. the prior best on three deterministic axes: cited DOIs present, hedge-
+# violation count, and numeric-consistency count.
+
+_DOI_RE = re.compile(r"10\.\d{4,}/\S+")
+
+
+def _extract_dois(text: str) -> set[str]:
+    """DOIs in ``text`` with trailing punctuation stripped for stable matching."""
+    return {m.rstrip(".,;:)]}'\"") for m in _DOI_RE.findall(text or "")}
+
+
+def _check_regression(
+    prior: str,
+    candidate: str,
+    *,
+    check_dois: bool = True,
+    check_hedge: bool = True,
+    check_numeric: bool = True,
+) -> list[str]:
+    """Return reasons ``candidate`` regresses vs. ``prior`` (empty list = adopt).
+
+    Reuses the existing deterministic verifiers rather than an LLM judge:
+    ``roles._guardrails.enforce_hedge`` and ``runner.verifiers.verify_numeric``,
+    imported lazily to avoid any import cycle at module load.
+    """
+    reasons: list[str] = []
+    if check_dois:
+        dropped = _extract_dois(prior) - _extract_dois(candidate)
+        if dropped:
+            reasons.append(f"dropped cited DOI(s): {', '.join(sorted(dropped))}")
+    if check_hedge:
+        from vaultlab.roles._guardrails import enforce_hedge
+
+        prior_n, cand_n = len(enforce_hedge(prior)), len(enforce_hedge(candidate))
+        if cand_n > prior_n:
+            reasons.append(f"added unhedged claim(s) ({prior_n} -> {cand_n})")
+    if check_numeric:
+        from vaultlab.runner.verifiers import verify_numeric
+
+        prior_n, cand_n = len(verify_numeric(prior)), len(verify_numeric(candidate))
+        if cand_n > prior_n:
+            reasons.append(f"added numeric inconsistency ({prior_n} -> {cand_n})")
+    return reasons
+
+
 REFLECTION_PROMPT_TEMPLATE = """\
 Round {round} of {max_rounds}.
 
@@ -74,6 +122,9 @@ class ReflectionResult:
     drafts: list[str] = field(default_factory=list)
     stopped_early: bool = False
     iterations_used: int = 0
+    rejected_refinements: list[str] = field(default_factory=list)
+    """Refinements blocked by the non-regression guard (reason strings); empty
+    unless ``run_with_reflection(non_regression_guard=True)`` rejected a round."""
 
     @property
     def final(self) -> str:
@@ -91,6 +142,7 @@ def run_with_reflection(
     tools: list[str] | None = None,
     reflection_prompt_template: str = REFLECTION_PROMPT_TEMPLATE,
     done_signal: str = DONE_SIGNAL_DEFAULT,
+    non_regression_guard: bool = False,
 ) -> ReflectionResult:
     """Run an agent then refine N times with early termination on "I am done".
 
@@ -109,6 +161,14 @@ def run_with_reflection(
         Controls how refinement rounds are framed.
     done_signal:
         The string that short-circuits the loop.
+    non_regression_guard:
+        When ``True``, a refined draft is adopted only if it does not regress
+        vs. the prior best — it must drop no cited DOI and add no unhedged claim
+        or numeric inconsistency (checked with the existing ``enforce_hedge`` /
+        ``verify_numeric`` verifiers). Rejected rounds are recorded in
+        ``ReflectionResult.rejected_refinements`` and the prior best is kept.
+        Default ``False`` preserves prior behaviour exactly. (AI co-scientist
+        "additive evolution"; see INSPIRATIONS.md.)
 
     Returns a :class:`ReflectionResult` with every draft + stop reason.
     """
@@ -132,8 +192,21 @@ def run_with_reflection(
             prior=result.final,
         )
         response = agent_fn(refinement_prompt, tools)
-        result.drafts.append(response)
         result.iterations_used += 1
+        if non_regression_guard:
+            regressions = _check_regression(result.final, response)
+            if regressions:
+                # Additive-evolution guard: do NOT adopt a regressing refinement;
+                # keep the prior best and record why (the round still counts as an
+                # agent call). A "done" signal still ends the loop.
+                result.rejected_refinements.append(
+                    f"round {round_num}: " + "; ".join(regressions)
+                )
+                if contains_done_signal(response, done_signal):
+                    result.stopped_early = True
+                    break
+                continue
+        result.drafts.append(response)
         if contains_done_signal(response, done_signal):
             result.stopped_early = True
             break

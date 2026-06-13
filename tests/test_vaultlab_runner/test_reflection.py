@@ -177,3 +177,74 @@ def test_done_signal_default_constant() -> None:
     assert DONE_SIGNAL_DEFAULT == "I am done"
     # Template contains the done-signal text so prompts are self-explanatory
     assert "I am done" in REFLECTION_PROMPT_TEMPLATE
+
+
+# ---------------------------------------------------------------------------
+# non-regression guard (AI co-scientist "additive evolution")
+# ---------------------------------------------------------------------------
+
+
+def test_non_regression_guard_rejects_doi_dropping_draft() -> None:
+    """A refinement that drops a cited DOI is rejected; the prior best is kept."""
+    responses = iter(
+        [
+            "Result is consistent with X (see 10.1234/abc.2025).",  # round 0 — cites a DOI
+            "Result is X.",  # round 1 — drops the citation
+        ]
+    )
+
+    def agent(prompt: str, tools: list[str]) -> str:
+        return next(responses)
+
+    result = run_with_reflection(
+        agent_fn=agent,
+        initial_prompt="p",
+        max_reflections=1,
+        non_regression_guard=True,
+    )
+    # The round still ran (agent called twice) but the regression was not adopted.
+    assert result.iterations_used == 2
+    assert "10.1234/abc.2025" in result.final
+    assert result.final.startswith("Result is consistent with")
+    assert result.rejected_refinements
+    assert "dropped cited DOI" in result.rejected_refinements[0]
+
+
+def test_non_regression_guard_default_off_adopts_regression() -> None:
+    """With the guard off (default), the DOI-dropping refinement IS adopted —
+    proving the new behaviour is strictly opt-in."""
+    responses = iter(
+        [
+            "Consistent with X (10.1234/abc.2025).",
+            "Final answer without the citation.",
+        ]
+    )
+
+    def agent(prompt: str, tools: list[str]) -> str:
+        return next(responses)
+
+    result = run_with_reflection(agent_fn=agent, initial_prompt="p", max_reflections=1)
+    assert result.final == "Final answer without the citation."
+    assert result.rejected_refinements == []
+
+
+def test_non_regression_guard_adopts_clean_refinement() -> None:
+    """A refinement that keeps the DOI and adds no overclaim is adopted."""
+    responses = iter(
+        [
+            "Consistent with X (10.1234/abc.2025).",
+            "More precisely, consistent with X under condition Y (10.1234/abc.2025).",
+        ]
+    )
+
+    def agent(prompt: str, tools: list[str]) -> str:
+        return next(responses)
+
+    result = run_with_reflection(
+        agent_fn=agent,
+        initial_prompt="p",
+        max_reflections=1,
+        non_regression_guard=True,
+    )
+    assert "condition Y" in result.final
+    assert result.rejected_refinements == []
