@@ -75,6 +75,7 @@ __all__ = [
     "adversarial_arc_meeting",
     "adversarial_deck_plan_meeting",
     "adversarial_picker_meeting",
+    "meta_review_checklist",
     "rigor_audit",
     "write_crosstalk_artifacts",
 ]
@@ -135,6 +136,10 @@ class CrosstalkResult:
     """Disagreement among critic outputs across rounds (0=converged, 1=max), or
     ``None`` with < 2 critic turns. Informational — feeds
     ``crosstalk_policy.rounds_for_spread`` for adaptive round sizing."""
+    meta_review: list[str] = field(default_factory=list)
+    """Recurring critic concerns across rounds (meta-review, AI co-scientist) — a
+    standing checklist a caller seeds into the next meeting so a concern caught
+    once stays addressed. Empty unless >= 2 critic turns repeat a concern."""
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +261,43 @@ def _compute_critic_spread(turns: list[MeetingTurn]) -> float | None:
         for i in range(len(critic_outputs) - 1)
     ]
     return sum(diffs) / len(diffs)
+
+
+def meta_review_checklist(turns: list[MeetingTurn], *, min_recurrence: int = 2) -> list[str]:
+    """Recurring critic concerns across a meeting, as a standing checklist.
+
+    Meta-review (AI co-scientist feedback-without-fine-tuning): mine the critic
+    outputs for concern lines that RECUR across >= ``min_recurrence`` distinct
+    critic turns — those are the unresolved issues every later round (or the
+    next meeting) should keep addressing. Returns them in first-seen order. A
+    caller seeds the next meeting's context with these so a concern caught once
+    becomes a standing requirement.
+
+    Deterministic + pure (no LLM): recurrence is matched on normalised concern
+    lines, so it catches verbatim / re-raised concerns. (A future LLM
+    ``meta_reviewer`` role could additionally distill paraphrased themes.)
+    """
+    from collections import Counter
+
+    turn_count: Counter[str] = Counter()
+    display: dict[str, str] = {}
+    order: list[str] = []
+    for t in turns:
+        if "critic" not in (t.role_id or ""):
+            continue
+        turn_concerns: set[str] = set()
+        for raw in (t.output or "").splitlines():
+            line = raw.strip(" -*\t").strip()
+            if len(line) < 8:  # skip blanks / trivial fragments
+                continue
+            norm = " ".join(line.lower().split())
+            if norm not in turn_concerns:
+                turn_concerns.add(norm)
+                if norm not in display:
+                    display[norm] = line
+                    order.append(norm)
+        turn_count.update(turn_concerns)
+    return [display[n] for n in order if turn_count[n] >= min_recurrence]
 
 
 def _run_adversarial_meeting(
@@ -419,6 +461,7 @@ def _run_adversarial_meeting(
         crosstalk_status=round_status,
         purpose=purpose,
         critic_spread=_compute_critic_spread(all_turns),
+        meta_review=meta_review_checklist(all_turns),
     )
 
 

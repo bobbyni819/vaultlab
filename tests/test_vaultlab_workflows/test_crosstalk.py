@@ -21,6 +21,7 @@ from vaultlab.workflows.crosstalk import (
     adversarial_deck_plan_meeting,
     adversarial_picker_meeting,
     append_decisions_log_entry,
+    meta_review_checklist,
     rigor_audit,
     write_crosstalk_artifacts,
 )
@@ -266,6 +267,36 @@ def test_critic_spread_none_for_single_round() -> None:
         runner_callback=runner,
     )
     assert result.critic_spread is None
+
+
+def test_meta_review_checklist_surfaces_recurring_critic_concerns() -> None:
+    """A concern the critic raises every round recurs → standing checklist, and
+    the result auto-carries it."""
+    runner = _stub_runner_for_picker(["10.1/found-1990", "10.1/method-2010"])
+    result = adversarial_picker_meeting(
+        topic="t",
+        candidates=_make_candidates(),
+        target_n=2,
+        abstracts_md="",
+        n_rounds=2,
+        runner_callback=runner,
+    )
+    assert result.meta_review == ["[literature_critic canned commentary]"]
+    assert meta_review_checklist(result.rounds) == result.meta_review
+
+
+def test_meta_review_checklist_empty_without_recurrence() -> None:
+    """A single round → no concern recurs → empty checklist."""
+    runner = _stub_runner_for_picker(["10.1/found-1990"])
+    result = adversarial_picker_meeting(
+        topic="t",
+        candidates=_make_candidates(),
+        target_n=1,
+        abstracts_md="",
+        n_rounds=1,
+        runner_callback=runner,
+    )
+    assert result.meta_review == []
 
 
 def test_adversarial_picker_meeting_no_callback_returns_fallback() -> None:
