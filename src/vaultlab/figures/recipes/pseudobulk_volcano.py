@@ -48,7 +48,7 @@ def render(
     title: str = "",
     log2fc_threshold: float = 1.0,
     pvalue_threshold: float = 0.05,
-    top_n_label: int = 10,
+    top_n_label: int = 6,
     palette: tuple[str, str, str] = ("#6c757d", "#d62728", "#1f77b4"),
 ) -> Path:
     """Render a volcano plot for differential abundance analysis.
@@ -146,6 +146,11 @@ def render(
 
     # Label the top-N up + down regulated features by name
     if top_n_label > 0:
+        from matplotlib import patheffects as pe
+
+        # White outline keeps labels legible even where the most-significant
+        # points (and their labels) cluster near the top edge.
+        halo = [pe.withStroke(linewidth=1.8, foreground="white")]
         for mask_idx, mask in enumerate((is_up.to_numpy(), is_down.to_numpy())):
             indices = np.where(mask)[0]
             if not len(indices):
@@ -159,20 +164,25 @@ def render(
                     xytext=(4 if mask_idx == 0 else -4, 4),
                     textcoords="offset points",
                     ha="left" if mask_idx == 0 else "right",
-                    fontsize=7,
+                    fontsize=6.5,
                     color="black",
-                    alpha=0.85,
+                    path_effects=halo,
                 )
 
     ax.set_xlabel(f"log2 fold change ({log2fc_col})", fontsize=10)
     ax.set_ylabel(f"-log10({pvalue_col})", fontsize=10)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    # Headroom so the top-N labels (clustered at high significance) are not
+    # clipped at the top spine.
+    ax.margins(y=0.10)
 
     if title:
         ax.set_title(title, fontsize=11)
 
-    ax.legend(loc="upper left", fontsize=8, frameon=False)
+    # Legend lower-right: the top-left/top-right are where the up/down labels
+    # cluster (most-significant points), so an upper legend collided with them.
+    ax.legend(loc="lower right", fontsize=8, frameon=False)
 
     out = Path(output_path)
     paths = save_fig(fig, out, dpi=300)

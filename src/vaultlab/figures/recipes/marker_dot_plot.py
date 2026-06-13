@@ -156,15 +156,20 @@ def render(
                 label=f"{int(frac * 100)}%",
             )
         )
+    # Size legend as a horizontal row BELOW the plot, clear of the data grid and
+    # the colorbar. (A right-anchored legend's left edge extended back into the
+    # rightmost data column and occluded those dots.)
     ax.legend(
         handles=handles,
-        title="Fraction\nexpressing",
-        loc="lower right",
-        bbox_to_anchor=(1.20, 0.0),
+        title="Fraction expressing",
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.22),
+        ncol=4,
+        columnspacing=1.6,
+        handletextpad=0.2,
         fontsize=8,
         title_fontsize=8,
-        frameon=True,
-        edgecolor="black",
+        frameon=False,
     )
 
     if title:
