@@ -66,7 +66,7 @@ def _record_crosstalk_decision(
 
     SPEC-E sub-goal 2.4: every crosstalk-firing site records ``invoked`` /
     ``skip_reason`` / ``task_kind`` so audits can reconstruct why a given
-    deep-think run was or wasn't a round-table. The decision is folded
+    deep-think run did or didn't fire crosstalk. The decision is folded
     into the WorkflowPlan's provenance via:
 
     * ``params`` — typed structured receipt (``crosstalk_invoked``,
@@ -410,7 +410,7 @@ def plan_deep_think_with_ensemble_critic(
     # SPEC-E sub-goal 2.4: gate crosstalk via the invocation policy.
     # The ensemble-critic deep-think is the canonical "fire the round-
     # table" workflow → 'deep_think'. Stamp the decision on every phase's
-    # provenance so each phase output records why the round-table fired
+    # provenance so each phase output records why crosstalk fired
     # (or didn't); the synthesis phase gets the canonical final record.
     bundle_ctx = CrosstalkContext(
         task_kind="deep_think",
