@@ -12,13 +12,13 @@ import matplotlib
 import pytest
 
 matplotlib.use("Agg", force=True)
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 
-from vaultlab.figures.contract import (  # noqa: E402
+from vaultlab.figures.contract import (
     ContractViolation,
     FigureContract,
 )
-from vaultlab.figures.publication.save import save_with_optional_contract  # noqa: E402
+from vaultlab.figures.publication.save import save_with_optional_contract
 
 pytestmark = pytest.mark.slow
 
