@@ -450,11 +450,27 @@ def slide_has_only_title(slide: Any) -> bool:
 def _shape_key(shape: Any) -> Any:
     """Return a stable identity for a python-pptx shape across iterations.
 
-    ``id(shape)`` is unreliable because python-pptx wraps the underlying
-    XML element in a fresh Python object on every ``slide.shapes`` access.
-    The underlying lxml element ``shape._element`` IS stable, so we key
-    by ``id(shape._element)`` instead.
+    ``id(shape)`` and ``id(shape._element)`` are BOTH unreliable: python-pptx
+    wraps the underlying XML element in a fresh Python object on every
+    ``slide.shapes`` access, and lxml in turn hands back a fresh proxy object
+    for the same underlying element on each access — so ``id(shape._element)``
+    changes between two separate ``slide.shapes`` iterations (and the freed id
+    can even be *reused* by a different shape's proxy, depending on the
+    interpreter's GC/allocation state). That made title-vs-body matching
+    nondeterministic — fine in isolation, broken once an earlier test churned
+    the heap.
+
+    ``shape.shape_id`` (the ``<p:cNvPr id="...">`` integer) is assigned by the
+    OOXML and is stable + unique within a slide, which is the only scope in
+    which we compare keys. Prefer it; fall back to ``id`` only if a shape has
+    no usable ``shape_id``.
     """
+    try:
+        sid = shape.shape_id
+        if sid is not None:
+            return ("sid", int(sid))
+    except Exception:  # pragma: no cover — defensive
+        pass
     elem = getattr(shape, "_element", None)
     return id(elem) if elem is not None else id(shape)
 
