@@ -64,7 +64,7 @@ def render(
     log2fc_col, pvalue_col, feature_col
         Column names. Defaults match common conventions.
     output_path
-        Path to write the PNG (also writes companion PDF + provenance).
+        Path to write the PNG (a companion PDF is written alongside).
     log2fc_threshold
         Absolute log2FC threshold to call a feature "regulated". Default 1.0.
     pvalue_threshold
@@ -78,7 +78,7 @@ def render(
     Returns
     -------
     Path
-        Path to the saved PNG. PDF + .provenance.json land alongside.
+        Path to the saved PNG. A companion PDF lands alongside.
 
     Anchored: Pentimalli 2025 Fig 4 layout + scanpy + decoupler-py gallery
     convention.

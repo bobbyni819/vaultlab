@@ -5,9 +5,11 @@ Each archetype is a Python module with a ``render()`` function and a sibling
 and public-repo cross-references (scanpy / squidpy / bioconductor / scverse).
 
 The library now ships 11 archetypes (6 originals + 5 metabolism-priority
-expansions per SPEC-L). Each ``render()`` returns the saved figure ``Path``
-and writes a sibling ``.provenance.json`` recording the recipe version +
-anchor papers + input hash.
+expansions per SPEC-L). Each ``render()`` saves the figure and returns its
+``Path``; it does not itself write a provenance receipt. A pipeline that emits
+a recipe figure as an audited artifact attaches the ``.provenance.json`` +
+``.method.md`` receipt with ``vaultlab.provenance.write_receipts`` (the recipe
+version + anchor papers belong in that record's params).
 
 Original 6 (v0.0.3):
 

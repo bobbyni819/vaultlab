@@ -1,14 +1,17 @@
-"""Multi-format figure save with provenance sidecar.
+"""Multi-format figure save (provenance is a separate, opt-in concern).
 
 `save_fig()` writes the figure in multiple formats (PNG + PDF by default) and
-returns the list of output paths. The provenance sidecar (`.provenance.json`)
-is intentionally NOT written here — that's a separate concern handled by
-`vaultlab.provenance.write_provenance()` so callers can attach the rich
-input/code/params context.
+returns the list of output paths. The provenance sidecar (`.provenance.json` +
+`.method.md`) is intentionally NOT written here — that's a separate concern
+handled by `vaultlab.provenance.write_receipts()`, so a caller can attach the
+rich input/code/params context (a `ProvenanceRecord`) only when it wants a
+receipt.
 
-Convention (per AGENTS.md): every recipe's `render()` function calls
-`save_fig()` and then `vaultlab.provenance.write_provenance()` immediately
-after, so each figure has both a PNG/PDF + a provenance receipt.
+Convention (per AGENTS.md Red Line #2): a pipeline that *produces* a figure as
+an audited artifact follows its `save_fig()` with `write_receipts(path,
+record)` — e.g. `vaultlab.analysis.run_pipeline` does this for every figure it
+emits. The low-level `recipes.*.render()` helpers, by contrast, only save the
+image (no receipt); receipts are the producing caller's job, not the recipe's.
 """
 
 from __future__ import annotations
@@ -75,11 +78,12 @@ def save_fig(
     This function does NOT write a provenance sidecar. To get a full audit
     trail, follow with::
 
-        from vaultlab.provenance import write_provenance
-        write_provenance(paths[0], inputs=..., params=..., code_called=...)
+        from vaultlab.provenance import ProvenanceRecord, write_receipts
+        write_receipts(paths[0], ProvenanceRecord(generated_by=..., kind=...,
+                                                  inputs=..., params=...))
 
-    The provenance writer creates `{out_path}.provenance.json` and
-    `{out_path}.method.md` per the vaultlab reproducibility convention.
+    `write_receipts` creates `{path}.provenance.json` and `{path}.method.md`
+    per the vaultlab reproducibility convention.
     """
     import matplotlib.pyplot as plt
 
