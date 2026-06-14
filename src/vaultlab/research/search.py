@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import time
 from dataclasses import dataclass, field
@@ -99,11 +100,24 @@ def unified_search(
     return_trace: bool = False,
     recency_weight: float | None = None,
     queries: list[str] | None = None,
+    parallel: bool = True,
+    per_source_timeout_s: float | None = 180.0,
 ) -> list[Paper] | tuple[list[Paper], SearchTrace]:
     """Search across multiple APIs and deduplicate results.
 
     Results are deduplicated by DOI. When the same paper appears from multiple
     sources, metadata is merged (PubMed data is preferred for bio papers).
+
+    Sources are queried CONCURRENTLY (one worker thread per source) so a slow
+    API can't serialize behind the others — directly serving the "async-first,
+    keeps working rather than blocking" commitment. Each source keeps its own
+    ``requests.Session`` on a single thread (Sessions are not safe to share
+    across threads), so query variants for one source still run sequentially
+    within that source's thread. ``per_source_timeout_s`` is a backstop: if a
+    source exceeds it, that source is recorded as an error in the trace and the
+    remaining sources' results are still returned (the hung worker is abandoned,
+    not awaited). Output (dedup, merge, sort order) is identical to the
+    sequential path — only wall-time improves.
 
     Args:
         query: Search query string.
@@ -131,6 +145,19 @@ def unified_search(
             :func:`vaultlab.research.query_expansion.expand_query` to
             produce variants. ``None`` (default) preserves single-query
             behaviour.
+        parallel: When ``True`` (default), fan out across sources on a thread
+            pool (one thread per source). ``False`` runs sources sequentially
+            in the calling thread — useful for deterministic debugging or
+            thread-averse environments. Output is identical either way.
+        per_source_timeout_s: A SINGLE wall-clock budget for the whole
+            concurrent fan-out (all sources run at once, so this is ~the
+            slowest source's allowance). Any source not finished by the
+            deadline is abandoned and recorded as a ``"timeout after Ns"``
+            error; everything that finished in time still returns. Because it's
+            one global deadline (via ``as_completed``), total wall-time is
+            bounded by this value no matter how many sources hang — they don't
+            stack. ``None`` disables the backstop (rely solely on each client's
+            own HTTP timeout). Only applies when ``parallel``.
 
     Returns:
         List of deduplicated :class:`Paper` (default) or
@@ -160,102 +187,149 @@ def unified_search(
         query_list = [query]
     primary_query = query_list[0]
 
-    all_papers: list[Paper] = []
+    # ------------------------------------------------------------------
+    # Resolve which source branches actually run (requested AND a client was
+    # supplied), in a STABLE order. The (canonical_key, client) order here is
+    # the historical source order — preserved so the rebuilt ``all_papers``
+    # below is byte-for-byte the sequential ordering, keeping dedup/merge/sort
+    # identical.
+    #
+    # Per design-doc Q1/Q5 (2026-05-02): paperclip is the 7th source and any
+    # PaperclipUnavailable (missing auth / binary) raised inside ``.search`` is
+    # caught per-query in the worker and recorded as a per-source error; the
+    # other sources continue. No exception leaks out.
+    # ------------------------------------------------------------------
+    branches: list[tuple[str, Any]] = []
+    if "pubmed" in sources and ncbi_client is not None:
+        branches.append(("ncbi", ncbi_client))
+    if "springer" in sources and springer_client is not None:
+        branches.append(("springer", springer_client))
+    if "semantic" in sources and semantic_client is not None:
+        branches.append(("semantic_scholar", semantic_client))
+    if "crossref" in sources and crossref_client is not None:
+        branches.append(("crossref", crossref_client))
+    if "biorxiv" in sources and biorxiv_client is not None:
+        branches.append(("biorxiv", biorxiv_client))
+    if (
+        "scopus" in sources or "sciencedirect" in sources or "elsevier" in sources
+    ) and sciencedirect_client is not None:
+        branches.append(("scopus", sciencedirect_client))
+    if "paperclip" in sources and paperclip_client is not None:
+        branches.append(("paperclip", paperclip_client))
+
+    def _search_one_source(client: Any) -> tuple[list[list[Paper]], int, int, list[str]]:
+        """Run every query variant for ONE source, on one thread.
+
+        Returns ``(papers_per_query, total_hits, total_wall_ms, errors)``.
+        ``papers_per_query[i]`` are the papers for ``query_list[i]`` (empty on
+        that query's failure). Keeping the per-query buckets lets the caller
+        rebuild ``all_papers`` in the exact historical query-major order.
+        """
+        per_query: list[list[Paper]] = []
+        hits = 0
+        wall_ms = 0
+        errors: list[str] = []
+        for qq in query_list:
+            started = time.time()
+            try:
+                papers = client.search(qq, max_results=max_results) or []
+                wall_ms += int((time.time() - started) * 1000)
+                hits += len(papers)
+                per_query.append(papers)
+            except Exception as e:  # one source failing must not sink the rest
+                wall_ms += int((time.time() - started) * 1000)
+                errors.append(repr(e))
+                per_query.append([])
+                logger.warning("%s search failed: %s", "source", e)
+        return per_query, hits, wall_ms, errors
+
+    # ``results[i]`` aligns with ``branches[i]``: (canonical_key, papers_per_query
+    # | None on timeout, hits, wall_ms, errors).
+    results: list[tuple[str, list[list[Paper]] | None, int, int, list[str]]] = []
+    if parallel and len(branches) > 1:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(branches))
+        try:
+            future_to_key = {
+                executor.submit(_search_one_source, client): key for key, client in branches
+            }
+            # Harvest as futures COMPLETE, under a single GLOBAL deadline. This
+            # is the key to "a slow source can't serialize behind the others":
+            # a per-future ``fut.result(timeout=T)`` loop would stack the budget
+            # (N hung sources -> up to N*T wall time). ``as_completed`` applies
+            # ONE wall-clock budget across the whole fan-out, so total time is
+            # bounded by ``per_source_timeout_s`` regardless of how many sources
+            # hang. Whatever finished in time is collected; the rest are marked
+            # timed-out below.
+            collected: dict[str, tuple[list[list[Paper]] | None, int, int, list[str]]] = {}
+            try:
+                for fut in concurrent.futures.as_completed(
+                    future_to_key, timeout=per_source_timeout_s
+                ):
+                    key = future_to_key[fut]
+                    try:
+                        collected[key] = fut.result()
+                    except Exception as e:  # worker shouldn't raise, but never sink the run
+                        collected[key] = (None, 0, 0, [repr(e)])
+                        logger.warning("%s search errored: %s", key, e)
+            except concurrent.futures.TimeoutError:
+                # Global deadline hit — sources not in ``collected`` are abandoned.
+                pass
+            # Reassemble in branch order (deterministic), filling timed-out sources.
+            for key, _client in branches:
+                if key in collected:
+                    per_query, hits, wall_ms, errors = collected[key]
+                    results.append((key, per_query, hits, wall_ms, errors))
+                else:
+                    timeout_ms = int((per_source_timeout_s or 0) * 1000)
+                    results.append(
+                        (key, None, 0, timeout_ms, [f"timeout after {per_source_timeout_s}s"])
+                    )
+                    logger.warning("%s search timed out after %ss", key, per_source_timeout_s)
+        finally:
+            # wait=False: do NOT block on a hung source's still-running HTTP
+            # call. Each client carries its own (≤90s) request timeout, so the
+            # abandoned worker thread terminates on its own shortly after.
+            executor.shutdown(wait=False)
+    else:
+        for key, client in branches:
+            per_query, hits, wall_ms, errors = _search_one_source(client)
+            results.append((key, per_query, hits, wall_ms, errors))
+
+    # ------------------------------------------------------------------
+    # Build the trace. Pre-seed an entry for EVERY requested source (even ones
+    # with no client / no hits) so the sidecar shape matches the historical
+    # behaviour, then overlay the branches that actually ran.
+    # ------------------------------------------------------------------
+    per_source: dict[str, SourceTrace] = {
+        _SOURCE_TO_TRACE_KEY[s]: SourceTrace(queries=list(query_list))
+        for s in sources
+        if s in _SOURCE_TO_TRACE_KEY
+    }
+    for key, _per_query, hits, wall_ms, errors in results:
+        per_source[key] = SourceTrace(
+            queries=list(query_list), hits=hits, errors=errors, wall_time_ms=wall_ms
+        )
     trace = SearchTrace(
         topic=primary_query,
         queried_at=_iso_utc_now(),
-        per_source={
-            _SOURCE_TO_TRACE_KEY[s]: SourceTrace(queries=list(query_list))
-            for s in sources
-            if s in _SOURCE_TO_TRACE_KEY
-        },
+        per_source=per_source,
     )
-    # Track which source returned each paper (pre-dedup).
-    pre_dedup_source_by_paper: list[str] = []
 
-    # Fan out: for each variant, hit every configured source. Across
-    # variants we accumulate hits; dedup-by-DOI runs once at the end.
-    for q in query_list:
-        if "pubmed" in sources and ncbi_client is not None:
-            papers = _run_source(
-                "ncbi",
-                trace,
-                lambda c=ncbi_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
+    # Reassemble ``all_papers`` in the historical query-major, source-inner
+    # order so dedup-by-DOI's "first PubMed wins / first-seen base" and the
+    # stable final sort are byte-for-byte identical to the sequential path.
+    all_papers: list[Paper] = []
+    pre_dedup_source_by_paper: list[str] = []  # retained for trace/debug parity
+    for qi in range(len(query_list)):
+        for key, per_query, *_rest in results:
+            if per_query is None:
+                continue
+            papers = per_query[qi] if qi < len(per_query) else []
             all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["ncbi"] * len(papers))
+            pre_dedup_source_by_paper.extend([key] * len(papers))
 
-        if "springer" in sources and springer_client is not None:
-            papers = _run_source(
-                "springer",
-                trace,
-                lambda c=springer_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["springer"] * len(papers))
-
-        if "semantic" in sources and semantic_client is not None:
-            papers = _run_source(
-                "semantic_scholar",
-                trace,
-                lambda c=semantic_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["semantic_scholar"] * len(papers))
-
-        if "crossref" in sources and crossref_client is not None:
-            papers = _run_source(
-                "crossref",
-                trace,
-                lambda c=crossref_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["crossref"] * len(papers))
-
-        if "biorxiv" in sources and biorxiv_client is not None:
-            papers = _run_source(
-                "biorxiv",
-                trace,
-                lambda c=biorxiv_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["biorxiv"] * len(papers))
-
-        if (
-            "scopus" in sources or "sciencedirect" in sources or "elsevier" in sources
-        ) and sciencedirect_client is not None:
-            papers = _run_source(
-                "scopus",
-                trace,
-                lambda c=sciencedirect_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["scopus"] * len(papers))
-
-        if "paperclip" in sources and paperclip_client is not None:
-            # Per design-doc Q1 (2026-05-02), paperclip is the 7th parallel
-            # source — surfaces papers (especially arXiv preprints + recent
-            # 2024-2025 SOTA) that the live PubMed/S2/CrossRef/biorxiv/
-            # Springer/Elsevier stack misses.
-            #
-            # Per Q5, PaperclipUnavailable raised inside .search (missing
-            # auth, missing binary, etc.) is caught by _run_source and
-            # recorded as a per-source error in the trace. The pipeline
-            # continues with the other 6 sources. No exception leaks out.
-            papers = _run_source(
-                "paperclip",
-                trace,
-                lambda c=paperclip_client, qq=q: c.search(qq, max_results=max_results),
-                accumulate=True,
-            )
-            all_papers.extend(papers)
-            pre_dedup_source_by_paper.extend(["paperclip"] * len(papers))
+    for key, _pq, hits, _wall, _errs in results:
+        logger.info("%s returned %d results", key, hits)
 
     # Deduplicate by DOI
     deduped = _deduplicate(all_papers)
@@ -293,50 +367,6 @@ def unified_search(
     if return_trace:
         return deduped, trace
     return deduped
-
-
-def _run_source(
-    canonical_key: str,
-    trace: SearchTrace,
-    fn: Any,
-    *,
-    accumulate: bool = False,
-) -> list[Paper]:
-    """Invoke a per-source search ``fn`` and record stats into ``trace``.
-
-    Args:
-        canonical_key: Trace-key for this source ("ncbi", "crossref", ...).
-        trace: The :class:`SearchTrace` to record stats into.
-        fn: The zero-arg callable that performs the search.
-        accumulate: When ``True``, hits and wall-time are summed across
-            calls (used for multi-query fan-out so the trace records the
-            total hits across all variants, not just the last one). When
-            ``False`` (default), behaves as before — overwrites any prior
-            stats. Errors always append, regardless.
-    """
-    started = time.time()
-    try:
-        papers = fn() or []
-        elapsed_ms = int((time.time() - started) * 1000)
-        slot = trace.per_source.setdefault(canonical_key, SourceTrace())
-        if accumulate:
-            slot.hits += len(papers)
-            slot.wall_time_ms += elapsed_ms
-        else:
-            slot.hits = len(papers)
-            slot.wall_time_ms = elapsed_ms
-        logger.info("%s returned %d results", canonical_key, len(papers))
-        return papers
-    except Exception as e:
-        elapsed_ms = int((time.time() - started) * 1000)
-        slot = trace.per_source.setdefault(canonical_key, SourceTrace())
-        slot.errors.append(repr(e))
-        if accumulate:
-            slot.wall_time_ms += elapsed_ms
-        else:
-            slot.wall_time_ms = elapsed_ms
-        logger.warning("%s search failed: %s", canonical_key, e)
-        return []
 
 
 def _iso_utc_now() -> str:
