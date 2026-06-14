@@ -27,7 +27,9 @@ import numpy as np
 if TYPE_CHECKING:
     import pandas as pd
 
-from vaultlab.figures.publication.save import save_fig
+    from vaultlab.figures.contract import FigureContract
+
+from vaultlab.figures.publication.save import save_with_optional_contract
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ def render(
     name_col: str = "name",
     output_path: Path | str,
     title: str = "",
+    contract: FigureContract | None = None,
     cmap: str = "RdBu_r",
     vmin: float | None = None,
     vmax: float | None = None,
@@ -219,5 +222,4 @@ def render(
         ax.set_title(title, fontsize=11)
 
     out = Path(output_path)
-    paths = save_fig(fig, out, dpi=300)
-    return paths[0]
+    return save_with_optional_contract(fig, out, contract=contract)

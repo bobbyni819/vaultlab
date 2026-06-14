@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt
 if TYPE_CHECKING:
     import pandas as pd
 
-from vaultlab.figures.publication.save import save_fig
+    from vaultlab.figures.contract import FigureContract
+
+from vaultlab.figures.publication.save import save_with_optional_contract
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ def render(
     palette: str | None = None,
     output_path: Path | str,
     title: str = "",
+    contract: FigureContract | None = None,
     point_size: float = 4.0,
     alpha: float = 0.7,
     show_legend: bool = True,
@@ -122,5 +125,4 @@ def render(
         ax.set_title(title, fontsize=11)
 
     out = Path(output_path)
-    paths = save_fig(fig, out, dpi=300)
-    return paths[0]
+    return save_with_optional_contract(fig, out, contract=contract)

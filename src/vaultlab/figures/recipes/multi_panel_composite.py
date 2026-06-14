@@ -10,12 +10,15 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vaultlab.figures.publication.save import save_fig
+if TYPE_CHECKING:
+    from vaultlab.figures.contract import FigureContract
+
+from vaultlab.figures.publication.save import save_with_optional_contract
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,7 @@ def render(
     panel_letter_color: str = "black",
     output_path: Path | str,
     title: str = "",
+    contract: FigureContract | None = None,
     figsize_per_panel: tuple[float, float] = (4.0, 3.0),
 ) -> Path:
     """Compose N existing figure files into a multi-panel composite.
@@ -111,5 +115,4 @@ def render(
         fig.suptitle(title, fontsize=12, fontweight="bold")
 
     out = Path(output_path)
-    paths = save_fig(fig, out, dpi=300)
-    return paths[0]
+    return save_with_optional_contract(fig, out, contract=contract)
