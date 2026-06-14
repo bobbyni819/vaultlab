@@ -2,6 +2,27 @@
 
 > **Claude Code: read [`READ_FIRST.md`](READ_FIRST.md) BEFORE this file.** READ_FIRST is the action-oriented dispatch + role-pass + first-encounter cheat sheet that maps natural-language asks to the right vaultlab primitive. CLAUDE.md (this file) is the architectural philosophy behind those primitives — read it second, when you need to understand *why* a primitive is shaped a certain way or before changing one.
 
+## Invoked from bobby_bluebubbles monitor (2026-05-18)
+
+This repo is a routing target for the iMessage monitor at `~/Downloads/bobby-tools/src/bobby_bluebubbles/monitor.py`. When a research/citation message arrives (e.g. `@claude can you summarize this paper DOI:...`) in an allowlisted iMessage chat, the monitor spawns `claude --print` with `cwd=<this repo>` so vaultlab's tooling becomes the answer framework.
+
+**Reply-format rule (load-bearing — Bobby cares about this):**
+
+| Substance of answer | What to do |
+|---|---|
+| ≤3 short sentences, factual ("what's the DOI for…", "is this paper open access?") | Reply inline as plain text — just stdout the answer. |
+| >3 sentences, structured ("summarize this paper", "compare these methods", a lit review) | **Generate an MD report → save in the appropriate KB → render to PDF (`vaultlab export pdf <md>` or equivalent) → `bobby_bluebubbles.send_file` with a short caption.** Don't dump multi-paragraph science text into iMessage. |
+
+The chat itself stays short ("Just sent the summary — PDF attached"); the depth lives in the saved KB file, which is searchable forever.
+
+**If you've been invoked this way** (the prompt starts with `[Context: this is an iMessage from <sender> in chat '<chat>'.]`):
+- Read the rule above. Pick text vs PDF based on substance.
+- You can call vaultlab primitives (`lit-search`, `cite verify`, etc.) — call ONE in text mode (the user is waiting). For PDF mode, you may chain a few (search → summarize → cite-audit → render).
+- Skip the full READ_FIRST onboarding flow. For a one-line iMessage answer, a quick lookup + short summary is plenty.
+- Output only the draft text (or the "PDF sent" caption) to stdout — the monitor parses stdout as the reply.
+- For **ambient** triggers, return the JSON envelope (`{"should_reply": ..., "draft": ...}`) per the monitor's system prompt.
+
+
 ## First-encounter checklist (run this BEFORE any vaultlab call)
 
 When Claude Code arrives at a project that uses vaultlab, run these three checks **before** invoking any slash command. Skipping them leaves the user staring at `ModuleNotFoundError` or `KbRootNotConfigured` from three layers deep — bad first impression.
@@ -282,6 +303,10 @@ After completing a meaningful task (rendering a figure, drafting a section, runn
 
 If you (Claude) catch yourself writing *"X is Y"* in scientific output, stop and rewrite as *"X is consistent with Y"* or *"data are compatible with Y"* (see AGENTS.md). Don't ship overclaimed conclusions.
 
+### Look at rendered figures — don't just assert they rendered
+
+When a primitive produces a visual artifact (a `figures.recipes` render, an analysis-pipeline figure, a slide, an exported PDF page), **`Read` the output image and judge it the way a reviewer would**: layout, panel placement/alignment, legible and non-clipped labels/legends, readable color/contrast, sane axes/ticks, nothing overlapping or cut off. "render didn't error" / "PNG > 1 KB" is a floor, **not** the bar — a test can pass while the figure is ugly or mislabeled. Fix what looks wrong in the plotting code and re-render, then look again. This is the "verify for real" rule applied to visuals; Claude can view images, so use it (the `slide-review` / `review-deck` primitives exist for decks).
+
 ## What to NOT do
 
 - Do **not** embed prompts as triple-quoted strings in Python (META PRINCIPLE #1)
@@ -328,6 +353,26 @@ The `MEMORY.md` index is one line per memory; dive into specific entries when re
 **When to write:** any time the user corrects or confirms in a way that's non-obvious from the code. Save what is applicable to future conversations.
 
 **When NOT to write:** ephemeral task state (use `START_HERE.md`); code patterns derivable from the repo (read it instead); anything the user explicitly asks to forget.
+
+## Core Terms
+
+The dozen-plus terms Bobby and AI sessions reuse constantly. Full glossary (84 terms, grouped): see [`_Ubiquitous_Language.md`](_Ubiquitous_Language.md). Per-component natural-language explanations: each `src/vaultlab/<package>/README.md`.
+
+- **Knowledge base (KB)** — one plain folder of Obsidian markdown per project; vaultlab's long-term memory. Every task reads it before starting and writes back when done.
+- **Companion mode** — vaultlab accompanies the user's real work with full life-context (KB + Google + Outlook + meetings); it does NOT autonomously generate research questions or run studies.
+- **lit-arc** — the flagship literature pipeline: search → influence map → most-open-first PDF acquisition → page-cited summary cards → a 3-paragraph lineage arc, written into the KB.
+- **Influence map** — the who-cites-whom citation graph from seed papers; tells a *foundational* paper apart from one that is merely *loud*, and reaches forward to recent work.
+- **Summary card (Tier-A card)** — a one-page, page-cited reading of one deep-read PDF where every finding carries a `[pN]` page marker or is dropped.
+- **Crosstalk** — the bounded multi-agent meeting (analyst/critic/synthesizer, hard cap 5 rounds) that drafts, challenges, and reconciles a finding before it ships.
+- **Figure contract** — the pre-plotting commitment (conclusion, per-panel evidence chain, archetype, Python-or-R backend, export targets); a panel with no unique evidence is a *rigor* issue, not a style nit.
+- **Recipe** — one of eleven figure-archetype modules; each cites ≥3 published **anchor papers**; the producing caller writes a provenance receipt (the recipe itself only saves the image).
+- **Role / Critic** — a named agent persona loaded from markdown+YAML; the Critic pressure-tests a finding (methods critic = stats rigor, literature critic = source quality).
+- **Hedged voice** — mandatory output register: "consistent with X" / "appears to X", never "proves X" or "X is Y".
+- **Provenance receipt** — the `.provenance.json` + `.method.md` sidecar pair written next to an audited output (AGENTS.md Red Line #2: no silent outputs).
+- **State-aware preflight** — glob prior outputs before a run so a primitive *extends* existing work instead of starting from zero (extend mode, not redo).
+- **KB-context preamble (compose-preamble)** — the token-budgeted START_HERE + decisions + summaries block prepended to every spawned sub-agent so sessions never zero-shoot.
+- **Tidy result table** — a post-analysis CSV/Parquet/TSV (one header row, one observation per row); the ONLY input the analysis pipeline accepts. Scope discipline rejects raw-data formats.
+- **START_HERE.md / decisions-log.md** — per-project resume brief (newest day on top, auto-maintained) and append-only design/scope decision record.
 
 ## When in doubt
 
