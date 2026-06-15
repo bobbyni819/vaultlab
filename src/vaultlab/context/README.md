@@ -14,9 +14,9 @@ The package top-level (`vaultlab.context`) re-exports only the always-needed res
 
 ### Top-level (`vaultlab.context`)
 
-The locations registry + KB-root resolver — the small universal core every command touches.
+The locations registry + KB-root resolver — the small universal core every command touches. Surfaced to users as the `vaultlab init` CLI subcommand (which writes `[paths] kb_root`) and re-exported for every orchestrator / slash command via `from vaultlab.context import ...`.
 
-- `resolve_kb_root` — the single canonical way to obtain the KB root. Walks a fixed resolution chain (explicit arg → `$VAULTLAB_KB_ROOT` → `locations.toml` → legacy `bobby_kb` config → first-run prompt) and returns a `Path`; raises if nothing resolves and the runner is non-interactive.
+- `resolve_kb_root` — the single canonical way to obtain the KB root. Walks a fixed resolution chain (explicit arg → `$VAULTLAB_KB_ROOT` → `locations.toml` `[paths] kb_root`, then legacy `[kb] root`/`[kb] default` in the same file → `bobby_kb` `config.json` compat → first-run prompt) and returns a `Path`; raises if nothing resolves and the runner is non-interactive. Never auto-creates the directory. The `bobby_kb` compat read checks `~/.config/bobby_kb/`, `%APPDATA%`, and `%LOCALAPPDATA%` so a Windows install whose config landed at the idiomatic location still resolves.
 - `KbRootNotConfigured` — exception raised when no KB root resolves non-interactively; carries a `suggested_default` so callers can offer a one-key-accept prompt.
 - `load_locations` — read `~/.config/vaultlab/locations.toml` into a nested dict (empty dict if the file is missing).
 - `get_path` — look up one named path by dotted slug (e.g. `"work_log.google_doc_id"`); returns `None` if unset rather than raising.
@@ -79,14 +79,16 @@ Outlook Classic via COM automation. **Windows-only** — every call raises a cle
 - Contacts: `read_contacts`, `search_contacts`, `create_contact`.
 - Models: `Email`, `CalendarEvent`, `Task`, `Contact` dataclasses.
 
-> Note: the sibling `.md` docs (`google.md`, `outlook.md`, `meetings.md`) carry `status: scaffold` / "planned" surfaces and list some symbols (e.g. `ingest_doc_to_kb`, `start_recording`) that are aspirational. This README lists what is actually exported by the code today; treat the `.md` files as design intent, not the current API.
+> Note: the sibling `.md` docs (`google.md`, `outlook.md`, `meetings.md`) carry `status: scaffold` / "planned" surfaces and list some symbols that are aspirational, not yet wired up. In particular `google.md` advertises a Gmail/Calendar/RAG surface (`search_emails`, `get_today_schedule`, `find_free_slots`, `ingest_doc_to_kb`, `scope_for_project`, `as_context_passages`) that the code does **not** export today: the `google` subpackage ships only auth + Docs + Sheets + Drive, there is no `calendar` module, and the lone `gmail.py` exposes a single `send_email` helper that is **not** re-exported from `vaultlab.context.google`. This README lists what is actually exported by the code today; treat the `.md` files as design intent, not the current API.
 
 ## How it fits
 
 `vaultlab.context` sits *underneath* the rest of vaultlab as the addressing layer:
 
-- **`resolve_kb_root` is upstream of everything.** Per the first-encounter checklist in `CLAUDE.md`, an agent resolves the KB root before invoking any primitive; orchestrators, the CLI, and slash commands all call it to find where to read/write.
-- **The locations registry feeds the companion pipes.** Slash commands like `/brief`, `/update`, `/weekly`, and `/eod` read named paths (work-log doc ID, transcript folders) from `locations.toml` rather than re-asking.
+- **`resolve_kb_root` is upstream of everything.** Per the first-encounter checklist in `CLAUDE.md`, an agent resolves the KB root before invoking any primitive; orchestrators, the CLI, and slash commands all call it to find where to read/write. In this repo the slash commands that open with `from vaultlab.context import resolve_kb_root` include `/lit-arc`, `/lit-arc-next`, `/lit-report`, `/papers-index`, `/onboard-me`, `/onboard-project`, `/start-project`, `/build-deck`, `/find-analogs`, `/full-reader`, `/next-analysis`, `/run-analysis`, and `/understand-figure` — i.e. essentially every artifact-producing primitive.
+- **The `vaultlab init` CLI subcommand is the write-side entry point.** `vaultlab init` (no-arg) runs the first-run prompt via `resolve_kb_root(interactive=True)`; `vaultlab init <path>` skips the prompt and calls `register_path("paths.kb_root", <path>)` directly. Either way the choice persists to `locations.toml` so the prompt fires exactly once per machine. This is the one CLI surface this package backs.
+- **`/link-repo` is the write-side entry point for the linked-code pipe.** The `/link-repo <path>` slash command calls `set_linked_repo` to store the repo path in `.vaultlab-project.json`, after which crosstalk meetings read its files + recent commits via `list_files` / `read_file` / `list_recent_changes`.
+- **The locations registry feeds the companion pipes.** Companion slash commands / skills (e.g. `/brief`, `/update`, `/weekly`, `/eod`) read named paths (work-log doc ID, transcript folders) from `locations.toml` rather than re-asking. When a needed slug is absent, `missing_paths_grill_doc` queues the question as a grill doc instead of blocking the chat.
 - **The companion pipes write back into the KB.** `meetings.ingest_transcript` lands transcripts in `<kb>/Sources/Meetings/`; the Google/Outlook pipes surface email/calendar/doc content into prompts. From there the normal KB index + retrieval pick them up.
 - **`code` bridges into crosstalk meetings.** It lets a researcher's own repo + data feed the multi-agent reasoning machinery without first converting everything into KB notes.
 - **`user_memory` is read on session start.** `recall_all()` seeds the always-loaded calibration summary so the system doesn't relearn preferences each chat.

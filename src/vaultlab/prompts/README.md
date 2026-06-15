@@ -2,7 +2,7 @@
 
 Reserved slot for a future shared prompt loader. **Not yet implemented** — today it is an empty placeholder with no public API.
 
-Plain-language subsystem context: none specific to this package (prompts-as-markdown is the spine of [vaultlab-subsystems.md](../../../docs/architecture.md) — see "Markdown is the user-facing interface"). Architecture sketch: [`docs/architecture.md`](../../../docs/architecture.md), which lists `prompts/` as the intended "Prompt loader."
+Plain-language subsystem context: **none** — this package ships nothing user-facing, so the plain-language subsystems guide (`Wiki/Concepts/vaultlab-subsystems.md`) has no entry for it. The "prompts-as-markdown" idea it is *meant* to serve is a system-wide invariant (`CLAUDE.md` / `docs/architecture.md`, "Markdown is the user-facing interface"), not a feature of this slot. Architecture sketch: [`docs/architecture.md`](../../../docs/architecture.md), whose top-level map lists `prompts/` as the intended "Prompt loader."
 
 ## What it is
 

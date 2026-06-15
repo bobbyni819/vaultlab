@@ -5,7 +5,7 @@ The place where a study gets written down *before* you run it — a pre-registra
 > Plain-language subsystem overview: `G:/My Drive/Knowledge/vaultlab/Wiki/Concepts/vaultlab-subsystems.md`.
 > Architectural sketch: [`docs/architecture.md`](../../../docs/architecture.md) → the `plan/` line in the top-level structure ("Pre-registration drafting").
 
-> **Status: placeholder.** As of this writing the package is a stub — `__init__.py` carries only `"""Placeholder. Will be populated by migration commits."""`, there is no `__all__`, and no drafting or comparison code has landed yet. Everything in *Planned scope* below describes intended behaviour from the architecture doc and the slash-command catalogue, **not** code you can call today. The matching `.claude/commands/plan.md` does not exist yet either. Treat this README as the design contract the migration commits should fill in.
+> **Status: placeholder.** As of this writing the package is a stub — `__init__.py` carries only `"""Placeholder. Will be populated by migration commits."""`, there is no `__all__`, and no drafting or comparison code has landed yet. The sibling CLI module `src/vaultlab/cli/plan/__init__.py` is an identical placeholder, and the CLI dispatcher does not register a `plan` command. Everything in the *planned surface* below describes intended behaviour from the architecture doc and the slash-command catalogue, **not** code you can call today. The matching `.claude/commands/plan.md` slash file does not exist yet either. Treat this README as the design contract the migration commits should fill in.
 
 ## What it is
 
@@ -15,10 +15,12 @@ The place where a study gets written down *before* you run it — a pre-registra
 
 **None yet.** The package exports no public symbols — `__init__.py` is a placeholder docstring with no `__all__` and no importable functions or classes. There is nothing to call here right now; importing `vaultlab.plan` gives you an empty namespace.
 
-When the migration commits land, the intended surface (per the slash-command catalogue in `.claude/commands/COMMANDS.md`) is a small pre-registration workflow exposed through two CLI subcommands:
+The CLI scaffold is empty too: `src/vaultlab/cli/plan/__init__.py` is the same placeholder docstring, and the minimal CLI dispatcher in `src/vaultlab/cli/__init__.py` (`main()`) wires up `init`, `demo`, `list-policy-skipped`, `fetch-list`, `paperclip-grep`, `paperclip-sql`, `claude-setup`, and `slides` — but **no `plan` command**. So `vaultlab plan ...` is not a real command today, and there is no `.claude/commands/plan.md` slash file behind it. Both the package and its CLI route are reserved namespaces waiting on the migration commits.
+
+When the migration commits land, the intended surface (per the slash-command catalogue in `.claude/commands/COMMANDS.md`, under the "Pre-registration" heading) is a small pre-registration workflow exposed through two subcommands:
 
 - *(planned)* `/plan draft <topic>` — draft a pre-registration plan for a study: the hypothesis, design, planned analysis, and the outcomes that would confirm or refute it, written to the project KB as a markdown artifact.
-- *(planned)* `/plan compare-to-actual <plan> <run>` — diff a pre-registered plan against what an analysis run actually did, surfacing deviations as warnings (the analysis you ran versus the analysis you promised).
+- *(planned)* `/plan compare-to-actual <plan> <run>` — diff a pre-registered plan against what an analysis run actually did, surfacing deviations as warnings (the analysis you ran versus the analysis you promised). The `<run>` it would consume is the tidy-results output of the result-analysis pipeline (`vaultlab.analysis` / `/run-analysis`), not raw data.
 
 ## How it fits
 
@@ -33,8 +35,12 @@ When the migration commits land, the intended surface (per the slash-command cat
 
 ## Files
 
-- `__init__.py` — placeholder module docstring; no exports yet.
+- `__init__.py` — placeholder module docstring (`"""Placeholder. Will be populated by migration commits."""`); no exports yet.
 - `README.md` — this file (the design contract for the package).
+
+Related-but-elsewhere (also placeholders today):
+
+- `src/vaultlab/cli/plan/__init__.py` — the reserved CLI subcommand module; same placeholder docstring, not yet wired into the `vaultlab` CLI dispatcher.
 
 ## See also
 

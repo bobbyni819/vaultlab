@@ -21,7 +21,9 @@ When the `/research-status` reporter is migrated in, this section should be repl
 
 Today: nothing reads from or writes to `vaultlab.status` — it sits unwired in the tree.
 
-As intended (per `docs/architecture.md` and `CLAUDE.md`): this slot is meant to back the `/research-status` slash command, reading project state from the KB (`START_HERE.md`, `decisions-log.md`, the project's `Output/` glob, pipeline/provenance receipts) and emitting a human-readable "where things stand" summary. Until that migration lands, the slash command and CLI subcommand do not exist.
+As intended (per `docs/architecture.md` and `CLAUDE.md`): this slot is meant to back the `/research-status` slash command, reading project state from the KB (`START_HERE.md`, `decisions-log.md`, the project's `Output/` glob, pipeline/provenance receipts) and emitting a human-readable "where things stand" summary — *current focus, recent activity, files to read next*.
+
+The intent is more than a code comment: `/research-status` is listed in the slash-command inventory (`.claude/commands/COMMANDS.md`) as an available command. But that listing is aspirational — there is **no** `research-status.md` command spec, **no** CLI subcommand (`vaultlab status` does not exist), and **no** Python here to invoke. Until the migration lands, a user who tries `/research-status` finds nothing wired up behind it.
 
 ## What it does NOT do
 

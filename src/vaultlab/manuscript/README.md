@@ -6,7 +6,7 @@ Publication-prose helpers for the last mile of a paper: polishing language to jo
 
 ## What it is
 
-When a researcher has finished the science and now has to make the *paper* pass an editor, three chores recur: tighten the prose to Nature/Cell/eLife house style, write a disciplined reply to every reviewer comment, and produce a Data Availability Statement that a FAIR-minded editor will accept. `vaultlab.manuscript` ships those three as addressable, testable data + thin helpers — the rule sets, taxonomies, repository registry, and templates live in code so they are versioned and queryable, while the actual prose transformation happens at slash-command time when the LLM consults them. The three pieces were absorbed from the MIT-licensed nature-skills bundle (Yuan Yizhe, SJTU). The `/polish`, `/respond`, and `/das-audit` skills are the user-facing front ends.
+When a researcher has finished the science and now has to make the *paper* pass an editor, three chores recur: tighten the prose to Nature/Cell/eLife house style, write a disciplined reply to every reviewer comment, and produce a Data Availability Statement that a FAIR-minded editor will accept. `vaultlab.manuscript` ships those three as addressable, testable data + thin helpers — the rule sets, taxonomies, repository registry, and templates live in code so they are versioned and queryable, while the actual prose transformation happens at slash-command time when the LLM consults them. The three pieces were absorbed from the MIT-licensed nature-skills bundle (Yuan Yizhe, SJTU); the lineage is recorded in [`INSPIRATIONS.md`](../../../INSPIRATIONS.md) (the *Yuan Yizhe — `nature-skills`* entry). The `/polish`, `/respond`, and `/das-audit` slash commands are the user-facing front ends; there is **no** `vaultlab manuscript` CLI subcommand today (the helpers are imported directly inside those commands).
 
 ## Public surface
 
@@ -16,7 +16,7 @@ The package barrel (`__init__`) re-exports the three submodules themselves; the 
 
 - `POLISH_RULES` — the 25 house-style rules as `PolishRule` records, grouped into seven categories (sentence architecture, hedging, section tense, vocabulary, citation integrity, overclaim, house style).
 - `WORKFLOW_STEPS` — the ordered 12-step polishing workflow (sentence-split → tense-audit → … → plain-text-output).
-- `BRITISH_ENGLISH_PAIRS` — the US→UK spelling table (60-odd entries: `color`→`colour`, `analyze`→`analyse`, …).
+- `BRITISH_ENGLISH_PAIRS` — the US→UK spelling table (65 entries spanning the `-or→-our`, `-ize→-ise`, `-l→-ll`, `-er→-re`, and miscellaneous-medical families: `color`→`colour`, `analyze`→`analyse`, `tumor`→`tumour`, `leukemia`→`leukaemia`, …).
 - `PolishRule` — one frozen rule record (`id`, `category`, `rule`, `rationale`).
 - `Category` — the `Literal` of the seven rule domains.
 - `rules_by_category()` — group `POLISH_RULES` into a `{category: [rules]}` map.
@@ -32,9 +32,9 @@ The package barrel (`__init__`) re-exports the three submodules themselves; the 
 - `ReviewerComment` — one comment plus its stable ID, classified kind, planned action, and evidence reference.
 - `ResponseLetter` — the full point-by-point letter for one reviewer.
 - `stable_id(reviewer, comment_index)` — mint the never-reordered `R<r>-C<n>` ID.
-- `classify_comment(text)` — heuristic keyword classifier → a `CommentKind`.
-- `suggest_action(kind)` — best-guess default `ActionType` for a kind (author overrides).
-- `parse_reviewer_block(text, reviewer_index=1)` — parse a numbered reviewer block into scaffolded `ReviewerComment`s with kind + suggested action auto-filled.
+- `classify_comment(text)` — heuristic keyword classifier → a `CommentKind`; returns `METHOD_QUESTION` as the fall-through default when no keyword group matches.
+- `suggest_action(kind)` — best-guess default `ActionType` for every one of the 12 kinds (author overrides). Notably maps `missing_experiment` and `editorial` to `AUTHOR_INPUT_NEEDED`, and `overclaim`/`scope` to `SOFTEN_CLAIM`.
+- `parse_reviewer_block(text, reviewer_index=1)` — parse a numbered reviewer block (matches `1.`, `(1)`, `Comment 1:`, … and folds wrapped continuation lines back into each item) into scaffolded `ReviewerComment`s with stable ID + kind + suggested action auto-filled, leaving `response_text` and `evidence_ref` empty for the author.
 - `render_response_letter(letter)` — emit the letter as markdown.
 - `write_response_letter(out_path, letter, …)` — render + write the markdown letter with provenance sidecars.
 
@@ -45,13 +45,13 @@ The package barrel (`__init__`) re-exports the three submodules themselves; the 
 
 ### `data_availability` — DAS templates, FAIR checklist, repository registry
 
-- `REPOSITORIES` — registry of common data repositories (`Repository` records: slug, name, domain, identifier regex, URL + citation templates) covering GEO, SRA, ENA, PRIDE, PDB, EMPIAR, IDR, EGA, dbGaP, Dryad, Zenodo, OSF, GitHub, and more.
-- `FAIR_CHECKLIST` — the 14 FAIR items as `FAIRItem` records, grouped by principle.
+- `REPOSITORIES` — registry of 15 common data repositories keyed by slug (`Repository` records: slug, name, domain, identifier-format regex, URL template, and a ready-to-paste DAS citation-prose template). Covers genomics (GEO, SRA, GenBank, ENA), proteomics (PRIDE, MassIVE), structural (PDB), imaging (EMPIAR, IDR), controlled-access human (EGA, dbGaP), and general-purpose archives (Dryad, Zenodo, OSF, GitHub). Each entry's `identifier_format` is an anchored regex (e.g. `^GSE\d+$`) usable to validate a supplied accession.
+- `FAIR_CHECKLIST` — the 14 FAIR items as `FAIRItem` records, split 4/3/3/4 across Findable / Accessible / Interoperable / Reusable. The package ships the checklist as data; the Y/N/TODO self-assessment is walked by the LLM at `/das-audit` time.
 - `Repository` / `FAIRItem` / `FAIRPrinciple` — the record types and the FAIR-principle `Literal`.
 - `DAScenario` — the six DAS scenarios (public deposit, restricted human, on-request, supplementary-only, internal-only, code-archived).
 - `StatementAuditFinding` — one audit finding with a `blocker`/`major`/`minor` severity.
-- `statement_template(scenario)` — fetch a DAS prose template for a scenario.
-- `audit_statement(text)` — heuristic audit of a candidate DAS (e.g. flags "available on reasonable request" with no contact, human data with no restriction clause, no accession identifier at all).
+- `statement_template(scenario)` — fetch a DAS prose template for a scenario (accepts a `DAScenario` or its string slug). Templates carry `{placeholder}` fields (`{repository_clauses}`, `{dac_contact}`, `{contact}`, `{github_repo}`, `{zenodo_doi}`, …) the caller fills in; the `internal_only` template is itself an `⚠ AUTHOR INPUT NEEDED` block listing the three deposit options.
+- `audit_statement(text)` — heuristic audit of a candidate DAS; returns a list of `StatementAuditFinding`. It flags "available on reasonable request" with no contact route (blocker), human-subject data with no restriction/consent clause (major), no persistent identifier or URL anywhere in the text (major), and an unfalsifiable "all data are available" with no named destination (minor).
 - `write_data_availability_statement(out_path, statement, …)` — write the DAS plus its audit findings, with provenance sidecars.
 
 ## How it fits
@@ -73,7 +73,7 @@ This package sits at the **manuscript / submission** end of the pipeline, downst
 - `respond_html.py` — single-file HTML view of a `ResponseLetter` (consumer of `vaultlab.report`).
 - `data_availability.py` — repository registry, FAIR checklist, DAS scenario templates, and the DAS auditor.
 
-No sibling `.md` docs ship inside the package today; the per-skill prose (when-to-load guidance, tone, difficult-case playbooks) lives in the `SKILL.md` files the docstrings reference.
+No sibling `.md` docs ship inside the package today (the module docstrings point at upstream `SKILL.md` files from the nature-skills bundle that are **not** vendored into this repo). The per-skill operational prose that vaultlab actually ships — when-to-load guidance, tone, the 12-step walk, difficult-case playbooks — lives in the three `.claude/commands/*.md` slash commands (`polish.md`, `respond.md`, `das-audit.md`).
 
 ## See also
 
