@@ -77,3 +77,7 @@ venv/
 !examples/**/expected_outputs/*.pptx
 !src/vaultlab/data/
 !src/vaultlab/data/**
+# ...but never the compiled-bytecode caches under data/ — the broad un-ignore
+# above would otherwise re-include them (root cause of tracked .pyc files).
+src/vaultlab/data/**/__pycache__/
+src/vaultlab/data/**/*.pyc
