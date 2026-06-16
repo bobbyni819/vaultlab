@@ -13,9 +13,11 @@ Public API
 ----------
 
 - :class:`FigureEntry` — dataclass for one (figure, caption, results) bundle
+- :class:`RenderResult` — the render outcome: report path, figures dir,
+  entry count, and an ``open_command`` (a ``bobby-kb open`` string the caller
+  can print so the user opens the report in Obsidian)
 - :func:`render_report` — write the markdown file (and copy figures into a
-  sibling ``figures/`` folder if requested)
-- :func:`open_in_obsidian` — surface via ``bobby-kb open``
+  sibling ``figures/`` folder if requested); returns a :class:`RenderResult`
 
 Examples
 --------

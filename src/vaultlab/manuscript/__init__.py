@@ -12,7 +12,7 @@ Submodules:
 
 All three were absorbed from the nature-skills bundle (Yuan Yizhe, SJTU)
 at github.com/Yuan1z0825/nature-skills, MIT-licensed; vaultlab credits
-this in ``INSPIRATIONS.md`` (when added).
+this in ``INSPIRATIONS.md`` (the *Yuan Yizhe — nature-skills* entry).
 """
 
 from __future__ import annotations

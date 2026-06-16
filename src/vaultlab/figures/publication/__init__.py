@@ -5,7 +5,8 @@ Low-level building blocks used by recipes and slide layouts:
     style.py       - rcParams + figure size presets + style_ax()
     color.py       - colorblind-safe palettes + Rule 14 neutral-grey defaults
     legend.py      - standalone legend export + density-aware positioning
-    save.py        - multi-format figure save (PNG + PDF + provenance sidecar)
+    save.py        - multi-format figure save (PNG + PDF); the provenance
+                     sidecar is written separately via vaultlab.provenance.write_receipts
     coverage.py    - CoverageManifest dataclass (P0.2; full impl in later commit)
     stamp.py       - parameter_stamp() for --K CLI convention (P0.3 helper)
 
@@ -16,7 +17,10 @@ Convention (per AGENTS.md):
     - Color discipline (Rule 14): neutral grey is the default for bars when row
       labels already carry the category; opt in to color only for sign,
       cross-panel tracking, or secondary axis.
-    - Every figure save writes a sibling .provenance.json (Q14.5).
+    - An audited figure gets a sibling .provenance.json + .method.md (Q14.5) —
+      written by the producing pipeline (e.g. analysis.run_pipeline) via
+      vaultlab.provenance.write_receipts after save_fig, not by save_fig or the
+      recipe itself.
 
 Ported from CODEX_MALDIIMS/lipid_annotations/ims_xgboost/figures/fig_style.py
 (P0.1 metabolism lift, file 06 in the architecture grill).
