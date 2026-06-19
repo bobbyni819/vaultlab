@@ -431,8 +431,15 @@ def _search_embeddings(
 # ---------------------------------------------------------------------------
 
 
+_TEXT_GLOBS = ("*.md", "*.txt")
+
+
 def _collect_paths(kb_root: Path, subdirs: tuple[str, ...]) -> list[Path]:
-    """Walk the KB and collect markdown files in the named subdirectories.
+    """Walk the KB and collect text files in the named subdirectories.
+
+    Indexes ``.md`` and ``.txt`` files. When a named subdir does not exist the
+    KB root itself is searched as a fallback (supports flat corpora dumped
+    directly into the KB root).
 
     Dot-prefixed segments *inside* the KB (``.obsidian/``, ``.git/``,
     ``.embeddings/``) are skipped. Dot-prefixed components in the KB root's own
@@ -440,16 +447,29 @@ def _collect_paths(kb_root: Path, subdirs: tuple[str, ...]) -> list[Path]:
     Drive's ``.shortcut-targets-by-id`` shortcut would collect zero files.
     """
     out: list[Path] = []
+    seen: set[Path] = set()
+
+    def _add(paths):
+        for p in paths:
+            if p not in seen:
+                seen.add(p)
+                out.append(p)
+
     for sub in subdirs:
         d = kb_root / sub
         if not d.exists():
             continue
-        for p in d.rglob("*.md"):
-            # Only inspect segments below the scanned subdir, so a hidden
-            # ancestor of the KB root cannot exclude the whole tree.
-            if any(part.startswith(".") for part in p.relative_to(d).parts):
-                continue
-            out.append(p)
+        for glob in _TEXT_GLOBS:
+            _add(
+                p for p in d.rglob(glob)
+                if not any(part.startswith(".") for part in p.relative_to(d).parts)
+            )
+    # Always include files directly in the KB root (supports flat corpora).
+    for glob in _TEXT_GLOBS:
+        _add(
+            p for p in kb_root.glob(glob)
+            if not any(part.startswith(".") for part in p.relative_to(kb_root).parts)
+        )
     return out
 
 
