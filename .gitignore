@@ -77,3 +77,11 @@ venv/
 !examples/**/expected_outputs/*.pptx
 !src/vaultlab/data/
 !src/vaultlab/data/**
+
+# Stray local artifacts — never commit (zips, scratch dirs, pulled data, test output)
+*.zip
+/files/
+/test-result-reports/
+/elife-91157-fig4-data1-v1/
+# __pycache__ under data/ slips through the data/** re-include above; re-ignore it
+src/vaultlab/data/**/__pycache__/

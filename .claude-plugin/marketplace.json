@@ -1,0 +1,15 @@
+{
+  "name": "vaultlab",
+  "owner": {
+    "name": "vaultlab",
+    "url": "https://github.com/bobbyni819/vaultlab"
+  },
+  "description": "In-repo marketplace for the vaultlab Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "vaultlab",
+      "source": "./",
+      "description": "Research companion for biological scientists, wired into Claude Code as slash commands + skill."
+    }
+  ]
+}

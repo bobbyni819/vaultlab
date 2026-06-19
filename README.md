@@ -37,6 +37,39 @@ Summarize what's installed, then wait for my project description.
 
 Claude does the entire bootstrap — clone → pip install → KB init → slash command wiring → reads the dispatch table → asks what project you want. After step 5, slash commands like `/lit-arc`, `/build-deck`, `/cite audit` are available in every Claude Code session on your machine. Full walkthrough: [`QUICKSTART.md`](QUICKSTART.md).
 
+## Install as a Claude Code plugin
+
+vaultlab also ships as a Claude Code **plugin**, so another lab can install the slash
+commands + skill without hand-wiring them. This appears to be the lowest-friction way to
+get the Claude Code surface; it does **not** install the Python engine (see step 3).
+
+```
+# 1. Add this repo as a plugin marketplace
+/plugin marketplace add bobbyni819/vaultlab
+#    (a git URL or a local clone path also works:
+#     /plugin marketplace add https://github.com/bobbyni819/vaultlab
+#     /plugin marketplace add ./vaultlab)
+
+# 2. Install the plugin from that marketplace
+/plugin install vaultlab@vaultlab
+```
+
+This loads all `/lit-arc`, `/build-deck`, `/run-analysis`, … commands (namespaced as
+`/vaultlab:<command>` if a name collides) plus the `using-vaultlab` skill.
+
+**3. Install the engine.** The plugin packages only the Claude Code surface
+(commands + skill). Most commands call into the `vaultlab` Python package, so you still
+need to bootstrap the engine once — run the [Quickstart](#quickstart--paste-this-into-claude-code)
+paste-block above (or, minimally, `pip install vaultlab` then `vaultlab init`). Until the
+engine is installed, engine-backed commands are expected to fail with an import or
+`KbRootNotConfigured` error rather than run.
+
+**4. Confirm.** In a fresh Claude Code session, type `/` — the vaultlab commands
+(`/lit-arc`, `/build-deck`, …) appearing in the menu confirms the *plugin* loaded,
+independent of the engine. For an end-to-end check, run `/vaultlab:demo`: it needs the
+engine from step 3 (it calls the `vaultlab` package) but no API key or KB, and is expected
+to produce a real journal-club deck fully offline.
+
 ## First run — produce a real artifact in under 5 minutes
 
 No KB, no API key, no Claude Code required to confirm the install works:

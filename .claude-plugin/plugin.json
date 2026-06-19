@@ -1,0 +1,14 @@
+{
+  "name": "vaultlab",
+  "version": "0.0.6",
+  "description": "Research companion for biological scientists — literature search, citation verification, wet-lab data analysis, figure generation, manuscript drafting, and slide decks, wired into Claude Code.",
+  "author": {
+    "name": "vaultlab",
+    "url": "https://github.com/bobbyni819/vaultlab"
+  },
+  "homepage": "https://github.com/bobbyni819/vaultlab",
+  "repository": "https://github.com/bobbyni819/vaultlab",
+  "license": "MIT",
+  "commands": "./.claude/commands",
+  "skills": "./.claude/skills"
+}
