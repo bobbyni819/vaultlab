@@ -87,7 +87,7 @@ def _resolve_api_key(explicit: str | None) -> str:
     return load_anthropic_api_key(explicit)
 
 
-def _make_client(api_key: str | None):
+def _make_client(api_key: str | None) -> Any:
     """Build an ``anthropic.Anthropic`` client, deferring the import."""
     import anthropic
 
@@ -179,7 +179,7 @@ def _extract_json(text: str) -> dict[str, Any] | None:
 
 def _call_messages(
     *,
-    client,
+    client: Any,
     model: str,
     system: str,
     user_blocks: list[dict[str, Any]],
@@ -204,7 +204,7 @@ def _call_messages(
 def describe_via_sdk(
     task: DescribeFigureTask,
     *,
-    client=None,
+    client: Any | None = None,
     model: str = DEFAULT_VISION_MODEL,
     api_key: str | None = None,
 ) -> str:
@@ -226,7 +226,7 @@ def describe_via_sdk(
 def match_via_sdk(
     task: MatchElementsTask,
     *,
-    client=None,
+    client: Any | None = None,
     model: str = DEFAULT_VISION_MODEL,
     api_key: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -247,7 +247,7 @@ def match_via_sdk(
 def verify_via_sdk(
     task: VerifyAnnotationTask,
     *,
-    client=None,
+    client: Any | None = None,
     model: str = DEFAULT_VISION_MODEL,
     api_key: str | None = None,
 ) -> VerificationIteration:
@@ -274,7 +274,7 @@ def understand_figure_via_sdk(
     paper_tldr: str = "",
     figure_id: str | None = None,
     annotated_png_path: str | Path | None = None,
-    client=None,
+    client: Any | None = None,
     model: str = DEFAULT_VISION_MODEL,
     api_key: str | None = None,
     dilation_px: int = 8,
@@ -368,7 +368,7 @@ def understand_figure_via_sdk(
         # Render fresh annotations onto the source figure before each pass
         # so the verifier sees the current state of the boxes.
         try:
-            render_debug_overlay(figure_path, annotations, annotated_path)
+            render_debug_overlay(figure_path, annotations, annotated_path)  # type: ignore[arg-type]
         except Exception as exc:
             logger.warning("verify_fn: render_debug_overlay failed: %s", exc)
         expected = [a.label for a in annotations] or described_elements_holder["value"]

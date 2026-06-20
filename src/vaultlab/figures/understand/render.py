@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, cast
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -147,7 +148,7 @@ def render_annotated_figure(
         try:
             tw, th = draw.textbbox((0, 0), num, font=label_font)[2:]
         except AttributeError:
-            tw, th = label_font.getsize(num)  # type: ignore[attr-defined]
+            tw, th = cast(Any, label_font).getsize(num)
 
         # On-figure marker
         marker_xy = (x0, max(0, y0 - marker_size))
@@ -201,7 +202,7 @@ def render_annotated_figure(
 # ---------------------------------------------------------------------------
 
 
-def _font(size: int) -> ImageFont.FreeTypeFont:
+def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = [
         r"C:\Windows\Fonts\arialbd.ttf",
         r"C:\Windows\Fonts\arial.ttf",
@@ -301,7 +302,7 @@ def render_annotated_figure_v3(
         try:
             tw, th = draw.textbbox((0, 0), num, font=label_font)[2:]
         except AttributeError:
-            tw, th = label_font.getsize(num)  # type: ignore[attr-defined]
+            tw, th = cast(Any, label_font).getsize(num)
 
         marker_top = max(0, y0 - marker_size - 4)
         marker_xy = (x0, marker_top)

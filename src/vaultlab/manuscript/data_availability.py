@@ -22,17 +22,23 @@ Public API
 - :data:`FAIR_CHECKLIST` — 14 items per FAIR principle
 - :func:`statement_template` — fetch a DAS template by scenario
 - :func:`audit_statement` — flag common DAS failures
+- :func:`data_sources_from_coverage` — draft source-data DAS prose from
+  figure coverage manifests
 - :class:`Repository`, :class:`FAIRItem`, :class:`DAScenario`
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Literal
 
+from vaultlab.figures.publication.coverage import CoverageManifest
 from vaultlab.provenance import ProvenanceRecord, write_receipts
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -309,6 +315,196 @@ def statement_template(scenario: DAScenario | str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Figure coverage manifests -> DAS source-data draft
+
+
+@dataclass(frozen=True)
+class FigureDataSource:
+    """One source data file and the figures that use it."""
+
+    source_file: str
+    figure_ids: list[str]
+    sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class CoverageDataSources:
+    """Deduplicated source-data inventory derived from coverage manifests."""
+
+    sources: list[FigureDataSource]
+    n_manifests: int
+    n_figures: int
+    sha256_conflicts: dict[str, list[str]] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, object]:
+        """Serialize the inventory to plain Python containers."""
+        return {
+            "sources": [
+                {
+                    "source_file": source.source_file,
+                    "figure_ids": list(source.figure_ids),
+                    "sha256": source.sha256,
+                }
+                for source in self.sources
+            ],
+            "n_manifests": self.n_manifests,
+            "n_figures": self.n_figures,
+            "sha256_conflicts": {
+                source_file: list(hashes)
+                for source_file, hashes in sorted(self.sha256_conflicts.items())
+            },
+        }
+
+    def to_markdown(self) -> str:
+        """Render the source-data inventory as a compact markdown table."""
+        lines = [
+            "| source_file | figures | sha256[:8] |",
+            "|---|---|---|",
+        ]
+        for source in self.sources:
+            short_hash = source.sha256[:8] if source.sha256 is not None else ""
+            lines.append(
+                f"| {source.source_file} | {', '.join(source.figure_ids)} | {short_hash} |"
+            )
+        return "\n".join(lines)
+
+    def to_das_draft(self) -> str:
+        """Draft hedged DAS prose from coverage-derived source-data links."""
+        if not self.sources:
+            return ""
+
+        lines: list[str] = []
+        has_local_source = False
+        for source in self.sources:
+            figures = ", ".join(source.figure_ids)
+            lines.append(
+                f"The source data underlying Figure(s) {figures} are provided in "
+                f"`{source.source_file}`."
+            )
+            if source.source_file in self.sha256_conflicts:
+                conflicts = ", ".join(self.sha256_conflicts[source.source_file])
+                lines.append(
+                    "The coverage manifests report conflicting SHA-256 values for "
+                    f"`{source.source_file}` ({conflicts}); this warrants author review "
+                    "before final deposition."
+                )
+            if _looks_like_local_source(source.source_file):
+                has_local_source = True
+
+        if has_local_source:
+            lines.append(
+                "accession-based deposit remains TODO for local source-data paths before "
+                "this draft is finalized."
+            )
+        return "\n".join(lines)
+
+
+@dataclass
+class _SourceAccumulator:
+    figure_ids: set[str] = field(default_factory=set)
+    sha256_values: set[str] = field(default_factory=set)
+
+
+def data_sources_from_coverage(coverage_dir: Path | str) -> CoverageDataSources:
+    """Collect deduplicated source-data links from ``*.coverage.json`` sidecars."""
+    root = Path(coverage_dir)
+    if not root.is_dir():
+        return CoverageDataSources(sources=[], n_manifests=0, n_figures=0)
+
+    by_source: dict[str, _SourceAccumulator] = {}
+    figure_ids: set[str] = set()
+    n_manifests = 0
+
+    for sidecar in sorted(root.glob("*.coverage.json")):
+        try:
+            manifest = CoverageManifest.read_json(sidecar)
+        except Exception as exc:
+            logger.warning("Skipping unreadable coverage manifest %s: %s", sidecar, exc)
+            continue
+
+        n_manifests += 1
+        figure_id = _coverage_figure_id(manifest, sidecar)
+        figure_ids.add(figure_id)
+        source_hashes = manifest.source_data_sha256 or {}
+        for source_file in manifest.source_data:
+            if not source_file.strip():
+                continue
+            source = source_file.strip()
+            accumulator = by_source.setdefault(source, _SourceAccumulator())
+            accumulator.figure_ids.add(figure_id)
+            source_hash = source_hashes.get(source)
+            if source_hash is not None and source_hash.strip():
+                accumulator.sha256_values.add(source_hash.strip())
+
+    sources: list[FigureDataSource] = []
+    conflicts: dict[str, list[str]] = {}
+    for source_file, accumulator in sorted(by_source.items()):
+        sorted_hashes = sorted(accumulator.sha256_values)
+        if len(sorted_hashes) > 1:
+            conflicts[source_file] = sorted_hashes
+        sources.append(
+            FigureDataSource(
+                source_file=source_file,
+                figure_ids=sorted(accumulator.figure_ids),
+                sha256=sorted_hashes[0] if sorted_hashes else None,
+            )
+        )
+
+    return CoverageDataSources(
+        sources=sources,
+        n_manifests=n_manifests,
+        n_figures=len(figure_ids),
+        sha256_conflicts=conflicts,
+    )
+
+
+def merge_into_das(existing_statement: str, sources: CoverageDataSources) -> str:
+    """Append coverage-derived source-data lines to an existing DAS without duplicates."""
+    draft = sources.to_das_draft()
+    if not draft:
+        return existing_statement
+
+    merged = existing_statement.rstrip()
+    for line in draft.splitlines():
+        if line not in merged:
+            if merged:
+                merged += "\n"
+            merged += line
+    return merged
+
+
+def _coverage_figure_id(manifest: CoverageManifest, sidecar: Path) -> str:
+    figure_id = manifest.figure_id.strip()
+    if figure_id:
+        return figure_id
+    stem = sidecar.name.removesuffix(".coverage.json")
+    return stem or sidecar.stem
+
+
+def _looks_like_local_source(source_file: str) -> bool:
+    lowered = source_file.lower()
+    if lowered.startswith(("http://", "https://", "doi:", "ftp://")):
+        return False
+    accession_prefixes = (
+        "gse",
+        "srp",
+        "prjna",
+        "prjeb",
+        "pxd",
+        "msv",
+        "empiar-",
+        "idr",
+        "egas",
+        "phs",
+    )
+    if lowered.startswith(accession_prefixes):
+        return False
+    if lowered.startswith("10."):
+        return False
+    return any(marker in source_file for marker in ("/", "\\", ".")) or not source_file.strip()
+
+
+# ---------------------------------------------------------------------------
 # Audit
 
 
@@ -430,14 +626,18 @@ def write_data_availability_statement(
 
 
 __all__ = [
+    "CoverageDataSources",
     "DAScenario",
     "FAIR_CHECKLIST",
     "FAIRItem",
     "FAIRPrinciple",
+    "FigureDataSource",
     "REPOSITORIES",
     "Repository",
     "StatementAuditFinding",
     "audit_statement",
+    "data_sources_from_coverage",
+    "merge_into_das",
     "statement_template",
     "write_data_availability_statement",
 ]

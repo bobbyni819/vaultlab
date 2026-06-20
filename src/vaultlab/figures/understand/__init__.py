@@ -101,6 +101,11 @@ from vaultlab.figures.understand.models import (
     VerificationIteration,
 )
 from vaultlab.figures.understand.render import render_debug_overlay
+from vaultlab.figures.understand.visual_qa import (
+    VisualQAFinding,
+    VisualQAResult,
+    visual_qa_figure,
+)
 from vaultlab.kb.paths import slugify_doi
 
 __all__ = [
@@ -110,6 +115,8 @@ __all__ = [
     "FigureUnderstandLog",
     "MatchElementsTask",
     "Region",
+    "VisualQAFinding",
+    "VisualQAResult",
     "VerificationIteration",
     "VerifyAnnotationTask",
     "describe_response_schema",
@@ -125,6 +132,7 @@ __all__ = [
     "render_verify_from_response",
     "save_understand_log",
     "understand_figure",
+    "visual_qa_figure",
     "verify_response_schema",
 ]
 

@@ -21,16 +21,26 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "FigureStage",
     "INDEX_FILENAME",
+    "archive_superseded",
+    "default_stage",
+    "find_existing_for_claim",
     "find_figure_pairs",
+    "get_figure_stage",
+    "list_by_stage",
     "load_figure_index",
+    "manuscript_figures",
+    "set_figure_stage",
     "update_figure_index",
 ]
 
@@ -39,6 +49,22 @@ INDEX_FILENAME = "figure-index.json"
 _DEFAULT_TOP_N = 3
 _COLOR_BIN_SIZE = 32  # 8x8x8 = 512 bins
 _DOMINANT_COLOR_TOP_K = 16  # keep top-16 dominant bins
+
+
+class FigureStage(str, Enum):
+    """Lifecycle state for a registered figure."""
+
+    EXPLORATORY = "exploratory"
+    CANDIDATE = "candidate"
+    MANUSCRIPT = "manuscript"
+    SUPPLEMENTARY = "supplementary"
+    ARCHIVED = "archived"
+    SUPERSEDED = "superseded"
+
+
+def default_stage() -> FigureStage:
+    """Default lifecycle stage for legacy entries without metadata."""
+    return FigureStage.EXPLORATORY
 
 
 def _hash_path(path: Path) -> str:
@@ -88,6 +114,25 @@ def _index_path(kb_root: Path, project_slug: str) -> Path:
     return Path(kb_root) / project_slug / INDEX_FILENAME
 
 
+def _as_entry_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [cast("dict[str, Any]", item) for item in value if isinstance(item, dict)]
+
+
+def _write_figure_index(
+    kb_root: Path | str,
+    project_slug: str,
+    entries: list[dict[str, Any]],
+) -> None:
+    """Atomically write a project's figure index."""
+    path = _index_path(Path(kb_root), project_slug)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text(json.dumps(entries, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def load_figure_index(
     kb_root: Path | str,
     project_slug: str,
@@ -100,14 +145,223 @@ def load_figure_index(
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
-            return data
+            return _as_entry_list(data)
         if isinstance(data, dict) and "entries" in data:
-            return data["entries"]
+            return _as_entry_list(data["entries"])
         logger.warning("figure-index at %s has unknown shape; treating as empty", path)
         return []
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("figure-index at %s unreadable: %s", path, exc)
         return []
+
+
+def _entry_stage(entry: dict[str, Any]) -> FigureStage:
+    raw = entry.get("lifecycle_stage")
+    if isinstance(raw, FigureStage):
+        return raw
+    if isinstance(raw, str):
+        normalized = raw.strip().lower()
+        for stage in FigureStage:
+            if normalized in {stage.value, stage.name.lower()}:
+                return stage
+    return default_stage()
+
+
+def _stage_history(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    history: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        stage = item.get("stage")
+        ts = item.get("ts")
+        if stage is None or ts is None:
+            continue
+        history.append({"stage": str(stage), "ts": str(ts)})
+    return history
+
+
+def _figure_identifier_matches(entry: dict[str, Any], figure_id_or_path: Path | str) -> bool:
+    identifier = str(figure_id_or_path)
+    direct_fields = (
+        "path_hash",
+        "figure_path",
+        "path",
+        "figure_id",
+        "id",
+    )
+    if any(str(entry.get(field)) == identifier for field in direct_fields if entry.get(field) is not None):
+        return True
+
+    metadata = entry.get("extra_metadata")
+    if isinstance(metadata, dict):
+        metadata_id = metadata.get("figure_id") or metadata.get("id")
+        if metadata_id is not None and str(metadata_id) == identifier:
+            return True
+
+    entry_path = entry.get("figure_path") or entry.get("path")
+    if not isinstance(entry_path, str):
+        return False
+    try:
+        query_path = Path(figure_id_or_path).resolve()
+    except (OSError, RuntimeError):
+        return False
+    try:
+        indexed_path = Path(entry_path).resolve()
+    except (OSError, RuntimeError):
+        return False
+    return indexed_path == query_path
+
+
+def _claim_values(entry: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    for key in ("claims", "related_claims"):
+        raw = entry.get(key)
+        if isinstance(raw, list):
+            values.extend(_claim_list_values(raw))
+
+    metadata = entry.get("extra_metadata")
+    if isinstance(metadata, dict):
+        for key in ("claims", "related_claims"):
+            raw = metadata.get(key)
+            if isinstance(raw, list):
+                values.extend(_claim_list_values(raw))
+        for key in ("claim_id", "claim_text"):
+            raw = metadata.get(key)
+            if raw is not None:
+                values.append(str(raw))
+
+    metadata = entry.get("metadata")
+    if isinstance(metadata, dict):
+        for key in ("claims", "related_claims"):
+            raw = metadata.get(key)
+            if isinstance(raw, list):
+                values.extend(_claim_list_values(raw))
+        for key in ("claim_id", "claim_text"):
+            raw = metadata.get(key)
+            if raw is not None:
+                values.append(str(raw))
+    return values
+
+
+def _claim_list_values(items: list[Any]) -> list[str]:
+    values: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            for key in ("claim_id", "claim_text", "text", "id"):
+                raw = item.get(key)
+                if raw is not None:
+                    values.append(str(raw))
+        else:
+            values.append(str(item))
+    return values
+
+
+def set_figure_stage(
+    kb_root: Path | str,
+    project_slug: str,
+    *,
+    figure_id_or_path: Path | str,
+    stage: FigureStage,
+    ts: str | None = None,
+) -> bool:
+    """Set a figure lifecycle stage and append a history event."""
+    index = load_figure_index(kb_root, project_slug)
+    timestamp = ts or datetime.now().isoformat(timespec="seconds")
+    changed = False
+    for entry in index:
+        if not _figure_identifier_matches(entry, figure_id_or_path):
+            continue
+        entry["lifecycle_stage"] = stage.value
+        entry.setdefault("superseded_by", None)
+        history = _stage_history(entry.get("stage_history"))
+        history.append({"stage": stage.value, "ts": timestamp})
+        entry["stage_history"] = history
+        changed = True
+        break
+    if changed:
+        _write_figure_index(kb_root, project_slug, index)
+    return changed
+
+
+def get_figure_stage(
+    kb_root: Path | str,
+    project_slug: str,
+    *,
+    figure_id_or_path: Path | str,
+) -> FigureStage | None:
+    """Return a figure's lifecycle stage, defaulting legacy entries to exploratory."""
+    for entry in load_figure_index(kb_root, project_slug):
+        if _figure_identifier_matches(entry, figure_id_or_path):
+            return _entry_stage(entry)
+    return None
+
+
+def list_by_stage(
+    kb_root: Path | str,
+    project_slug: str,
+    stage: FigureStage,
+) -> list[dict[str, Any]]:
+    """List index entries at a lifecycle stage."""
+    return [entry for entry in load_figure_index(kb_root, project_slug) if _entry_stage(entry) is stage]
+
+
+def find_existing_for_claim(
+    kb_root: Path | str,
+    project_slug: str,
+    *,
+    claim_id: str | None = None,
+    claim_text: str | None = None,
+    include_archived: bool = False,
+) -> list[dict[str, Any]]:
+    """Find registered figures that already reference a manuscript claim."""
+    if claim_id is None and claim_text is None:
+        return []
+
+    matches: list[dict[str, Any]] = []
+    excluded = {FigureStage.ARCHIVED, FigureStage.SUPERSEDED}
+    for entry in load_figure_index(kb_root, project_slug):
+        if not include_archived and _entry_stage(entry) in excluded:
+            continue
+        claims = _claim_values(entry)
+        claim_id_match = claim_id is not None and claim_id in claims
+        claim_text_match = claim_text is not None and claim_text in claims
+        if claim_id_match or claim_text_match:
+            matches.append(entry)
+    return matches
+
+
+def archive_superseded(
+    kb_root: Path | str,
+    project_slug: str,
+    *,
+    figure_id_or_path: Path | str,
+    superseded_by: str,
+    ts: str | None = None,
+) -> bool:
+    """Mark a figure as superseded without moving or deleting its file."""
+    index = load_figure_index(kb_root, project_slug)
+    timestamp = ts or datetime.now().isoformat(timespec="seconds")
+    changed = False
+    for entry in index:
+        if not _figure_identifier_matches(entry, figure_id_or_path):
+            continue
+        entry["lifecycle_stage"] = FigureStage.SUPERSEDED.value
+        entry["superseded_by"] = superseded_by
+        history = _stage_history(entry.get("stage_history"))
+        history.append({"stage": FigureStage.SUPERSEDED.value, "ts": timestamp})
+        entry["stage_history"] = history
+        changed = True
+        break
+    if changed:
+        _write_figure_index(kb_root, project_slug, index)
+    return changed
+
+
+def manuscript_figures(kb_root: Path | str, project_slug: str) -> list[dict[str, Any]]:
+    """Return figures promoted to the manuscript stage."""
+    return list_by_stage(kb_root, project_slug, FigureStage.MANUSCRIPT)
 
 
 def update_figure_index(
@@ -178,17 +432,21 @@ def _signature_distance(sig_a: dict[str, Any], sig_b: dict[str, Any]) -> float:
     Returns 0.0 (identical) → 1.0 (orthogonal). Returns 1.0 if either
     signature is empty.
     """
-    bins_a = sig_a.get("dominant_bins") or []
-    counts_a = sig_a.get("dominant_bin_counts") or []
-    bins_b = sig_b.get("dominant_bins") or []
-    counts_b = sig_b.get("dominant_bin_counts") or []
+    raw_bins_a = sig_a.get("dominant_bins")
+    raw_counts_a = sig_a.get("dominant_bin_counts")
+    raw_bins_b = sig_b.get("dominant_bins")
+    raw_counts_b = sig_b.get("dominant_bin_counts")
+    bins_a = raw_bins_a if isinstance(raw_bins_a, list) else []
+    counts_a = raw_counts_a if isinstance(raw_counts_a, list) else []
+    bins_b = raw_bins_b if isinstance(raw_bins_b, list) else []
+    counts_b = raw_counts_b if isinstance(raw_counts_b, list) else []
 
     if not bins_a or not bins_b:
         return 1.0
 
     # Build sparse vectors keyed by tuple(bin_key)
-    def to_dict(bins, counts):
-        out = {}
+    def to_dict(bins: list[Any], counts: list[Any]) -> dict[tuple[Any, ...], float]:
+        out: dict[tuple[Any, ...], float] = {}
         for k, c in zip(bins, counts, strict=False):
             out[tuple(k)] = float(c)
         return out
@@ -200,12 +458,12 @@ def _signature_distance(sig_a: dict[str, Any], sig_b: dict[str, Any]) -> float:
         return 1.0
 
     # Cosine similarity
-    dot = sum(da.get(k, 0.0) * db.get(k, 0.0) for k in keys)
-    norm_a = sum(v * v for v in da.values()) ** 0.5
-    norm_b = sum(v * v for v in db.values()) ** 0.5
+    dot: float = sum(da.get(k, 0.0) * db.get(k, 0.0) for k in keys)
+    norm_a: float = sum(v * v for v in da.values()) ** 0.5
+    norm_b: float = sum(v * v for v in db.values()) ** 0.5
     if norm_a == 0 or norm_b == 0:
         return 1.0
-    sim = dot / (norm_a * norm_b)
+    sim: float = dot / (norm_a * norm_b)
     return 1.0 - max(0.0, min(1.0, sim))
 
 
@@ -241,11 +499,12 @@ def find_figure_pairs(
     query_entry = next((e for e in index if e.get("path_hash") == query_hash), None)
     query_recipe = (query_entry or {}).get("recipe_id")
 
-    candidates = []
+    candidates: list[dict[str, Any]] = []
     for entry in index:
         if entry.get("path_hash") == query_hash:
             continue
-        sig = entry.get("pixel_signature") or {}
+        raw_sig = entry.get("pixel_signature")
+        sig = raw_sig if isinstance(raw_sig, dict) else {}
         dist = _signature_distance(query_sig, sig)
         sim = 1.0 - dist
         bonus = 0.0
@@ -270,5 +529,5 @@ def find_figure_pairs(
             }
         )
 
-    candidates.sort(key=lambda c: -c["similarity"])
+    candidates.sort(key=lambda c: -float(c["similarity"]))
     return candidates[:top_n]

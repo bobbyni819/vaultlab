@@ -154,7 +154,7 @@ def save_legend(
     fig_leg, ax_leg = plt.subplots(figsize=(3, height))
     ax_leg.axis("off")
 
-    leg_kwargs: dict = {
+    leg_kwargs: dict[str, object] = {
         "loc": "center",
         "frameon": False,
         "fontsize": fontsize,
