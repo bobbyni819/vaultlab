@@ -16,11 +16,21 @@ from vaultlab.figures.acquisition import (
     acquire_figures_for_corpus,
     figure_cache_dir,
 )
+from vaultlab.figures.explain import (
+    FigureExplainer,
+    explain_figure,
+    explain_from_bundle,
+    write_explainer,
+)
 
 __all__ = [
     "Figure",
     "FigureAcquisitionResult",
+    "FigureExplainer",
     "acquire_figures",
     "acquire_figures_for_corpus",
+    "explain_figure",
+    "explain_from_bundle",
     "figure_cache_dir",
+    "write_explainer",
 ]
