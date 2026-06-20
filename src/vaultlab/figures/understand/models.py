@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 
 @dataclass
@@ -154,8 +154,8 @@ class FigureUnderstandLog:
     n_iterations: int
 
     step1_description: str = ""
-    step2_regions: list[dict] = field(default_factory=list)
-    step3_matches: list[dict] = field(default_factory=list)
+    step2_regions: list[dict[str, Any]] = field(default_factory=list)
+    step3_matches: list[dict[str, Any]] = field(default_factory=list)
     step4_verifications: list[VerificationIteration] = field(default_factory=list)
 
     annotated_png_path: str = ""

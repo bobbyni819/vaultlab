@@ -77,7 +77,7 @@ class AuditResult:
 # ---------------------------------------------------------------------------
 
 
-def _load_image(path: Path):
+def _load_image(path: Path) -> Any:
     try:
         from PIL import Image
     except ImportError as exc:  # pragma: no cover — PIL is in vaultlab base deps
@@ -92,7 +92,7 @@ def _load_image(path: Path):
 # ---------------------------------------------------------------------------
 
 
-def _check_title_cutoff(img) -> AuditCheck:
+def _check_title_cutoff(img: Any) -> AuditCheck:
     """Detect content clipped at the top edge.
 
     Heuristic: if the topmost 4 pixel rows have any non-background pixel
@@ -128,7 +128,7 @@ def _check_title_cutoff(img) -> AuditCheck:
 # ---------------------------------------------------------------------------
 
 
-def _check_axis_label_cutoff(img) -> AuditCheck:
+def _check_axis_label_cutoff(img: Any) -> AuditCheck:
     """Detect content clipped at the bottom or left edge."""
     import numpy as np
 
@@ -158,7 +158,7 @@ def _check_axis_label_cutoff(img) -> AuditCheck:
 # ---------------------------------------------------------------------------
 
 
-def _check_legend_overlap(img, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
+def _check_legend_overlap(img: Any, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
     """Heuristic: a legend rendered ON TOP of data points is detectable as
     a high-density rectangular region near a corner. Without parsing the
     actual legend bbox from matplotlib, we can only flag suspiciously
@@ -180,7 +180,7 @@ def _check_legend_overlap(img, recipe_metadata: dict[str, Any] | None) -> AuditC
 # ---------------------------------------------------------------------------
 
 
-def _check_colorbar_overlap(img, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
+def _check_colorbar_overlap(img: Any, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
     """Same caveat as legend_overlap — heuristic-only post-save."""
     return AuditCheck(
         name="colorbar_overlap",
@@ -194,7 +194,7 @@ def _check_colorbar_overlap(img, recipe_metadata: dict[str, Any] | None) -> Audi
 # ---------------------------------------------------------------------------
 
 
-def _check_palette_accessibility(img) -> AuditCheck:
+def _check_palette_accessibility(img: Any) -> AuditCheck:
     """Sample dominant colors and verify pairwise distinguishability.
 
     For multi-category palettes (e.g., tab20), check that any two adjacent
@@ -228,7 +228,7 @@ def _check_palette_accessibility(img) -> AuditCheck:
         )
 
     try:
-        import colorspacious as cs
+        import colorspacious as cs  # type: ignore[import-not-found]
 
         rgb_floats = (bins * 32 + 16).astype(float) / 255.0
         lab = cs.cspace_convert(rgb_floats, "sRGB1", "CAM02-UCS")
@@ -266,7 +266,7 @@ def _check_palette_accessibility(img) -> AuditCheck:
 # ---------------------------------------------------------------------------
 
 
-def _check_aspect_ratio(img, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
+def _check_aspect_ratio(img: Any, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
     """Verify rendered aspect matches recipe metadata's claim (if any).
 
     Without recipe metadata, we just report the rendered aspect ratio
@@ -310,7 +310,7 @@ def _check_aspect_ratio(img, recipe_metadata: dict[str, Any] | None) -> AuditChe
 # ---------------------------------------------------------------------------
 
 
-def _check_dpi(img) -> AuditCheck:
+def _check_dpi(img: Any) -> AuditCheck:
     """DPI must be ≥ 300 for publication-tight figures."""
     info = img.info or {}
     dpi = info.get("dpi") if isinstance(info, dict) else None
@@ -342,7 +342,7 @@ def _check_dpi(img) -> AuditCheck:
 # ---------------------------------------------------------------------------
 
 
-def _check_empty_panel(img) -> AuditCheck:
+def _check_empty_panel(img: Any) -> AuditCheck:
     """Detect a figure that's mostly uniform white (rendered with no data)."""
     import numpy as np
 
@@ -379,7 +379,7 @@ def _check_empty_panel(img) -> AuditCheck:
 # ---------------------------------------------------------------------------
 
 
-def _check_recipe_conformance(img, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
+def _check_recipe_conformance(img: Any, recipe_metadata: dict[str, Any] | None) -> AuditCheck:
     """If recipe metadata declares an expected panel count, verify it via XY-cut."""
     expected_panels = (recipe_metadata or {}).get("expected_panel_count")
     if expected_panels is None:

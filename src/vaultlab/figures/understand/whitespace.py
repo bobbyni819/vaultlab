@@ -22,9 +22,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image
 from skimage import color as skcolor
 from skimage.feature import canny
@@ -40,9 +41,10 @@ Direction = Literal[
     "bottom-left",
     "bottom-right",
 ]
+MaskArray = npt.NDArray[Any]
 
 
-def whitespace_mask(image_path: str | Path) -> np.ndarray:
+def whitespace_mask(image_path: str | Path) -> MaskArray:
     """Return a strict whitespace mask: white background AND no text/glyphs nearby.
 
     Strict = patches over text labels are EXCLUDED via edge dilation.
@@ -51,23 +53,26 @@ def whitespace_mask(image_path: str | Path) -> np.ndarray:
 
 
 @lru_cache(maxsize=8)
-def _compute_mask(path_str: str, mtime: float) -> np.ndarray:
+def _compute_mask(path_str: str, mtime: float) -> MaskArray:
     """Cache key: (resolved path, mtime). Recomputes when the file changes."""
     rgb = np.asarray(Image.open(path_str).convert("RGB"))
-    gray = skcolor.rgb2gray(rgb)
-    hsv = skcolor.rgb2hsv(rgb)
+    gray = cast(MaskArray, skcolor.rgb2gray(rgb))
+    hsv = cast(MaskArray, skcolor.rgb2hsv(rgb))
 
     # White-ish color
     color_white = (hsv[..., 2] > 0.92) & (hsv[..., 1] < 0.08)
 
     # Edge map - Canny finds glyph strokes + line art
-    edges = canny(gray, sigma=2.0)
+    edges = cast(MaskArray, canny(gray, sigma=2.0))  # type: ignore[no-untyped-call]
     # Dilate edges aggressively so the "near a glyph or line" zone is excluded.
     # 30 px radius covers full text glyphs + their immediate margin so a 120px
     # marker patch over text gets caught.
-    edges_dilated = binary_dilation(edges, disk(30))
+    edges_dilated = cast(
+        MaskArray,
+        binary_dilation(edges, disk(30)),  # type: ignore[no-untyped-call]
+    )
 
-    return color_white & ~edges_dilated
+    return cast(MaskArray, color_white & ~edges_dilated)
 
 
 def find_marker_offset(
@@ -252,13 +257,13 @@ def _collides(
 #                           don't keep slicing inside each panel forever)
 
 
-def _project_whitespace(mask, axis: int):
+def _project_whitespace(mask: MaskArray, axis: int) -> MaskArray:
     """Per-row (axis=1) or per-column (axis=0) whitespace fraction in [0, 1]."""
-    return mask.mean(axis=axis)
+    return cast(MaskArray, mask.mean(axis=axis))
 
 
 def _find_gutters(
-    profile,
+    profile: MaskArray,
     *,
     min_run: int,
     purity: float = 0.99,
@@ -313,7 +318,7 @@ def _split_by_gutters(
 
 
 def _xy_cut(
-    mask, x0: int, y0: int, x1: int, y1: int, *, depth: int, max_depth: int
+    mask: MaskArray, x0: int, y0: int, x1: int, y1: int, *, depth: int, max_depth: int
 ) -> list[tuple[int, int, int, int]]:
     """Recursive XY-cut on the slice ``mask[y0:y1, x0:x1]``.
 
@@ -372,7 +377,7 @@ def _xy_cut(
 
 
 def detect_panels(
-    image: str | Path | "Image.Image",
+    image: str | Path | Image.Image,
     *,
     max_depth: int = 3,
 ) -> list[tuple[int, int, int, int]]:
@@ -408,18 +413,21 @@ def detect_panels(
     else:
         # PIL.Image input — bypass the cache (no stable mtime key).
         rgb = np.asarray(image.convert("RGB"))
-        gray = skcolor.rgb2gray(rgb)
-        hsv = skcolor.rgb2hsv(rgb)
+        gray = cast(MaskArray, skcolor.rgb2gray(rgb))
+        hsv = cast(MaskArray, skcolor.rgb2hsv(rgb))
         color_white = (hsv[..., 2] > 0.92) & (hsv[..., 1] < 0.08)
-        edges = canny(gray, sigma=2.0)
-        edges_dilated = binary_dilation(edges, disk(30))
-        mask = color_white & ~edges_dilated
+        edges = cast(MaskArray, canny(gray, sigma=2.0))  # type: ignore[no-untyped-call]
+        edges_dilated = cast(
+            MaskArray,
+            binary_dilation(edges, disk(30)),  # type: ignore[no-untyped-call]
+        )
+        mask = cast(MaskArray, color_white & ~edges_dilated)
 
     H, W = mask.shape
     return _xy_cut(mask, 0, 0, W, H, depth=0, max_depth=max_depth)
 
 
-def is_single_plot(image: str | Path | "Image.Image") -> bool:
+def is_single_plot(image: str | Path | Image.Image) -> bool:
     """True iff the figure has exactly one detected panel.
 
     Convenience predicate over :func:`detect_panels`. Use it in layout
@@ -459,16 +467,16 @@ _INSET_MAX_EXTENT = 0.20  # bbox fill-ratio cap — frames are mostly hollow
 _INSET_DARK_THRESHOLD = 0.5  # gray < 0.5 → "dark enough to be an axis stroke"
 
 
-def _gray_for(image: str | Path | "Image.Image") -> np.ndarray:
+def _gray_for(image: str | Path | Image.Image) -> MaskArray:
     """Internal helper: load the grayscale image (path or PIL.Image)."""
     if isinstance(image, (str, Path)):
         rgb = np.asarray(Image.open(str(image)).convert("RGB"))
     else:
         rgb = np.asarray(image.convert("RGB"))
-    return skcolor.rgb2gray(rgb)
+    return cast(MaskArray, skcolor.rgb2gray(rgb))
 
 
-def has_corner_inset(image: str | Path | "Image.Image") -> bool:
+def has_corner_inset(image: str | Path | Image.Image) -> bool:
     """Heuristic: detect a small rectangular-frame component in one corner.
 
     Strategy:
@@ -505,8 +513,8 @@ def has_corner_inset(image: str | Path | "Image.Image") -> bool:
     gray = _gray_for(image)
     H, W = gray.shape
     dark = gray < _INSET_DARK_THRESHOLD
-    labeled = measure.label(dark, connectivity=2)
-    props = measure.regionprops(labeled)
+    labeled = measure.label(dark, connectivity=2)  # type: ignore[no-untyped-call]
+    props = measure.regionprops(labeled)  # type: ignore[no-untyped-call]
 
     min_w = _INSET_MIN_AXIS_FRAC * W
     min_h = _INSET_MIN_AXIS_FRAC * H
@@ -533,7 +541,7 @@ def has_corner_inset(image: str | Path | "Image.Image") -> bool:
     return False
 
 
-def classify_panel_layout(image: str | Path | "Image.Image") -> str:
+def classify_panel_layout(image: str | Path | Image.Image) -> str:
     """Return the panel-layout class for a figure.
 
     One of:

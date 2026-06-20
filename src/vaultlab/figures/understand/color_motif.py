@@ -23,8 +23,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image
 from skimage import color as skcolor
 from skimage import measure, morphology
@@ -111,20 +113,29 @@ def extract_regions(
         All regions across all motifs, in motif order then descending area.
     """
     rgb = np.asarray(Image.open(Path(image_path)).convert("RGB"))
-    hsv = skcolor.rgb2hsv(rgb)
+    hsv = cast(npt.NDArray[Any], skcolor.rgb2hsv(rgb))
     total_px = rgb.shape[0] * rgb.shape[1]
 
     out: list[Region] = []
     for motif in motifs:
         mask = _mask_for_motif(hsv, motif)
         if opening_radius > 0:
-            mask = morphology.binary_opening(mask, footprint=morphology.disk(opening_radius))
+            mask = cast(
+                npt.NDArray[Any],
+                morphology.binary_opening(
+                    mask,
+                    footprint=morphology.disk(opening_radius),  # type: ignore[no-untyped-call]
+                ),
+            )
         min_area = max(20, int(total_px * motif.min_area_frac))
-        mask = morphology.remove_small_objects(mask, min_size=min_area)
+        mask = cast(
+            npt.NDArray[Any],
+            morphology.remove_small_objects(mask, min_size=min_area),  # type: ignore[no-untyped-call]
+        )
 
-        labels = measure.label(mask, connectivity=2)
+        labels = measure.label(mask, connectivity=2)  # type: ignore[no-untyped-call]
         regions: list[Region] = []
-        for region in measure.regionprops(labels):
+        for region in measure.regionprops(labels):  # type: ignore[no-untyped-call]
             y0, x0, y1, x1 = region.bbox
             regions.append(
                 Region(
@@ -144,7 +155,7 @@ def extract_regions(
 # ---------------------------------------------------------------------------
 
 
-def _mask_for_motif(hsv: np.ndarray, motif: ColorMotif) -> np.ndarray:
+def _mask_for_motif(hsv: npt.NDArray[Any], motif: ColorMotif) -> npt.NDArray[Any]:
     """Return a boolean mask of pixels matching the motif."""
     h = hsv[..., 0] * 360.0
     s = hsv[..., 1]
@@ -155,7 +166,7 @@ def _mask_for_motif(hsv: np.ndarray, motif: ColorMotif) -> np.ndarray:
     else:
         # Wrap-around (e.g., red 350-10)
         hue_match = (h >= lo) | (h <= hi)
-    return hue_match & (s >= motif.sat_min) & (v >= motif.val_min)
+    return cast(npt.NDArray[Any], hue_match & (s >= motif.sat_min) & (v >= motif.val_min))
 
 
 __all__ = ["ColorMotif", "Region", "extract_regions"]
