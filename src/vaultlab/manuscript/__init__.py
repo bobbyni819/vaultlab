@@ -13,6 +13,8 @@ Submodules:
   helpers.
 - :mod:`vaultlab.manuscript.figure_text_consistency` — deterministic
   checks for figure callouts, numeric links, and figure identity labels.
+- :mod:`vaultlab.manuscript.preflight` — reviewer-perspective manuscript
+  preflight gate combining deterministic checks with prepared role passes.
 
 All three were absorbed from the nature-skills bundle (Yuan Yizhe, SJTU)
 at github.com/Yuan1z0825/nature-skills, MIT-licensed; vaultlab credits
@@ -26,6 +28,7 @@ from vaultlab.manuscript import (
     data_availability,
     figure_text_consistency,
     polish,
+    preflight,
     respond,
 )
 from vaultlab.manuscript.claim_ledger import (
@@ -44,6 +47,12 @@ from vaultlab.manuscript.figure_text_consistency import (
     FigureCallout,
     check_figure_text_consistency,
 )
+from vaultlab.manuscript.preflight import (
+    FixItem,
+    ManuscriptPreflightReport,
+    PreparedRolePass,
+    run_manuscript_preflight,
+)
 
 __all__ = [
     "CitationLink",
@@ -55,12 +64,17 @@ __all__ = [
     "ConsistencyReport",
     "FigureCallout",
     "FigureLink",
+    "FixItem",
     "LedgerAudit",
+    "ManuscriptPreflightReport",
     "NumericLink",
+    "PreparedRolePass",
     "check_figure_text_consistency",
     "claim_ledger",
     "data_availability",
     "figure_text_consistency",
     "polish",
+    "preflight",
     "respond",
+    "run_manuscript_preflight",
 ]
