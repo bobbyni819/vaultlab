@@ -11,6 +11,8 @@ Submodules:
 - :mod:`vaultlab.manuscript.data_availability` — Data Availability
   statement templates, repository registry, FAIR checklist, audit
   helpers.
+- :mod:`vaultlab.manuscript.figure_text_consistency` — deterministic
+  checks for figure callouts, numeric links, and figure identity labels.
 
 All three were absorbed from the nature-skills bundle (Yuan Yizhe, SJTU)
 at github.com/Yuan1z0825/nature-skills, MIT-licensed; vaultlab credits
@@ -19,7 +21,13 @@ this in ``INSPIRATIONS.md`` (when added).
 
 from __future__ import annotations
 
-from vaultlab.manuscript import claim_ledger, data_availability, polish, respond
+from vaultlab.manuscript import (
+    claim_ledger,
+    data_availability,
+    figure_text_consistency,
+    polish,
+    respond,
+)
 from vaultlab.manuscript.claim_ledger import (
     CitationLink,
     CitationTier,
@@ -30,6 +38,12 @@ from vaultlab.manuscript.claim_ledger import (
     LedgerAudit,
     NumericLink,
 )
+from vaultlab.manuscript.figure_text_consistency import (
+    ConsistencyProblem,
+    ConsistencyReport,
+    FigureCallout,
+    check_figure_text_consistency,
+)
 
 __all__ = [
     "CitationLink",
@@ -37,11 +51,16 @@ __all__ = [
     "Claim",
     "ClaimLedger",
     "ClaimReadiness",
+    "ConsistencyProblem",
+    "ConsistencyReport",
+    "FigureCallout",
     "FigureLink",
     "LedgerAudit",
     "NumericLink",
+    "check_figure_text_consistency",
     "claim_ledger",
     "data_availability",
+    "figure_text_consistency",
     "polish",
     "respond",
 ]
