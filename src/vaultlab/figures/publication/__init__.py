@@ -46,6 +46,14 @@ from vaultlab.figures.publication.legend import (
     legend_position_for_density,
     save_legend,
 )
+from vaultlab.figures.publication.profile import (
+    FontRegime,
+    StyleProfile,
+    apply_profile,
+    default_profile,
+    heatmap_kwargs,
+    resolve_entity_palette,
+)
 from vaultlab.figures.publication.save import save_fig
 from vaultlab.figures.publication.style import (
     ANNOT_SIZE,
@@ -99,15 +107,21 @@ __all__ = [
     "TICK_SIZE",
     "TITLE_SIZE",
     "FIG_1p5COL",
+    "FontRegime",
     "PaletteRegistry",
     # bundle
     "PublicationBundleResult",
+    "StyleProfile",
     # coverage
     "CoverageAuditResult",
     "CoverageManifest",
+    "apply_profile",
     "bar_fill",
+    "default_profile",
+    "heatmap_kwargs",
     "legend_position_for_density",
     "palette_for",
+    "resolve_entity_palette",
     # save
     "render_with_contract",
     "save_fig",
