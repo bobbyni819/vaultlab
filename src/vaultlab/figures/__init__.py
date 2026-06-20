@@ -32,12 +32,21 @@ from vaultlab.figures.index import (
     manuscript_figures,
     set_figure_stage,
 )
+from vaultlab.figures.tournament import (
+    FigureCandidate,
+    Match,
+    TournamentResult,
+    run_figure_tournament,
+)
 
 __all__ = [
     "Figure",
     "FigureAcquisitionResult",
+    "FigureCandidate",
     "FigureExplainer",
     "FigureStage",
+    "Match",
+    "TournamentResult",
     "acquire_figures",
     "acquire_figures_for_corpus",
     "archive_superseded",
@@ -49,6 +58,7 @@ __all__ = [
     "get_figure_stage",
     "list_by_stage",
     "manuscript_figures",
+    "run_figure_tournament",
     "set_figure_stage",
     "write_explainer",
 ]
