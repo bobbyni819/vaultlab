@@ -4,6 +4,8 @@ Submodules:
 
 - :mod:`vaultlab.manuscript.claim_ledger` — claim-to-figure/stat/citation
   ledger and no-untiered-claim gate.
+- :mod:`vaultlab.manuscript.citation_gate` — Tier-3 citation gate and
+  promotion queue.
 - :mod:`vaultlab.manuscript.polish` — 25 prose rules + 12-step workflow +
   British-English vocabulary + sentence/spelling checkers.
 - :mod:`vaultlab.manuscript.respond` — reviewer-response letter scaffolding
@@ -24,12 +26,19 @@ this in ``INSPIRATIONS.md`` (when added).
 from __future__ import annotations
 
 from vaultlab.manuscript import (
+    citation_gate,
     claim_ledger,
     data_availability,
     figure_text_consistency,
     polish,
     preflight,
     respond,
+)
+from vaultlab.manuscript.citation_gate import (
+    CitationGateReport,
+    CitationTierStatus,
+    PromotionAction,
+    run_citation_gate,
 )
 from vaultlab.manuscript.claim_ledger import (
     CitationLink,
@@ -56,7 +65,9 @@ from vaultlab.manuscript.preflight import (
 
 __all__ = [
     "CitationLink",
+    "CitationGateReport",
     "CitationTier",
+    "CitationTierStatus",
     "Claim",
     "ClaimLedger",
     "ClaimReadiness",
@@ -69,12 +80,15 @@ __all__ = [
     "ManuscriptPreflightReport",
     "NumericLink",
     "PreparedRolePass",
+    "PromotionAction",
     "check_figure_text_consistency",
     "claim_ledger",
+    "citation_gate",
     "data_availability",
     "figure_text_consistency",
     "polish",
     "preflight",
     "respond",
+    "run_citation_gate",
     "run_manuscript_preflight",
 ]

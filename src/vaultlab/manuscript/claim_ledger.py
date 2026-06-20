@@ -42,6 +42,15 @@ class CitationTier(Enum):
     TIER_2 = "tier_2"
     TIER_3 = "tier_3"
 
+    @property
+    def rank(self) -> int:
+        """Numeric ordering for tier-gate comparisons."""
+        return {
+            CitationTier.TIER_1: 1,
+            CitationTier.TIER_2: 2,
+            CitationTier.TIER_3: 3,
+        }[self]
+
     @classmethod
     def from_verification_status(cls, status: VerificationStatus) -> CitationTier | None:
         """Map citation verifier statuses onto ledger tiers."""
