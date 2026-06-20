@@ -22,15 +22,33 @@ from vaultlab.figures.explain import (
     explain_from_bundle,
     write_explainer,
 )
+from vaultlab.figures.index import (
+    FigureStage,
+    archive_superseded,
+    default_stage,
+    find_existing_for_claim,
+    get_figure_stage,
+    list_by_stage,
+    manuscript_figures,
+    set_figure_stage,
+)
 
 __all__ = [
     "Figure",
     "FigureAcquisitionResult",
     "FigureExplainer",
+    "FigureStage",
     "acquire_figures",
     "acquire_figures_for_corpus",
+    "archive_superseded",
+    "default_stage",
     "explain_figure",
     "explain_from_bundle",
     "figure_cache_dir",
+    "find_existing_for_claim",
+    "get_figure_stage",
+    "list_by_stage",
+    "manuscript_figures",
+    "set_figure_stage",
     "write_explainer",
 ]
