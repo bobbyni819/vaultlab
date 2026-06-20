@@ -6,7 +6,8 @@ Low-level building blocks used by recipes and slide layouts:
     color.py       - colorblind-safe palettes + Rule 14 neutral-grey defaults
     legend.py      - standalone legend export + density-aware positioning
     save.py        - multi-format figure save (PNG + PDF + provenance sidecar)
-    coverage.py    - CoverageManifest dataclass (P0.2; full impl in later commit)
+    coverage.py    - CoverageManifest JSON sidecar + footer validation
+    bundle.py      - contract -> exports -> audit -> coverage -> provenance bundle
     stamp.py       - parameter_stamp() for --K CLI convention (P0.3 helper)
 
 Convention (per AGENTS.md):
@@ -24,6 +25,11 @@ Ported from CODEX_MALDIIMS/lipid_annotations/ims_xgboost/figures/fig_style.py
 
 from __future__ import annotations
 
+from vaultlab.figures.publication.bundle import (
+    PublicationBundleResult,
+    render_with_contract,
+    save_publication_figure,
+)
 from vaultlab.figures.publication.color import (
     CB_PALETTE,
     EXT_PALETTE,
@@ -35,6 +41,7 @@ from vaultlab.figures.publication.color import (
     bar_fill,
     palette_for,
 )
+from vaultlab.figures.publication.coverage import CoverageAuditResult, CoverageManifest
 from vaultlab.figures.publication.legend import (
     legend_position_for_density,
     save_legend,
@@ -93,11 +100,18 @@ __all__ = [
     "TITLE_SIZE",
     "FIG_1p5COL",
     "PaletteRegistry",
+    # bundle
+    "PublicationBundleResult",
+    # coverage
+    "CoverageAuditResult",
+    "CoverageManifest",
     "bar_fill",
     "legend_position_for_density",
     "palette_for",
     # save
+    "render_with_contract",
     "save_fig",
+    "save_publication_figure",
     # legend
     "save_legend",
     "setup_rcparams",
