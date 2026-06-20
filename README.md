@@ -313,7 +313,7 @@ Three subpackages absorbed from the [nature-skills](https://github.com/Yuan1z082
 
 - **`vaultlab.manuscript.polish`** — 25 academic-prose rules across 7 categories + 12-step polishing workflow + 65+ British-English replacement pairs + sentence-length / US-spelling checkers. Slash command: `/polish <manuscript>`.
 - **`vaultlab.manuscript.respond`** — reviewer response letter scaffolding. 12-kind comment taxonomy × 9 action types, `R<n>-C<m>` stable IDs, numbered-list parser, markdown renderer. Slash command: `/respond <reviewer-block>`.
-- **`vaultlab.manuscript.data_availability`** — 15-repository registry (GEO, SRA, PRIDE, PDB, EMPIAR, EGA, dbGaP, Dryad, Zenodo, …) with regex identifier formats + DAS citation prose, 14-item FAIR checklist, 6 statement templates, heuristic auditor. Slash command: `/das-audit <text>`.
+- **`vaultlab.manuscript.data_availability`** — 15-repository registry (GEO, SRA, PRIDE, PDB, EMPIAR, EGA, dbGaP, Dryad, Zenodo, …) with regex identifier formats + DAS citation prose, 14-item FAIR checklist, 6 statement templates, heuristic auditor, and coverage-manifest source-data DAS drafts. Slash command: `/das-audit <text>`.
 
 Plus **`vaultlab.figures.contract`** — the figure-contract discipline. Before any matplotlib call: declare the conclusion, evidence chain, archetype, backend, and export contract. Validation raises `ContractViolation` for missing commitments; warns about Nature-policy violations (≥300 DPI TIFF, ≤183mm width, image-integrity notes for image plates). Companion command: `/figure-contract`.
 

@@ -53,6 +53,12 @@ from vaultlab.manuscript.claim_ledger import (
     LedgerAudit,
     NumericLink,
 )
+from vaultlab.manuscript.data_availability import (
+    CoverageDataSources,
+    FigureDataSource,
+    data_sources_from_coverage,
+    merge_into_das,
+)
 from vaultlab.manuscript.figure_text_consistency import (
     ConsistencyProblem,
     ConsistencyReport,
@@ -82,7 +88,9 @@ __all__ = [
     "ClaimReadiness",
     "ConsistencyProblem",
     "ConsistencyReport",
+    "CoverageDataSources",
     "FigureCallout",
+    "FigureDataSource",
     "FigureLink",
     "FixItem",
     "LedgerAudit",
@@ -98,7 +106,9 @@ __all__ = [
     "claim_ledger",
     "citation_gate",
     "data_availability",
+    "data_sources_from_coverage",
     "figure_text_consistency",
+    "merge_into_das",
     "polish",
     "preflight",
     "respond",
