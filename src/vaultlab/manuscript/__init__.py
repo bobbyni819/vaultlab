@@ -17,6 +17,8 @@ Submodules:
   checks for figure callouts, numeric links, and figure identity labels.
 - :mod:`vaultlab.manuscript.preflight` — reviewer-perspective manuscript
   preflight gate combining deterministic checks with prepared role passes.
+- :mod:`vaultlab.manuscript.state` — durable manuscript lifecycle state
+  derived from preflight and citation gates.
 
 All three were absorbed from the nature-skills bundle (Yuan Yizhe, SJTU)
 at github.com/Yuan1z0825/nature-skills, MIT-licensed; vaultlab credits
@@ -33,6 +35,7 @@ from vaultlab.manuscript import (
     polish,
     preflight,
     respond,
+    state,
 )
 from vaultlab.manuscript.citation_gate import (
     CitationGateReport,
@@ -62,6 +65,12 @@ from vaultlab.manuscript.preflight import (
     PreparedRolePass,
     run_manuscript_preflight,
 )
+from vaultlab.manuscript.state import (
+    ManuscriptStage,
+    ManuscriptState,
+    StageGate,
+    assess_manuscript,
+)
 
 __all__ = [
     "CitationLink",
@@ -77,10 +86,14 @@ __all__ = [
     "FigureLink",
     "FixItem",
     "LedgerAudit",
+    "ManuscriptStage",
     "ManuscriptPreflightReport",
+    "ManuscriptState",
     "NumericLink",
     "PreparedRolePass",
     "PromotionAction",
+    "StageGate",
+    "assess_manuscript",
     "check_figure_text_consistency",
     "claim_ledger",
     "citation_gate",
@@ -91,4 +104,5 @@ __all__ = [
     "respond",
     "run_citation_gate",
     "run_manuscript_preflight",
+    "state",
 ]
