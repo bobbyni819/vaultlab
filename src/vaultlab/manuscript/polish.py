@@ -383,7 +383,7 @@ def check_us_spelling(text: str) -> list[tuple[str, str]]:
     Title → Title, UPPER → UPPER).
     """
     found: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for us_word, uk_word in BRITISH_ENGLISH_PAIRS.items():
         pattern = re.compile(rf"\b{us_word}\b", re.IGNORECASE)
         for m in pattern.finditer(text):

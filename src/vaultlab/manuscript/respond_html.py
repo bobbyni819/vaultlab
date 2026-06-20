@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import html as _html
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from vaultlab.manuscript.respond import (
     ActionType,
@@ -26,7 +26,7 @@ from vaultlab.report import _components as c
 from vaultlab.report.html import render_report
 
 # Action → severity colour
-_ACTION_LEVEL: dict[str, str] = {
+_ACTION_LEVEL: dict[str, c.Severity] = {
     "ACCEPT_TEXT": "good",
     "ACCEPT_ANALYSIS": "good",
     "ACCEPT_EXPERIMENT": "good",
@@ -57,9 +57,9 @@ def _comment_card(cm: ReviewerComment | dict[str, Any]) -> str:
     else:
         d = dict(cm)
 
-    action = d.get("action", "")
+    action = str(d.get("action", ""))
     severity = _ACTION_LEVEL.get(action, "neutral")
-    kind = d.get("kind", "")
+    kind = str(d.get("kind", ""))
     filter_keys = ",".join(filter(None, [action, kind]))
 
     body_parts: list[str] = []
@@ -82,7 +82,7 @@ def _comment_card(cm: ReviewerComment | dict[str, Any]) -> str:
             f"</div>"
         )
 
-    badges: list[tuple[str, str]] = [
+    badges: list[tuple[str, c.Severity]] = [
         (action, severity),
         (kind, "neutral"),
     ]
@@ -113,6 +113,7 @@ def build_response_letter_html(
     Accepts a :class:`ResponseLetter` dataclass or a dict shaped like
     ``{"reviewer": int, "opening": str, "closing": str, "comments": list[ReviewerComment-or-dict]}``.
     """
+    comments: list[ReviewerComment | dict[str, Any]]
     if isinstance(letter, ResponseLetter):
         reviewer = letter.reviewer
         opening = letter.opening
@@ -122,7 +123,10 @@ def build_response_letter_html(
         reviewer = letter.get("reviewer", 1)
         opening = letter.get("opening", "")
         closing = letter.get("closing", "")
-        comments = list(letter.get("comments", []))
+        comments = [
+            cast("ReviewerComment | dict[str, Any]", item)
+            for item in list(letter.get("comments", []))
+        ]
 
     report_title = title or f"Response to Reviewer {reviewer}"
 
@@ -135,7 +139,7 @@ def build_response_letter_html(
             if cm.action == ActionType.AUTHOR_INPUT_NEEDED:
                 open_questions += 1
         else:
-            act = cm.get("action", "?")
+            act = str(cm.get("action", "?"))
             if act == "AUTHOR_INPUT_NEEDED":
                 open_questions += 1
         action_counts[act] = action_counts.get(act, 0) + 1
