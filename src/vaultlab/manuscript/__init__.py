@@ -13,6 +13,8 @@ Submodules:
 - :mod:`vaultlab.manuscript.data_availability` — Data Availability
   statement templates, repository registry, FAIR checklist, audit
   helpers.
+- :mod:`vaultlab.manuscript.deck_sync` — claim-ledger figure links synced
+  against deck figure references.
 - :mod:`vaultlab.manuscript.figure_text_consistency` — deterministic
   checks for figure callouts, numeric links, and figure identity labels.
 - :mod:`vaultlab.manuscript.preflight` — reviewer-perspective manuscript
@@ -33,6 +35,7 @@ from vaultlab.manuscript import (
     citation_gate,
     claim_ledger,
     data_availability,
+    deck_sync,
     figure_text_consistency,
     polish,
     preflight,
@@ -61,6 +64,12 @@ from vaultlab.manuscript.data_availability import (
     FigureDataSource,
     data_sources_from_coverage,
     merge_into_das,
+)
+from vaultlab.manuscript.deck_sync import (
+    DeckSyncProblem,
+    DeckSyncReport,
+    figure_key,
+    sync_claims_to_deck,
 )
 from vaultlab.manuscript.figure_text_consistency import (
     ConsistencyProblem,
@@ -100,6 +109,8 @@ __all__ = [
     "ConsistencyProblem",
     "ConsistencyReport",
     "CoverageDataSources",
+    "DeckSyncProblem",
+    "DeckSyncReport",
     "FigureRung",
     "FigureCallout",
     "FigureDataSource",
@@ -122,7 +133,9 @@ __all__ = [
     "citation_gate",
     "data_availability",
     "data_sources_from_coverage",
+    "deck_sync",
     "figure_text_consistency",
+    "figure_key",
     "merge_into_das",
     "polish",
     "preflight",
@@ -130,5 +143,6 @@ __all__ = [
     "run_citation_gate",
     "run_manuscript_preflight",
     "state",
+    "sync_claims_to_deck",
     "verification_ladder",
 ]
