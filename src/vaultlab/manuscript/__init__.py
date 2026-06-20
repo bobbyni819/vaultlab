@@ -19,6 +19,8 @@ Submodules:
   preflight gate combining deterministic checks with prepared role passes.
 - :mod:`vaultlab.manuscript.state` — durable manuscript lifecycle state
   derived from preflight and citation gates.
+- :mod:`vaultlab.manuscript.verification_ladder` — per-claim and per-figure
+  strict verification ladder composed from the manuscript gates.
 
 All three were absorbed from the nature-skills bundle (Yuan Yizhe, SJTU)
 at github.com/Yuan1z0825/nature-skills, MIT-licensed; vaultlab credits
@@ -36,6 +38,7 @@ from vaultlab.manuscript import (
     preflight,
     respond,
     state,
+    verification_ladder,
 )
 from vaultlab.manuscript.citation_gate import (
     CitationGateReport,
@@ -77,8 +80,16 @@ from vaultlab.manuscript.state import (
     StageGate,
     assess_manuscript,
 )
+from vaultlab.manuscript.verification_ladder import (
+    ClaimRung,
+    FigureRung,
+    LadderRung,
+    VerificationLadderReport,
+    assess_verification_ladder,
+)
 
 __all__ = [
+    "ClaimRung",
     "CitationLink",
     "CitationGateReport",
     "CitationTier",
@@ -89,10 +100,12 @@ __all__ = [
     "ConsistencyProblem",
     "ConsistencyReport",
     "CoverageDataSources",
+    "FigureRung",
     "FigureCallout",
     "FigureDataSource",
     "FigureLink",
     "FixItem",
+    "LadderRung",
     "LedgerAudit",
     "ManuscriptStage",
     "ManuscriptPreflightReport",
@@ -101,7 +114,9 @@ __all__ = [
     "PreparedRolePass",
     "PromotionAction",
     "StageGate",
+    "VerificationLadderReport",
     "assess_manuscript",
+    "assess_verification_ladder",
     "check_figure_text_consistency",
     "claim_ledger",
     "citation_gate",
@@ -115,4 +130,5 @@ __all__ = [
     "run_citation_gate",
     "run_manuscript_preflight",
     "state",
+    "verification_ladder",
 ]
