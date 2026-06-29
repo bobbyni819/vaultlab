@@ -432,6 +432,7 @@ def run_layout_audit(
     figure_path: Path | str,
     *,
     recipe_metadata: dict[str, Any] | None = None,
+    layout_sidecar: Any | None = None,
 ) -> AuditResult:
     """Run all 9 layout-audit checks on a rendered figure file.
 
@@ -444,6 +445,10 @@ def run_layout_audit(
         Optional dict from the recipe declaring expectations like
         ``expected_aspect_ratio``, ``expected_panel_count``, etc. When
         absent, those checks pass with an informational note.
+    layout_sidecar
+        Optional :class:`vaultlab.figures.layout_sidecar.FigureLayoutSidecar`
+        or path to a ``*.layout.json`` sidecar. When supplied, object-level
+        checks such as legend/axes overlap are folded into the same result.
 
     Returns
     -------
@@ -471,6 +476,8 @@ def run_layout_audit(
         _check_empty_panel(img),
         _check_recipe_conformance(img, recipe_metadata),
     ]
+    if layout_sidecar is not None:
+        checks.extend(_checks_from_layout_sidecar(layout_sidecar))
 
     return AuditResult(
         figure_path=str(path),
@@ -479,3 +486,40 @@ def run_layout_audit(
         image_size_px=size_px,
         image_dpi=tuple(dpi) if isinstance(dpi, (tuple, list)) else None,
     )
+
+
+def _checks_from_layout_sidecar(layout_sidecar: Any) -> list[AuditCheck]:
+    """Convert object-sidecar audit checks into this module's check type."""
+
+    try:
+        from vaultlab.figures.layout_sidecar import audit_layout_sidecar
+
+        sidecar_audit = audit_layout_sidecar(layout_sidecar)
+    except Exception as exc:
+        return [
+            AuditCheck(
+                name="layout_sidecar",
+                severity="warn",
+                detail=f"layout sidecar audit failed: {exc}",
+            )
+        ]
+
+    converted = [
+        AuditCheck(
+            name=f"layout_sidecar.{check.name}",
+            severity=check.severity,
+            detail=check.detail,
+            evidence=check.evidence,
+        )
+        for check in sidecar_audit.checks
+    ]
+    converted.insert(
+        0,
+        AuditCheck(
+            name="layout_sidecar",
+            severity=sidecar_audit.overall_severity,
+            detail=f"object-level layout sidecar severity: {sidecar_audit.overall_severity}",
+            evidence={"n_fail": sidecar_audit.n_fail, "n_warn": sidecar_audit.n_warn},
+        ),
+    )
+    return converted

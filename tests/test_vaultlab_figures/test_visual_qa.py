@@ -121,3 +121,35 @@ def test_visual_qa_markdown_lists_fix_items(tmp_path: Path) -> None:
 
     assert "## What to fix" in markdown
     assert "Increase legend font size." in markdown
+
+
+def test_visual_qa_accepts_layout_sidecar_and_reports_geometry_failures(tmp_path: Path) -> None:
+    from vaultlab.figures.layout_sidecar import (
+        CanvasSpec,
+        DisplaySpec,
+        FigureLayoutObject,
+        FigureLayoutSidecar,
+    )
+    from vaultlab.figures.understand.visual_qa import visual_qa_figure
+
+    png = _render_small_png(tmp_path / "toy.png")
+    sidecar = FigureLayoutSidecar(
+        figure_path=str(png),
+        canvas=CanvasSpec(width_px=800, height_px=600, dpi=200, width_in=4.0, height_in=3.0),
+        display=DisplaySpec(target_width_in=2.0, target_height_in=1.5, scale_factor=0.5),
+        objects=[
+            FigureLayoutObject(id="axes.0", type="axes", bbox_px=[100, 100, 700, 500]),
+            FigureLayoutObject(
+                id="legend.0",
+                type="legend",
+                bbox_px=[520, 120, 760, 280],
+                placement="inside_axes",
+            ),
+        ],
+    )
+
+    result = visual_qa_figure(png, layout_sidecar=sidecar, run_vision=False)
+
+    assert result.verdict == "FAIL"
+    assert any("layout_sidecar" in finding.message for finding in result.findings)
+    assert any("legend_overlap" in finding.message for finding in result.findings)

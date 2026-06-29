@@ -34,6 +34,8 @@ Figure-side helpers plug into this loop rather than replacing it. The lifecycle 
 | Claim ledger | [`src/vaultlab/manuscript/claim_ledger.py`](../src/vaultlab/manuscript/claim_ledger.py) | `ClaimLedger.from_markdown()`, `CitationTier` | Manuscript markdown maps each tagged claim to figure links, numeric source links, and citation tiers. |
 | Figure-text consistency | [`src/vaultlab/manuscript/figure_text_consistency.py`](../src/vaultlab/manuscript/figure_text_consistency.py) | `check_figure_text_consistency()` | Deterministic checks flag missing or cut figures, number mismatches, and conservative identity contradictions. |
 | Visual QA | [`src/vaultlab/figures/understand/visual_qa.py`](../src/vaultlab/figures/understand/visual_qa.py) | `visual_qa_figure()` | The exported PNG is audited with deterministic layout checks, with optional vision readback when requested. |
+| Layout sidecar | [`src/vaultlab/figures/layout_sidecar.py`](../src/vaultlab/figures/layout_sidecar.py) | `build_matplotlib_layout_sidecar()`, `audit_layout_sidecar()` | A matplotlib figure can emit object boxes for axes, labels, legends, annotations, canvas size, and intended display scale before the figure object is closed. |
+| PPTX panel contract | [`src/vaultlab/slides/panel_contract.py`](../src/vaultlab/slides/panel_contract.py) | `audit_panel_layout_contract()`, `extract_pptx_slide_geometry()` | Manuscript-style panel slots can be checked for bounds, gutters, overlap, and panel-letter font size; existing slides can be read for native PowerPoint shape geometry. |
 | Citation gate | [`src/vaultlab/manuscript/citation_gate.py`](../src/vaultlab/manuscript/citation_gate.py) | `run_citation_gate()` | Claims below the required citation tier are blocked and queued for concrete promotion actions. |
 | Reviewer preflight | [`src/vaultlab/manuscript/preflight.py`](../src/vaultlab/manuscript/preflight.py) | `run_manuscript_preflight()` | Ledger, figure-text, visual-QA, and prepared reviewer-role outputs are normalized into one ranked fix queue. |
 | Manuscript state | [`src/vaultlab/manuscript/state.py`](../src/vaultlab/manuscript/state.py) | `assess_manuscript()`, `ManuscriptStage` | The manuscript advances through strict lifecycle stages only as evidence, figures, citations, and reviewer gates pass. |
@@ -66,6 +68,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from vaultlab.figures.contract import FigureContract
+from vaultlab.figures.layout_sidecar import build_matplotlib_layout_sidecar, write_layout_sidecar
 from vaultlab.figures.publication.bundle import save_publication_figure
 from vaultlab.figures.publication.coverage import CoverageManifest
 from vaultlab.figures.understand.visual_qa import visual_qa_figure
@@ -125,6 +128,12 @@ figures_dir.mkdir()
 coverage_dir.mkdir()
 shutil.copyfile(bundle.png, figures_dir / "1.png")
 shutil.copyfile(bundle.coverage_json, coverage_dir / "1.coverage.json")
+layout_sidecar = build_matplotlib_layout_sidecar(
+    fig,
+    figure_path=figures_dir / "1.png",
+    target_width_in=3.2,
+)
+write_layout_sidecar(layout_sidecar)
 
 manuscript_md = f"""
 # Synthetic manuscript
@@ -144,7 +153,12 @@ consistency = check_figure_text_consistency(
     figures_dir=figures_dir,
     coverage_dir=coverage_dir,
 )
-visual_qa = visual_qa_figure(figures_dir / "1.png", run_vision=False, write_sidecar=False)
+visual_qa = visual_qa_figure(
+    figures_dir / "1.png",
+    layout_sidecar=layout_sidecar,
+    run_vision=False,
+    write_sidecar=False,
+)
 citation_gate = run_citation_gate(ledger=ledger)
 preflight = run_manuscript_preflight(
     manuscript_md,
@@ -184,7 +198,7 @@ Relevant local command surfaces exist for adjacent pieces, but there is not yet 
 
 ## Deterministic vs LLM Status
 
-Deterministic or CI-safe by default: `CoverageManifest.validate()`, `CoverageManifest.audit()`, `ClaimLedger.from_markdown()`, `ClaimLedger.audit()`, `check_figure_text_consistency()`, `visual_qa_figure(..., run_vision=False)`, `run_citation_gate()`, `run_manuscript_preflight()` without an executor, `assess_manuscript()`, `assess_verification_ladder()`, `data_sources_from_coverage()`, `sync_claims_to_deck()`, `explain_figure()` without `refine_fn`, and the default `run_figure_tournament()` scorer.
+Deterministic or CI-safe by default: `CoverageManifest.validate()`, `CoverageManifest.audit()`, `ClaimLedger.from_markdown()`, `ClaimLedger.audit()`, `check_figure_text_consistency()`, `build_matplotlib_layout_sidecar()`, `audit_layout_sidecar()`, `visual_qa_figure(..., run_vision=False)`, `audit_panel_layout_contract()`, `extract_pptx_slide_geometry()`, `run_citation_gate()`, `run_manuscript_preflight()` without an executor, `assess_manuscript()`, `assess_verification_ladder()`, `data_sources_from_coverage()`, `sync_claims_to_deck()`, `explain_figure()` without `refine_fn`, and the default `run_figure_tournament()` scorer.
 
 LLM-dependent or executor-dependent: `visual_qa_figure(..., run_vision=True)` requires a vision verifier or SDK path; `run_manuscript_preflight(..., executor=...)` can execute prepared reviewer-role passes; `assess_manuscript()` and `assess_verification_ladder()` inherit that executor-dependent reviewer status. Without an executor, role passes are prepared but not executed, and reviewer-audited readiness should remain blocked or advisory rather than silently accepted.
 

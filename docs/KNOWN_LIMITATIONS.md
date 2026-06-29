@@ -63,6 +63,12 @@ The figure-understanding pipeline ships its describe + localize + match steps as
 
 This is a **deliberate v0.1 scope cut** — the underlying machinery (describe + localize + match) is real and tested; the polish on the final annotation overlay isn't release-blocking.
 
+### Figure and PowerPoint layout QA
+
+The object-level figure layout sidecar currently targets matplotlib figures while the figure object is still alive. It improves on PNG-only heuristics for axes, labels, legends, annotations, canvas size, and intended display scale, but it does not recover semantic objects from an arbitrary PNG after the plotting script is gone.
+
+The PowerPoint panel contract checker audits declared panel slots and can extract native shape geometry from an existing `.pptx` file via `python-pptx`. It does not render a slide preview by itself and it does not yet auto-place panels from arbitrary images. Slide-grade QA should combine the panel contract, extracted PPTX geometry, and a rendered slide PNG preview.
+
 ### Compliance
 
 - vaultlab is **NOT HIPAA-compliant.** See [`docs/data-privacy.md`](data-privacy.md) and [`docs/compliance.md`](compliance.md).

@@ -103,6 +103,7 @@ def visual_qa_figure(
     png_path: Path | str,
     *,
     conclusion: str | None = None,
+    layout_sidecar: Any | None = None,
     run_vision: bool = False,
     verify_fn: Callable[..., Any] | None = None,
     write_sidecar: bool = True,
@@ -116,6 +117,9 @@ def visual_qa_figure(
     conclusion
         Optional intended conclusion. The vision prompt asks whether the PNG
         appears to support this conclusion; deterministic layout checks ignore it.
+    layout_sidecar
+        Optional object-level sidecar or ``*.layout.json`` path. When supplied,
+        visual QA includes strict geometry checks such as legend/axes overlap.
     run_vision
         When false, no model, network, or SDK path is touched.
     verify_fn
@@ -127,7 +131,7 @@ def visual_qa_figure(
     """
 
     png = Path(png_path)
-    layout = run_layout_audit(png)
+    layout = run_layout_audit(png, layout_sidecar=layout_sidecar)
     findings = _findings_from_layout(layout.overall_severity, layout.checks)
     vision_ran = False
 

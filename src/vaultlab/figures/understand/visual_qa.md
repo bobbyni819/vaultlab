@@ -10,6 +10,12 @@ actually see. It always runs the deterministic `run_layout_audit()` checks first
 cutoff detection, DPI, empty-panel detection, palette accessibility, aspect ratio,
 and the existing layout heuristics.
 
+For matplotlib outputs, callers can pass `layout_sidecar=` with a
+`FigureLayoutSidecar` or `<png>.layout.json` path created by
+`build_matplotlib_layout_sidecar()`. The sidecar adds object-level checks for
+axes, labels, legends, annotations, canvas bounds, and intended display-scale
+font size before the original figure object is lost.
+
 When `run_vision=False` (the default), the pass is fully deterministic and CI-safe:
 no model, network, SDK client, or API key is touched.
 

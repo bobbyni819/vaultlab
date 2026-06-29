@@ -63,14 +63,18 @@ from vaultlab.slides.notes import (
     format_speaker_notes,
     parse_speaker_notes,
 )
-from vaultlab.slides.render import RenderError, render_pptx
-from vaultlab.slides.time_budget import (
-    SlideTimeEstimate,
-    TimeBudgetReport,
-    audit_time_budget,
+from vaultlab.slides.panel_contract import (
+    PanelLayoutAudit,
+    PanelLayoutContract,
+    PanelLayoutIssue,
+    PanelSlot,
+    SlideGeometry,
+    SlideShapeGeometry,
+    audit_panel_layout_contract,
+    extract_pptx_slide_geometry,
 )
-from vaultlab.slides.version_diff import DeckDiff, SlideDiff, diff_decks
 from vaultlab.slides.qa_anticipator import AnticipatedQuestion, anticipate_qa
+from vaultlab.slides.render import RenderError, render_pptx
 from vaultlab.slides.self_review import (
     ReviewReport,
     SlideReview,
@@ -86,6 +90,12 @@ from vaultlab.slides.template import (
     theme_colors,
     theme_colors_hex,
 )
+from vaultlab.slides.time_budget import (
+    SlideTimeEstimate,
+    TimeBudgetReport,
+    audit_time_budget,
+)
+from vaultlab.slides.version_diff import DeckDiff, SlideDiff, diff_decks
 
 __all__ = [
     # Typed deck data classes + composer
@@ -95,7 +105,9 @@ __all__ = [
     "RenderError",
     "ReviewReport",
     "Slide",
+    "SlideGeometry",
     "SlideReview",
+    "SlideShapeGeometry",
     "build_deck",
     "build_deck_from_lineage_result",
     "render_pptx",
@@ -108,8 +120,10 @@ __all__ = [
     "SlideTimeEstimate",
     "TimeBudgetReport",
     "anticipate_qa",
+    "audit_panel_layout_contract",
     "audit_time_budget",
     "diff_decks",
+    "extract_pptx_slide_geometry",
     # Dict-plan-driven deck builder
     "build_from_plan",
     # KB reader
@@ -142,6 +156,11 @@ __all__ = [
     # Marp mirror
     "deck_plan_to_marp",
     "write_marp",
+    # Manuscript panel contract
+    "PanelLayoutAudit",
+    "PanelLayoutContract",
+    "PanelLayoutIssue",
+    "PanelSlot",
     # Template + theme
     "load_template",
     "load_plain_presentation",
