@@ -2,6 +2,31 @@
 
 from __future__ import annotations
 
+from vaultlab.projects.analysis_planning import (
+    AnalysisOpportunity,
+    AnalysisOpportunityAudit,
+    AnalysisOpportunityProblem,
+    AnalysisSeverity,
+    find_coverage_gaps,
+)
+from vaultlab.projects.compute_plan import (
+    ComputePlan,
+    ComputePlanAudit,
+    ComputePlanProblem,
+    ComputeSeverity,
+    ComputeTarget,
+    ResourceHints,
+    classify_compute_target,
+)
+from vaultlab.projects.data_inventory import (
+    AccessStatus,
+    DataInventory,
+    DataInventoryAudit,
+    DataInventoryProblem,
+    DatasetRecord,
+    InventorySeverity,
+    InventorySummary,
+)
 from vaultlab.projects.figure_plan import (
     FigurePlan,
     FigurePlanAudit,
@@ -22,6 +47,18 @@ from vaultlab.projects.figure_trace import (
     link_panel_slot_to_subpanel,
     trace_subpanel,
 )
+from vaultlab.projects.lane_log import (
+    Lane,
+    LaneHandoff,
+    LaneLogAudit,
+    LaneLogProblem,
+    LanePairStatus,
+    LaneSeverity,
+    LaneStatusReport,
+    ReadReceipt,
+    merge_handoffs,
+    validate_handoff,
+)
 from vaultlab.projects.readiness import (
     PLACEHOLDER_MARKERS,
     PromotionGate,
@@ -34,15 +71,40 @@ from vaultlab.projects.readiness import (
 )
 
 __all__ = [
+    "AccessStatus",
+    "AnalysisOpportunity",
+    "AnalysisOpportunityAudit",
+    "AnalysisOpportunityProblem",
+    "AnalysisSeverity",
+    "ComputePlan",
+    "ComputePlanAudit",
+    "ComputePlanProblem",
+    "ComputeSeverity",
+    "ComputeTarget",
+    "DataInventory",
+    "DataInventoryAudit",
+    "DataInventoryProblem",
+    "DatasetRecord",
     "FigurePlan",
     "FigurePlanAudit",
     "FigurePlanProblem",
+    "InventorySeverity",
+    "InventorySummary",
+    "Lane",
+    "LaneHandoff",
+    "LaneLogAudit",
+    "LaneLogProblem",
+    "LanePairStatus",
+    "LaneSeverity",
+    "LaneStatusReport",
     "PLACEHOLDER_MARKERS",
     "PromotionGate",
     "ProvenanceScan",
     "ReadinessAudit",
     "ReadinessProblem",
     "ReadinessSeverity",
+    "ReadReceipt",
+    "ResourceHints",
     "SubpanelPlan",
     "SubpanelReadiness",
     "SubpanelTrace",
@@ -51,11 +113,15 @@ __all__ = [
     "SupplementPlan",
     "SupportRole",
     "TraceSeverity",
+    "classify_compute_target",
     "dump_plan",
     "evaluate_promotion",
+    "find_coverage_gaps",
     "link_panel_slot_to_subpanel",
     "load_plan",
+    "merge_handoffs",
     "scan_provenance_text",
     "trace_subpanel",
+    "validate_handoff",
     "validate_figure_plan",
 ]
