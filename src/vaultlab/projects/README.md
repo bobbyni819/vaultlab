@@ -6,7 +6,13 @@
 
 1. `figure_plan.py` defines `FigurePlan`, `SubpanelPlan`, and `SupplementPlan`. `SubpanelPlan` is the join object that connects one intended panel to analysis scripts, output figures, coverage manifests, layout sidecars, provenance, panel slots, claims, and supplements.
 2. `readiness.py` defines the readiness ladder: `DISPLAY_EXISTS`, `PROVENANCE_VERIFIED`, `GEOMETRY_QA_PASSED`, `DECK_READY`, and `FAILED`. `evaluate_promotion` only promotes monotonically when provenance, coverage, layout, and panel audits support the requested rung.
-3. `figure_trace.py` loads the existing figure QA sidecars lazily and computes readiness for one `SubpanelPlan`. Missing files become named trace problems rather than exceptions.
+3. `figure_trace.py` loads the existing figure QA sidecars lazily and computes readiness for one `SubpanelPlan`. Missing files become named trace problems rather than exceptions. Pass a `panel_audit` to let a subpanel reach `DECK_READY`.
+4. `compute_plan.py` defines `ComputePlan` and `classify_compute_target`, a deterministic local-vs-remote classifier from RAM/walltime hints (no Slurm/SSH).
+5. `data_inventory.py` defines `DataInventory`/`DatasetRecord` with `summarize()` splitting available/staged from needs-collection/restricted.
+6. `analysis_planning.py` defines `find_coverage_gaps`, a deterministic gap-finder that flags a missing negative control, a dataset absent from the inventory, and missing donor-aware support, ordered by priority.
+7. `lane_log.py` defines `LaneHandoff`/`ReadReceipt` with `validate_handoff` (required-read enforcement is caller-supplied) and `merge_handoffs` into a `LaneStatusReport`.
+
+Every contract is a frozen dataclass with `to_dict`/`from_dict` JSON round-trips, a `validate()`/`audit()` surface, a `pass`/`warn`/`fail` severity grammar, and a versioned `SCHEMA` string. Everything here is deterministic and CI-safe; schema validation never touches the filesystem.
 
 ## Key Join
 
