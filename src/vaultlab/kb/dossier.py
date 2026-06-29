@@ -217,7 +217,10 @@ def dossier_age_hours(kb_root: Path, project_slug: str) -> float | None:
         return None
     mtime = datetime.fromtimestamp(path.stat().st_mtime)
     delta = datetime.now() - mtime
-    return delta.total_seconds() / 3600.0
+    # Clamp to zero: a just-written dossier can read a filesystem mtime a hair
+    # ahead of the wall clock (timestamp granularity / clock skew), which would
+    # otherwise yield a nonsensical tiny-negative age and a flaky `0 <= age` test.
+    return max(0.0, delta.total_seconds() / 3600.0)
 
 
 def load_dossier(kb_root: Path, project_slug: str) -> str:
