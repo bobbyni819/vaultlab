@@ -251,6 +251,7 @@ def audit_layout_sidecar(
         _check_minimum_effective_font(sidecar, min_effective_font_pt=min_effective_font_pt),
         _check_legend_overlap(sidecar),
         _check_colorbar_overlap(sidecar),
+        _check_clipped_text_labels(sidecar),
     ]
     return LayoutSidecarAudit(overall_severity=_aggregate(checks), checks=checks)
 
@@ -314,6 +315,43 @@ def _is_colorbar_axes(ax: Any) -> bool:
         return str(ax.get_label()) == "<colorbar>"
     except Exception:
         return False
+
+
+_CLIP_FAIL_ROLES = frozenset({"title", "axis_label", "colorbar_label"})
+
+
+def _check_clipped_text_labels(sidecar: FigureLayoutSidecar) -> LayoutSidecarCheck:
+    """Flag text whose bbox runs past the rendered canvas edge.
+
+    A clipped title, axis label, or colorbar label is a hard ``fail`` -- the
+    text is cut off in the exported image (the exact defect that motivated this
+    layer: a colorbar label pushed off the canvas). Any other clipped text
+    (e.g. an in-axes annotation) is a ``warn``. This sharpens the generic
+    ``objects_inside_canvas`` check, which only ever warns.
+    """
+
+    clipped: list[dict[str, Any]] = []
+    for obj in sidecar.objects:
+        if obj.type != "text":
+            continue
+        x0, y0, x1, y1 = obj.bbox_px
+        if x0 < 0 or y0 < 0 or x1 > sidecar.canvas.width_px or y1 > sidecar.canvas.height_px:
+            clipped.append({"id": obj.id, "role": obj.text_role, "bbox_px": obj.bbox_px})
+    if not clipped:
+        return LayoutSidecarCheck(
+            name="clipped_label",
+            severity="pass",
+            detail="no text labels are clipped at the canvas edge",
+        )
+    severity: LayoutSeverity = (
+        "fail" if any(record["role"] in _CLIP_FAIL_ROLES for record in clipped) else "warn"
+    )
+    return LayoutSidecarCheck(
+        name="clipped_label",
+        severity=severity,
+        detail=f"{len(clipped)} text label(s) extend past the canvas edge",
+        evidence={"clipped": clipped},
+    )
 
 
 def _check_objects_inside_canvas(sidecar: FigureLayoutSidecar) -> LayoutSidecarCheck:

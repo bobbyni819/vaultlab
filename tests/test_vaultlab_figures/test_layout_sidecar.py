@@ -213,3 +213,65 @@ def test_audit_layout_sidecar_colorbar_beside_axes_passes_despite_wide_title() -
     audit = audit_layout_sidecar(sidecar)
     colorbar_check = next(c for c in audit.checks if c.name == "colorbar_overlap")
     assert colorbar_check.severity == "pass"
+
+
+def test_audit_layout_sidecar_flags_clipped_labels_as_fail_and_other_text_as_warn() -> None:
+    from vaultlab.figures.layout_sidecar import (
+        CanvasSpec,
+        FigureLayoutObject,
+        FigureLayoutSidecar,
+        audit_layout_sidecar,
+    )
+
+    canvas = CanvasSpec(width_px=800, height_px=600, dpi=200, width_in=4.0, height_in=3.0)
+
+    # A colorbar label whose bbox runs past the right edge -> FAIL (clipped in export).
+    clipped_label = FigureLayoutSidecar(
+        figure_path="clip.png",
+        canvas=canvas,
+        objects=[
+            FigureLayoutObject(id="axes.0", type="axes", bbox_px=[60, 60, 700, 520]),
+            FigureLayoutObject(
+                id="colorbar_label.1.y",
+                type="text",
+                bbox_px=[770, 200, 860, 420],
+                text_role="colorbar_label",
+            ),
+        ],
+    )
+    label_audit = audit_layout_sidecar(clipped_label)
+    clip_check = next(c for c in label_audit.checks if c.name == "clipped_label")
+    assert clip_check.severity == "fail"
+    assert label_audit.overall_severity == "fail"
+    assert clip_check.evidence["clipped"][0]["id"] == "colorbar_label.1.y"
+
+    # A clipped in-axes annotation (not a label) is only a WARN.
+    clipped_annotation = FigureLayoutSidecar(
+        figure_path="clip2.png",
+        canvas=canvas,
+        objects=[
+            FigureLayoutObject(
+                id="annotation.0.0",
+                type="text",
+                bbox_px=[10, 590, 200, 640],
+                text_role="annotation",
+            ),
+        ],
+    )
+    annot_check = next(
+        c for c in audit_layout_sidecar(clipped_annotation).checks if c.name == "clipped_label"
+    )
+    assert annot_check.severity == "warn"
+
+    # All text inside the canvas -> pass.
+    clean = FigureLayoutSidecar(
+        figure_path="clean.png",
+        canvas=canvas,
+        objects=[
+            FigureLayoutObject(
+                id="title.0", type="text", bbox_px=[100, 540, 700, 580], text_role="title"
+            ),
+        ],
+    )
+    clean_check = next(c for c in audit_layout_sidecar(clean).checks if c.name == "clipped_label")
+    assert clean_check.severity == "pass"
