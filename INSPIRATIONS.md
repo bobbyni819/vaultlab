@@ -329,6 +329,16 @@ Two of the 7 skills (`nature-reader`, `nature-citation`-screening-page) were def
 
 ---
 
+## Adopted in v0.0.5 planning layer (2026-06-29)
+
+| Module | Lineage type | What was taken | Where in vaultlab | License compatibility | Attribution form |
+|---|---|---|---|---|---|
+| Figure plan schemas | PATTERN | Planning-contract pattern: one typed join record connects figure intent to sidecars, claims, panel slots, and supplements without dereferencing paths during schema validation. | `src/vaultlab/projects/figure_plan.py`, `src/vaultlab/projects/figure_plan.md` | MIT-clean; internal pattern and no external code copied. | This file plus sibling module markdown. |
+| Readiness ladder | CONCEPT | Trust-by-assertion blocker: claimed readiness must be recomputed from deterministic coverage, provenance, geometry, and panel gates before promotion. | `src/vaultlab/projects/readiness.py`, `src/vaultlab/projects/readiness.md` | MIT-clean; concept reimplemented from the dogfood planning spec. | This file plus sibling module markdown. |
+| Subpanel trace bridge | PATTERN | Registry/join pattern: bridge subpanel IDs and panel letters to existing `CoverageManifest`, `FigureLayoutSidecar`, `PanelLayoutContract`, and claim-ledger contracts. | `src/vaultlab/projects/figure_trace.py`, `src/vaultlab/projects/figure_trace.md` | MIT-clean; no external source code copied. | This file plus sibling module markdown. |
+
+---
+
 ## Pending Bobby review
 
 This document is a starting point. Bobby to:
